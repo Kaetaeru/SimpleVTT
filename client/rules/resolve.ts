@@ -86,6 +86,10 @@ export interface Combatant {
   markAdvantage?: boolean;
   /** R99 (D234): 연구된 공격. */
   studiedAttacks?: boolean;
+  /** R102 (D237): monster traits — damage types that heal instead (번개 흡수), a CON save to stay at 1 HP (언데드 인내), advantage while bloodied (피투성이 분노). */
+  absorbs?: string[];
+  undeadFortitude?: boolean;
+  bloodiedAdvantage?: string;
 }
 
 export interface DamagePart {
@@ -239,6 +243,8 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (has(attacker, "투명")) plus.push("공격자 투명");
   if (effect(attacker, "은신")) plus.push("공격자 은신");
   if (effect(attacker, "도움")) plus.push("도움 받음");
+  // R102 (D237): 피투성이 분노 and its kin — advantage while at half hit points or fewer.
+  if (attacker.bloodiedAdvantage && attacker.hp.current <= Math.floor(attacker.hp.max / 2)) plus.push(`공격자 ${attacker.bloodiedAdvantage}`);
   if (has(attacker, "약화")) minus.push("약화 (Sap): 다음 공격 불리");
   if (target.vexedBy && attacker.tokenId && target.vexedBy === attacker.tokenId) plus.push("교란 (Vex): 이 대상에게 유리");
   if (has(target, "넘어짐")) (spec.mode === "melee" ? plus : minus).push(spec.mode === "melee" ? "대상 넘어짐 (근접)" : "대상 넘어짐 (원거리)");
@@ -400,6 +406,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
     ? applyDamage(target, [...spec.damage, ...(spec.riders ?? []), ...(outcome === "crit" ? spec.critRiders ?? [] : [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta, savage: spec.savage, ...(spec.diceRules?.length ? { diceRules: spec.diceRules } : {}), ...(options.rerollOnce ? { rerollOnce: true } : {}) })
     : grazes ? applyDamage(target, [{ formula: String(spec.abilityMod), type: spec.damage[0]?.type ?? "타격", label: "스치기", critDoubles: false }], options.dice, { fixed: options.fixed?.damage, scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
   const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed, deathFailures } = outcomeDamage;
+  if (outcomeDamage.trait) reasons.push(outcomeDamage.trait);
   const inflicted = hit ? (spec.inflicts ?? []).filter((condition) => !immuneToCondition(target.defenses, condition)) : [];
   if (grazes) mastery = { kind: "graze", label: MASTERY_LABEL.graze, grazed: damageTotal, marks: [], note: `빗나갔지만 ${damageTotal} 피해` };
   else if (hit && spec.mastery) {
@@ -423,10 +430,11 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
 }
 
 /** What a hit (or a failed save) does to the target: dice per part, resistances, temp HP first, concentration, 0 HP. Shared by weapon attacks and spells. */
-export interface DamageOutcome { damage: DamageResult[]; damageTotal: number; absorbed: number; hpLost: number; hpBefore: number; hpAfter: number; tempAfter: number; concentration?: AttackResolution["concentration"]; downed?: AttackResolution["downed"]; /** Death-save failures the damage caused on a PC already at 0 HP (2 from a critical hit). */ deathFailures?: number }
+export interface DamageOutcome { /** R102 (D237): what a trait did (흡수, 언데드 인내). */ trait?: string; damage: DamageResult[]; damageTotal: number; absorbed: number; hpLost: number; hpBefore: number; hpAfter: number; tempAfter: number; concentration?: AttackResolution["concentration"]; downed?: AttackResolution["downed"]; /** Death-save failures the damage caused on a PC already at 0 HP (2 from a critical hit). */ deathFailures?: number }
 export const noDamage = (target: Combatant): DamageOutcome => ({ damage: [], damageTotal: 0, absorbed: 0, hpLost: 0, hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp });
 export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSource, options: { fixed?: Array<number[] | undefined>; /** R63 (D198): see `ResolveOptions.rerollOnce`. */ rerollOnce?: boolean; crit?: boolean; scale?: number; delta?: number; /** Halve after resistances (a successful save). */ half?: boolean; /** R32 (D166): 야만적 공격자 — roll the weapon dice twice and keep the better. */ savage?: boolean; /** R60 (D195): what a rule does to the weapon's own dice. */ diceRules?: DiceRule[] } = {}): DamageOutcome {
   const damage: DamageResult[] = [];
+  let absorbedHeal = 0;
   parts.forEach((part, index) => {
     const fixedDice = options.fixed?.[index];
     const weaponDice = part.critDoubles !== false;
@@ -450,6 +458,8 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
     // first. The old order doubled for vulnerability and only then halved, which rounds differently (11 → 22 → 11
     // instead of 11 → 5 → 10).
     const raw = options.half ? Math.floor(rawRolled / 2) : rawRolled;
+    // R102 (D237): 흡수 — this damage type restores hit points instead.
+    if ((target.absorbs ?? []).some((type) => listCovers([type], part.type))) { absorbedHeal += raw; damage.push({ part, dice: rolled.dice, rolled: rawRolled, adjusted: 0, adjustment: "흡수" }); return; }
     const immune = listCovers(target.defenses.immunities, part.type);
     const resist = !immune && !part.ignoresResistance && listCovers(target.defenses.resistances, part.type);
     const vulnerable = !immune && listCovers(target.defenses.vulnerabilities, part.type);
@@ -463,8 +473,18 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
   if (options.scale !== undefined) damageTotal = Math.floor(damageTotal * options.scale);
   if (options.delta) damageTotal = Math.max(0, damageTotal + options.delta);
   const absorbed = Math.min(target.hp.temp, damageTotal);
-  const hpLost = Math.min(target.hp.current, damageTotal - absorbed);
-  const hpAfter = target.hp.current - hpLost;
+  let hpLost = Math.min(target.hp.current, damageTotal - absorbed);
+  let hpAfter = target.hp.current - hpLost;
+  let trait: string | undefined;
+  // R102 (D237): 언데드 인내 — dropped to 0 by damage that is neither radiant nor a critical hit: CON save, DC 5 + the damage.
+  if (hpAfter === 0 && target.hp.current > 0 && target.undeadFortitude && !options.crit && !damage.some((item) => item.adjusted > 0 && damageTypeKey(item.part.type) === "radiant")) {
+    const d20 = dice.d(20);
+    const dc = 5 + damageTotal;
+    const saved = d20 + target.conSave >= dc;
+    trait = `언데드 인내: 건강 내성 ${d20 + target.conSave} vs DC ${dc} ${saved ? "성공 → HP 1" : "실패"}`;
+    if (saved) { hpAfter = 1; hpLost = target.hp.current - 1; }
+  }
+  if (absorbedHeal) { hpAfter = Math.min(target.hp.max, hpAfter + absorbedHeal); trait = [trait, `흡수: HP ${absorbedHeal} 회복`].filter(Boolean).join(" · "); }
   const tempAfter = target.hp.temp - absorbed;
   let concentration: AttackResolution["concentration"];
   if (damageTotal > 0 && target.concentration) {
@@ -483,7 +503,7 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
     if (damageTotal - absorbed >= target.hp.max) downed = "instant-death";
     else deathFailures = options.crit ? 2 : 1;
   }
-  return { damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures };
+  return { damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures, ...(trait ? { trait } : {}) };
 }
 
 /** One-line summary for the chat archive and logs. */

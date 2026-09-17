@@ -75,3 +75,23 @@ test("R101: a spell nothing computes says DM 판정 on its card; one the rules r
   assert.equal(judged("hunter-s-mark"), false);
   assert.equal(judged("fireball"), false, "not a tracked effect at all");
 });
+
+test("R102: monster trait patterns — 언데드 인내, 흡수, 피투성이 분노, 회피술 (D237)", async () => {
+  const { applyDamage } = await import("../../client/rules/resolve");
+  const zombie = npcCombatant(newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.zombie")!));
+  assert.equal(zombie.undeadFortitude, true);
+  const low = { ...zombie, hp: { ...zombie.hp, current: 3 } };
+  const saved = applyDamage(low, [{ formula: "4", type: "참격" }], diceFrom(() => 0.99));
+  assert.deepEqual([saved.hpAfter, saved.downed], [1, undefined], saved.trait);
+  assert.equal(applyDamage(low, [{ formula: "4", type: "광휘" }], diceFrom(() => 0.99)).hpAfter, 0, "radiant damage ends it");
+  assert.equal(applyDamage(low, [{ formula: "4", type: "참격" }], diceFrom(() => 0.99), { crit: true }).hpAfter, 0, "so does a critical hit");
+  const golem = npcCombatant(newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.flesh-golem")!));
+  const hurt = { ...golem, hp: { ...golem.hp, current: golem.hp.max - 10 } };
+  const zapped = applyDamage(hurt, [{ formula: "6", type: "번개" }], diceFrom(() => 0.5));
+  assert.equal(zapped.hpAfter, golem.hp.max - 4, zapped.trait);
+  const boar = npcCombatant(newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.boar")!));
+  const tusk = npcAttackSpec(newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.boar")!), monsterById("dnd.srd521.monster.boar")!.actions.find((action) => action.kind === "attack")!.name)!;
+  assert.equal(suggestAdvantage({ ...boar, hp: { ...boar.hp, current: 1 } }, zombie, tusk).advantage, "advantage");
+  assert.equal(suggestAdvantage(boar, zombie, tusk).advantage, "normal");
+  assert.equal(npcCombatant(newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.assassin")!)).evasion, true);
+});

@@ -176,7 +176,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
     .filter((effect) => effect.trigger === trigger || effect.trigger === "always")
     .map((effect) => CONDITION_KO[effect.conditionId] ?? effect.conditionId)
     .filter((condition) => !target || !immuneToCondition(target.defenses, condition));
-  const afterDamage = (row: SpellTargetResult, outcome: DamageOutcome) => { row.damage = outcome; row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter; };
+  const afterDamage = (row: SpellTargetResult, outcome: DamageOutcome) => { row.damage = outcome; row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter; if (outcome.trait) row.note = [row.note, outcome.trait].filter(Boolean).join(" · "); };
   const targets: SpellTargetResult[] = [];
   let note: string | undefined;
   const all = input.targets;

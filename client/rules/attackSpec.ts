@@ -99,6 +99,19 @@ export function regenerationOf(block: MonsterView): { amount: number; note: stri
   return amount > 0 ? { amount, note: trait.text } : undefined;
 }
 
+/** R102 (D237): monster traits read by name — the SRD writes them the same way on every stat block that has them. */
+export function traitPatterns(block: MonsterView): Pick<Combatant, "absorbs" | "undeadFortitude" | "bloodiedAdvantage" | "evasion"> {
+  const names = block.traits.map((trait) => trait.nameEn ?? trait.name);
+  const absorbs = names.flatMap((name) => { const match = /^([A-Za-z]+) Absorption/i.exec(name); return match ? [match[1].toLowerCase()] : []; });
+  const bloodied = block.traits.find((trait) => /Bloodied (Fury|Frenzy)/i.test(trait.nameEn ?? trait.name));
+  return {
+    ...(absorbs.length ? { absorbs } : {}),
+    ...(names.some((name) => /Undead Fortitude/i.test(name)) ? { undeadFortitude: true } : {}),
+    ...(bloodied ? { bloodiedAdvantage: bloodied.name } : {}),
+    ...(names.some((name) => /^Evasion$/i.test(name)) ? { evasion: true } : {}),
+  };
+}
+
 /** An NPC through its token (unlinked bar = the token's own HP, D78) or its sheet. */
 export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
   const block = entry.statBlock;
@@ -111,6 +124,8 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
     // R31 (D161): 마법 저항 is on 34 stat blocks and nothing read it — the resolver knows now.
     magicResistance: block.traits.some((trait) => /마법 저항|Magic Resistance/i.test(trait.nameEn ?? trait.name)),
     regeneration: regenerationOf(block),
+    // R102 (D237): the shared monster trait patterns the resolver computes.
+    ...traitPatterns(block),
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities, conditionImmunities: block.conditionImmunities },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),
