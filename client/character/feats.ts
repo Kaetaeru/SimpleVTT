@@ -8,7 +8,6 @@ import type { FeatView } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { ABILITY_SCORE_MAX } from "../rules/tables";
-import { SPELLCASTING_ABILITY } from "../rules/classes";
 import { abilityOptions, allToolOptions, damageTypeOptions, skillOptions, spellOptions, toolName, weaponMasteryOptions } from "./choices";
 import { featDieMinimum, featExecutionStatus, featNotes, resetKo } from "./featRules";
 import type { Ledger } from "./ledger";
@@ -62,7 +61,7 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
     const ability = (instance.preset?.spellcastingAbility as AbilityKey | undefined) ?? (ledger.askOne({ ...ask, id: `${prefix}.ability`, label: "주문 시전 능력치", options: abilityOptions(abilityKeys) }) as AbilityKey | undefined);
     const listClass = listSlug ? catalog.classBySlug(listSlug) : undefined;
     if (listClass) {
-      const entry = ledger.spellcastingEntry(`feat:${instance.key}:${feat.id}`, () => ({ classId: listClass.id, className: `${feat.name} (${listClass.name})`, ability: ability ?? SPELLCASTING_ABILITY[listSlug!] ?? "cha", cantripsMax: spellChoices.cantrips ?? 0, preparedMax: 0 }));
+      const entry = ledger.spellcastingEntry(`feat:${instance.key}:${feat.id}`, () => ({ classId: listClass.id, className: `${feat.name} (${listClass.name})`, ability: ability ?? listClass.rules.spellcastingAbility ?? "cha", cantripsMax: spellChoices.cantrips ?? 0, preparedMax: 0 }));
       if (ability) entry.ability = ability;
       const cantrips = ledger.ask({ ...ask, id: `${prefix}.cantrips`, label: `${listClass.name} 소마법`, count: spellChoices.cantrips ?? 0, options: spellOptions(catalog, [listClass.id], [0]) });
       for (const id of cantrips) entry.cantrips.add(id);

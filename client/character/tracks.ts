@@ -8,11 +8,7 @@ import type { ClassLevelRow, ClassView } from "../catalog/catalog";
 import type { IndexClassChoiceJson } from "../catalog/types";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
-import {
-  CLASS_RESOURCES, CLASS_TRAINING, COLUMN, METAMAGIC_KNOWN, numericColumn, SUBCLASS_LEVEL,
-  type ArmorTraining, type WeaponTraining,
-} from "../rules/classes";
-import { MULTICLASS_PREREQUISITES } from "../rules/tables";
+import { COLUMN, numericColumn, type ArmorTraining, type WeaponTraining } from "../rules/classes";
 import { SRD_SUBCLASSES } from "../data/srd";
 import type { SrdSubclassData } from "../data/srd/subclasses";
 import {
@@ -28,7 +24,6 @@ import type { ClassState, Ledger } from "./ledger";
 import { resolveToolId } from "./origin";
 import { applyClassSpellcasting, classSpellEntry } from "./spells";
 
-const ASI_FEAT_ID = "dnd.srd521.feat.ability-score-improvement";
 const RECOVERY_KO: Record<string, string> = { "short-rest": "짧은 휴식", "long-rest": "긴 휴식", "short-rest:1": "긴 휴식 (짧은 휴식마다 1회 회복)", "short-rest:half": "긴 휴식 (짧은 휴식에 절반 회복)" };
 
 const featContext = (ledger: Ledger, hasFightingStyle = false): FeatContext => ({
@@ -63,21 +58,14 @@ export function applyTracks(ledger: Ledger) {
   }
 }
 
-function trainingOf(ledger: Ledger, cls: ClassView) {
-  const known = CLASS_TRAINING[cls.slug];
-  if (known) return known;
-  const def = (ledger.catalog.entry(cls.id)?.mechanics.find((item) => item.kind === "class-definition")?.config ?? {}) as { armorTraining?: ArmorTraining[]; weaponTraining?: WeaponTraining[]; toolProficiencies?: string[]; multiclass?: { armor?: ArmorTraining[]; weapons?: WeaponTraining[]; skills?: number; tools?: string[] } };
-  return { armor: def.armorTraining ?? [], weapons: def.weaponTraining ?? ["simple"], tools: def.toolProficiencies, multiclass: { armor: def.multiclass?.armor ?? [], weapons: def.multiclass?.weapons ?? [], skills: def.multiclass?.skills, tools: def.multiclass?.tools } };
-}
-
 function applyPrimaryClass(ledger: Ledger, cls: ClassView, index: number) {
   const { catalog } = ledger;
   const sourceLabel = `${cls.name} 1레벨`;
   for (const key of cls.savingThrows) ledger.saves.set(key, cls.name);
-  const training = trainingOf(ledger, cls);
-  for (const armor of training.armor) ledger.armor.add(armor);
-  for (const weapon of training.weapons) ledger.weapons.add(weapon);
-  for (const tool of training.tools ?? []) { const id = resolveToolId(ledger, tool); ledger.tools.set(id, toolName(catalog, id)); }
+  const training = cls.rules;
+  for (const armor of training.armorTraining) ledger.armor.add(armor);
+  for (const weapon of training.weaponTraining) ledger.weapons.add(weapon);
+  for (const tool of training.toolProficiencies) { const id = resolveToolId(ledger, tool); ledger.tools.set(id, toolName(catalog, id)); }
   const picked = ledger.ask({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.skills`, label: `기술 숙련 (${cls.skillChoice.count}개)`, count: cls.skillChoice.count, options: skillOptions(catalog, cls.skillChoice.options, (id) => ledger.hasSkill(id)) });
   for (const skill of picked) ledger.addSkill(skill, cls.name);
   applyLevel1Choices(ledger, cls, index, false);
@@ -86,8 +74,8 @@ function applyPrimaryClass(ledger: Ledger, cls: ClassView, index: number) {
 function applyMulticlassEntry(ledger: Ledger, cls: ClassView, index: number) {
   const { catalog } = ledger;
   const sourceLabel = `${cls.name} 1레벨 (멀티클래스)`;
-  const check = (slug: string, name: string) => {
-    const rule = MULTICLASS_PREREQUISITES[slug];
+  const check = (other: ClassView | undefined, name: string) => {
+    const rule = other?.rules.multiclass.prerequisites;
     if (!rule) return;
     const ok = rule.all ? rule.all.every((key) => ledger.abilityScore(key) >= 13) : (rule.any ?? []).some((key) => ledger.abilityScore(key) >= 13);
     if (!ok) {
@@ -95,9 +83,9 @@ function applyMulticlassEntry(ledger: Ledger, cls: ClassView, index: number) {
       ledger.blocking.push(`${index + 1}레벨에서 ${cls.name}을(를) 추가하려면 ${name}의 조건(${text})이 필요합니다.`);
     }
   };
-  check(cls.slug, cls.name);
-  for (const other of ledger.classes.values()) if (other.classId !== cls.id) check(other.slug, other.name);
-  const training = trainingOf(ledger, cls);
+  check(cls, cls.name);
+  for (const other of ledger.classes.values()) if (other.classId !== cls.id) check(catalog.classById(other.classId), other.name);
+  const training = cls.rules;
   for (const armor of training.multiclass.armor) ledger.armor.add(armor);
   for (const weapon of training.multiclass.weapons) ledger.weapons.add(weapon);
   for (const tool of training.multiclass.tools ?? []) { const id = resolveToolId(ledger, tool); ledger.tools.set(id, toolName(catalog, id)); }
@@ -180,10 +168,12 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
 
   for (const feature of row.featureRecords) {
     const key = feature.id.split(".").pop() ?? feature.id;
+    // hardcode: the progression table's own row words (HARDCODE_AUDIT §4) — every class table, SRD or module, writes
+    // its ASI, Epic Boon and subclass rows this way, so they are the table format's vocabulary, not content.
     if (feature.nameEn === "Ability Score Improvement") { askAsi(ledger, cls, index, sourceLabel); continue; }
     if (feature.nameEn === "Epic Boon") { askEpicBoon(ledger, cls, index, sourceLabel); continue; }
     if (feature.nameEn === "Subclass Feature") continue;
-    if (/Subclass$/.test(feature.nameEn) && level === SUBCLASS_LEVEL) {
+    if (/Subclass$/.test(feature.nameEn)) {
       const picked = ledger.askOne({ ...ask, id: `class.${index}.subclass`, label: `${cls.name} 서브클래스`, description: feature.description, options: subclassOptions(catalog, cls.id) });
       if (picked) {
         state.subclassId = picked;
@@ -196,16 +186,17 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
 
     // H3 (D240): what gaining this feature asks or grants is in its contract.
     applyGainContract(ledger, cls, index, `${cls.slug}.${level}.${feature.id}`, feature.name, sourceLabel);
-    if (key === "pact-magic") ledger.flags.add("pact-magic");
-    if (key === "spellcasting") ledger.flags.add(`spellcasting:${cls.id}`);
   }
 
   applySubclassLevel(ledger, cls, state, index, sourceLabel);
 }
 
+/** The repeatable feats of a tier go first in its picker (능력치 향상, taken again and again). */
+const repeatableFeats = (feats: ReadonlyArray<{ id: string; tier: string; repeatable: boolean }>, tier: string) => feats.filter((feat) => feat.tier === tier && feat.repeatable).map((feat) => feat.id);
+
 function askAsi(ledger: Ledger, cls: ClassView, index: number, sourceLabel: string) {
   const { catalog } = ledger;
-  const options = featOptions(catalog, ["general"], featContext(ledger), [ASI_FEAT_ID]);
+  const options = featOptions(catalog, ["general"], featContext(ledger), repeatableFeats(catalog.feats, "general"));
   const picked = ledger.askOne({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.asi`, label: "능력치 향상 또는 일반 재주", description: "능력치 향상 재주(+2 하나 또는 +1 둘)를 얻거나, 조건을 만족하는 일반 재주 하나를 고릅니다.", options });
   const feat = picked ? catalog.featById(picked) : undefined;
   if (feat) applyFeat(ledger, feat, { key: `class.${index}.asi`, sourceLabel, trackIndex: index });
@@ -214,7 +205,7 @@ function askAsi(ledger: Ledger, cls: ClassView, index: number, sourceLabel: stri
 
 function askEpicBoon(ledger: Ledger, cls: ClassView, index: number, sourceLabel: string) {
   const { catalog } = ledger;
-  const options = featOptions(catalog, ["epic-boon", "general"], featContext(ledger), [ASI_FEAT_ID]);
+  const options = featOptions(catalog, ["epic-boon", "general"], featContext(ledger), repeatableFeats(catalog.feats, "general"));
   const picked = ledger.askOne({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.epic-boon`, label: "에픽 은총", description: "에픽 은총 재주 하나를 얻거나, 조건을 만족하는 다른 재주로 대신합니다.", options });
   const feat = picked ? catalog.featById(picked) : undefined;
   if (feat) applyFeat(ledger, feat, { key: `class.${index}.epic-boon`, sourceLabel, trackIndex: index });
@@ -389,19 +380,27 @@ function applyClassWide(ledger: Ledger, cls: ClassView, state: ClassState) {
     applyInvocations(ledger, cls, first, picked);
   }
 
-  if (cls.slug === "sorcerer" && level >= 2) {
-    const count = Object.entries(METAMAGIC_KNOWN).filter(([threshold]) => Number(threshold) <= level).reduce((max, [, value]) => Math.max(max, value), 0);
-    const picked = ledger.ask({ ...ask, id: `class.${first}.metamagic`, label: `메타매직 (${count}개)`, count, options: classOptionList(catalog, "sorcerer.metamagic") });
+  // H4 (D243): option lists known in growing numbers (메타매직), from the class definition.
+  for (const pool of cls.rules.optionPools) {
+    const count = Object.entries(pool.known).filter(([threshold]) => Number(threshold) <= level).reduce((max, [, value]) => Math.max(max, value), 0);
+    if (count <= 0) continue;
+    const picked = ledger.ask({ ...ask, id: `class.${first}.${pool.id}`, label: `${pool.label} (${count}개)`, count, options: classOptionList(catalog, pool.list) });
     for (const optionId of picked) {
-      const option = catalog.classOptions["sorcerer.metamagic"]?.find((item) => item.id === optionId);
-      if (option) ledger.addFeature({ id: option.id, name: `메타매직: ${option.name}`, nameEn: option.nameEn, source: "metamagic", sourceLabel: cls.name, description: option.description, descriptionSource: "srd-summary" });
+      const option = catalog.classOptions[pool.list]?.find((item) => item.id === optionId);
+      if (option) ledger.addFeature({ id: option.id, name: `${pool.label}: ${option.name}`, nameEn: option.nameEn, source: pool.source ?? "class", sourceLabel: cls.name, description: option.description, descriptionSource: "srd-summary" });
     }
   }
 
-  for (const rule of CLASS_RESOURCES) {
-    if (rule.classSlug !== cls.slug || level < rule.minLevel) continue;
+  // H4 (D243): resource pools from the class definition — a progression column or an expression.
+  const scope = (ref: string) => {
+    if (ref === "class.level") return level;
+    const ability = /^ability\.([a-z]{3})\.modifier$/.exec(ref);
+    return ability ? ledger.abilityMod(ability[1] as AbilityKey) : undefined;
+  };
+  for (const rule of cls.rules.resources) {
+    if (level < rule.minLevel) continue;
     if (rule.subclassId && state.subclassId !== rule.subclassId) continue;
-    const max = rule.column ? numericColumn(row.columns[rule.column]) : rule.maximum ? rule.maximum(level, (key) => ledger.abilityMod(key)) : 0;
+    const max = rule.column ? numericColumn(row.columns[rule.column]) : Number(evaluate(rule.max, scope)) || 0;
     if (max <= 0) continue;
     const recovery = rule.recoveryFrom && level >= rule.recoveryFrom.level ? rule.recoveryFrom.recovery : rule.recovery;
     ledger.addResource({ id: rule.id, label: rule.label, max, recovery: RECOVERY_KO[recovery] ?? recovery, source: cls.name, freeCastSpellId: rule.spell ? catalog.spellByName(rule.spell)?.id : undefined });

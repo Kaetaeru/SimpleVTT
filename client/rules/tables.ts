@@ -79,21 +79,6 @@ export function multiclassCasterLevel(tracks: Array<{ kind: CasterKind; level: n
 
 export const SIZE_KO: Record<string, string> = { tiny: "초소형", small: "소형", medium: "중형", large: "대형", huge: "거대형", gargantuan: "초대형" };
 
-/** Multiclass prerequisites (SRD 5.2.1): ability score 13 in the listed abilities ("any" = one of them is enough). */
-export const MULTICLASS_PREREQUISITES: Record<string, { all?: AbilityKey[]; any?: AbilityKey[] }> = {
-  barbarian: { all: ["str"] },
-  bard: { all: ["cha"] },
-  cleric: { all: ["wis"] },
-  druid: { all: ["wis"] },
-  fighter: { any: ["str", "dex"] },
-  monk: { all: ["dex", "wis"] },
-  paladin: { all: ["str", "cha"] },
-  ranger: { all: ["dex", "wis"] },
-  rogue: { all: ["dex"] },
-  sorcerer: { all: ["cha"] },
-  warlock: { all: ["cha"] },
-  wizard: { all: ["int"] },
-};
 
 /** Hit-point gain of a level after the first when the fixed value is chosen: die/2 + 1. */
 export const fixedHitPoints = (hitDie: number) => Math.floor(hitDie / 2) + 1;

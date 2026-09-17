@@ -16,14 +16,13 @@ import { newScene, tokenForCharacter } from "../../client/campaign/page";
 import { newTurn } from "../../client/campaign/tracker";
 import { initialRuntime } from "../../client/character/runtime";
 import { featureActivation, featureRuleKey } from "../../client/rules/activation";
-import { CLASS_RESOURCES } from "../../client/rules/classes";
 import { pcStats } from "../../client/rules/actions";
 import { derivedOf, pcCombatant, pcConcentrationKey } from "../../client/rules/attackSpec";
 import { characterScope, economyBucketOf, evaluate, interceptorsFor, resourceIdOf, runEntryPoint } from "../../client/rules/contract";
 import { TableClient } from "../../client/session/client";
 import { TableHost } from "../../client/session/host";
 import { MemoryHub } from "../../client/session/transport";
-import { build, catalog } from "./support";
+import { build, catalog, ids } from "./support";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 const contract = (key: string) => catalog().contractFor(key)!;
@@ -89,7 +88,7 @@ test("contracts: a contract's payment and the hand-written activation spend the 
   // subclass gate is asserted on the rule itself rather than on a second patron that does not exist yet.
   const younger = build({ name: "w", classes: "warlock", level: 5 }, { "class.2.subclass": ["dnd.srd521.subclass.warlock.fiend-patron"] }).derived;
   assert.equal(younger.resources.some((resource) => resource.id === "resource.warlock.fiend.dark-ones-own-luck"), false);
-  assert.equal(CLASS_RESOURCES.find((rule) => rule.id === "resource.warlock.fiend.dark-ones-own-luck")?.subclassId, "dnd.srd521.subclass.warlock.fiend-patron");
+  assert.equal(catalog().classById(ids.cls("warlock"))!.rules.resources.find((rule) => rule.id === "resource.warlock.fiend.dark-ones-own-luck")?.subclassId, "dnd.srd521.subclass.warlock.fiend-patron");
   assert.equal(resourceIdOf("resource:bard.bardic-inspiration"), "resource.bard.bardic-inspiration");
 });
 

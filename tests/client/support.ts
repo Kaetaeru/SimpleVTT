@@ -86,6 +86,8 @@ export function classCoverage() {
       seen.add(key);
       if (featureContract(cat, key)) { counts.contract += 1; continue; }
       if (featureActivation(feature, made.derived)) { counts.activation += 1; continue; }
+      // H4 (D243): a class definition names the feature its spellcasting implements (계약 마법).
+      if (feature.execution === "derived") { counts.mentioned += 1; continue; }
       const tail = key.split(".").pop()!;
       if (tail.length > 3 && code.includes(tail)) { counts.mentioned += 1; continue; }
       counts.silent += 1;

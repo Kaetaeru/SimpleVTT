@@ -114,6 +114,8 @@ export interface IndexClassJson {
     cantrips?: number;
     prepared?: number;
     spellbook?: number;
+    /** Spells added to the spellbook each class level after the first. */
+    spellbookPerLevel?: number;
     preparedFromSpellbook?: number;
     alwaysPrepared?: string[];
     bonusCantripChoice?: { choiceId: string; value: string };

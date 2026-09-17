@@ -10,11 +10,11 @@ import test from "node:test";
 
 const CEILINGS = {
   /** A content id literal. */
-  contentIds: 20,
+  contentIds: 17,
   /** A branch on a feature, option or event key. */
-  keyBranches: 33,
+  keyBranches: 31,
   /** A branch on a class slug or a picked option id. */
-  slugBranches: 2,
+  slugBranches: 0,
   /** A regex run over a name or a description. */
   nameRegex: 4,
 };
@@ -104,4 +104,26 @@ test("H3d: option choices grant through contracts at their own level — 대지 
   assert.ok(sorcerer.damageTypeModifier?.includes("fire"), JSON.stringify(sorcerer.damageTypeModifier));
   const warden = build({ name: "드루이드", classes: "druid", level: 1 }, { "class.0.primal-order": ["warden"] }).derived;
   assert.ok(warden.proficiencies.armor.some((item) => item.includes("평장")), JSON.stringify(warden.proficiencies.armor));
+});
+
+test("H4: a class module's definition carries its training, resources, option pools and multiclass rules (D243)", async () => {
+  const { createCatalog } = await import("../../client/catalog");
+  const { autofill } = await import("../../client/character/autofill");
+  const { sourceOf } = await import("./support");
+  // An installed patch rewrites the fighter's definition; nothing in client code names what it now holds.
+  const patch = { moduleId: "module.grit", moduleVersion: "1", content: [{ id: "dnd.srd521.class.fighter", category: "class", mechanics: [{ kind: "class-definition", config: {
+    armorTraining: ["light"], weaponTraining: ["simple"],
+    multiclass: { armor: [], weapons: [], prerequisites: { all: ["con"] } },
+    resources: [{ id: "resource.module.grit", label: "투지", max: { op: "add", args: [{ ref: "class.level" }, { ref: "ability.con.modifier" }] }, recovery: "long-rest", minLevel: 1 }],
+    optionPools: [{ id: "tricks", list: "sorcerer.metamagic", label: "요령", known: { "3": 1 } }],
+  } }] }] };
+  const catalog = createCatalog([patch as never]);
+  const made = autofill(sourceOf({ name: "투사", classes: "fighter", level: 3, abilities: { con: 14 } }), catalog);
+  const grit = made.derived.resources.find((resource) => resource.id === "resource.module.grit");
+  assert.equal(grit?.max, 3 + 2, JSON.stringify(made.derived.resources));
+  assert.ok(!made.derived.resources.some((resource) => resource.id === "resource.fighter.second-wind"), "the SRD pools are the SRD module's data, not code");
+  assert.ok(!made.derived.proficiencies.armor.some((item) => item.includes("중갑")), JSON.stringify(made.derived.proficiencies.armor));
+  assert.equal(made.source.choices["class.0.tricks"]?.length, 1, JSON.stringify(made.derived.choices.map((item) => item.id)));
+  const multi = autofill(sourceOf({ name: "투사", classes: ["wizard", "fighter"], abilities: { con: 10, int: 13 } }), catalog);
+  assert.ok(multi.derived.validation.blocking.some((line) => line.includes("건강 13")), JSON.stringify(multi.derived.validation.blocking));
 });

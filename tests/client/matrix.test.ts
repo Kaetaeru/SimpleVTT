@@ -5,7 +5,10 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ASI_LEVELS, EPIC_BOON_LEVEL, SUBCLASS_LEVEL } from "../../client/rules/classes";
+// The SRD schedules, kept here as the independent check on what the progression tables drive (H4, D243).
+const ASI_LEVELS: Record<string, number[]> = { default: [4, 8, 12, 16], fighter: [4, 6, 8, 12, 14, 16], rogue: [4, 8, 10, 12, 16] };
+const EPIC_BOON_LEVEL = 19;
+const SUBCLASS_LEVEL = 3;
 import { fixedHitPoints, fullCasterSlots, pactMagicSlots, proficiencyBonusForLevel } from "../../client/rules/tables";
 import { build, catalog, choice, ids } from "./support";
 

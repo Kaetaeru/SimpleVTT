@@ -11,6 +11,7 @@ import type {
   ProgressionCatalogJson, ProgressionLevelRowJson, RuleModuleJson, SpellPresentationJson,
 } from "./types";
 import { parseContract, type CommonPlayContract } from "../rules/contract";
+import type { ClassRules } from "../rules/classes";
 
 export interface FeatureRecord {
   /** Stable id such as `fighter.second-wind` or `dnd.srd521.feature.cleric.life-domain.preserve-life`. */
@@ -38,6 +39,8 @@ export interface ClassView {
   casterKind: "full" | "half" | "pact" | "none";
   progression: ClassLevelRow[];
   multiclassGrants: string[];
+  /** H4 (D243): training, multiclass rules, casting ability, resources and option pools from the class definition. */
+  rules: ClassRules;
   scope: "builtin" | "installed";
 }
 
@@ -390,7 +393,7 @@ export class ContentCatalog {
     };
     const views: ClassView[] = [];
     for (const entry of this.byCategory("class")) {
-      const def = mechanic<{ hitDie?: number; primaryAbilities?: AbilityKey[]; savingThrowProficiencies?: AbilityKey[]; skillChoiceCount?: number }>(entry, "class-definition") ?? {};
+      const def = mechanic<{ hitDie?: number; primaryAbilities?: AbilityKey[]; savingThrowProficiencies?: AbilityKey[]; skillChoiceCount?: number } & Partial<ClassRules>>(entry, "class-definition") ?? {};
       const slug = slugOfId(entry.id);
       const table = this.inputs.progression.classes.find((row) => row.id === entry.id);
       const indexClass = this.inputs.index.classes[entry.id];
@@ -415,6 +418,13 @@ export class ContentCatalog {
         casterKind,
         progression,
         multiclassGrants: table?.multiclassGrants ?? [],
+        rules: {
+          armorTraining: def.armorTraining ?? [], weaponTraining: def.weaponTraining ?? ["simple"], toolProficiencies: def.toolProficiencies ?? [],
+          multiclass: { armor: [], weapons: [], ...(def.multiclass ?? {}) },
+          ...(def.spellcastingAbility ? { spellcastingAbility: def.spellcastingAbility } : {}),
+          ...(def.spellcastingFeature ? { spellcastingFeature: def.spellcastingFeature } : {}),
+          resources: def.resources ?? [], optionPools: def.optionPools ?? [],
+        },
         scope: entry.scope,
       });
     }
@@ -497,7 +507,7 @@ export class ContentCatalog {
     const views: BackgroundView[] = [];
     for (const entry of this.byCategory("background")) {
       const def = mechanic<{ abilityChoices?: AbilityKey[]; skills?: string[]; tool?: string; toolChoice?: string; originFeat?: string; equipmentChoice?: boolean }>(entry, "background-definition") ?? {};
-      const feat = this.resolveFeatReference(def.originFeat ?? "dnd.srd521.feat.skilled");
+      const feat = this.resolveFeatReference(def.originFeat ?? "");
       views.push({
         id: entry.id, name: entry.name, nameEn: entry.nameEn, description: entry.description ?? this.inputs.extras.backgrounds[entry.id]?.description,
         abilityChoices: def.abilityChoices ?? ["str", "dex", "con"], skills: def.skills ?? [], tool: def.tool, toolChoice: def.toolChoice,
@@ -510,8 +520,9 @@ export class ContentCatalog {
   /** `dnd.srd521.feat.magic-initiate-cleric` → the magic-initiate feat with spellList preset to cleric. */
   resolveFeatReference(id: string): { id: string; preset?: Record<string, string> } {
     if (this.entries.has(id)) return { id };
-    const match = /^(.*\.feat\.magic-initiate)-(cleric|druid|wizard)$/.exec(id);
-    if (match && this.entries.has(match[1])) return { id: match[1], preset: { spellList: match[2] } };
+    // A reference with a class slug appended presets that spell list (`…magic-initiate-cleric`).
+    const match = /^(.*)-([a-z]+)$/.exec(id);
+    if (match && this.entries.has(match[1]) && this.byCategory("class").some((entry) => slugOfId(entry.id) === match[2])) return { id: match[1], preset: { spellList: match[2] } };
     return { id };
   }
 

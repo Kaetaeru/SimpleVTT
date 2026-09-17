@@ -5,13 +5,13 @@
  */
 import type { ClassLevelRow, ClassView } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
-import { COLUMN, numericColumn, SPELLCASTING_ABILITY, WIZARD_SPELLBOOK } from "../rules/classes";
+import { COLUMN, numericColumn } from "../rules/classes";
 import { fullCasterSlots, multiclassCasterLevel, pactMagicSlots } from "../rules/tables";
 import { spellOption, spellOptions } from "./choices";
 import type { ClassState, Ledger, SpellcastingAccumulator } from "./ledger";
 
 export function classCastingAbility(cls: ClassView): AbilityKey {
-  return SPELLCASTING_ABILITY[cls.slug] ?? cls.primaryAbilities.find((key) => key === "int" || key === "wis" || key === "cha") ?? "int";
+  return cls.rules.spellcastingAbility ?? cls.primaryAbilities.find((key) => key === "int" || key === "wis" || key === "cha") ?? "int";
 }
 
 /** Highest spell level the class can prepare at this row (its own slot columns; Pact Magic uses the slot-level column). */
@@ -71,10 +71,11 @@ export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: Cl
     for (const id of picked) entry.cantrips.add(id);
   }
 
-  if (cls.spells?.spellbook !== undefined || cls.slug === "wizard") {
-    const spellbookMax = WIZARD_SPELLBOOK.atLevel1 + WIZARD_SPELLBOOK.perLevel * (state.level - 1);
+  if (cls.spells?.spellbook !== undefined) {
+    const perLevel = cls.spells.spellbookPerLevel ?? 0;
+    const spellbookMax = cls.spells.spellbook + perLevel * (state.level - 1);
     entry.spellbook = new Set();
-    const picked = ledger.ask({ ...ask, id: `class.${first}.spellbook`, label: `주문서 (${spellbookMax}개)`, description: "1레벨에 6개, 이후 레벨마다 2개씩 적습니다. 발견한 주문은 별도로 필사합니다.", count: spellbookMax, options: spellOptions(catalog, lists, levels) });
+    const picked = ledger.ask({ ...ask, id: `class.${first}.spellbook`, label: `주문서 (${spellbookMax}개)`, description: `1레벨에 ${cls.spells.spellbook}개${perLevel ? `, 이후 레벨마다 ${perLevel}개씩` : ""} 적습니다. 발견한 주문은 별도로 필사합니다.`, count: spellbookMax, options: spellOptions(catalog, lists, levels) });
     for (const id of picked) entry.spellbook.add(id);
     if (entry.preparedMax > 0) {
       const options = picked.map((id) => catalog.spellById(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)).map((spell) => spellOption(spell));

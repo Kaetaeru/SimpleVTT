@@ -181,6 +181,7 @@ export function applyBackground(ledger: Ledger) {
     if (picked) ledger.tools.set(picked, toolName(catalog, picked));
   }
 
+  if (!background.originFeat) return;
   const feat = catalog.featById(background.originFeat);
   if (feat) applyFeat(ledger, feat, { key: "background", sourceLabel, preset: background.originFeatPreset });
   else ledger.warnings.push(`배경의 기원 재주 "${background.originFeat}"을(를) 찾을 수 없습니다.`);

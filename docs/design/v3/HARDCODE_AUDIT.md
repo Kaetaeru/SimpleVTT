@@ -35,14 +35,14 @@
 
 | # | 위치 | 지금 | JSON 목표 | 필요한 문법 |
 |---|---|---|---|---|
-| P1 (일부 ✔ H3: 원초의 투사·야성 감각·불굴의 힘·드루이드어·도둑 은어·마법의 비밀·단련된 생존자; H3c ✔ 비무장 방어·빠른 이동·비무장 이동·만능재주·무술; 남음: 주문 시전 플래그 → H4) | `tracks.ts` 특성 키 분기: `fast-movement`, `unarmored-defense`, `unarmored-movement`, `martial-arts`, `jack-of-all-trades`, `disciplined-survivor`, `primal-champion`, `feral-senses`, `indomitable-might`, `druidic`, `thieves-cant`, `magical-secrets`, `pact-magic`, `spellcasting` | 특성 키 → 플래그 → `derive.ts`가 플래그로 계산 | 특성 계약: `speed.walk`(조건 `armor.training`), `ac.unarmored-formula`, `skill.all.half-proficiency`, `saving-throw.proficiency`, `ability.score.bonus`, `senses.blindsight`, `language.grant`, `spell-list.any` | `ac.unarmored-formula`, `language.grant`, `check.minimum`, `spell-list.*` 추가 |
+| P1 (일부 ✔ H3: 원초의 투사·야성 감각·불굴의 힘·드루이드어·도둑 은어·마법의 비밀·단련된 생존자; H3c ✔ 비무장 방어·빠른 이동·비무장 이동·만능재주·무술; H4 ✔ 주문 시전 플래그 → `casterKind`) | `tracks.ts` 특성 키 분기: `fast-movement`, `unarmored-defense`, `unarmored-movement`, `martial-arts`, `jack-of-all-trades`, `disciplined-survivor`, `primal-champion`, `feral-senses`, `indomitable-might`, `druidic`, `thieves-cant`, `magical-secrets`, `pact-magic`, `spellcasting` | 특성 키 → 플래그 → `derive.ts`가 플래그로 계산 | 특성 계약: `speed.walk`(조건 `armor.training`), `ac.unarmored-formula`, `skill.all.half-proficiency`, `saving-throw.proficiency`, `ability.score.bonus`, `senses.blindsight`, `language.grant`, `spell-list.any` | `ac.unarmored-formula`, `language.grant`, `check.minimum`, `spell-list.*` 추가 |
 | P2 ✔ H3 | `tracks.ts` `expertise`, `deft-explorer`, `fighting-style`, `primal-knowledge`, `blessed-strikes`, `elemental-fury`, `mystic-arcanum-N` | 선택 요청을 특성 키로 분기 | 특성 계약 `choice.*` 연산(`choice.expertise`, `choice.languages`, `choice.fighting-style`, `choice.skills`, `choice.class-option`, `choice.spell` + 무료 시전 자원) | §3 만들기 연산 |
 | P3 ✔ H3 | `tracks.ts` 기원술 slug 분기: `pact-of-the-tome`, `gift-of-the-depths`, `witch-sight`, `devils-sight` | 기원술 ID 분기 | 기원술 계약: `choice.spells`, `speed.swim`, `senses.truesight`, `senses.devils-sight` | §3 + 감각 속성 |
 | P4 ✔ H3c | `derive.ts` slug 분기: 용의 회복력 AC(`sorcerer` draconic), 방랑자 이동(`ranger` 6), 보호의 오라 내성(`paladin` 6) | 직업 slug·레벨 비교 | 해당 특성 계약 `ac.unarmored-formula`, `speed.walk`(조건: 중갑 아님), `saving-throw.bonus`(이미 계약 있음 — 코드와 이중 계산 위험) | 기존 + `ac.unarmored-formula` |
-| P5 | `tracks.ts` `cls.slug === "paladin"/"ranger"` 전투 방식 대체 선택지, `cls.slug === "sorcerer"` 메타매직 | 직업 slug 분기 | 직업 데이터: 전투 방식 선택지 목록에 대체 항목, 메타매직 선택 스케줄 | 직업 JSON 필드 |
-| P6 | `rules/classes.ts` `CLASS_TRAINING`, `SPELLCASTING_ABILITY`, `ASI_LEVELS`, `EXPERTISE_SCHEDULE`, `FIGHTING_STYLE_LEVEL`, `METAMAGIC_KNOWN`, `MYSTIC_ARCANUM`, `WIZARD_SPELLBOOK`, `COLUMN`, `CLASS_RESOURCES`(29개, 최대치 함수 포함) | 12직업 표가 TS 상수 | 직업 모듈 JSON(`progression`, `resources: [{ id, max: 표현식 또는 열 이름, recovery }]`). 모듈 직업이 자원·스케줄을 가질 수 있어야 함 | 자원 최대치 표현식(계약 표현식 재사용) |
+| P5 ✔ H3·H4 | `tracks.ts` `cls.slug === "paladin"/"ranger"` 전투 방식 대체 선택지, `cls.slug === "sorcerer"` 메타매직 | 직업 slug 분기 | 직업 데이터: 전투 방식 선택지 목록에 대체 항목, 메타매직 선택 스케줄 | 직업 JSON 필드 |
+| P6 ✔ H4 (`COLUMN`·`numericColumn`은 진행표 열 어휘로 남음) | `rules/classes.ts` `CLASS_TRAINING`, `SPELLCASTING_ABILITY`, `ASI_LEVELS`, `EXPERTISE_SCHEDULE`, `FIGHTING_STYLE_LEVEL`, `METAMAGIC_KNOWN`, `MYSTIC_ARCANUM`, `WIZARD_SPELLBOOK`, `COLUMN`, `CLASS_RESOURCES`(29개, 최대치 함수 포함) | 12직업 표가 TS 상수 | 직업 모듈 JSON(`progression`, `resources: [{ id, max: 표현식 또는 열 이름, recovery }]`). 모듈 직업이 자원·스케줄을 가질 수 있어야 함 | 자원 최대치 표현식(계약 표현식 재사용) |
 | P7 | `client/data/srd/*.ts` 739줄 (`classFeatures`, `subclasses`, `classOptions`, `species`, `spellLists`, `featsAndBackgrounds`) | SRD 콘텐츠가 TS 파일 | `content/modules/dnd-srd-5.2.1.*` JSON으로 이동 | 없음(형식 변환) |
-| P8 | `rules/tables.ts` `MULTICLASS_PREREQUISITES` | 직업별 멀티클래스 조건 | 직업 JSON `multiclass.prerequisites` | 직업 JSON 필드 |
+| P8 ✔ H4 | `rules/tables.ts` `MULTICLASS_PREREQUISITES` | 직업별 멀티클래스 조건 | 직업 JSON `multiclass.prerequisites` | 직업 JSON 필드 |
 | P9 ✔ H3d | `tracks.ts` `LAND_RESISTANCE`, `subclass.land-type`·`elemental-affinity` 분기 | 서브클래스 선택지 효과 분기 | 선택지 계약 `resistance`, `condition-immunity` | 기존 문법 |
 | P10 | `attackSpec.ts` 암습(`sneakDice`, `hasSneakAttack`), 신성한 강타(`hasSmite`, `SMITE_LABEL`, 악마·언데드 +1d8), `HIT_BUILT_INS`, 야만적 공격자 `featEffects` | 명중 창 내장 라이더 | `on-hit` 계약: 암습 `diceCount: ceil-div(rogue level, 2)` + 조건 사실(유리 또는 인접 아군 — 버튼), 강타 `damage.apply` + 슬롯 비용 + `when: target.type in [fiend, undead]` | 슬롯 비용 연산, 대상 유형 참조 |
 | P11 | `activation.ts` `FEATURE_ACTIVATIONS` 4개(공격 흘리기, 브레스 무기, 아드레날린 분출, 안수), `breathDice`, `METAMAGIC_COST`, `NOT_ACTIVATABLE` | 손으로 쓴 사용 규칙 | 각 특성 계약(`damage.apply` 레벨 표현식, `temp-hp.grant`, 점수 풀 사용), 메타매직 선택지 계약 `resource.change` | 점수형 풀 사용 연산 |
@@ -51,7 +51,7 @@
 | P14 | `summons.ts` `SUMMON_RULES`(5), `CONJURES_NOTHING`(6), `STEEDS` | 주문 ID별 소환 규칙 | 주문 메커닉 `summon`(R84에 이미 있음)으로 합치고, 소환 없음은 `summon: false` + 사유 | 기존(R84) |
 | P15 | `host.ts` `COUNTERSPELL`, 방패 반응(`pcReactionSpell(… "shield")`), `Notify.tsx` 두 ID | 반응 주문 ID | 주문 메커닉 `reaction: { trigger: "attack.hit-self", acBonus: 5 }`, `reaction: { trigger: "spell.cast-seen", counter: true }` — 반응 창이 주문 목록을 읽음 | 반응 주문 트리거 |
 | P16 ✔ H1 | `PageCanvas.tsx` `SITUATIONAL`(무리 전술·태양광 과민성·투명 정규식) | 특성 이름 정규식 | S6 색인 패턴 `pack-tactics`, `sunlight-sensitivity` → 상황 버튼 | S6 |
-| P17 | `classes.ts` `fiend-patron` 자원, `catalog.ts` 기본 기원 재주 `feat.skilled`, `tracks.ts` `ASI_FEAT_ID` | 콘텐츠 ID 기본값 | 배경 JSON `originFeat` 필수화, 직업 JSON `asiFeat` | 필드 |
+| P17 ✔ H4 | `classes.ts` `fiend-patron` 자원, `catalog.ts` 기본 기원 재주 `feat.skilled`, `tracks.ts` `ASI_FEAT_ID` | 콘텐츠 ID 기본값 | 배경 JSON `originFeat` 필수화, 직업 JSON `asiFeat` | 필드 |
 
 ## 3. 추가해야 할 범용 문법
 
@@ -79,6 +79,7 @@
 | 계약 문법 집합(`COMPUTED_OPERATIONS`, `PROPERTIES`, `ATTACK_INVOCATIONS` …) | 문법 자체. |
 | 채팅 명령 정규식, `LIMITS`, UI 색·라벨, 지속시간 한국어 단위 파싱(`ROUNDS_PER`) | UI·통신·보안. |
 | `activation.ts` `featureRuleKey` ID 규칙 | ID 체계 해석. |
+| `tracks.ts` 진행표 행 단어 `"Ability Score Improvement"`, `"Epic Boon"`, `"Subclass Feature"`, `/Subclass$/` (H4) | 직업 진행표 형식의 어휘. SRD와 모듈 직업표가 같은 단어로 행을 쓴다. |
 
 ## 5. 진행 순서 (제안)
 

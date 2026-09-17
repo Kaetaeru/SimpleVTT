@@ -66,6 +66,8 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
     // R51 (D186): a feat already carries the lines its own config produced (R33); the contract's join them rather
     // than replacing them, so a feat that is half config and half contract says both halves.
     if (contract) { const summary = contractSummary(contract, characterScope(derived)); feature.rules = [...(feature.rules ?? []), ...summary.rules]; feature.execution = summary.execution; }
+    // H4 (D243): the feature a class definition names as its spellcasting is the sheet's spell section, worked out.
+    else if (derived.classes.some((state) => catalog.classById(state.classId)?.rules.spellcastingFeature === key)) { feature.rules = [...(feature.rules ?? []), "주문 시전: 슬롯·소마법·준비 주문을 주문 칸에서 자동 계산"]; feature.execution = "derived"; }
   }
   derived.featureContracts = featureContracts;
   // R52 (D187): what this sheet may declare in the attack dialog, worked out once and carried with it.

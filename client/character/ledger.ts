@@ -186,7 +186,7 @@ export class Ledger {
     return entry;
   }
 
-  hasSpellcasting() { return this.spellcasting.size > 0 || this.flags.has("pact-magic") || [...this.flags].some((flag) => flag.startsWith("spellcasting:")); }
+  hasSpellcasting() { return this.spellcasting.size > 0 || [...this.classes.values()].some((state) => (this.catalog.classById(state.classId)?.casterKind ?? "none") !== "none"); }
 
   classBySlug(slug: string) { return [...this.classes.values()].find((state) => state.slug === slug); }
   classLevel(slug: string) { return this.classBySlug(slug)?.level ?? 0; }
