@@ -120,3 +120,29 @@ test("V3c: 믿음직한 재능 turns a proficient check's low d20 into 10 at the
   const card = t.host.archive.filter((message) => message.type === "act" && message.act).at(-1)!;
   assert.equal(card.act!.check?.d20, 10, JSON.stringify(card.act!.check));
 });
+
+test("V3d: 몽크의 기 is three uses, each with its cost, economy and effect; 열린 손 기술 rides a 질풍 연타 hit (D258)", async () => {
+  const { featureActivation } = await import("../../client/rules/activation");
+  const { hitOffers } = await import("../../client/rules/attackSpec");
+  const monk = build({ name: "몽크", classes: "monk", level: 10 }, { "class.2.subclass": ["dnd.srd521.subclass.monk.warrior-of-the-open-hand"] }).derived;
+  const use = (name: string) => { const feature = monk.features.find((item) => item.name === name)!; assert.ok(feature, monk.features.map((item) => item.name).join(", ")); return featureActivation(feature, monk)!; };
+  const flurry = use("질풍 연타");
+  assert.deepEqual([flurry.resourceId, flurry.economy, flurry.duration?.(monk).rounds], ["resource.monk.focus", "bonus-action", 1]);
+  assert.ok(flurry.note?.includes("3회"), flurry.note);
+  assert.equal(use("인내의 방어").tempHp?.(monk), "2d8");
+  assert.equal(use("바람의 걸음").economy, "bonus-action");
+  assert.equal(monk.features.find((item) => item.name === "몽크의 기")?.execution, "derived");
+  // The open hand riders are offered only while 질풍 연타 runs, on an unarmed strike.
+  const fist = monk.attacks.find((attack) => !attack.itemId)!;
+  const runtime = initialRuntime(monk);
+  const keys = (effects: string[]) => hitOffers({ runtime: { ...runtime, effects: effects.map((name) => ({ key: `x:${name}`, name, source: "feature" as const, duration: "이번 턴", concentration: false, elapsed: 0, startedAt: "" })) } }, monk, fist.id).map((offer) => offer.key);
+  assert.ok(!keys([]).some((key) => key.includes("open-hand-technique")), JSON.stringify(keys([])));
+  assert.ok(keys(["질풍 연타"]).some((key) => key.endsWith("open-hand-technique#topple")), JSON.stringify(keys(["질풍 연타"])));
+
+  // At the table, 인내의 방어 marks its user with 회피 and 이탈.
+  const t = await soloTable("monk", 10, {}, () => 0.5);
+  t.dm.send({ type: "act.contract", actor: t.ref, ruleKey: "monk.focus#patient-defense" });
+  await tick();
+  const token = t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((item) => item.id === t.token.id)!;
+  assert.deepEqual(token.markers.map((marker) => marker.name).filter((name) => name === "회피" || name === "이탈").sort(), ["이탈", "회피"], JSON.stringify(token.markers));
+});

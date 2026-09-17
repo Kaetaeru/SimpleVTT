@@ -322,7 +322,25 @@ export class ContentCatalog {
 
   entry(id: string) { return this.entries.get(id); }
   /** R34 (D171): the contract for a feature rule key (`featureRuleKey(feature.id)`), when the content ships one. */
-  contractFor(ruleKey: string) { return this.contracts.get(ruleKey); }
+  /**
+   * A contract by rule key. V3d (D258): `<rule key>#<use>` is one labelled use of it — only that entry point, with its
+   * own payments; the plain key is the rest of the contract, without its labelled uses.
+   */
+  contractFor(ruleKey: string) {
+    const hash = ruleKey.indexOf("#");
+    const contract = this.contracts.get(hash < 0 ? ruleKey : ruleKey.slice(0, hash));
+    if (!contract || !contract.entryPoints.some((entry) => entry.label)) return hash < 0 ? contract : undefined;
+    if (hash < 0) {
+      const rest = contract.entryPoints.filter((entry) => !entry.label);
+      // A feature that is only its uses says so on its own line; each use has the rest.
+      const uses = contract.entryPoints.filter((entry) => entry.label).map((entry) => entry.label).join(" · ");
+      return { ...contract, entryPoints: rest.length ? rest : [{ id: "uses", invocation: "manual", operations: [{ kind: "property.modify" as const, property: "rule.applied-elsewhere", operation: "set", note: `사용: ${uses} — 아래 줄` }] }] };
+    }
+    const use = contract.entryPoints.find((entry) => entry.label && entry.id === ruleKey.slice(hash + 1));
+    return use ? { ...contract, entryPoints: [use], payments: use.payments ?? contract.payments } : undefined;
+  }
+  /** V3d (D258): the labelled uses a contract names. */
+  contractUses(ruleKey: string) { return (this.contracts.get(ruleKey)?.entryPoints ?? []).filter((entry) => entry.label).map((entry) => ({ id: entry.id, label: entry.label! })); }
   name(id: string) { return this.entries.get(id)?.name ?? this.spellById(id)?.name ?? id; }
   byCategory(category: string) { return [...this.entries.values()].filter((entry) => entry.category === category); }
 

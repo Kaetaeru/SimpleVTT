@@ -81,6 +81,8 @@ export function classCoverage() {
     silent[slug] = [];
     for (const feature of made.derived.features) {
       if (feature.source !== "class" && feature.source !== "subclass") continue;
+      // V3d (D258): a use of a feature is counted with the feature.
+      if (feature.id.includes("#")) continue;
       const key = featureRuleKey(feature.id);
       if (seen.has(key)) continue;
       seen.add(key);

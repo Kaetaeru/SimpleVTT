@@ -145,7 +145,7 @@ export interface TableHostOptions {
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number } } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
@@ -1011,6 +1011,8 @@ export class TableHost {
           this.mark(target, outcome.conditionsRemoved, false);
         }
         const lines: string[] = [];
+        // V3d (D258): the turn marks a use puts on its user.
+        if (outcome.selfMarks?.length) { this.mark(actor, outcome.selfMarks, true); lines.push(`${who}: ${outcome.selfMarks.join("·")}`); }
         if (outcome.conditionsApplied.length && targets.length) lines.push(`${targets.map((target) => target.token?.name ?? target.entry.name).join(", ")}: ${outcome.conditionsApplied.join("·")}`);
         for (const artifact of outcome.artifacts) {
           if (artifact.kind === "artifact.spawn" && artifact.monsterId) {

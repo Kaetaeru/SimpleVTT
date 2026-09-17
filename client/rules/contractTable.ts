@@ -14,6 +14,8 @@ export interface TableOutcome {
   label: string;
   conditionsApplied: string[];
   conditionsRemoved: string[];
+  /** V3d (D258): turn marks the use puts on its user (인내의 방어: 회피·이탈). */
+  selfMarks: string[];
   deathSave: boolean;
   notes: string[];
   artifacts: Array<{ kind: string; monsterId?: string; count?: number }>;
@@ -35,6 +37,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const scope = characterScope(derived);
   const outcome = contractOutcome(contract, scope);
   const applied: string[] = [];
+  const selfMarks: string[] = [];
   const party: TableOutcome["party"] = { grants: [] };
   const formula = (operation: { dice?: string; amount?: unknown }) => {
     const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
@@ -46,6 +49,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     for (const operation of entry.operations) {
       if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
       if (operation.kind === "condition.apply" && operation.target !== "self") { applied.push(operation.condition); continue; }
+      if (operation.kind === "condition.apply") { selfMarks.push(operation.condition); continue; }
       // R58 (D193): the half aimed at other people. The sheet cannot answer any of it — it does not know who.
       if (!("target" in operation) || !atOthers(operation.target)) continue;
       if (operation.kind === "temp-hp.grant") party.tempHp = formula(operation);
@@ -59,12 +63,13 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     label: derived.features.find((feature) => feature.id.endsWith(ruleKey))?.name ?? ruleKey,
     conditionsApplied: applied,
     conditionsRemoved: [],
+    selfMarks,
     deathSave: outcome.deathSave,
     notes: outcome.notes,
     artifacts: outcome.artifacts.map((item) => ({ kind: item.kind, monsterId: item.monsterId, count: item.count })),
     party,
   };
-  const asks = table.conditionsApplied.length || table.deathSave || table.notes.length || table.artifacts.length
+  const asks = table.conditionsApplied.length || table.selfMarks.length || table.deathSave || table.notes.length || table.artifacts.length
     || party.tempHp || party.heal || party.grants.length;
   return asks ? table : null;
 }

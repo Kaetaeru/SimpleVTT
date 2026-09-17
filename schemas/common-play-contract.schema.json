@@ -2011,7 +2011,14 @@
             "manual",
             "triggered",
             "automatic",
-            "granted"
+            "granted",
+            "on-hit",
+            "pre-roll-attack",
+            "gain",
+            "short-rest",
+            "initiative",
+            "kill",
+            "turn-start"
           ]
         },
         "legality": {
@@ -2040,6 +2047,37 @@
           "items": {
             "$ref": "#/$defs/operation"
           }
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "V3d (D258): the name of this use when a feature has several; the sheet gets a line and a button per labelled entry point."
+        },
+        "payments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/payment"
+          },
+          "description": "V3d (D258): what this use costs, in place of the contract payments."
+        },
+        "attack": {
+          "type": "object",
+          "description": "R52/R63: the weapon filter, once-per-turn budget and required running effects of an attack rider.",
+          "properties": {
+            "scope": {
+              "type": "string"
+            },
+            "oncePerTurn": {
+              "type": "boolean"
+            },
+            "requiresEffects": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

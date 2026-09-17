@@ -139,6 +139,10 @@ export interface ContractEntryPoint {
    * `requiresEffects` the effects that must already be running, and `oncePerTurn` the budget the player keeps.
    */
   attack?: { scope?: string; oncePerTurn: boolean; requiresEffects: string[] };
+  /** V3d (D258): the name of this use when a feature has several — the sheet gets a line and a button per use. */
+  label?: string;
+  /** V3d (D258): what this use costs, in place of the contract's own payments. */
+  payments?: ContractPayment[];
 }
 
 export interface ContractInterceptor {
@@ -342,19 +346,17 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
   return out;
 }
 
-/** Read a `common-play` mechanic config into a contract, naming every part this executor cannot run. */
-export function parseContract(config: Record<string, unknown>, entryId: string): CommonPlayContract {
-  const unsupported: string[] = [];
-  const id = String(config.id ?? entryId);
+/** The payments a contract or one of its entry points declares, naming what this executor cannot take. */
+function parsePayments(list: unknown, at: string, unsupported: string[]): ContractPayment[] {
   const payments: ContractPayment[] = [];
-  for (const [index, item] of (Array.isArray(config.payments) ? config.payments : []).entries()) {
+  for (const [index, item] of (Array.isArray(list) ? list : []).entries()) {
     const payment = item as Record<string, unknown>;
     const kind = payment.kind === "economy" ? "economy" : payment.kind === "resource" ? "resource" : null;
-    if (!kind) { unsupported.push(`payments[${index}]: ${String(payment.kind)}`); continue; }
+    if (!kind) { unsupported.push(`${at}[${index}]: ${String(payment.kind)}`); continue; }
     const condition = payment.condition as { kind?: string; outcome?: string } | undefined;
-    if (condition && condition.kind !== "d20-result") unsupported.push(`payments[${index}].condition: ${String(condition.kind)}`);
+    if (condition && condition.kind !== "d20-result") unsupported.push(`${at}[${index}].condition: ${String(condition.kind)}`);
     const amount = (payment.amount as { value?: number } | undefined)?.value;
-    if (typeof amount !== "number") { unsupported.push(`payments[${index}].amount: 고정 숫자가 아닙니다`); continue; }
+    if (typeof amount !== "number") { unsupported.push(`${at}[${index}].amount: 고정 숫자가 아닙니다`); continue; }
     payments.push({
       kind, amount, consumeAt: String(payment.consumeAt ?? "commit"),
       ...(kind === "resource" ? { resourceId: resourceIdOf(String(payment.resource ?? "")) } : { bucket: String(payment.bucket ?? "") }),
@@ -363,6 +365,14 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
       ...(payment.actionKind ? { actionKind: String(payment.actionKind) } : {}),
     });
   }
+  return payments;
+}
+
+/** Read a `common-play` mechanic config into a contract, naming every part this executor cannot run. */
+export function parseContract(config: Record<string, unknown>, entryId: string): CommonPlayContract {
+  const unsupported: string[] = [];
+  const id = String(config.id ?? entryId);
+  const payments = parsePayments(config.payments, "payments", unsupported);
   const entryPoints: ContractEntryPoint[] = [];
   for (const [index, item] of (Array.isArray(config.entryPoints) ? config.entryPoints : []).entries()) {
     const entry = item as Record<string, unknown>;
@@ -385,6 +395,9 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const targeting = entry.targeting as { from?: string; min?: number; max?: number } | undefined;
     entryPoints.push({
       id: String(entry.id ?? `entry${index}`), invocation,
+      // V3d (D258): a labelled entry point is a use of its own (몽크의 기: 질풍 연타 …), with its own payments.
+      ...(typeof entry.label === "string" ? { label: entry.label } : {}),
+      ...(Array.isArray(entry.payments) ? { payments: parsePayments(entry.payments, `entryPoints[${index}].payments`, unsupported) } : {}),
       ...(targeting ? { targeting: { from: String(targeting.from ?? "targets"), min: targeting.min ?? 1, max: targeting.max ?? 1 } } : {}),
       ...(test ? { test } : {}),
       ...(ATTACK_INVOCATIONS.has(invocation) ? { attack: { ...(attack?.scope ? { scope: String(attack.scope) } : {}), oncePerTurn: attack?.oncePerTurn !== false, requiresEffects: Array.isArray(attack?.requiresEffects) ? attack!.requiresEffects.map(String) : [] } } : {}),

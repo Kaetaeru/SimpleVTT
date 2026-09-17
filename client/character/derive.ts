@@ -14,7 +14,7 @@ import { MASTERY_KO, SKILL_ABILITY, weaponIsProficient } from "./choices";
 import { applyEquipment } from "./equipment";
 import { Ledger } from "./ledger";
 import { applyPassiveContracts, applyActiveEffects } from "../rules/effects";
-import { featureRuleKey } from "../rules/activation";
+import { featureRuleKey, qualifyRuleKey } from "../rules/activation";
 import { characterScope } from "../rules/contract";
 import { contractDurations, contractSummary, featureContract } from "../rules/contractActivation";
 import { characterRiders } from "../rules/attackRiders";
@@ -54,6 +54,14 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   if (options.inventory) applyInventoryPatch(ledger, options.inventory);
   if (options.equipped) applyEquipState(ledger, options.equipped);
   const derived = finalize(ledger);
+  // V3d (D258): a feature whose contract names several uses (몽크의 기: 질풍 연타, 인내의 방어, 바람의 걸음) gets a line per use.
+  for (let index = derived.features.length - 1; index >= 0; index -= 1) {
+    const feature = derived.features[index];
+    const key = featureRuleKey(feature.id);
+    const uses = catalog.contractUses(qualifyRuleKey(key)).length ? catalog.contractUses(qualifyRuleKey(key)) : catalog.contractUses(key);
+    if (!uses.length) continue;
+    derived.features.splice(index + 1, 0, ...uses.map((use) => ({ ...feature, id: `${feature.id}#${use.id}`, name: use.label, nameEn: `${feature.nameEn} (${use.id})`, rules: undefined, execution: undefined })));
+  }
   // R49 (D184): every feature's contract, worked out once and carried with the sheet.
   const durations = contractDurations(catalog, characterScope(derived));
   const featureContracts: NonNullable<DerivedCharacter["featureContracts"]> = {};

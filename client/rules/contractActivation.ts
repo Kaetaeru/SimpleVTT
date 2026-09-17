@@ -252,6 +252,12 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
         const count = operation.diceCount === undefined ? undefined : number(operation.diceCount);
         const die = operation.dice ? `${count ?? ""}${operation.dice.startsWith("d") ? operation.dice : operation.dice.replace(/^\d+/, "")}` : String(number(operation.amount) ?? "");
         rules.push(`${where} — 피해 +${die}`);
+      } else if (operation.kind === "condition.apply") {
+        // V3d (D258): what a rider puts on the target, and the save that resists it (넘어뜨리기, 충격의 일격).
+        rules.push(`${where} — ${operation.save ? `${operation.save.ability.toUpperCase()} 내성 실패 시 ` : ""}${operation.condition}`);
+      } else if (operation.kind === "resource.change") {
+        const amount = number(operation.amount) ?? 0;
+        if (amount < 0) rules.push(`${where} — ${-amount} 소비`);
       } else if (operation.kind === "adjudication.request") questions.push(operation.question);
     }
     if (entry.attack?.oncePerTurn) questions.push("턴당 한 번 (직접 세어 주세요)");
