@@ -423,11 +423,15 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
         const tcp = await TauriTcpTransport.host(DEFAULT_SESSION_PORT);
         if (hostRef.current !== host) { tcp.close(); return; }
         host.attach(tcp);
-        const addresses = await listSessionAddresses();
-        const lan = addresses.map((ip) => encodeInvite({ carrier: "tcp", address: `${ip}:${DEFAULT_SESSION_PORT}`, joinCode: campaign.joinCode }));
+        // R70 (D205): Hamachi first — the address the internet route picks is the home LAN one, which a friend on
+        // Hamachi cannot reach. And the address is the whole invite: IP and port, no code.
+        const addresses = [...await listSessionAddresses()].sort((a, b) => Number(!a.startsWith("25.")) - Number(!b.startsWith("25.")));
+        const lan = addresses.map((ip) => encodeInvite({ carrier: "tcp", address: `${ip}:${DEFAULT_SESSION_PORT}` }));
         setInvites([...lan, tabInvite]);
         setInvite(lan[0] ?? tabInvite);
-        setTransportNote(addresses.length ? null : `LAN 주소를 찾지 못했습니다. ipconfig의 IPv4 주소로 코드를 만드세요: <IP>:${DEFAULT_SESSION_PORT}-${campaign.joinCode}`);
+        setTransportNote(addresses.length
+          ? `다른 PC는 캠페인 화면에서 위의 IP와 포트(${DEFAULT_SESSION_PORT})로 들어옵니다. 못 들어오면 Windows 방화벽에서 SimpleVTT를 "개인"과 "공용" 네트워크 모두 허용하세요 — 하마치는 공용으로 잡히는 경우가 많습니다. 양쪽이 같은 버전의 exe여야 합니다.`
+          : `주소를 찾지 못했습니다. 하마치 창의 25.x.x.x 주소나 ipconfig의 IPv4 주소와 포트 ${DEFAULT_SESSION_PORT}를 알려 주세요.`);
       } catch (error) { setTransportNote(`LAN 호스트를 열지 못했습니다: ${error instanceof Error ? error.message : String(error)}`); }
       bump();
     } else setTransportNote("브라우저에서는 같은 PC의 다른 탭만 참가할 수 있습니다. LAN·하마치는 exe에서 열립니다.");
@@ -435,13 +439,13 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
 
   const join = useCallback(async (inviteText: string) => {
     const parsed: Invite | null = decodeInvite(inviteText);
-    if (!parsed) return "참가 코드 형식이 아닙니다. 예: tab:camp_x1-K7QX3M 또는 25.12.34.56:41230-K7QX3M";
+    if (!parsed) return "주소 형식이 아닙니다. 예: 25.12.34.56:41230 (같은 PC 브라우저 탭은 tab:camp_x1-K7QX3M)";
     if (parsed.carrier === "tcp" && !tauriAvailable()) return "LAN(tcp) 참가는 exe에서만 됩니다. 브라우저에서는 같은 PC의 tab: 코드만 됩니다.";
     if (parsed.carrier === "tab" && !BroadcastChannelTransport.available()) return "이 브라우저는 탭 간 연결을 지원하지 않습니다.";
     leave();
     try {
       const transport = parsed.carrier === "tcp" ? await TauriTcpTransport.connect(parsed.address) : new BroadcastChannelTransport(parsed.address, "peer");
-      const client = new TableClient(transport, { userId, displayName: displayName || "플레이어", joinCode: parsed.joinCode, seat: seatSecret });
+      const client = new TableClient(transport, { userId, displayName: displayName || "플레이어", joinCode: parsed.joinCode ?? "", seat: seatSecret });
       attachClient(client);
       client.subscribe(() => {
         const snapshot = client.snapshot;
@@ -458,7 +462,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       bump();
       return null;
     } catch (error) {
-      return `호스트 ${parsed.address}에 연결하지 못했습니다: ${error instanceof Error ? error.message : String(error)}. 호스트가 캠페인을 시작했는지, 방화벽이 ${DEFAULT_SESSION_PORT} 포트를 허용하는지 확인하세요.`;
+      return `호스트 ${parsed.address}에 연결하지 못했습니다: ${error instanceof Error ? error.message : String(error)}. 확인할 것: ① 호스트가 exe에서 "게임 시작"을 눌렀는지 ② IP가 호스트 헤더에 보이는 주소(하마치면 25.x.x.x)인지 ③ 호스트 PC의 Windows 방화벽이 SimpleVTT를 공용 네트워크에서도 허용하는지 ④ 하마치에서 두 PC가 같은 네트워크에 초록불로 붙어 있는지.`;
     }
   }, [attachClient, bump, displayName, joined, leave, saveJoined, userId, seatSecret]);
 

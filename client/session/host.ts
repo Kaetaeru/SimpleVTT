@@ -295,7 +295,8 @@ export class TableHost {
   private dispatch(peerId: string, command: ClientCommand) {
     if (command.type === "hello") {
       if (command.protocol !== PROTOCOL_VERSION) return this.reply(peerId, { type: "refused", reason: `버전이 다릅니다 (호스트 ${PROTOCOL_VERSION}, 참가자 ${command.protocol}). 같은 빌드를 쓰세요.`, commandType: "hello" });
-      if (command.joinCode.toUpperCase() !== this.campaign.joinCode) return this.reply(peerId, { type: "refused", reason: "참가 코드가 맞지 않습니다", commandType: "hello" });
+      // R70 (D205): a player who came by address alone brings no code; a code that is brought still has to match.
+      if (command.joinCode && command.joinCode.toUpperCase() !== this.campaign.joinCode) return this.reply(peerId, { type: "refused", reason: "참가 코드가 맞지 않습니다", commandType: "hello" });
       const isHostUser = command.userId === this.options.hostUserId;
       if (isHostUser && (!this.options.hostSecret || command.hostSecret !== this.options.hostSecret)) return this.reply(peerId, { type: "refused", reason: "호스트와 같은 사용자 id입니다", commandType: "hello" });
       const existing = this.campaign.players.find((player) => player.userId === command.userId);

@@ -14,12 +14,16 @@ export function CampaignsScreen() {
   const c = useCampaigns();
   const [title, setTitle] = useState("");
   const [code, setCode] = useState("");
+  // R70 (D205): over LAN/Hamachi an IP and a port are the whole way in.
+  const [hostIp, setHostIp] = useState("");
+  const [hostPort, setHostPort] = useState("41230");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [display, setDisplay] = useState(c.displayName);
   const commitName = () => { if (display.trim() && display.trim() !== c.displayName) c.setDisplayName(display.trim()); };
   const create = async () => { commitName(); const campaign = await c.createCampaign(title); setTitle(""); navigate({ screen: "campaign", id: campaign.id }); };
-  const join = async () => { commitName(); setBusy(true); const result = await c.join(code); setBusy(false); setError(result); if (!result) navigate({ screen: "table" }); };
+  const join = async (target = code) => { commitName(); setBusy(true); const result = await c.join(target); setBusy(false); setError(result); if (!result) navigate({ screen: "table" }); };
+  const joinByAddress = () => void join(`${hostIp.trim()}:${hostPort.trim() || "41230"}`);
   const mine = c.campaigns;
   return (
     <div className="cl-page">
@@ -34,10 +38,17 @@ export function CampaignsScreen() {
           </div>
         </div>
         <div className="cl-card">
-          <h3>참가 코드로 입장</h3>
+          <h3>호스트에 입장</h3>
           <div className="cl-row" style={{ gap: 6 }}>
-            <input className="cl-input" style={{ flex: 1 }} placeholder="tab:camp_x1-K7QX3M 또는 25.1.2.3:41230-K7QX3M" aria-label="참가 코드" value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void join(); }} />
-            <button type="button" className="cl-btn primary" disabled={!code.trim() || busy} onClick={() => void join()}>{busy ? "연결 중…" : "입장"}</button>
+            <input className="cl-input" style={{ flex: 1 }} placeholder="호스트 IP (하마치 25.x.x.x)" aria-label="호스트 IP" inputMode="decimal" value={hostIp} onChange={(event) => setHostIp(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && hostIp.trim()) joinByAddress(); }} />
+            <input className="cl-input" style={{ width: 90 }} placeholder="포트" aria-label="포트" inputMode="numeric" value={hostPort} onChange={(event) => setHostPort(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && hostIp.trim()) joinByAddress(); }} />
+            <button type="button" className="cl-btn primary" disabled={!hostIp.trim() || busy} onClick={joinByAddress}>{busy ? "연결 중…" : "입장"}</button>
+          </div>
+          <p className="cl-quiet cl-small" style={{ margin: "4px 0 10px" }}>exe끼리 LAN·하마치로 들어갑니다. 호스트 화면 위쪽에 보이는 IP와 포트를 넣으세요.</p>
+          <div className="cl-quiet cl-small">같은 PC의 브라우저 탭으로 들어갈 때는 참가 코드:</div>
+          <div className="cl-row" style={{ gap: 6 }}>
+            <input className="cl-input" style={{ flex: 1 }} placeholder="tab:camp_x1-K7QX3M" aria-label="참가 코드" value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void join(); }} />
+            <button type="button" className="cl-btn" disabled={!code.trim() || busy} onClick={() => void join()}>{busy ? "연결 중…" : "코드로 입장"}</button>
           </div>
           {error ? <Notice tone="bad">{error}</Notice> : null}
         </div>

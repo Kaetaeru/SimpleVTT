@@ -68,7 +68,7 @@ try {
   await player.goto(`${base}?seat=player#/campaigns`);
   await player.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("지연");
   await player.getByLabel("참가 코드").fill(code);
-  await player.getByRole("button", { name: "입장", exact: true }).click();
+  await player.getByRole("button", { name: "코드로 입장", exact: true }).click();
   await player.locator(".cl-chat-input").waitFor({ timeout: 10000 });
   await dm.locator(".cl-avatar-chip", { hasText: "지연" }).waitFor({ timeout: 10000 });
   await dm.getByRole("button", { name: "+ 장면" }).first().click();

@@ -46,6 +46,12 @@ test("join code admits and remembers players; a wrong code and a kicked player a
   assert.equal(alice.status, "joined", "lower-case code is accepted");
   assert.equal(wrong.status, "refused");
   assert.equal(impostor.status, "refused", "the host's user id needs the host secret");
+  // R70 (D205): a player who came by IP and port alone brings no code, and is let in; the host secret still guards the DM.
+  const byAddress = new TableClient(hub.connect("p4"), { userId: "bob", displayName: "밥", joinCode: "" });
+  const impostorByAddress = new TableClient(hub.connect("p5"), { userId: "dm", displayName: "가짜", joinCode: "" });
+  await tick();
+  assert.equal(byAddress.status, "joined", "no code: admitted");
+  assert.equal(impostorByAddress.status, "refused", "no code does not skip the host secret");
   assert.ok(saved.campaign?.players.some((player) => player.userId === "alice" && player.role === "player" && player.color), "the campaign remembers alice with a color");
   assert.equal(host.state.joinCode, "ABC234", "the code did not change");
   alice.leave();
@@ -124,6 +130,12 @@ test("invite codes carry the campaign's fixed code for tab and tcp carriers", ()
   assert.equal(encodeInvite({ carrier: "tab", address: "camp_1", joinCode: "K7QX3M" }), "tab:camp_1-K7QX3M");
   assert.deepEqual(decodeInvite("25.12.34.56:41230-k7qx3m"), { carrier: "tcp", address: "25.12.34.56:41230", joinCode: "K7QX3M" });
   assert.equal(decodeInvite("garbage"), null);
+  // R70 (D205): an address alone is an invite over LAN/Hamachi; a bare IPv4 takes the default port.
+  assert.deepEqual(decodeInvite("25.12.34.56:41230"), { carrier: "tcp", address: "25.12.34.56:41230" });
+  assert.deepEqual(decodeInvite(" 25.12.34.56 "), { carrier: "tcp", address: "25.12.34.56:41230" });
+  assert.deepEqual(decodeInvite("tcp:192.168.0.7:5000"), { carrier: "tcp", address: "192.168.0.7:5000" });
+  assert.equal(encodeInvite({ carrier: "tcp", address: "25.12.34.56:41230" }), "tcp:25.12.34.56:41230");
+  assert.equal(decodeInvite("camp_1"), null, "a bare word is not an address");
   assert.equal(visibleTo({ id: "m", at: "", type: "whisper", who: "a", playerId: "a", target: "gm", content: "x" }, { userId: "b", role: "player" }), false);
   assert.equal(visibleTo({ id: "m", at: "", type: "whisper", who: "a", playerId: "a", target: "gm", content: "x" }, { userId: "c", role: "gm" }), true);
 });

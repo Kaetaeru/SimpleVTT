@@ -54,7 +54,7 @@ try {
   await player.goto(`${base}?seat=player#/campaigns`);
   await player.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("지연");
   await player.getByLabel("참가 코드").fill(code);
-  await player.getByRole("button", { name: "입장", exact: true }).click();
+  await player.getByRole("button", { name: "코드로 입장", exact: true }).click();
   await player.locator(".cl-chat-input").waitFor({ timeout: 10000 });
   await dm.locator(".cl-avatar-chip", { hasText: "지연" }).waitFor({ timeout: 10000 });
   check(await player.locator(".cl-avatar-chip", { hasText: "DM 민수" }).isVisible(), "player sees the DM in presence");
@@ -125,7 +125,7 @@ try {
   stranger.on("dialog", (dialog) => void dialog.accept());
   await stranger.goto(`${base}?seat=stranger#/campaigns`);
   await stranger.getByLabel("참가 코드").fill(code.replace(/-[A-Z0-9]{6}$/, "-ZZZZZZ"));
-  await stranger.getByRole("button", { name: "입장", exact: true }).click();
+  await stranger.getByRole("button", { name: "코드로 입장", exact: true }).click();
   await stranger.getByText(/참가 코드가 맞지 않습니다/).waitFor({ timeout: 10000 });
   check(true, "wrong code refused");
   await stranger.screenshot({ path: path.join(OUT, "35-join-wrong-code.png") });

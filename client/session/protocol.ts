@@ -197,10 +197,17 @@ export type HostMessage =
 export const isClientCommand = (value: unknown): value is ClientCommand => typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string";
 export const isHostMessage = (value: unknown): value is HostMessage => typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string";
 
-/** Invite: `<carrier>:<address>-<joinCode>`; `tab:<campaignId>-CODE` on one PC, `tcp:<host:port>-CODE` over LAN/Hamachi. */
-export interface Invite { carrier: "tab" | "tcp"; address: string; joinCode: string }
+/**
+ * Invite: `<carrier>:<address>-<joinCode>`; `tab:<campaignId>-CODE` on one PC, `tcp:<host:port>-CODE` over LAN/Hamachi.
+ * R70 (D205): over LAN/Hamachi the address is enough — `25.1.2.3:41230`, or just `25.1.2.3` for the default port.
+ * A code, when given, is still checked; when left out, the host does not ask for one.
+ */
+export interface Invite { carrier: "tab" | "tcp"; address: string; joinCode?: string }
 
-export const encodeInvite = (invite: Invite) => `${invite.carrier}:${invite.address}-${invite.joinCode}`;
+/** The port a host listens on when nobody says otherwise (the exe's TCP carrier). */
+export const INVITE_DEFAULT_PORT = 41230;
+
+export const encodeInvite = (invite: Invite) => `${invite.carrier}:${invite.address}${invite.joinCode ? `-${invite.joinCode}` : ""}`;
 
 export function decodeInvite(text: string): Invite | null {
   const value = text.trim();
@@ -208,5 +215,8 @@ export function decodeInvite(text: string): Invite | null {
   if (match) return { carrier: match[1].toLowerCase() as Invite["carrier"], address: match[2], joinCode: match[3].toUpperCase() };
   const bare = /^(\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-f:]+\]|[a-z0-9.-]+):(\d{2,5})-([A-Z0-9]{6})$/i.exec(value);
   if (bare) return { carrier: "tcp", address: `${bare[1]}:${bare[2]}`, joinCode: bare[3].toUpperCase() };
+  // R70 (D205): an address with no code — `tcp:25.1.2.3:41230`, `25.1.2.3:41230`, or a bare IPv4 on the default port.
+  const address = /^(?:tcp:)?(\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-f:]+\]|[a-z0-9-]+(?:\.[a-z0-9-]+)+)(?::(\d{2,5}))?$/i.exec(value);
+  if (address && (address[2] || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(address[1]))) return { carrier: "tcp", address: `${address[1]}:${address[2] ?? INVITE_DEFAULT_PORT}` };
   return null;
 }

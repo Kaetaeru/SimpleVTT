@@ -40,7 +40,7 @@ function Table() {
   const c = useCampaigns();
   const snapshot = c.table.snapshot!;
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean | string>(false);
   const [noteClosed, setNoteClosed] = useState(false);
   const [tab, setTab] = useState<"chat" | "journal" | "art" | "compendium">("chat");
   const [windows, setWindows] = useState<JournalWindow[]>([]);
@@ -68,10 +68,22 @@ function Table() {
           {snapshot.players.map((player) => <span key={player.userId} className={`cl-avatar-chip${player.connected ? "" : " off"}`} style={{ borderColor: player.color }} title={`${player.displayName}${player.role === "gm" ? " (GM)" : ""}${player.connected ? "" : " · 오프라인"}`}><span className="cl-swatch" style={{ background: player.color }} />{player.displayName}{player.role === "gm" ? <small>GM</small> : null}</span>)}
         </span>
         {c.table.role === "host" ? (
+          // R70 (D205): in the exe the way in is an address — Hamachi first, each with its own copy button.
+          c.table.invites.some((invite) => invite.startsWith("tcp:")) ? (
+            <span className="cl-row cl-small cl-invite" style={{ gap: 6 }}>
+              {c.table.invites.filter((invite) => invite.startsWith("tcp:")).slice(0, 2).map((invite) => { const address = invite.slice("tcp:".length).replace(/-[A-Z0-9]{6}$/, ""); return (
+                <span key={address} className="cl-row" style={{ gap: 4 }}>
+                  <span className="cl-quiet">{address.startsWith("25.") ? "하마치" : "LAN"}</span>
+                  <code className="cl-code" title={`${address} — IP와 포트`}>{address}</code>
+                  <button type="button" className="cl-btn small" onClick={async () => { setCopied((await copyText(address)) ? address : false); window.setTimeout(() => setCopied(false), 2000); }}>{copied === address ? "복사됨" : "복사"}</button>
+                </span>
+              ); })}
+            </span>
+          ) :
           <span className="cl-row cl-small cl-invite" style={{ gap: 4 }}>
             {/* R68 (D203): the code is long and only ever copied; it shows as much as fits and the button says what it is. */}
             <code className="cl-code" title={`참가 코드: ${c.table.invite ?? ""}`}>{c.table.invite}</code>
-            <button type="button" className="cl-btn small" title="참가 코드를 복사합니다" onClick={async () => { setCopied(await copyText(c.table.invite ?? "")); window.setTimeout(() => setCopied(false), 2000); }}>{copied ? "복사됨" : "참가 코드 복사"}</button>
+            <button type="button" className="cl-btn small" title="참가 코드를 복사합니다" onClick={async () => { setCopied((await copyText(c.table.invite ?? "")) ? true : false); window.setTimeout(() => setCopied(false), 2000); }}>{copied === true ? "복사됨" : "참가 코드 복사"}</button>
           </span>
         ) : null}
         <ClockStrip isGm={isGm} />

@@ -45,7 +45,7 @@ try {
   await player.goto(`${base}?seat=지연#/campaigns`);
   await player.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("지연");
   await player.getByLabel("참가 코드").fill(code);
-  await player.getByRole("button", { name: "입장", exact: true }).click();
+  await player.getByRole("button", { name: "코드로 입장", exact: true }).click();
   await player.locator(".cl-chat-input").waitFor({ timeout: 10000 });
   const seatId = await player.evaluate(() => window.localStorage.getItem("simplevtt-user-id:지연"));
   const dmId = await dm.evaluate(() => window.localStorage.getItem("simplevtt-user-id"));
@@ -79,7 +79,7 @@ try {
   const backId = await again.evaluate(() => window.localStorage.getItem("simplevtt-user-id:지연"));
   check(backId === seatId, `coming back is the same person (${seatId} → ${backId})`);
   await again.getByLabel("참가 코드").fill(code);
-  await again.getByRole("button", { name: "입장", exact: true }).click();
+  await again.getByRole("button", { name: "코드로 입장", exact: true }).click();
   await again.locator(".cl-chat-input").waitFor({ timeout: 10000 });
   await tab(again, "저널").click();
   await again.getByRole("button", { name: "지연의 파이터" }).first().click();
