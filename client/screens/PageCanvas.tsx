@@ -30,7 +30,7 @@ import { resolveRuntime } from "../character/save";
 import type { DerivedFeature, DerivedItem } from "../character/types";
 import { itemUse } from "../rules/items";
 import { castableSpells } from "../rules/spellcast";
-import { describeSpellExec, spellExec, sustainedExec, sustainOf , variantsOf } from "../compendium/spells";
+import { describeSpellExec, spellExec, sustainedExec, sustainOf, targetCountOf, variantsOf } from "../compendium/spells";
 import type { CastMethod } from "../character/play";
 import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
@@ -616,9 +616,13 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
     let targets: string[] = selfOnly ? [token.id] : [];
     if (!selfOnly) {
-      targets = await requestTargets(`${name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`})` : ""}`, { multi: exec.targeting.maxTargets > 1, exclude: exec.targeting.allowedRelations?.includes("self") ? undefined : token.id });
+      // V4v (D284): a bigger slot may reach more creatures (축복) — the highest slot this sheet could spend decides
+      // how many the window lets the player click; the host checks the count against the slot actually spent.
+      const highestSlot = entry.kind === "character" && derived ? Math.max(exec.baseLevel, ...Object.entries(derived.spellSlots).filter(([, max]) => max > 0).map(([slot]) => Number(slot))) : exec.baseLevel;
+      const mayTake = targetCountOf(exec, highestSlot);
+      targets = await requestTargets(`${name} — 대상을 클릭하세요${mayTake > 1 ? ` (최대 ${mayTake >= 64 ? "범위 안 전부" : `${mayTake}명`})` : ""}`, { multi: mayTake > 1, exclude: exec.targeting.allowedRelations?.includes("self") ? undefined : token.id });
       if (!targets.length) return;
-      if (targets.length > exec.targeting.maxTargets) targets = targets.slice(0, exec.targeting.maxTargets);
+      if (targets.length > mayTake) targets = targets.slice(0, mayTake);
     }
     let method: CastMethod | undefined = forced;
     if (!forced && entry.kind === "character" && derived) {

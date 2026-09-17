@@ -125,7 +125,7 @@ export function parseSpellDuration(value:unknown,label:string):DurationSpec {
 
 function parseTargeting(value:unknown,label:string):TargetingRule {
   const raw=object(value,label);
-  onlyKeys(raw,label,["kind","minimumRangeFeet","rangeFeet","minTargets","maxTargets","allowedRelations","requiresSight","directTarget"]);
+  onlyKeys(raw,label,["kind","minimumRangeFeet","rangeFeet","minTargets","maxTargets","targetsPerSlotAboveBase","allowedRelations","requiresSight","directTarget"]);
   const minTargets=integer(raw.minTargets,`${label}.minTargets`,0);
   const maxTargets=integer(raw.maxTargets,`${label}.maxTargets`,0);
   if(maxTargets<minTargets)throw new DomainEvaluationError(`${label}.maxTargets must be >= minTargets`);
@@ -133,6 +133,7 @@ function parseTargeting(value:unknown,label:string):TargetingRule {
   return {
     kind:oneOf(raw.kind,`${label}.kind`,TARGET_KINDS),
     minTargets,maxTargets,
+    ...(raw.targetsPerSlotAboveBase!==undefined?{targetsPerSlotAboveBase:integer(raw.targetsPerSlotAboveBase,`${label}.targetsPerSlotAboveBase`,0)}:{}),
     ...(raw.minimumRangeFeet!==undefined?{minimumRangeFeet:integer(raw.minimumRangeFeet,`${label}.minimumRangeFeet`,0)}:{}),
     ...(raw.rangeFeet!==undefined?{rangeFeet:integer(raw.rangeFeet,`${label}.rangeFeet`,0)}:{}),
     ...(allowedRelations?{allowedRelations}:{}),

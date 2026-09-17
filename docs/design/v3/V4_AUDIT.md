@@ -176,7 +176,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - produce-flame, flame-blade — 추가 행동 시전·이후 마법 행동 공격이어야. — [data-fix]
 - ✔ D269 spellIsJudged 버그 — 색인 데이터(sustain, creatures, weapon-spell)를 안 봐서 true-strike·spike-growth·find-familiar·find-steed·animate-dead가 판정으로 표시. — [engine bug]
 - ✔ D283 spare-the-dying — 안정화 계산 가능. — [host-hook]
-- 상위 슬롯 대상 증가 문법 없음(축복·액운·매혹·명령·웃음·영웅심·도약·괴물/인간 포박·투명·실명/귀머거리·능력 강화·비행·추방 등), 호스트가 추가 대상 거절. — [new-grammar] `targetsPerSlotAboveBase`.
+- ✔ D284 (문법과 작성된 5개: 축복·액운·영웅심·투명화·능력 강화. 나머지는 정의를 작성해야 함) 상위 슬롯 대상 증가 문법 없음(축복·액운·매혹·명령·웃음·영웅심·도약·괴물/인간 포박·투명·실명/귀머거리·능력 강화·비행·추방 등), 호스트가 추가 대상 거절. — [new-grammar] `targetsPerSlotAboveBase`.
 - ✔ D268 chromatic-orb — 항상 화염, 튕김 없음. — [picker + new-grammar]
 - ice-knife — 피해 없음. 명중 1d10 뒤 범위 2d6 내성. — [new-grammar]
 - command — 효과 없음. — [picker]

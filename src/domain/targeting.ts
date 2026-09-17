@@ -33,6 +33,8 @@ export interface TargetingRule {
   rangeFeet?: number;
   minTargets: number;
   maxTargets: number;
+  /** V4v (D284): one more creature per slot above the spell's own level (축복, 매혹). */
+  targetsPerSlotAboveBase?: number;
   allowedRelations?: TargetRelation[];
   requiresSight?: boolean;
   directTarget?: boolean;

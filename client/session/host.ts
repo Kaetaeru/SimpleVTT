@@ -26,7 +26,7 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { bearerRolls, monsterAuras, splitHitOffers, versusParts, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { onHitOf, spellExec, sustainedExec, sustainOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
+import { onHitOf, spellExec, sustainedExec, sustainOf, targetCountOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
 import type { ConditionDuration, TargetMark } from "../rules/contract";
 import type { ZeroHold } from "../character/types";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -925,7 +925,9 @@ export class TableHost {
         }
         const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
-        if (targetRefs.length > Math.max(exec.targeting.maxTargets, command.method?.kind === "sustain" ? 1 : 0)) return refuse(`대상은 최대 ${exec.targeting.maxTargets}명입니다`);
+        // V4v (D284): a bigger slot may reach more creatures (축복).
+        const mayTake = targetCountOf(exec, prepared.spec.level);
+        if (targetRefs.length > Math.max(mayTake, command.method?.kind === "sustain" ? 1 : 0)) return refuse(`대상은 최대 ${mayTake}명입니다`);
         const targets = targetRefs.map((ref) => this.resolveActor(ref)).filter((item): item is NonNullable<typeof item> => Boolean(item));
         if (targets.length !== targetRefs.length) return refuse("대상을 찾을 수 없습니다");
         const casterCombatant = this.combatantOf(caster);

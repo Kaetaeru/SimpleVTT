@@ -818,3 +818,21 @@ test("V4u: 죽음 방비 stops a dying character, 흡혈의 손길 gives its cas
   const wizard = dark.entry(0) as ReturnType<typeof newJournalCharacter>;
   assert.ok(wizard.runtime.hp.current > 5, JSON.stringify(dark.host.archive.slice(-3).map((message) => message.content)));
 });
+
+test("V4v: a bigger slot reaches more creatures — 축복 at 3rd takes five, and the table refuses a sixth (D284)", async () => {
+  const { spellExec, targetCountOf } = await import("../../client/compendium/spells");
+  const bless = spellExec("dnd.srd521.spell.bless")!;
+  assert.equal(bless.targeting.targetsPerSlotAboveBase, 1);
+  assert.equal(targetCountOf(bless, 1), 3);
+  assert.equal(targetCountOf(bless, 3), 5);
+
+  const t = await table([
+    { classes: "cleric", level: 9, abilities: { wis: 18 } },
+    { classes: "fighter", level: 5 }, { classes: "rogue", level: 5 }, { classes: "wizard", level: 5 }, { classes: "bard", level: 5 },
+  ], [], () => 0.5);
+  const party = [1, 2, 3, 4].map((index) => t.ref(index));
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.bless", targets: [t.ref(0), ...party], method: { kind: "slot", level: 3 } });
+  await tick();
+  const card = t.host.archive.filter((message) => message.type === "spell").at(-1);
+  assert.equal(card?.spell?.targets.length, 5, JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
+});

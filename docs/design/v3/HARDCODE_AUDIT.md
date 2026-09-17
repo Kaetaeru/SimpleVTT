@@ -86,6 +86,7 @@
 - `weapon.shillelagh`의 무기 목록·주사위를 데이터로(§2 위반 제거) · 주문 종료 `termination.bearerAttacksOrCasts`와 `consumeOn: "attack-or-cast"` (D281)
 - 주문 계약의 `turn-start` 시점을 호스트가 읽음 · 턴 시작의 임시 HP·피해 (D282)
 - 표 결과의 `stabilizes` · 주문 기계학의 `casterHealing` · 반응 주문 색인에 지옥의 응징 (D283)
+- 타깃 규칙의 `targetsPerSlotAboveBase`와 `targetCountOf` (D284)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

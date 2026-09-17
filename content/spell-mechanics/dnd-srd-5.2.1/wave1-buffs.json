@@ -18,7 +18,8 @@
     "allowedRelations": [
      "self",
      "ally"
-    ]
+    ],
+    "targetsPerSlotAboveBase": 1
    },
    "primary": {
     "kind": "tracked-effect",

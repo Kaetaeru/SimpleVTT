@@ -319,7 +319,8 @@
     "allowedRelations": [
      "self",
      "ally"
-    ]
+    ],
+    "targetsPerSlotAboveBase": 1
    },
    "primary": {
     "kind": "tracked-effect",
@@ -386,7 +387,8 @@
     "rangeFeet": 30,
     "minTargets": 1,
     "maxTargets": 3,
-    "requiresSight": true
+    "requiresSight": true,
+    "targetsPerSlotAboveBase": 1
    },
    "primary": {
     "kind": "save-effect",
@@ -556,7 +558,8 @@
     "allowedRelations": [
      "self",
      "ally"
-    ]
+    ],
+    "targetsPerSlotAboveBase": 1
    },
    "primary": {
     "kind": "temporary-hp",

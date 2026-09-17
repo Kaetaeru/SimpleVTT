@@ -34,7 +34,7 @@ export interface SpellExec {
   spellId: string;
   baseLevel: number;
   castingEconomy: "action" | "bonus-action" | "reaction";
-  targeting: { kind: string; rangeFeet?: number; minTargets: number; maxTargets: number; allowedRelations?: string[]; directTarget?: boolean; requiresSight?: boolean };
+  targeting: { kind: string; rangeFeet?: number; minTargets: number; maxTargets: number; /** V4v (D284): one more creature per slot above the spell's own level (축복). */ targetsPerSlotAboveBase?: number; allowedRelations?: string[]; directTarget?: boolean; requiresSight?: boolean };
   primary: SpellPrimary;
   concentration?: boolean;
   /** V4u (D283): the caster heals by this share of the damage the spell dealt (흡혈의 손길: half). */
@@ -93,6 +93,10 @@ const BUILTIN_CREATURES = (creaturesJson as unknown as { spells: Record<string, 
 export interface SpellVariant { id: string; label: string; patch: Record<string, unknown> }
 const BUILTIN_VARIANTS = (variantsJson as unknown as { spells: Record<string, { variants: SpellVariant[] }> }).spells;
 /** V4f (D268): the choices this spell asks for when cast, SRD index or installed module alike. */
+/** V4v (D284): how many creatures a cast of this spell may take at this slot level (축복: 슬롯마다 한 명 더). */
+export const targetCountOf = (exec: SpellExec, level: number) =>
+  exec.targeting.maxTargets + Math.max(0, (level ?? exec.baseLevel) - exec.baseLevel) * (exec.targeting.targetsPerSlotAboveBase ?? 0);
+
 export const variantsOf = (spellId: string): SpellVariant[] => spellExec(spellId)?.variants ?? BUILTIN_VARIANTS[spellId]?.variants ?? [];
 const mergePatch = (base: unknown, patch: unknown): unknown => {
   if (!patch || typeof patch !== "object" || Array.isArray(patch) || !base || typeof base !== "object" || Array.isArray(base)) return patch;
