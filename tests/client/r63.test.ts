@@ -74,7 +74,8 @@ test("R63: a rogue's hit opens the window, and 암습 lands on the same dice (D1
   const [prompt] = t.open();
   assert.ok(prompt, "an on-hit window");
   // The soldier background brings 야만적 공격자 as well; both are offered, nothing is ticked for the player.
-  assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["savage", "rogue.sneak-attack"]);
+  // V3e (D259): 교활한 일격's options ride along as uses of their own (`#`).
+  assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key).filter((key) => !key.includes("#")), ["savage", "rogue.sneak-attack"]);
   assert.equal(prompt.prompt!.onHit!.outcome, "hit");
 
   t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"] });

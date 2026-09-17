@@ -92,13 +92,14 @@ test("R61: 튼튼함 on death saves and 전투 시전자 on Constitution saves (
 
 test("R61: a feat that buys one more swing offers it as a real attack (D196)", () => {
   const dual = rogueWith("dual-wielder", "쌍수 사용자").derived;
-  assert.deepEqual(dual.bonusActions, [{ kind: "attack", source: "쌍수 사용자", attackScope: "one-handed-melee" }]);
+  assert.deepEqual(dual.bonusActions?.filter((item) => item.kind === "attack"), [{ kind: "attack", source: "쌍수 사용자", attackScope: "one-handed-melee" }]);
   const polearm = rogueWith("polearm-master", "장병기 달인").derived;
-  assert.deepEqual(polearm.bonusActions, [{ kind: "attack", source: "장병기 달인", attackScope: "two-handed" }]);
+  assert.deepEqual(polearm.bonusActions?.filter((item) => item.kind === "attack"), [{ kind: "attack", source: "장병기 달인", attackScope: "two-handed" }]);
   // 대형 무기 달인's extra swing is conditional — it is bought by a critical or a kill — so it is not a standing
   // menu entry. R53's aftermath hands the bonus action back at the moment it is earned and says so in the log.
   const gwm = rogueWith("great-weapon-master", "대형 무기 달인").derived;
-  assert.deepEqual(gwm.bonusActions, [], "a conditional swing does not sit in the menu all turn");
+  assert.deepEqual(gwm.bonusActions?.filter((item) => item.kind === "attack"), [], "a conditional swing does not sit in the menu all turn");
   // A feat with neither kind of clause leaves the menu alone.
-  assert.deepEqual(rogueWith("tough", "강인함").derived.bonusActions, []);
+  // V3e (D259): the rogue base has 교활한 행동's bonus actions; the feat adds no swing.
+  assert.deepEqual(rogueWith("tough", "강인함").derived.bonusActions?.filter((item) => item.kind === "attack"), []);
 });

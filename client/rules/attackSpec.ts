@@ -193,13 +193,20 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   }
   // R52 (D187): the open half of the riders — whatever the player ticked in the dialog, matched against the riders
   // this sheet actually offers. A key the sheet does not carry is dropped, so the wire cannot invent damage.
-  for (const key of riders.contracts ?? []) {
+  // V3e (D259): a rider that gives up another rider's dice counts only when that rider was taken with it.
+  const declaredKeys = riders.contracts ?? [];
+  const chosen = declaredKeys.filter((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return !rider?.forgo || declaredKeys.includes(rider.forgo.key); });
+  const forgone = (key: string) => chosen.reduce((sum, other) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === other); return rider?.forgo?.key === key ? sum + rider.forgo.dice : sum; }, 0);
+  for (const key of chosen) {
     const rider = (derived.attackRiders ?? []).find((item) => item.key === key);
     if (!rider || !riderFitsAttack(rider, attack)) continue;
+    const giveUp = forgone(key);
     // R57 (D192): a part gated on a declared fact lands only if the player ticked it in the dialog.
     for (const part of rider.damage) {
       if (part.factId && !(riders.facts ?? []).includes(part.factId)) continue;
-      extra.push({ formula: part.formula, type: part.type === "weapon" ? attack.damageType : part.type, label: rider.label, critDoubles: /d\d/.test(part.formula) });
+      const formula = giveUp ? part.formula.replace(/^(\d+)d/, (_, count: string) => `${Math.max(0, Number(count) - giveUp)}d`) : part.formula;
+      if (/^0d/.test(formula)) continue;
+      extra.push({ formula, type: part.type === "weapon" ? attack.damageType : part.type, label: rider.label, critDoubles: /d\d/.test(formula) });
     }
     if (rider.resourceId && rider.cost) { const { resourceId, cost, label } = rider; spenders.push((runtime) => spendResource(runtime, derived, resourceId, cost, label)); }
   }
@@ -214,11 +221,11 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const crits = catalog ? critRiders(derived, catalog, attack) : { parts: [], dice: [] };
   // R60 (D195): the rules that touch this swing's own dice — declared riders first, then whatever a critical adds.
   const diceRules = [
-    ...(riders.contracts ?? []).flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.dice : []; }),
+    ...chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.dice : []; }),
     ...crits.dice,
   ];
-  const hitSaves = (riders.contracts ?? []).flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
-  const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
+  const hitSaves = chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
+  const declared = chosen.map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
   if (strike) declared.unshift(strikeName);
   return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus + swap, mode: range.mode, damage, riders: extra, ...(versusRiders.length ? { versusRiders } : {}), ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }

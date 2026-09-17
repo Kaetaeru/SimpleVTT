@@ -59,7 +59,7 @@ async function table(cls: string, hitPolicy: Record<string, HitPolicy>) {
 }
 
 test("R64: \"always\" takes an offer without a window (D199)", async () => {
-  const t = await table("rogue", { "rogue.sneak-attack": "always", savage: "never" });
+  const t = await table("rogue", { "rogue.sneak-attack": "always", savage: "never", "rogue.cunning-strike#poison": "never", "rogue.cunning-strike#trip": "never", "rogue.cunning-strike#withdraw": "never" });
   await t.swing();
   assert.equal(t.prompts().length, 0, "nothing to ask");
   const [card] = t.cards();
@@ -67,7 +67,7 @@ test("R64: \"always\" takes an offer without a window (D199)", async () => {
 });
 
 test("R64: \"never\" drops an offer, and with nothing left there is no window (D199)", async () => {
-  const t = await table("rogue", { "rogue.sneak-attack": "never", savage: "never" });
+  const t = await table("rogue", { "rogue.sneak-attack": "never", savage: "never", "rogue.cunning-strike#poison": "never", "rogue.cunning-strike#trip": "never", "rogue.cunning-strike#withdraw": "never" });
   await t.swing();
   assert.equal(t.prompts().length, 0);
   const [card] = t.cards();
@@ -75,7 +75,7 @@ test("R64: \"never\" drops an offer, and with nothing left there is no window (D
 });
 
 test("R64: the window asks only what is still \"ask\", says what rides along, and 안 함 keeps it (D199)", async () => {
-  const t = await table("rogue", { savage: "always" });
+  const t = await table("rogue", { savage: "always", "rogue.cunning-strike#poison": "never", "rogue.cunning-strike#trip": "never", "rogue.cunning-strike#withdraw": "never" });
   await t.swing();
   const [prompt] = t.prompts();
   assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["rogue.sneak-attack"]);

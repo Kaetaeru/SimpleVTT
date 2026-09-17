@@ -368,7 +368,7 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
   if (extras.tempRoll !== undefined) { next = grantTempHp(next, extras.tempRoll); parts.push(`임시 HP ${extras.tempRoll}`); }
   const duration = activation.duration?.(derived);
   if (duration && !duration.instantaneous) {
-    next = startEffect(next, { key: effectKeyForFeature(feature.id), name: feature.name, source: "feature", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds });
+    next = startEffect(next, { key: effectKeyForFeature(feature.id), name: feature.name, source: "feature", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds, ...(duration.consumeOn ? { consumeOn: duration.consumeOn } : {}) });
     parts.push(duration.text);
   }
   return stamp(next, `사용: ${feature.name}${parts.length ? ` (${parts.join(" · ")})` : ""}`);

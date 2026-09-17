@@ -114,6 +114,8 @@ export interface ActiveEffect {
   fromConcentration?: boolean;
   /** R85 (D220): the turn that counts its rounds — the caster ("until the end of your next turn") or the bearer. */
   anchor?: { who: "source" | "bearer"; boundary: "start" | "end" };
+  /** V3e (D259): the effect ends when its bearer next attacks (안정된 조준). */
+  consumeOn?: "attack";
   /** R85 (D220): conditions the effect put on the bearer, which come off with it. */
   conditions?: string[];
   /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */

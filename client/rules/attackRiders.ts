@@ -53,6 +53,8 @@ export interface ContractRider {
   saves: Array<{ ability: string; dc: number; condition: string }>;
   resourceId?: string;
   cost: number;
+  /** V3e (D259): this rider gives up this many dice of another rider it must be taken with (교활한 일격 from 암습). */
+  forgo?: { key: string; dice: number };
 }
 
 const SAVE_KO: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
@@ -94,6 +96,9 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
       } else if (operation.kind === "resource.change") {
         const amount = Number(evaluate(operation.amount, scope));
         if (Number.isFinite(amount) && amount < 0) { rider.resourceId = operation.resourceId; rider.cost = -amount; }
+      } else if (operation.kind === "property.modify" && operation.property === "rider.forgo-dice") {
+        const dice = Number(evaluate(operation.value, scope));
+        if (operation.params?.rider && Number.isFinite(dice)) { rider.forgo = { key: String(operation.params.rider), dice }; hints.push(`주사위 ${dice}개 포기`); }
       } else if (operation.kind === "property.modify") {
         // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);

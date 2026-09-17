@@ -146,3 +146,35 @@ test("V3d: 몽크의 기 is three uses, each with its cost, economy and effect; 
   const token = t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((item) => item.id === t.token.id)!;
   assert.deepEqual(token.markers.map((marker) => marker.name).filter((name) => name === "회피" || name === "이탈").sort(), ["이탈", "회피"], JSON.stringify(token.markers));
 });
+
+test("V3e: 교활한 일격 takes its dice from 암습 taken with it; 안정된 조준 is spent by the next attack; 교활한 행동 is the bonus action menu (D259)", async () => {
+  const { pcAttackSpec } = await import("../../client/rules/attackSpec");
+  const rogue = build({ name: "로그", classes: "rogue", level: 5 });
+  const entry = newJournalCharacter("c", "p", rogue.source, initialRuntime(rogue.derived));
+  const blade = rogue.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
+  const trip = "rogue.cunning-strike#trip";
+  const both = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: ["rogue.sneak-attack", trip] }, catalog())!.spec;
+  assert.equal(both.riders?.find((part) => part.label === "암습")?.formula, "2d6", "3d6 less the die 넘어뜨리기 took");
+  assert.ok(both.hitSaves?.some((save) => save.condition === "prone" && save.ability === "dex"), JSON.stringify(both.hitSaves));
+  const alone = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: [trip] }, catalog())!.spec;
+  assert.ok(!alone.hitSaves?.length, "without 암습 there are no dice to give up, so no effect");
+  assert.deepEqual(rogue.derived.bonusActions?.filter((item) => item.source === "교활한 행동").map((item) => item.kind), ["dash", "disengage", "hide"]);
+
+  // 안정된 조준 at the table: the attack is advantaged, and the effect is gone after it.
+  const parsed = parseCustomMonster(JSON.stringify({ name: "허수아비", ac: 10, hp: 40, abilities: { str: 10, dex: 10, con: 10, int: 1, wis: 1, cha: 1 }, actions: [] }));
+  const t = await soloTable("rogue", 3, {}, () => 0.5, (runtime) => ({ ...runtime, effects: [{ key: "feature:rogue.steady-aim", name: "안정된 조준", source: "feature", duration: "다음 공격까지", concentration: false, rounds: 1, elapsed: 0, startedAt: "", consumeOn: "attack" }] }));
+  const npc = newJournalNpc(t.pc.campaignId, "dm", (parsed as { monster: Parameters<typeof newJournalNpc>[2] }).monster);
+  t.dm.send({ type: "journal.put", entry: npc });
+  await tick();
+  const npcToken = tokenForNpc(npc);
+  t.dm.send({ type: "token.put", pageId: t.scene.id, token: npcToken });
+  await tick();
+  const weapon = t.made.derived.attacks.find((attack) => attack.itemId)!;
+  t.dm.send({ type: "act.attack", attacker: t.ref, targets: [{ entryId: npc.id, pageId: t.scene.id, tokenId: npcToken.id }], attack: { source: "weapon", attackId: weapon.id } });
+  await tick();
+  for (const prompt of t.host.archive.filter((message) => message.type === "prompt" && message.prompt?.kind === "on-hit" && !message.supersedes)) t.dm.send({ type: "act.decline", messageId: prompt.id });
+  await tick();
+  const card = t.host.archive.filter((message) => message.type === "action" && message.action).at(-1)!;
+  assert.ok(card.action!.reasons.join(" ").includes("안정된 조준"), JSON.stringify(card.action!.reasons));
+  assert.ok(!t.sheet().runtime.effects.some((effect) => effect.key === "feature:rogue.steady-aim"), "spent by the attack");
+});

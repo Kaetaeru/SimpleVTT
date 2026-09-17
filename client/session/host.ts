@@ -1629,7 +1629,7 @@ export class TableHost {
   private consumeOnUse(entryId: string, on: "attack" | "attacked") {
     const live = this.journalEntries.get(entryId);
     if (!live || live.kind === "handout") return;
-    const keys = (bearerRolls(live.runtime.effects, false).consumable ?? []).filter((item) => item.on === on).map((item) => item.key);
+    const keys = [...(bearerRolls(live.runtime.effects, false).consumable ?? []).filter((item) => item.on === on).map((item) => item.key), ...(live.runtime.effects ?? []).filter((effect) => effect.consumeOn === on).map((effect) => effect.key)];
     if (keys.length) this.shedEffects(live, (live.runtime.effects ?? []).filter((effect) => keys.includes(effect.key)), "사용함");
   }
 

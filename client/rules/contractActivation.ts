@@ -29,7 +29,7 @@ export function contractDuration(contract: CommonPlayContract, scope: Scope): Pa
     // The counter is whatever the contract states and nothing else: a duration with no `rounds` is one the table
     // watches (집중, 최대 1시간), and guessing a number from the text would start a countdown nobody asked for.
     const rounds = counted ? operation.template.rounds : undefined;
-    return { text, instantaneous: false, concentration: Boolean(operation.template.concentration), ...(rounds === undefined ? {} : { rounds }) };
+    return { text, instantaneous: false, concentration: Boolean(operation.template.concentration), ...(rounds === undefined ? {} : { rounds }), ...(operation.template.consumeOn ? { consumeOn: operation.template.consumeOn } : {}) };
   }
   return undefined;
 }
@@ -258,6 +258,8 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
       } else if (operation.kind === "resource.change") {
         const amount = number(operation.amount) ?? 0;
         if (amount < 0) rules.push(`${where} — ${-amount} 소비`);
+      } else if (operation.kind === "property.modify" && operation.property === "rider.forgo-dice") {
+        rules.push(`${where} — 함께 고른 명중 피해의 주사위 ${number(operation.value) ?? 0}개 포기`);
       } else if (operation.kind === "adjudication.request") questions.push(operation.question);
     }
     if (entry.attack?.oncePerTurn) questions.push("턴당 한 번 (직접 세어 주세요)");
