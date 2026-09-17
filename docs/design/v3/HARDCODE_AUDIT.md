@@ -66,6 +66,7 @@
 - `choice.spell` { resourceId, recovery, atWill } · `grant.resource` { id, recovery, spell } · `grant.ritual-casting` · `grant.spellbook-picks` { school } (D261)
 - `grant.spells` { spells, into } · `choice.spells` { classes, levels } (D262)
 - 사용: `damage.apply` { save, diceSides } → 표의 `strikes` · `healing.apply` { pool: half-max } · 예약 자원 `resource.spell-slot` · `resource.lockout` { resource, dice } · `adjudication.request` { amount } · 진입점 `killer: nearby` · 속성 `healing.self-on-slot-heal`, `marked-spell.reveal-defenses` · 기습 이니셔티브 `tracker.add.surprised` (D263)
+- `condition.apply` { duration {kind rounds|minutes|hours|permanent, amount, boundary, anchor}, repeatSave: turn-end, successMark } · 탑승 속성 `target.mark` { mark {name, nextSave, nextAttack {advantage, bonus, by}} } · 표 `conditionSaves` (D264)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

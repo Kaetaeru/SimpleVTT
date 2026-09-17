@@ -17,7 +17,7 @@ import { applyActiveEffects } from "../../client/rules/effects";
 import { build, catalog } from "./support";
 
 const FEATURE_CONTRACTS = [
-  ["barbarian", 20, "barbarian.rage"], ["barbarian", 20, "barbarian.reckless-attack"], ["barbarian", 20, "barbarian.berserker.intimidating-presence"],
+  ["barbarian", 20, "barbarian.rage"], ["barbarian", 20, "barbarian.reckless-attack"],
   ["sorcerer", 20, "sorcerer.innate-sorcery"], ["sorcerer", 20, "sorcerer.draconic.dragon-wings"],
   ["monk", 20, "monk.superior-defense"], ["paladin", 20, "paladin.oath-of-devotion.sacred-weapon"], ["paladin", 20, "paladin.oath-of-devotion.holy-nimbus"],
   ["druid", 20, "druid.circle-of-the-land.natures-sanctuary"], ["ranger", 20, "ranger.favored-enemy"], ["ranger", 20, "ranger.natures-veil"],

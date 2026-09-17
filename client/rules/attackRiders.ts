@@ -13,7 +13,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
-import { ATTACK_INVOCATIONS, characterScope, evaluate, type CommonPlayContract, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, characterScope, evaluate, parseTargetMark, type CommonPlayContract, type ConditionDuration, type Scope, type TargetMark } from "./contract";
 import { diceRuleOf, type DiceRule } from "./resolve";
 import { CONDITION_KO } from "../compendium/spells";
 import { attackScopeFilter } from "./contractEffects";
@@ -50,7 +50,9 @@ export interface ContractRider {
   /** R60 (D195): what declaring it does to the weapon's own damage dice. */
   dice: DiceRule[];
   /** R94 (D229): a save the target makes when this rider lands, and the condition a failure puts on it (기절 타격). */
-  saves: Array<{ ability: string; dc: number; condition: string }>;
+  saves: Array<{ ability: string; dc: number; condition: string; duration?: ConditionDuration; repeatSave?: "turn-end"; successMark?: TargetMark }>;
+  /** V4b (D264): marks a hit leaves on the target (휘청이는 일격, 무너뜨리는 일격). */
+  marks?: TargetMark[];
   resourceId?: string;
   cost: number;
   /** V3e (D259): this rider gives up this many dice of another rider it must be taken with (교활한 일격 from 암습). */
@@ -113,20 +115,23 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         rider.forgoAdvantage = true; hints.push("이 공격의 유리 포기");
       } else if (operation.kind === "property.modify" && operation.property === "damage.type.replace") {
         if (operation.params?.type) { rider.damageType = String(operation.params.type); hints.push(`무기 피해 유형을 ${String(operation.params.type)}(으)로`); }
+      } else if (operation.kind === "property.modify" && operation.property === "target.mark") {
+        const mark = parseTargetMark(operation.params?.mark);
+        if (mark) { rider.marks = [...(rider.marks ?? []), mark]; hints.push(`명중하면 대상에 ${mark.name}`); }
       } else if (operation.kind === "property.modify") {
         // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);
         if (rule) rider.dice.push(rule);
       } else if (operation.kind === "condition.apply" && operation.save && operation.target === "attack-target") {
         const dc = Number(evaluate(operation.save.dc, scope));
-        if (Number.isFinite(dc)) rider.saves.push({ ability: operation.save.ability, dc, condition: operation.condition });
+        if (Number.isFinite(dc)) rider.saves.push({ ability: operation.save.ability, dc, condition: operation.condition, ...(operation.duration ? { duration: operation.duration } : {}), ...(operation.repeatSave ? { repeatSave: operation.repeatSave } : {}), ...(operation.successMark ? { successMark: operation.successMark } : {}) });
       } else if (operation.kind === "adjudication.request") {
         if (operation.fact?.at === moment) rider.facts.push({ id: operation.fact.id, question: operation.question, ...(operation.fact.auto ? { auto: operation.fact.auto } : {}) });
         else hints.push(operation.question);
       }
     }
     rider.hint = [...rider.damage.map((part) => `피해 +${part.formula}`), ...rider.saves.map((save) => `${SAVE_KO[save.ability] ?? save.ability} 내성 DC ${save.dc} 실패 시 ${CONDITION_KO[save.condition] ?? save.condition}`), ...rider.dice.map((rule) => DICE_RULE_KO[rule.mode](rule.value)), ...hints, ...(rider.oncePerTurn ? ["턴당 한 번"] : [])].join(" · ");
-    if (rider.damage.length || rider.dice.length || rider.saves.length || hints.length || rider.facts.length) riders.push(rider);
+    if (rider.damage.length || rider.dice.length || rider.saves.length || rider.marks?.length || hints.length || rider.facts.length) riders.push(rider);
   }
   return riders;
 }

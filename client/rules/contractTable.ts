@@ -7,7 +7,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedCharacter } from "../character/types";
-import { ATTACK_INVOCATIONS, characterScope, evaluate } from "./contract";
+import { ATTACK_INVOCATIONS, characterScope, evaluate, type ConditionDuration } from "./contract";
 import { atOthers, contractOutcome, featureContract, formula as useFormula } from "./contractActivation";
 
 export interface TableOutcome {
@@ -25,6 +25,8 @@ export interface TableOutcome {
    * says so. Everything here needs a target, which is why it could not live on the sheet.
    */
   party: { tempHp?: string; heal?: string; grants: string[]; max?: number; /** V4a (D263): an amount shared out among the chosen creatures, none past half its maximum. */ healPool?: { amount: number; cap: "half-max" } };
+  /** V4b (D264): conditions the chosen creatures save against (언데드 퇴치, 적 퇴치). */
+  conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>;
   /** V4a (D263): damage the use deals to the chosen creatures, rolled once, with the save that resists it. */
   strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>;
 }
@@ -41,6 +43,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const removed: string[] = [];
   const party: TableOutcome["party"] = { grants: [] };
   const strikes: NonNullable<TableOutcome["strikes"]> = [];
+  const conditionSaves: NonNullable<TableOutcome["conditionSaves"]> = [];
   const formula = (operation: { dice?: string; amount?: unknown }) => {
     const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
     const parts = [operation.dice, Number.isFinite(flat) && flat ? `${operation.dice ? (flat > 0 ? "+" : "-") : ""}${Math.abs(flat as number)}` : ""].filter(Boolean);
@@ -50,6 +53,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     if (ATTACK_INVOCATIONS.has(entry.invocation)) continue;
     for (const operation of entry.operations) {
       if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
+      if (operation.kind === "condition.apply" && operation.target !== "self" && operation.save) { conditionSaves.push({ condition: operation.condition, ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10, ...(operation.duration ? { duration: operation.duration } : {}), ...(operation.repeatSave ? { repeatSave: operation.repeatSave } : {}) }); continue; }
       if (operation.kind === "condition.apply" && operation.target !== "self") { applied.push(operation.condition); continue; }
       if (operation.kind === "condition.apply") { selfMarks.push(operation.condition); continue; }
       // V3f (D260): a condition the use takes off the people it is aimed at.
@@ -75,8 +79,9 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     artifacts: outcome.artifacts.map((item) => ({ kind: item.kind, monsterId: item.monsterId, count: item.count })),
     party,
     ...(strikes.length ? { strikes } : {}),
+    ...(conditionSaves.length ? { conditionSaves } : {}),
   };
   const asks = table.conditionsApplied.length || table.conditionsRemoved.length || table.selfMarks.length || table.deathSave || table.notes.length || table.artifacts.length
-    || party.tempHp || party.heal || party.healPool || party.grants.length || strikes.length;
+    || party.tempHp || party.heal || party.healPool || party.grants.length || strikes.length || conditionSaves.length;
   return asks ? table : null;
 }

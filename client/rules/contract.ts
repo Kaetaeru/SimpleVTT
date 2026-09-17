@@ -68,7 +68,7 @@ export interface ContractPayment {
 
 export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr }
-  | { kind: "condition.apply"; condition: string; target: string; when?: Expr; /** R94 (D229): resisted with this save (기절 타격). */ save?: { ability: string; dc: Expr } }
+  | { kind: "condition.apply"; condition: string; target: string; when?: Expr; /** R94 (D229): resisted with this save (기절 타격). */ save?: { ability: string; dc: Expr }; /** V4b (D264): how long it lasts (default: until the start of the source's next turn). */ duration?: ConditionDuration; /** V4b (D264): the bearer repeats the save at the end of each of its turns. */ repeatSave?: "turn-end"; /** V4b (D264): what a successful save still leaves on the target (충격의 일격). */ successMark?: TargetMark }
   | { kind: "healing.apply"; dice?: string; amount?: Expr; target: string; when?: Expr; /** V4a (D263): one amount shared out among the chosen creatures, none past half its maximum (생명 보존). */ pool?: "half-max" }
   | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr }
   /**
@@ -184,6 +184,25 @@ export interface CommonPlayContract {
 /** `resource:fighter.second-wind` → `resource.fighter.second-wind`; anything else is passed through. */
 export const resourceIdOf = (reference: string) => (reference.startsWith("resource:") ? `resource.${reference.slice("resource:".length)}` : reference);
 
+/** V4b (D264): how long a condition from a rule lasts, counted on the source's or the bearer's turns. */
+export interface ConditionDuration { /** `permanent`: until something takes it off (넘어짐). */ kind: "rounds" | "minutes" | "hours" | "permanent"; amount: number; boundary?: "start" | "end"; anchor?: "source" | "bearer" }
+/**
+ * V4b (D264): a mark a rule leaves on a creature until the start of the marker's next turn — its next save is at
+ * disadvantage, or the next attack against it (by anyone, or by somebody other than the marker) has advantage or a bonus.
+ */
+export interface TargetMark { name: string; nextSave?: "disadvantage"; nextAttack?: { advantage?: boolean; bonus?: number; by: "any" | "others" } }
+const parseDuration = (raw: unknown): ConditionDuration | undefined => {
+  const value = raw as Record<string, unknown> | undefined;
+  if (!value || !["rounds", "minutes", "hours", "permanent"].includes(String(value.kind)) || (value.kind !== "permanent" && typeof value.amount !== "number")) return undefined;
+  return { kind: value.kind as ConditionDuration["kind"], amount: typeof value.amount === "number" ? value.amount : 0, ...(value.boundary === "start" || value.boundary === "end" ? { boundary: value.boundary } : {}), ...(value.anchor === "source" || value.anchor === "bearer" ? { anchor: value.anchor } : {}) };
+};
+export const parseTargetMark = (raw: unknown): TargetMark | undefined => {
+  const value = raw as Record<string, unknown> | undefined;
+  if (!value || typeof value.name !== "string") return undefined;
+  const next = value.nextAttack as Record<string, unknown> | undefined;
+  return { name: value.name, ...(value.nextSave === "disadvantage" ? { nextSave: "disadvantage" as const } : {}), ...(next ? { nextAttack: { ...(next.advantage === true ? { advantage: true } : {}), ...(typeof next.bonus === "number" ? { bonus: next.bonus } : {}), by: next.by === "others" ? "others" as const : "any" as const } } : {}) };
+};
+
 /** A contract id as a feature rule key: `feature.` and `dnd.<x>.feature.` prefixes come off, everything else stands. */
 export function contractRuleKey(id: string) {
   const namespaced = /^dnd\.[a-z0-9]+\.feature\.(.+)$/.exec(id);
@@ -268,7 +287,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     const at = `${path}[${index}]`;
     if (!OPERATION_KINDS.has(kind)) { unsupported.push(`${at}: ${kind || "이름 없는 연산"}`); return; }
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: isExpr(operation.amount) ? operation.amount : { value: operation.amount ?? 0 } }); return; }
-    if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}) }); return; }
+    if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}), ...(parseDuration(operation.duration) ? { duration: parseDuration(operation.duration) } : {}), ...(operation.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}), ...(parseTargetMark(operation.successMark) ? { successMark: parseTargetMark(operation.successMark) } : {}) }); return; }
     if (kind === "condition.remove") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.pool === "half-max" ? { pool: "half-max" as const } : {}) }); return; }
     const expr = (raw: unknown, fallback = 0) => (isExpr(raw) ? raw : { value: raw === undefined ? fallback : raw });

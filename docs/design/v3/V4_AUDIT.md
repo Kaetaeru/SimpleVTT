@@ -4,13 +4,13 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 공통 엔진
 
-- once-per-turn은 명중 창 탑승물만 센다(`host.ts` useThisTurn). 판정 전 탑승물·특성 사용·행동 폭증은 세지 않고 시트가 "직접 세어 주세요"라고 쓴다. — [host-hook] 턴 사용 기록을 판정 전 창·사용 버튼에도.
-- 명중 창 내성 실패 상태(`riderSave`)가 항상 "다음 내 턴 시작까지 1라운드"로 박혀 있다. 넘어짐·1분 중독·1분 무의식이 한 라운드 뒤 사라진다. — [new-grammar] `condition.apply`에 지속시간과 반복 내성.
+- (D264: 판정 전 탑승물은 셈. 특성 사용·행동 폭증은 남음) once-per-turn은 명중 창 탑승물만 센다(`host.ts` useThisTurn). 판정 전 탑승물·특성 사용·행동 폭증은 세지 않고 시트가 "직접 세어 주세요"라고 쓴다. — [host-hook] 턴 사용 기록을 판정 전 창·사용 버튼에도.
+- ✔ D264 명중 창 내성 실패 상태(`riderSave`)가 항상 "다음 내 턴 시작까지 1라운드"로 박혀 있다. 넘어짐·1분 중독·1분 무의식이 한 라운드 뒤 사라진다. — [new-grammar] `condition.apply`에 지속시간과 반복 내성.
 - ✔ D263 사용의 `healing.apply`/`temp-hp.grant`가 남 대상이어도 사용자 자신도 회복했다(`contractUse`). — 남 대상은 표로만.
 - ✔ D263 양수 `resource.change`(풀 회복)가 적용되지 않았다. — `contractOutcome.restores`.
 - ✔ D263 사용의 대상 피해(`damage.apply` target/area)가 굴림만 하고 HP를 깎지 않았다. — 표의 `strikes`, 주문 해석기로 내성·저항·되돌리기.
-- 표의 `condition.apply`가 `save`를 무시한다(`act.contract`). — [host-hook] 대상마다 내성.
-- 대상 표식 효과(다음 내성 불리, 다른 이의 다음 명중 +5, 기회 공격 불가, 속도 감소, 다음 명중 유리)가 없다. — [new-grammar]
+- ✔ D264 표의 `condition.apply`가 `save`를 무시한다(`act.contract`). — [host-hook] 대상마다 내성.
+- ✔ D264 대상 표식 효과(다음 내성 불리, 다른 이의 다음 명중 +5, 기회 공격 불가, 속도 감소, 다음 명중 유리)가 없다. — [new-grammar]
 - 계약 치유에 최상급 치유(최대값)가 적용되지 않는다. — [host-hook]
 - 전투 중 0 HP가 되는 순간의 가로채기(무모한 격노, 보호자의 선물)가 없다. — [new-grammar + host-hook]
 - 야생 변신 형태(능력치 덮어쓰기)가 없다. — [new-grammar + picker]
@@ -22,7 +22,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - relentless-rage (11) — 0 HP 순간 가로채기 없음, 건강 내성 없음, HP를 레벨×2로 두지 않음, DC 누적이 풀로 잘못 모델링. — [new-grammar + host-hook]
 - rage (1) — 근력 판정·내성 유리가 문구뿐(속성 있음). 주문 시전·집중 금지, 조기 종료 조건, 연장이 문구. — [data-fix + host-hook]
 - persistent-rage (15) — 수동 +1 버튼. 규칙은 이니셔티브 때 전부 회복, 긴 휴식당 1회. — [data-fix]
-- berserker.intimidating-presence (14) — 추가 행동·지혜 내성·공포·반복 내성·긴 휴식 1회·격노로 회복 없음. — [new-grammar]
+- ✔ D264 berserker.intimidating-presence (14) — 추가 행동·지혜 내성·공포·반복 내성·긴 휴식 1회·격노로 회복 없음. — [new-grammar]
 - berserker.mindless-rage (6) — 언제든 누르는 해제 버튼. 격노 중 면역이어야. — [new-grammar] 효과 중 조건부 속성.
 - berserker.frenzy (3) — 판정 전이지만 "처음 맞힌 대상"이라 명중 창이어야. 턴당 1회 안 셈. — [data-fix + host-hook]
 - brutal-strike 계열 (9/13/17) — 턴당 1회·효과 수 제한 안 셈, 절뚝·휘청·무너뜨림 효과가 문구. — [new-grammar + host-hook]
@@ -41,21 +41,21 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - open-hand.quivering-palm (17) — 해방이 내성 없이 10d12 전부. 공격 행동의 공격 하나 대신. 대상 표식·하나만 제한 없음. — [data-fix + new-grammar]
 - martial-arts (1) — 추가 행동 맨손 타격 없음. — [data-fix]
 - focus#flurry (2/10) — 2·3회 타격이 문구, 공격 경제 부여 없음. — [data-fix]
-- stunning-strike (5) — 무기 범위 없음(활에도), 성공 시 속도 절반·다음 공격 유리가 문구. — [data-fix + new-grammar]
+- ✔ D264 stunning-strike (5) — 무기 범위 없음(활에도), 성공 시 속도 절반·다음 공격 유리가 문구. — [data-fix + new-grammar]
 - deflect-attacks (3) — 되돌리기(기 1, 민첩 내성, 무예 주사위×2+민첩)가 문구. — [new-grammar]
 - superior-defense (18) — 기 3 소비·역장 외 저항 없음. — [data-fix]
 - disciplined-survivor (14) — 실패한 내성 기 1로 재굴림 없음. — [data-fix]
 - perfect-focus (15) — 수동 +4. 이니셔티브 때 4까지 채우기. — [new-grammar] "N까지 회복".
 - self-restoration (10) — 세 상태를 한 번에 버튼. 턴 끝마다 하나. — [host-hook + picker]
 - open-hand.fleet-step (11) — 무료라는 문구가 틀림, 결제 중복. — [data-fix]
-- open-hand.open-hand-technique (3) — 밀어내기 내성 굴림 없음, 교란의 기회 공격 불가가 문구, 넘어짐 1라운드. — [new-grammar]
+- ✔ D264 open-hand.open-hand-technique (3) — 밀어내기 내성 굴림 없음, 교란의 기회 공격 불가가 문구, 넘어짐 1라운드. — [new-grammar]
 - ✔ D263 slow-fall (4) — DM 팔레트 손 작업 안내. — [button] 마지막 낙하 피해 감소 반응.
 
 ## 로그
 - stroke-of-luck (20) — 풀만 소비, 굴림은 그대로. — [data-fix] 실패 시 20으로.
-- cunning-strike#poison/#trip (5) — 1분·반복 내성이 1라운드로. — [new-grammar]
-- devious-strikes#daze (14) — 내성·효과 없음. — [new-grammar]
-- devious-strikes#knock-out/#obscure (14) — 지속시간 잘못. — [new-grammar]
+- ✔ D264 cunning-strike#poison/#trip (5) — 1분·반복 내성이 1라운드로. — [new-grammar]
+- ✔ D264 devious-strikes#daze (14) — 내성·효과 없음. — [new-grammar]
+- ✔ D264 devious-strikes#knock-out/#obscure (14) — 지속시간 잘못. — [new-grammar]
 - sneak-attack (1) — 유리 여부를 앱이 아는데 확인 안 함, 인접 아군이 문구. — [host-hook + button]
 - improved-cunning-strike (11) — 효과 둘 제한 안 셈. — [picker]
 - ✔ D263 thief.thiefs-reflexes (17) — 기습 제외는 2014 문구, 2024엔 없음. — [data-fix] 문구 제거 (D263의 기습 버튼은 2024 기습 규칙: 이니셔티브 불리).
@@ -76,7 +76,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 ## 클레릭
 - ✔ D263 channel-divinity#divine-spark-heal — 치유가 사용자에게도 들어감(공통 항목).
 - life-domain.supreme-healing (17) — 계약 치유에 최대값 없음. — [host-hook]
-- channel-divinity#turn-undead (2) — 지혜 내성·공포·행동불능이 문구, 소각 피해에 내성 조건 없음, 피해 받으면 끝 없음. — [host-hook + data-fix]
+- ✔ D264 channel-divinity#turn-undead (2) — 지혜 내성·공포·행동불능이 문구, 소각 피해에 내성 조건 없음, 피해 받으면 끝 없음. — [host-hook + data-fix]
 - ✔ D263 channel-divinity#divine-spark-harm (2) — 건강 내성 절반이 문구. — [data-fix] D263 `save`.
 - divine-intervention (10) — 5레벨 이하 클레릭 주문 무료 시전 선택 없음. — [picker]
 - ✔ D263 greater-divine-intervention (20) — 2d4 긴 휴식 잠금. — [data-fix] D263 `resource.lockout`.
@@ -87,7 +87,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 팔라딘
 - oath-of-devotion.sacred-weapon (3) — 신성 변환 소비·매력 명중 보너스·광휘 없음, 누르면 아무것도 안 바뀜. — [data-fix]
-- abjure-foes (9) — 행동 결제·지혜 내성·공포·대상 수 없음. — [data-fix + host-hook]
+- ✔ D264 abjure-foes (9) — 행동 결제·지혜 내성·공포·대상 수 없음. — [data-fix + host-hook]
 - channel-divinity (3) — "수동 적용" 안내, 신성 감지 계약 없음. — [button]
 - lay-on-hands (1) — 남에게 쓰면 점수만 쓰고 치유 안 됨, 중독 해제 5점이 문구. — [data-fix + host-hook]
 - oath-of-devotion.holy-nimbus (20) — 빈 효과. — [data-fix + host-hook]

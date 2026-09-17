@@ -148,3 +148,68 @@ test("V4a: 몸의 완전함 heals its user by the martial arts die, 느린 낙�
   const hunter = build({ name: "레인저", classes: "ranger", level: 20 }, { "class.2.subclass": ["dnd.srd521.subclass.ranger.hunter"] }).derived;
   assert.equal(tableOutcome(hunter, cat, "ranger.hunter.superior-hunters-prey#spread")?.strikes?.[0]?.formula, "1d10");
 });
+
+const markers = (t: Awaited<ReturnType<typeof table>>, index: number) => t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((token) => token.id === t.ref(index).tokenId)!.markers.map((marker) => marker.name);
+const openHits = (t: Awaited<ReturnType<typeof table>>) => { const answered = new Set(t.host.archive.map((message) => message.supersedes)); return t.host.archive.filter((message) => message.type === "prompt" && message.prompt?.kind === "on-hit" && !message.prompt.outcome && !answered.has(message.id)); };
+const lastCard = (t: Awaited<ReturnType<typeof table>>) => t.host.archive.filter((message) => message.type === "action" && message.action).at(-1)!.action!;
+
+test("V4b: 교활한 일격's poison lasts a minute with a repeat save; 무너뜨리는 일격 marks the target for somebody else's +5 (D264)", async () => {
+  // Low dice: every save fails.
+  const t = await table([
+    { classes: "rogue", level: 5 },
+    { classes: "barbarian", level: 13, runtime: (runtime) => ({ ...runtime, effects: [{ key: "feature:barbarian.reckless-attack", name: "무모한 공격", source: "feature", duration: "이 턴", concentration: false, rounds: 1, elapsed: 0, startedAt: "" }] }) },
+    { classes: "fighter", level: 5 },
+  ], [dummy("허수아비", 200)], () => 0.05);
+  const blade = t.made[0].derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
+  t.dm.send({ type: "act.attack", attacker: t.ref(0), targets: [t.ref(3)], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
+  await tick();
+  t.dm.send({ type: "act.onhit", messageId: openHits(t)[0].id, choices: ["rogue.sneak-attack", "rogue.cunning-strike#poison"] });
+  await tick();
+  const poisoned = (t.entry(3) as { runtime: { effects: Array<{ rounds?: number; endSave?: unknown; name: string }> } }).runtime.effects.find((effect) => effect.name === "독");
+  assert.ok(poisoned?.rounds === 10 && poisoned.endSave, JSON.stringify((t.entry(3) as { runtime: { effects: unknown[] } }).runtime.effects));
+  assert.ok(markers(t, 3).includes("중독"));
+
+  const axe = t.made[1].derived.attacks.find((attack) => attack.itemId && attack.ability === "str" && !attack.range)!;
+  t.dm.send({ type: "act.attack", attacker: t.ref(1), targets: [t.ref(3)], attack: { source: "weapon", attackId: axe.id }, riders: { contracts: ["barbarian.brutal-strike#strike", "barbarian.improved-brutal-strike#sundering"] }, overrides: { outcome: "hit" } });
+  await tick();
+  for (const prompt of openHits(t)) t.dm.send({ type: "act.decline", messageId: prompt.id });
+  await tick();
+  assert.ok(markers(t, 3).some((name) => name.startsWith("무너뜨림")), JSON.stringify(markers(t, 3)));
+  const sword = t.made[2].derived.attacks.find((attack) => attack.itemId && !attack.range)!;
+  t.dm.send({ type: "act.attack", attacker: t.ref(2), targets: [t.ref(3)], attack: { source: "weapon", attackId: sword.id } });
+  await tick();
+  for (const prompt of openHits(t)) t.dm.send({ type: "act.decline", messageId: prompt.id });
+  await tick();
+  assert.ok(lastCard(t).reasons.some((reason) => reason.startsWith("무너뜨림") && reason.endsWith("+5")), JSON.stringify(lastCard(t).reasons));
+  assert.ok(!markers(t, 3).some((name) => name.startsWith("무너뜨림")), "spent by the fighter's attack");
+});
+
+test("V4b: 언데드 퇴치 is a Wisdom save per creature; a once-per-turn rider declared twice counts once; 충격의 일격's success still marks (D264)", async () => {
+  const t = await table([{ classes: "cleric", level: 2, abilities: { wis: 16 } }, { classes: "barbarian", level: 9, runtime: (runtime) => ({ ...runtime, effects: [{ key: "feature:barbarian.reckless-attack", name: "무모한 공격", source: "feature", duration: "이 턴", concentration: false, rounds: 1, elapsed: 0, startedAt: "" }] }) }], [dummy("좀비", 200), dummy("구울", 200)], () => 0.05);
+  t.dm.send({ type: "act.contract", actor: t.ref(0), ruleKey: "cleric.channel-divinity#turn-undead", targets: [t.ref(2)] });
+  await tick();
+  assert.ok(["공포", "행동불능"].every((name) => markers(t, 2).includes(name)), JSON.stringify(markers(t, 2)));
+
+  t.dm.send({ type: "tracker.add", turn: { name: "바바리안", tokenId: t.ref(1).tokenId, pageId: t.scene.id, entryId: t.ref(1).entryId, initiative: 20 } });
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  const axe = t.made[1].derived.attacks.find((attack) => attack.itemId && attack.ability === "str" && !attack.range)!;
+  for (let swing = 0; swing < 2; swing += 1) {
+    t.dm.send({ type: "act.attack", attacker: t.ref(1), targets: [t.ref(3)], attack: { source: "weapon", attackId: axe.id }, riders: { contracts: ["barbarian.brutal-strike#strike"] }, overrides: { outcome: "hit" } });
+    await tick();
+    for (const prompt of openHits(t)) t.dm.send({ type: "act.decline", messageId: prompt.id });
+    await tick();
+  }
+  const cards = t.host.archive.filter((message) => message.type === "action" && message.action).slice(-2).map((message) => message.action!.attack.name);
+  assert.deepEqual(cards.map((name) => name.includes("잔혹한 일격")), [true, false], JSON.stringify(cards));
+
+  // High dice: the save succeeds, and the next attack against the target still has advantage.
+  const monk = await table([{ classes: "monk", level: 5 }], [dummy("오우거", 200)], () => 0.95);
+  const fist = monk.made[0].derived.attacks.find((attack) => !attack.range)!;
+  monk.dm.send({ type: "act.attack", attacker: monk.ref(0), targets: [monk.ref(1)], attack: { source: "weapon", attackId: fist.id }, overrides: { outcome: "hit" } });
+  await tick();
+  monk.dm.send({ type: "act.onhit", messageId: openHits(monk)[0].id, choices: ["monk.stunning-strike"] });
+  await tick();
+  assert.ok(markers(monk, 1).some((name) => name.startsWith("충격의 일격")), JSON.stringify(markers(monk, 1)));
+  assert.ok(!markers(monk, 1).includes("충격"), "the save succeeded");
+});

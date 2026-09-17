@@ -275,7 +275,8 @@ test("R92: 거상 학살자 is offered only against a wounded creature, with no 
 
 test("R94: 기절 타격 spends a focus point and makes the target roll its Constitution save on a card (D229)", async () => {
   const t = await table("monk", 5);
-  const fist = t.derived.attacks[0];
+  // V4b (D264): a melee swing — 충격의 일격 is not offered on a thrown dart or a bow.
+  const fist = t.derived.attacks.find((attack) => !attack.range)!;
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: fist.id }, overrides: { outcome: "hit" } });
   await tick();
   const offer = t.open()[0]?.prompt?.onHit?.offers.find((item) => item.key.endsWith("stunning-strike"));

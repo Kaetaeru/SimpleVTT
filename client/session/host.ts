@@ -26,7 +26,8 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { bearerRolls, monsterAuras, splitHitOffers, versusParts, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
+import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellDuration, type SpellExec } from "../compendium/spells";
+import type { ConditionDuration, TargetMark } from "../rules/contract";
 import { summonMonster } from "../compendium/summonTemplate";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
@@ -123,6 +124,8 @@ export interface TableHostOptions {
   pcGuards?: (entry: JournalCharacter, trigger: ReactionTrigger) => GuardOffer[];
   /** R63 (D198): what this character may still add to a swing that just landed (암습, 신성한 강타, on-hit contracts). */
   pcHitOffers?: (entry: JournalCharacter, attackId: string, riders: AttackRiders) => HitOffer[];
+  /** V4b (D264): the rule keys of this sheet's once-per-turn riders declared before the roll. */
+  pcOncePerTurnRiders?: (entry: JournalCharacter) => string[];
   /** R72 (D207): how many attacks this sheet's Attack action makes. */
   pcAttackActionAttacks?: (entry: JournalCharacter) => number;
   /** R58 (D193): the display name of a content id the host has no catalog to look up. */
@@ -153,7 +156,7 @@ export interface TableHostOptions {
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" } } } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" } } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
@@ -200,6 +203,8 @@ export class TableHost {
   /** R99 (D234): per attacker with 연구된 공격, the creature its last miss was against. ponytail: in memory, and it waits for the next attack rather than ending with the next turn. */
   private readonly studied = new Map<string, string>();
   private readonly turnUses = new Map<string, { mark: string; keys: string[] }>();
+  /** V4b (D264): marks rules left on tokens, by token id — what they do, and whose next turn start ends them. ponytail: in memory, a host restart keeps the marker name but forgets its effect. */
+  private readonly targetMarks = new Map<string, Array<{ from?: string; mark: TargetMark }>>();
   /** R86 (D221): per card, how to take back what happened automatically because of it (effects shed, a smite save card). */
   private readonly childUndos = new Map<string, Array<() => void>>();
   private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; /** R63 (D198): whose answer holds it — the target's reaction, or the attacker's on-hit choice. */ stage?: "reaction" | "on-hit"; /** R63 (D198): the result waits for the DM once it is let go (D90). */ waits?: boolean }>();
@@ -815,7 +820,13 @@ export class TableHost {
         if (command.targets.length > LIMITS.targets) return refuse(`한 번에 ${LIMITS.targets}명까지 겨냥할 수 있습니다`);
         // In combat a player attacks on their turn; out of turn only as a reaction (an opportunity prompt or a readied action).
         if (!isGm && !command.reaction && !command.readied && this.tracker.turns.length && this.turnOf(command.attacker)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 공격할 수 있습니다 (남의 턴에는 기회 공격·준비한 행동만)");
-        let prepared = this.prepareAttack(attackerEntry, command.attack, command.riders ?? {});
+        // V4b (D264): a once-per-turn rider already taken this turn is not taken again.
+        const once = attackerEntry.entry.kind === "character" ? this.options.pcOncePerTurnRiders?.(attackerEntry.entry) ?? [] : [];
+        const takenThisTurn = (() => { const used = this.turnUses.get(attackerEntry.entry.id); return used && used.mark === this.turnMark() ? used.keys : []; })();
+        const declaredRiders = command.riders?.contracts ? { ...command.riders, contracts: command.riders.contracts.filter((key) => !(once.includes(key) && takenThisTurn.includes(key))) } : command.riders ?? {};
+        if (declaredRiders.contracts && command.riders?.contracts && declaredRiders.contracts.length !== command.riders.contracts.length) this.say({ type: "system", who: "", content: `${attackerEntry.token?.name ?? attackerEntry.entry.name}: 이번 턴에 이미 쓴 턴당 1회 선언은 빠졌습니다` });
+        this.useThisTurn(attackerEntry.entry.id, (declaredRiders.contracts ?? []).filter((key) => once.includes(key)));
+        let prepared = this.prepareAttack(attackerEntry, command.attack, declaredRiders);
         if (!prepared) return refuse("그 공격을 찾을 수 없습니다");
         // D95: players may declare advantage/disadvantage; cover and forced outcomes are the DM's (pre-roll or palette).
         const overrides = isGm ? command.overrides : command.overrides?.advantage ? { advantage: command.overrides.advantage } : undefined;
@@ -1043,6 +1054,8 @@ export class TableHost {
         if (!outcome) return refuse("그 특성에는 표에서 할 일이 없습니다");
         const who = actor.token?.name ?? actor.entry.name;
         const targets = (command.targets ?? []).slice(0, LIMITS.targets).map((ref) => this.resolveActor(ref)).filter((found): found is NonNullable<typeof found> => Boolean(found));
+        // V4b (D264): a condition the rule lets its targets save against is a save card per target.
+        for (const target of targets) for (const rule of outcome.conditionSaves ?? []) this.riderSave(actor, target, { label: outcome.label, ...rule }, Boolean(this.campaign.settings.dmConfirmsResults) && !isGm, userId);
         for (const target of targets) {
           this.mark(target, outcome.conditionsApplied, true, actor.token?.id);
           this.mark(target, outcome.conditionsRemoved, false);
@@ -1620,6 +1633,41 @@ export class TableHost {
   }
 
   private combatantOf(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
+    const base = this.combatantBase(actor);
+    const marks = actor.token ? this.targetMarks.get(actor.token.id) ?? [] : [];
+    if (!base || !marks.length) return base;
+    const saves = marks.filter((item) => item.mark.nextSave).map((item) => ({ on: "save" as const, state: "disadvantage" as const, label: item.mark.name }));
+    const attacks = marks.filter((item) => item.mark.nextAttack).map((item) => ({ label: item.mark.name, ...(item.mark.nextAttack!.advantage ? { advantage: true } : {}), ...(item.mark.nextAttack!.bonus ? { bonus: item.mark.nextAttack!.bonus } : {}), ...(item.mark.nextAttack!.by === "others" && item.from ? { except: item.from } : {}) }));
+    return { ...base, ...(saves.length ? { rollStates: [...(base.rollStates ?? []), ...saves] } : {}), ...(attacks.length ? { nextAttackAgainst: attacks } : {}) };
+  }
+
+  /** V4b (D264): leave a mark on a target, with its effect remembered; returns how to take it back. */
+  private markTarget(target: { entry: JournalEntry; token?: Token; page?: Page }, from: string | undefined, mark: TargetMark): () => void {
+    if (!target.token || !target.page) return () => undefined;
+    const tokenId = target.token.id;
+    const pageId = target.page.id;
+    const entry = { ...(from ? { from } : {}), mark };
+    this.targetMarks.set(tokenId, [...(this.targetMarks.get(tokenId) ?? []).filter((item) => !(item.mark.name === mark.name && item.from === from)), entry]);
+    this.mark(target, [mark.name], true, from);
+    return () => { this.dropMarks(tokenId, (item) => item === entry, pageId); };
+  }
+
+  /** V4b (D264): take marks off a token — their effects and their marker names. */
+  private dropMarks(tokenId: string, which: (item: { from?: string; mark: TargetMark }) => boolean, pageId?: string) {
+    const all = this.targetMarks.get(tokenId) ?? [];
+    const gone = all.filter(which);
+    if (!gone.length) return;
+    const kept = all.filter((item) => !gone.includes(item));
+    if (kept.length) this.targetMarks.set(tokenId, kept); else this.targetMarks.delete(tokenId);
+    const page = [...this.pages.values()].find((item) => (!pageId || item.id === pageId) && item.tokens.some((token) => token.id === tokenId));
+    const token = page?.tokens.find((item) => item.id === tokenId);
+    if (!page || !token) return;
+    const names = new Set(gone.map((item) => item.mark.name).filter((name) => !kept.some((item) => item.mark.name === name)));
+    const markers = token.markers.filter((marker) => !names.has(marker.name));
+    if (markers.length !== token.markers.length) this.storeToken(page, { ...token, markers });
+  }
+
+  private combatantBase(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
     if (actor.entry.kind === "npc") return { ...npcCombatant(actor.entry, actor.token), tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from, vexedBy: actor.token?.markers.find((marker) => marker.name === "교란")?.from };
     if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.filter((marker) => marker.name !== HIT_DEFENSE_MARK).map((marker) => marker.name) ?? [])])], tokenId: actor.token?.id, hitDefenseFrom: actor.token?.markers.filter((marker) => marker.name === HIT_DEFENSE_MARK && marker.from).map((marker) => marker.from!), grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from, vexedBy: actor.token?.markers.find((marker) => marker.name === "교란")?.from }; }
     return null;
@@ -1763,7 +1811,7 @@ export class TableHost {
    */
   private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; spellSmite?: { spellId: string; slot: number } }, auto: HitOffer[]): string {
     const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], spellSmite: answer.spellSmite };
-    if (!all.choices.length) return this.finishAttack(held);
+    if (!all.choices.length) { const card = this.finishAttack(held); this.hitRiderCards(held.spec, held.attacker, held.target, held.resolution, card, Boolean(held.waits), held.inputs.by); return card; }
     this.useThisTurn(held.attacker.entry.id, all.choices);
     // H2 (D239): the computed facts of what was chosen count as confirmed.
     if (held.attacker.entry.kind === "character" && held.inputs.attack.source === "weapon") {
@@ -1791,11 +1839,7 @@ export class TableHost {
     // R82 (D218): a smite spell is cast as a bonus action.
     if (riders.spellSmite) this.markUsed(held.inputs.attacker, "bonus");
     const card = this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
-    // R94 (D229): a rider that forces a save (기절 타격) posts it as its own card, undone with the swing.
-    for (const rule of prepared.spec.hitSaves ?? []) {
-      const save = this.riderSave(attacker, target, rule, Boolean(held.waits), held.inputs.by);
-      if (save) this.childOf(() => { if (this.spells.has(save)) this.undoCard(save, "", held.inputs.by); }, card);
-    }
+    this.hitRiderCards(prepared.spec, attacker, target, resolution, card, Boolean(held.waits), held.inputs.by);
     if (riders.spellSmite && attacker.entry.kind === "character") {
       const save = this.smiteSave(attacker, target, riders.spellSmite, Boolean(held.waits), held.inputs.by);
       // R86 (D221): undoing the swing takes the smite save card back with it.
@@ -1804,24 +1848,39 @@ export class TableHost {
     return card;
   }
 
+  /** R94 (D229), V4b (D264): what the declared riders do once a swing has landed — saves as their own cards, marks on the target — all undone with it. */
+  private hitRiderCards(spec: AttackSpec, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, resolution: AttackResolution, card: string, waits: boolean, by: string) {
+    if (resolution.outcome !== "hit" && resolution.outcome !== "crit") return;
+    for (const rule of spec.hitSaves ?? []) {
+      const save = this.riderSave(attacker, target, rule, waits, by);
+      if (save) this.childOf(() => { if (this.spells.has(save)) this.undoCard(save, "", by); }, card);
+    }
+    const live = this.resolveActor(this.refOf(target)) ?? target;
+    for (const hit of spec.hitMarks ?? []) { const undo = this.markTarget(live, attacker.token?.id, hit.mark); this.childOf(undo, card); }
+  }
+
   /**
    * R82 (D218): the save a smite spell asks of the creature it hit (분노의 강타's 지혜, 휘감는 일격's 근력), rolled against
    * the caster's spell DC and posted as its own card — the same card, conditions, effects and undo a cast save gets.
    */
   /** R94 (D229): the save a feature rider forces, as a card: the condition lands on a failure until the start of the attacker's next turn. */
-  private riderSave(attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, rule: { label: string; ability: string; dc: number; condition: string }, waits: boolean, by: string) {
+  private riderSave(attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, rule: { label: string; ability: string; dc: number; condition: string; duration?: ConditionDuration; repeatSave?: "turn-end"; successMark?: TargetMark }, waits: boolean, by: string) {
     const live = this.resolveActor(this.refOf(target)) ?? target;
     const combatant = this.combatantOf(live);
     const stats = this.statsOf(live);
     const caster = this.combatantOf(this.resolveActor(this.refOf(attacker)) ?? attacker);
     if (!combatant || !stats || !caster) return;
-    const duration = { kind: "rounds" as const, amount: 1, anchorActorId: "$source", boundary: "start" as const };
-    const exec: SpellExec = { spellId: `feature:${rule.label}`, baseLevel: 0, castingEconomy: "action", targeting: { kind: "creature", minTargets: 1, maxTargets: 1 }, primary: { kind: "save-effect", saveAbility: rule.ability, duration }, effects: [{ conditionId: rule.condition, trigger: "failed-save", duration }] };
+    // V4b (D264): how long the rule says, counted on the source's or the bearer's turns; the default is R94's.
+    const duration: SpellDuration = rule.duration ? { kind: rule.duration.kind, amount: rule.duration.amount, ...(rule.duration.boundary ? { boundary: rule.duration.boundary, anchorActorId: rule.duration.anchor === "bearer" ? "$target" : "$source" } : {}) } : { kind: "rounds", amount: 1, anchorActorId: "$source", boundary: "start" };
+    const exec: SpellExec = { spellId: `feature:${rule.label}`, baseLevel: 0, castingEconomy: "action", targeting: { kind: "creature", minTargets: 1, maxTargets: 1 }, primary: { kind: "save-effect", saveAbility: rule.ability, duration }, effects: [{ conditionId: rule.condition, trigger: "failed-save", duration }], ...(rule.repeatSave ? { repeatSave: rule.repeatSave } : {}) };
     const spec = { spellId: exec.spellId, name: rule.label, level: 0, exec };
     const casterStats = { attackBonus: 0, saveDc: rule.dc, modifier: 0, level: 1 };
     const resolution = resolveSpell({ caster, casterStats, spec, targets: [{ combatant, stats }], dice: diceFrom(this.options.random ?? Math.random), apply: !waits });
     const player = this.campaign.players.find((item) => item.userId === by);
-    return this.postSpell(resolution, [live], () => undefined, waits, player?.displayName ?? "", by, { spec, casterStats });
+    const card = this.postSpell(resolution, [live], () => undefined, waits, player?.displayName ?? "", by, { spec, casterStats });
+    // V4b (D264): a successful save may still leave a mark (충격의 일격: the next attack against it has advantage).
+    if (rule.successMark && resolution.targets[0]?.save?.success) this.markTarget(live, attacker.token?.id, rule.successMark);
+    return card;
   }
 
   private smiteSave(attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, smite: { spellId: string; slot: number }, waits: boolean, by: string) {
@@ -2213,6 +2272,8 @@ export class TableHost {
     const messageId = newMessageId();
     const apply = () => this.asCause(messageId, () => {
       const rows = resolution.targets.map((row, index) => this.applySpellRow(row, targets[index], resolution));
+      // V4b (D264): a save made spends the mark that put it at disadvantage.
+      resolution.targets.forEach((row, index) => { const tokenId = targets[index]?.token?.id; if (row.save && tokenId) this.dropMarks(tokenId, (item) => Boolean(item.mark.nextSave)); });
       // R99 (D234): a spell that dropped a monster is the moment 어둠의 존재의 축복 waits for.
       const killer = this.journalEntries.get(resolution.caster.id);
       if (resolution.targets.some((row, index) => targets[index]?.entry.kind === "npc" && (row.attack?.downed ?? row.damage?.downed))) { if (killer?.kind === "character") this.offerTriggers(killer, "kill"); this.offerNearbyKill(resolution.caster.id, targets.find((target, index) => target?.entry.kind === "npc" && (resolution.targets[index]?.attack?.downed ?? resolution.targets[index]?.damage?.downed))?.page?.id); }
@@ -2625,6 +2686,8 @@ export class TableHost {
       if (args[0].downed && args[1].entry.kind === "npc" && !args[6]) { if (killer?.kind === "character") this.offerTriggers(killer, "kill"); this.offerNearbyKill(args[2].entry.id, args[1].page?.id); }
       // R90 (D225): after the card has written its own changes, so they do not put the spent effect back.
       this.consumeOnUse(args[2].entry.id, "attack");
+      // V4b (D264): the attack spends a mark on the target that was waiting for it.
+      if (args[1].token) { const attackerToken = args[2].token?.id; this.dropMarks(args[1].token.id, (item) => Boolean(item.mark.nextAttack) && !(item.mark.nextAttack!.by === "others" && item.from === attackerToken)); }
       this.consumeOnUse(args[1].entry.id, "attacked");
       return out;
     });
@@ -2826,6 +2889,8 @@ export class TableHost {
     // R28 (D151): the rage is judged at the end of its bearer's turn, on what happened since their last one.
     if (endedActor && this.rageOf(endedActor.entry) && !result.ended?.ragingDeed) this.endRage(this.journalEntries.get(endedActor.entry.id) ?? endedActor.entry, "그 사이 공격도 피해도 없었음");
     const startedActor = this.actorOfTurn(result.started);
+    // V4b (D264): marks this creature left on others end as its turn starts.
+    if (startedActor?.token) for (const tokenId of [...this.targetMarks.keys()]) this.dropMarks(tokenId, (item) => item.from === startedActor.token!.id);
     if (startedActor) this.mark(startedActor, [...TURN_MARKS.startOfTurn], false);
     // 도움 the starting creature granted ends now (until the start of the helper's next turn).
     if (startedActor?.token && startedActor.page) {

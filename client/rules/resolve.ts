@@ -7,6 +7,7 @@
  */
 import type { ActorRef, AttackRef } from "../session/protocol";
 import { CANNOT_ACT } from "./actions";
+import type { ConditionDuration, TargetMark } from "./contract";
 export type Advantage = "advantage" | "disadvantage" | "normal";
 
 export interface CombatantDefenses {
@@ -79,6 +80,8 @@ export interface Combatant {
   /** V3h (D262): a creature that hit this one has disadvantage on its other attacks against it this turn (다중 공격 방어) — the rule's name, and who hit. */
   hitDefense?: string;
   hitDefenseFrom?: string[];
+  /** V4b (D264): what the next attack against this creature gets, from a mark on it; `except` is the marker's token when only others benefit. */
+  nextAttackAgainst?: Array<{ label: string; advantage?: boolean; bonus?: number; except?: string }>;
   /** R90 (D225): dice a spell it is under adds to its own attack rolls or saves (축복 +1d4, 액운 −1d4). */
   d20Dice?: Array<{ on: "attack" | "save"; dice: string; label: string }>;
   /** R90 (D225): advantage or disadvantage on its own attack rolls or saves, from a spell it is under. */
@@ -154,7 +157,9 @@ export interface AttackSpec {
    */
   diceRules?: DiceRule[];
   /** R94 (D229): saves the target makes because a chosen rider landed (기절 타격), each with the condition a failure gives. */
-  hitSaves?: Array<{ label: string; ability: string; dc: number; condition: string }>;
+  hitSaves?: Array<{ label: string; ability: string; dc: number; condition: string; duration?: ConditionDuration; repeatSave?: "turn-end"; successMark?: TargetMark }>;
+  /** V4b (D264): marks a hit leaves on the target. */
+  hitMarks?: Array<{ label: string; mark: TargetMark }>;
 }
 
 export interface DiceRule {
@@ -269,6 +274,7 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (has(target, "장님")) plus.push("대상 장님");
   if (has(target, "투명")) minus.push("대상 투명");
   if (effect(target, "회피")) minus.push("대상 회피");
+  for (const mark of target.nextAttackAgainst ?? []) if (mark.advantage && (!mark.except || mark.except !== attacker.tokenId)) plus.push(mark.label);
   // R55 (D190): whatever the two sheets' own contracts declared, on either side of the swing.
   for (const reason of spec.advantageOn ?? []) plus.push(reason);
   for (const reason of target.grantsAdvantage ?? []) plus.push(reason);
@@ -410,7 +416,10 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   // R90 (D225): the dice a spell adds to this creature's attack rolls, kept on a re-resolution like the d20.
   const bonusDice = (attacker.d20Dice ?? []).filter((item) => item.on === "attack").map((item, index) => ({ label: item.label, dice: item.dice, total: options.fixed?.bonusDice?.[index] ?? rollFormula(item.dice, options.dice) }));
   for (const item of bonusDice) reasons.push(`${item.label} ${item.total >= 0 ? "+" : ""}${item.total} (${item.dice})`);
-  const attackTotal = kept + spec.attackBonus - exhausted + (overrides.rollDelta ?? 0) + bonusDice.reduce((total, item) => total + item.total, 0);
+  // V4b (D264): a mark on the target that adds to the next attack against it (무너뜨리는 일격).
+  const marked = (target.nextAttackAgainst ?? []).filter((mark) => mark.bonus && (!mark.except || mark.except !== attacker.tokenId));
+  for (const mark of marked) reasons.push(`${mark.label} +${mark.bonus}`);
+  const attackTotal = kept + spec.attackBonus - exhausted + (overrides.rollDelta ?? 0) + bonusDice.reduce((total, item) => total + item.total, 0) + marked.reduce((total, mark) => total + (mark.bonus ?? 0), 0);
   if (exhausted) reasons.push(`탈진 ${attacker.exhaustion}단계 (−${exhausted})`);
   // R43 (D183): 향상된 치명타 lowers the number a d20 has to reach for a critical hit; 20 is the default.
   const critRange = Math.max(2, Math.min(20, spec.critRange ?? 20));

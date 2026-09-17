@@ -492,7 +492,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     // its sheet half and stopped. When it needs people, the targeting mode asks for them first.
     const table = derived ? tableOutcome(derived, catalog, featureRuleKey(feature.id)) : null;
     if (table) {
-      const wantsTargets = table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.healPool || table.party.grants.length || table.strikes?.length;
+      const wantsTargets = table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.healPool || table.party.grants.length || table.strikes?.length || table.conditionSaves?.length;
       let picked: string[] = [];
       if (wantsTargets) {
         picked = await requestTargets(`${feature.name} — 대상을 클릭하세요${table.party.max ? ` (최대 ${table.party.max}명)` : ""}`, { multi: true });

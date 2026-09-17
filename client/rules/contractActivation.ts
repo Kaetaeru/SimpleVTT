@@ -284,6 +284,8 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
       } else if (operation.kind === "property.modify" && operation.property === "rider.forgo-dice") {
         const dice = number(operation.value) ?? 0;
         rules.push(dice ? `${where} — 함께 고른 명중 피해의 주사위 ${dice}개 포기` : `${where} — 함께 고른 공격에만`);
+      } else if (operation.kind === "property.modify" && operation.property === "target.mark") {
+        rules.push(`${where} — 명중하면 대상에 ${String((operation.params?.mark as { name?: string } | undefined)?.name ?? "")}`);
       } else if (operation.kind === "property.modify" && operation.property === "attack-roll.forgo-advantage") {
         rules.push(`${where} — 이 공격의 유리를 포기`);
       } else if (operation.kind === "property.modify" && operation.property === "damage.type.replace") {
