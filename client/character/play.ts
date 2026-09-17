@@ -371,11 +371,19 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
     parts.push(`히트 다이스 ${die} 소비`);
   }
   // V4a (D263): a spell slot as the cost — the lowest one left.
+  // V4j (D272): unless the contract names the level it burns (마법의 샘 turns that slot into sorcery points).
   if (activation.spellSlot) {
-    const level = Object.keys(derived.spellSlots).map(Number).sort((a, b) => a - b).find((slot) => (next.slotsUsed[slot] ?? 0) < (derived.spellSlots[slot] ?? 0));
-    if (level === undefined) return null;
+    const level = activation.slotLevel ?? Object.keys(derived.spellSlots).map(Number).sort((a, b) => a - b).find((slot) => (next.slotsUsed[slot] ?? 0) < (derived.spellSlots[slot] ?? 0));
+    if (level === undefined || (next.slotsUsed[level] ?? 0) >= (derived.spellSlots[level] ?? 0)) return null;
     next = { ...next, slotsUsed: { ...next.slotsUsed, [level]: (next.slotsUsed[level] ?? 0) + 1 } };
     parts.push(`${level}레벨 슬롯 소비`);
+  }
+  // V4j (D272): a use that hands a slot back instead (마법 점수로 슬롯 만들기, 야생 재발).
+  if (activation.slotGain) {
+    const level = activation.slotGain;
+    if ((next.slotsUsed[level] ?? 0) <= 0) return null;
+    next = { ...next, slotsUsed: { ...next.slotsUsed, [level]: (next.slotsUsed[level] ?? 0) - 1 } };
+    parts.push(`${level}레벨 슬롯 회복`);
   }
   if (extras.rolled) parts.push(`${extras.rolled.label} ${extras.rolled.total}`);
   // The caller decides what was rolled or chosen (Second Wind roll, Lay on Hands points on self); apply whatever it passed.

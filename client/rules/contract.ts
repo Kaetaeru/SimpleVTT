@@ -93,7 +93,7 @@ export type ContractOperation =
   /**
    * R40 (D180): the pool a use spends or gives back. A negative `amount` spends; `resource` is the client's pool id.
    */
-  | { kind: "resource.change"; resourceId: string; amount: Expr; target: string; when?: Expr; /** V4c (D265): give uses back until this many are left (지속되는 격노, 완벽한 집중). */ upTo?: boolean }
+  | { kind: "resource.change"; resourceId: string; amount: Expr; target: string; when?: Expr; /** V4c (D265): give uses back until this many are left (지속되는 격노, 완벽한 집중). */ upTo?: boolean; /** V4j (D272): the spell slot level a reserved slot resource spends or gives back (마법의 샘의 교환). */ level?: number }
   /** R40 (D180): dice rolled and applied as healing or temporary hit points; `dice` and `amount` add up to the formula. */
   | { kind: "temp-hp.grant"; dice?: string; amount?: Expr; target: string; when?: Expr }
   /** R40 (D180): dice rolled and logged as damage a feature deals (Breath Weapon), without choosing who takes it. */
@@ -331,7 +331,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
       const resource = String(operation.resource ?? "");
       if (!resource) { unsupported.push(`${at}: resource.change에 resource가 없습니다`); return; }
       const raw = operation.amount;
-      out.push({ kind, resourceId: resourceIdOf(resource), amount: isExpr(raw) ? raw : { value: typeof raw === "number" ? raw : (raw as { value?: number } | undefined)?.value ?? 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.upTo === true ? { upTo: true } : {}) });
+      out.push({ kind, resourceId: resourceIdOf(resource), amount: isExpr(raw) ? raw : { value: typeof raw === "number" ? raw : (raw as { value?: number } | undefined)?.value ?? 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.upTo === true ? { upTo: true } : {}), ...(typeof operation.level === "number" ? { level: operation.level } : {}) });
       return;
     }
     if (kind === "temp-hp.grant" || kind === "damage.apply") {

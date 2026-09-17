@@ -74,6 +74,7 @@
 - 주문 정의 `removesConditions`(표의 해제), 지속 색인의 `primary` 재사용, 반복 내성 색인 추가 (D269)
 - 시점 `turn-end`(pcTurnEnd) · 속성 `death-save.crit-range`, `rider.forgo-limit` · 가드 속성 `reaction.redirect` · 사실 `orAsk`와 계산 사실 `attack.advantage` (D270)
 - `grant.resource`의 `atWill` · 명중 창 효과의 예약 자원 결제(`resource.pact-slot`) · 내성 없는 `condition.apply`가 명중과 함께 붙는 상태(`ContractRider.conditions`) (D271)
+- `resource.change`의 `level`(예약 슬롯 자원이 쓰거나 돌려주는 슬롯 레벨) · 사용의 `slotLevel`·`slotGain` (D272)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

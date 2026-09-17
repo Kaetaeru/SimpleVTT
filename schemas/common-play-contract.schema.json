@@ -1401,6 +1401,12 @@
         "when": {
           "$ref": "#/$defs/predicate"
         },
+        "level": {
+          "description": "V4j (D272): the spell slot level a reserved slot resource spends or gives back (Font of Magic's conversions).",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9
+        },
         "createIfMissing": {
           "type": "object",
           "required": [

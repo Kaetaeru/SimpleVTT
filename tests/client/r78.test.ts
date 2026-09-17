@@ -19,7 +19,7 @@ test("R78: rest features are not turn buttons (D213)", () => {
   const sorcerer = build({ classes: "sorcerer", level: 5 });
   assert.ok(!names(usableFeatures(wizard.derived, initialRuntime(wizard.derived), catalog())).includes("비전 회복"));
   assert.ok(!names(usableFeatures(sorcerer.derived, initialRuntime(sorcerer.derived), catalog())).includes("마력 회복"));
-  assert.ok(names(usableFeatures(sorcerer.derived, initialRuntime(sorcerer.derived), catalog())).includes("마력의 샘"), "a feature used on the turn still is");
+  assert.ok(names(usableFeatures(sorcerer.derived, initialRuntime(sorcerer.derived), catalog())).includes("마력의 샘: 1레벨 슬롯 → 마법 점수 1"), "a feature used on the turn still is — V4j (D272) made each conversion its own use");
 });
 
 test("R78: 비전 회복 gives back slots up to half the wizard level, once (D213)", () => {

@@ -127,6 +127,10 @@ export interface ContractUse {
   economy?: string;
   /** V4a (D263): the use costs one spell slot, the lowest one left. */
   spellSlot?: boolean;
+  /** V4j (D272): the slot level the use spends, when the contract names one instead of taking the lowest (마법의 샘). */
+  slotLevel?: number;
+  /** V4j (D272): the slot level the use gives back (마법 점수로 슬롯 만들기, 야생 재발). */
+  slotGain?: number;
   /** V4a (D263): the pool that cannot come back for this many long rests, rolled when used (더 강한 신성 개입). */
   lockout?: { resourceId: string; dice: string };
 }
@@ -178,9 +182,13 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
       // A negative amount spends the pool; a positive one gives it back, which a use never does to its own cost.
       if (spent > 0) {
         if (operation.resourceId === HIT_DIE_RESOURCE) { use.hitDie = true; found = true; continue; }
-        if (operation.resourceId === SPELL_SLOT_RESOURCE) { use.spellSlot = true; found = true; continue; }
+        // V4j (D272): a contract may name the level it burns (마법의 샘 turns that slot into sorcery points).
+        if (operation.resourceId === SPELL_SLOT_RESOURCE) { use.spellSlot = true; if (operation.level) use.slotLevel = operation.level; found = true; continue; }
         use.resourceId = operation.resourceId; if (spent > 1) use.cost = spent; found = true;
       }
+      // V4j (D272): a use that hands a spell slot back (마법의 샘의 교환, 야생 재발); a pool it fills back up is
+      // already the contract outcome's doing, so it is not repeated here.
+      if (spent < 0 && operation.resourceId === SPELL_SLOT_RESOURCE && operation.level) { use.slotGain = operation.level; found = true; }
       continue;
     }
     if (operation.kind === "property.modify" && operation.property === "resource.lockout" && operation.params?.resource && operation.dice) { use.lockout = { resourceId: resourceIdOf(String(operation.params.resource)), dice: operation.dice }; found = true; continue; }

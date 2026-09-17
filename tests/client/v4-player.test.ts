@@ -472,3 +472,29 @@ test("V4i: an invocation's free cast never runs out, 마귀의 시야 sees 120 f
   assert.ok(markers(t, 1).includes("넘어짐"), JSON.stringify(markers(t, 1)));
   assert.equal((t.entry(0) as ReturnType<typeof newJournalCharacter>).runtime.pactSlotsUsed, 1);
 });
+
+test("V4j: 마력의 샘 turns a slot into sorcery points and points back into a slot; 야생 재발 trades a Wild Shape use for a 1st-level slot (D272)", async () => {
+  const cat = catalog();
+  const sorcerer = build({ name: "소서러", classes: "sorcerer", level: 5 });
+  let sheet: CharacterRuntime = initialRuntime(sorcerer.derived);
+  const deps = (made: typeof sorcerer) => ({ source: made.source, catalog: cat, derived: made.derived, get runtime() { return sheet; }, rollDice: async (spec: { label: string; formula: string }) => ({ id: "r", at: "", label: spec.label, formula: spec.formula, total: 3, dice: [], modifier: 0 }), save: (update: (current: CharacterRuntime) => CharacterRuntime) => { sheet = update(sheet); } });
+  const useOf = (made: typeof sorcerer, name: string) => made.derived.features.find((feature) => feature.name === name)!;
+
+  // A 2nd-level slot becomes two sorcery points.
+  sheet = { ...sheet, resourcesUsed: { "resource.sorcerer.sorcery-points": 4 } };
+  assert.equal(await activateFeature(useOf(sorcerer, "마력의 샘: 2레벨 슬롯 → 마법 점수 2"), deps(sorcerer) as Parameters<typeof activateFeature>[1]), "done");
+  assert.equal(sheet.slotsUsed[2], 1);
+  assert.equal(sheet.resourcesUsed["resource.sorcerer.sorcery-points"], 2, "four spent of five, two points back");
+
+  // Three points buy the 2nd-level slot back.
+  assert.equal(await activateFeature(useOf(sorcerer, "마력의 샘: 마법 점수 3 → 2레벨 슬롯"), deps(sorcerer) as Parameters<typeof activateFeature>[1]), "done");
+  assert.equal(sheet.slotsUsed[2], 0);
+  assert.equal(sheet.resourcesUsed["resource.sorcerer.sorcery-points"], 5, "three of the three points left paid for it");
+
+  // 야생 재발: a Wild Shape use for a 1st-level slot, and only while a slot is spent to give back.
+  const druid = build({ name: "드루이드", classes: "druid", level: 5 });
+  sheet = { ...initialRuntime(druid.derived), slotsUsed: { 1: 2 } };
+  assert.equal(await activateFeature(useOf(druid, "야생 재발: 야생 변신 1회 → 1레벨 슬롯"), deps(druid) as Parameters<typeof activateFeature>[1]), "done");
+  assert.equal(sheet.slotsUsed[1], 1);
+  assert.equal(sheet.resourcesUsed["resource.druid.wild-shape"], 1);
+});

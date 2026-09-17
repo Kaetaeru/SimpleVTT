@@ -113,7 +113,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 ## 드루이드
 - wild-shape (2) — 형태 없음(AC·공격·속도·능력치), 형태 목록·CR 제한, 지속시간·해제 없음. — [new-grammar + picker]
 - elemental-fury.primal-strike (7) — 야생 변신 공격에 안 붙음. — [host-hook] 형태와 함께.
-- wild-resurgence (5) — 슬롯↔야생 변신 교환 둘 다 없음. — [data-fix] D263 슬롯 결제·풀 회복.
+- ✔ D272 wild-resurgence (5) — 슬롯↔야생 변신 교환 둘 다 없음. — [data-fix] D263 슬롯 결제·풀 회복.
 - (D265: 이니셔티브 회복 ✔, 자연 마법사 남음) archdruid (20) — 수동 +1, 이니셔티브 때 0이면. 자연 마법사 문구. — [data-fix + picker]
 - circle-of-the-land.natures-sanctuary (14) — 사용 소비·행동·엄폐·저항 없음. — [data-fix + button]
 - wild-companion (2) — 사역마 찾기 무료 시전 없음. — [new-grammar]
@@ -121,7 +121,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D263 circle-of-the-land.lands-aid (3) — 내성 없음, 아군 회복 없음. — [data-fix]
 
 ## 소서러
-- font-of-magic (2) — 슬롯↔점수 변환 없음. — [new-grammar + picker]
+- ✔ D272 font-of-magic (2) — 슬롯↔점수 변환 없음. — [new-grammar + picker]
 - ✔ D265 innate-sorcery (1) — 효과에 속성 없음(DC +1, 주문 명중 유리), 추가 행동 결제 없음. — [data-fix]
 - ✔ D265 draconic.dragon-wings (14) — 비행 60·추가 행동·횟수 없음. — [data-fix]
 - draconic.dragon-companion (18) — 집중 없음이 문구. — [picker]
