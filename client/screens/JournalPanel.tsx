@@ -8,8 +8,9 @@ import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { Audience, JournalCharacter, JournalEntry, JournalFolder, Pending, TextSpan } from "../campaign/journal";
 import type { Macro } from "../campaign/model";
-import { canEdit, findByName, journalFolders, journalTree, newHandout, newJournalCharacter, parseJournalText, pendingFor, pendingValue } from "../campaign/journal";
+import { canEdit, findByName, journalFolders, journalTree, newHandout, newJournalCharacter, newJournalNpc, parseJournalText, pendingFor, pendingValue } from "../campaign/journal";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
+import { CUSTOM_MONSTER_EXAMPLE, parseCustomMonster } from "../compendium/customMonster";
 import { deriveCharacter } from "../character/derive";
 import type { RollResult } from "../character/dice";
 import type { CharacterRuntime } from "../character/runtime";
@@ -44,6 +45,15 @@ export function JournalTab({ onOpen, onNewCharacter }: { onOpen: (id: string) =>
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [npcJson, setNpcJson] = useState<string | null>(null);
+  const npcParsed = useMemo(() => (npcJson?.trim() ? parseCustomMonster(npcJson) : null), [npcJson]);
+  const addCustomNpc = () => {
+    if (!npcParsed || "error" in npcParsed) return;
+    const npc = { ...newJournalNpc(snapshot.campaignId, userId, npcParsed.monster), folder: "NPC" };
+    c.putJournal(npc);
+    setNpcJson(null);
+    onOpen(npc.id);
+  };
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const entries = snapshot.journal.filter((entry) => (showArchived ? entry.archived : !entry.archived));
   const filtered = query.trim() ? entries.filter((entry) => entry.name.toLowerCase().includes(query.trim().toLowerCase())) : entries;
@@ -83,6 +93,7 @@ export function JournalTab({ onOpen, onNewCharacter }: { onOpen: (id: string) =>
         <input className="cl-input" placeholder="이름으로 찾기" aria-label="저널 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
         <div className="cl-row" style={{ gap: 4 }}>
           {isGm ? <button type="button" className="cl-btn small" onClick={addHandout}>+ 핸드아웃</button> : null}
+          {isGm ? <button type="button" className="cl-btn small" onClick={() => setNpcJson("")} title="JSON으로 쓴 스탯 블록을 붙여 넣어 NPC를 만듭니다 (docs/guides/CUSTOM_NPC_JSON.md)">+ NPC</button> : null}
           {mayCreate ? <button type="button" className="cl-btn small" onClick={onNewCharacter}>+ 캐릭터</button> : null}
           {mayCreate ? <button type="button" className="cl-btn small" onClick={() => setImporting(true)} title="내 라이브러리의 캐릭터를 이 캠페인으로 복사합니다 (Vault 가져오기)">라이브러리에서</button> : null}
           {isGm ? <button type="button" className={`cl-btn small quiet${showArchived ? " active" : ""}`} onClick={() => setShowArchived((value) => !value)}>{showArchived ? "보관함 닫기" : "보관함 보기"}</button> : null}
@@ -91,6 +102,18 @@ export function JournalTab({ onOpen, onNewCharacter }: { onOpen: (id: string) =>
       <div className="cl-journal-list">
         {filtered.length === 0 ? <p className="cl-quiet cl-small" style={{ padding: 10 }}>{showArchived ? "보관된 항목이 없습니다." : isGm ? "핸드아웃이나 캐릭터를 만들면 여기에 폴더별로 보입니다. 플레이어는 \"볼 수 있는 사람\"에 든 항목만 봅니다." : "아직 볼 수 있는 항목이 없습니다. GM이 핸드아웃을 공개하거나 캐릭터를 맡기면 여기에 나타납니다."}</p> : renderFolder(tree, 0)}
       </div>
+      {npcJson !== null ? (
+        <Modal title="커스텀 NPC 추가" onClose={() => setNpcJson(null)}>
+          <p className="cl-muted cl-small">스탯 블록 JSON을 붙여 넣으세요. 형식은 docs/guides/CUSTOM_NPC_JSON.md에 있고, 코딩 에이전트에게 그 문서를 주고 만들게 할 수 있습니다. 공격·내성 행동은 SRD 몬스터처럼 턴 패널에서 굴려집니다.</p>
+          <textarea className="cl-input" aria-label="NPC JSON" rows={14} style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }} value={npcJson} placeholder='{ "name": "...", "ac": 13, "hp": 22, "abilities": { ... }, "actions": [ ... ] }' onChange={(event) => setNpcJson(event.target.value)} />
+          {npcParsed && "error" in npcParsed ? <Notice tone="warn">{npcParsed.error}</Notice> : null}
+          {npcParsed && "monster" in npcParsed ? <Notice tone={npcParsed.warnings.length ? "warn" : "good"}>{npcParsed.monster.name} · AC {npcParsed.monster.ac} · HP {npcParsed.monster.hp} · CR {npcParsed.monster.crText} · 행동 {npcParsed.monster.actions.length}개{npcParsed.warnings.map((warning) => <div key={warning} className="cl-small">⚠ {warning}</div>)}</Notice> : null}
+          <div className="cl-row" style={{ gap: 6, justifyContent: "flex-end" }}>
+            <button type="button" className="cl-btn small quiet" onClick={() => setNpcJson(JSON.stringify(CUSTOM_MONSTER_EXAMPLE, null, 2))}>예시 넣기</button>
+            <button type="button" className="cl-btn small primary" disabled={!npcParsed || "error" in npcParsed} onClick={addCustomNpc}>저널에 추가</button>
+          </div>
+        </Modal>
+      ) : null}
       {importing ? (
         <Modal title="라이브러리에서 가져오기" onClose={() => setImporting(false)}>
           <p className="cl-muted cl-small">선택한 캐릭터의 사본이 이 캠페인에 생깁니다. 이후 캠페인의 사본이 원본이고, 라이브러리 것은 그대로 남습니다 (D73). "라이브러리로 내보내기"로 되돌려 보낼 수 있습니다.</p>
