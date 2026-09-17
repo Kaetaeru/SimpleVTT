@@ -15,7 +15,8 @@ import { newTurn } from "../../client/campaign/tracker";
 import { initialRuntime } from "../../client/character/runtime";
 import { monsterById, searchMonsters } from "../../client/compendium/monsters";
 import { pcStats } from "../../client/rules/actions";
-import { derivedOf, npcCombatant, npcSaveExec, pcCombatant, pcConcentrationKey, regenerationOf } from "../../client/rules/attackSpec";
+import { derivedOf, npcCombatant, npcSaveExec, pcCombatant, pcConcentrationKey } from "../../client/rules/attackSpec";
+import { traitRule } from "../../client/compendium/monsterTraits";
 import { pcSpell, resolveSpell, type CasterStats } from "../../client/rules/spellcast";
 import { spellExec } from "../../client/compendium/spells";
 import { diceFrom, type Combatant } from "../../client/rules/resolve";
@@ -47,10 +48,10 @@ test("traits: a trait whose save is parsed resolves like any other save action (
 
 test("traits: 마법 저항 gives advantage on a save against a spell, not against a breath (D161)", () => {
   const mage = newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.archmage")!);
-  assert.ok(mage.statBlock.traits.some((trait) => /Magic Resistance/i.test(trait.nameEn ?? trait.name)), "the archmage has 마법 저항");
+  assert.ok(traitRule(mage.statBlock, "magic-resistance"), "the archmage has 마법 저항 as a trait rule");
   assert.equal(npcCombatant(mage).magicResistance, true);
   const ogre = newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.ogre")!);
-  assert.equal(npcCombatant(ogre).magicResistance, false, "an ogre has none");
+  assert.equal(npcCombatant(ogre).magicResistance ?? false, false, "an ogre has none");
   const casterStats: CasterStats = { saveDc: 15, attackBonus: 7, modifier: 4, level: 9 };
   const stats = { abilities: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 }, saves: { str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0 }, skills: {}, proficiencyBonus: 4 } as never;
   const cast = (target: Combatant) => resolveSpell({
@@ -69,9 +70,10 @@ test("traits: 마법 저항 gives advantage on a save against a spell, not again
 
 test("traits: 재생 names its own number, and the host hands it back at the turn start (D162)", async () => {
   const troll = newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.troll")!);
-  const regen = regenerationOf(troll.statBlock);
+  const regen = traitRule(troll.statBlock, "regeneration")?.rule;
   assert.ok(regen && regen.amount > 0, `the troll regenerates: ${JSON.stringify(regen)}`);
-  assert.equal(regenerationOf(monsterById("dnd.srd521.monster.ogre")!), undefined);
+  assert.equal(regen?.amount, 15, "SRD 5.2.1: the troll regains 15");
+  assert.equal(traitRule(monsterById("dnd.srd521.monster.ogre")!, "regeneration"), undefined);
 
   const hub = new MemoryHub();
   const campaign = { ...newCampaign("R31 재생", { userId: "dm", displayName: "DM" }), joinCode: "R31AAA" };
@@ -88,20 +90,23 @@ test("traits: 재생 names its own number, and the host hands it back at the tur
   const made = build({ name: "파이터", classes: "fighter", level: 3 });
   const pc = newJournalCharacter(campaign.id, "dm", made.source, initialRuntime(made.derived));
   dm.send({ type: "journal.put", entry: pc });
-  const hurt = { ...troll, campaignId: campaign.id, runtime: { ...troll.runtime, hp: { ...troll.runtime.hp, current: troll.runtime.hp.max - 30 } } };
+  const hurt = { ...troll, campaignId: campaign.id };
   dm.send({ type: "journal.put", entry: hurt });
   await tick();
   const pcToken = tokenForCharacter(pc);
-  const trollToken = tokenForNpc(hurt);
+  // H1 (D238): the troll's token is unlinked, so the wound and the healing are on its bar (D78).
+  const whole = tokenForNpc(hurt);
+  const trollToken: typeof whole = { ...whole, bars: [{ ...whole.bars[0], value: (whole.bars[0].max ?? 0) - 30 }, whole.bars[1], whole.bars[2]] };
+  const barHp = () => host.pageList.find((page) => page.id === scene.id)!.tokens.find((token) => token.id === trollToken.id)!.bars[0].value ?? 0;
   dm.send({ type: "token.put", pageId: scene.id, token: trollToken });
   dm.send({ type: "token.put", pageId: scene.id, token: pcToken });
   await tick();
-  const before = (host.journal.find((entry) => entry.id === troll.id) as JournalNpc).runtime.hp.current;
+  const before = barHp();
   dm.send({ type: "tracker.set", tracker: { open: true, round: 1, current: 0, sorted: true, turns: [newTurn({ name: "파이터", initiative: 20, tokenId: pcToken.id, pageId: scene.id, entryId: pc.id }), newTurn({ name: "트롤", initiative: 10, tokenId: trollToken.id, pageId: scene.id, entryId: troll.id })] } });
   await tick();
   dm.send({ type: "tracker.next" });
   await tick();
-  const after = (host.journal.find((entry) => entry.id === troll.id) as JournalNpc).runtime.hp.current;
+  const after = barHp();
   assert.equal(after, before + regen!.amount, "the troll's turn started and it healed");
   assert.ok(host.archive.some((message) => message.content.includes("재생")), JSON.stringify(host.archive.map((message) => message.content).slice(-4)));
 });

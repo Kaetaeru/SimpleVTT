@@ -6,6 +6,7 @@
  */
 import monsterJson from "../../src/generated/monsterCatalog.generated.json";
 import type { AbilityKey } from "../catalog/types";
+import type { TraitRule } from "./monsterTraits";
 
 export interface MonsterDamage { average: number; dice: string; count: number; sides: number; flat: number; type: string }
 export interface MonsterAttack { mode: "melee" | "ranged" | string; bonus: number; rangeFeet?: number; longRangeFeet?: number; damage: MonsterDamage[]; hitText?: string; riderConditions?: string[] }
@@ -23,6 +24,8 @@ export interface MonsterAction {
   timing?: { recharge?: { min: number; sides: number }; usesPerRound?: number };
   legendaryCost?: number;
   costText?: string;
+  /** H1 (D238): what this trait does, as generic patterns (compendium/monsterTraits.ts). */
+  rules?: TraitRule[];
 }
 
 export interface MonsterView {

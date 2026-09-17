@@ -1,0 +1,884 @@
+{
+ "description": "SRD monster trait rules keyed by monster id and the trait's English name. Each rule names a generic pattern the table runs (see docs/guides/CUSTOM_NPC_JSON.md).",
+ "monsters": {
+  "dnd.srd521.monster.aboleth": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-black-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-blue-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-brass-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-bronze-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-copper-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-gold-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-green-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-red-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-silver-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.adult-white-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-black-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-blue-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-brass-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-bronze-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-copper-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-gold-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-green-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-red-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-silver-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ancient-white-dragon": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.archmage": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.assassin": {
+   "Evasion": [
+    {
+     "pattern": "evasion"
+    }
+   ]
+  },
+  "dnd.srd521.monster.azer-sentinel": {
+   "Fire Aura": [
+    {
+     "pattern": "aura-damage",
+     "dice": "1d10",
+     "damageType": "fire",
+     "timing": "owner-turn-end"
+    }
+   ]
+  },
+  "dnd.srd521.monster.baboon": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.balor": {
+   "Fire Aura": [
+    {
+     "pattern": "aura-damage",
+     "dice": "3d8",
+     "damageType": "fire",
+     "timing": "owner-turn-end"
+    }
+   ],
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.barbed-devil": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.bearded-devil": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.berserker": {
+   "Bloodied Frenzy": [
+    {
+     "pattern": "bloodied-advantage",
+     "rolls": [
+      "attack",
+      "save"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.monster.blood-hawk": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.boar": {
+   "Bloodied Fury": [
+    {
+     "pattern": "bloodied-advantage",
+     "rolls": [
+      "attack"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.monster.bone-devil": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.chain-devil": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.clay-golem": {
+   "Acid Absorption": [
+    {
+     "pattern": "absorb",
+     "damageType": "acid"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.deva": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.dire-wolf": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.djinni": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.drider": {
+   "Sunlight Sensitivity": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "태양광 과민성 — 햇빛 아래라면 명중 굴림 불리",
+     "button": "햇빛 아래",
+     "grants": "disadvantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.dryad": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.efreeti": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.erinyes": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.화염-elemental": {
+   "Fire Aura": [
+    {
+     "pattern": "aura-damage",
+     "dice": "1d10",
+     "damageType": "fire",
+     "timing": "owner-turn-end"
+    }
+   ]
+  },
+  "dnd.srd521.monster.flesh-golem": {
+   "Lightning Absorption": [
+    {
+     "pattern": "absorb",
+     "damageType": "lightning"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.giant-boar": {
+   "Bloodied Fury": [
+    {
+     "pattern": "bloodied-advantage",
+     "rolls": [
+      "attack"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.monster.giant-rat": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.giant-vulture": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.glabrezu": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.hell-hound": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.hezrou": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.hobgoblin-warrior": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.horned-devil": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.hyena": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ice-devil": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.imp": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.iron-golem": {
+   "Fire Absorption": [
+    {
+     "pattern": "absorb",
+     "damageType": "fire"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.kobold-warrior": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ],
+   "Sunlight Sensitivity": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "태양광 과민성 — 햇빛 아래라면 명중 굴림 불리",
+     "button": "햇빛 아래",
+     "grants": "disadvantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.kraken": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.lich": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.lion": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.marilith": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.mummy-lord": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.nalfeshnee": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.night-hag": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.ogre-zombie": {
+   "Undead Fortitude": [
+    {
+     "pattern": "hold-at-one-hp",
+     "ability": "con",
+     "dcBase": 5,
+     "exceptDamageTypes": [
+      "radiant"
+     ],
+     "exceptCritical": true
+    }
+   ]
+  },
+  "dnd.srd521.monster.oni": {
+   "Regeneration": [
+    {
+     "pattern": "regeneration",
+     "amount": 10
+    }
+   ]
+  },
+  "dnd.srd521.monster.pit-fiend": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ],
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.planetar": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.pseudodragon": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.quasit": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.reef-shark": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.remorhaz": {
+   "Heat Aura": [
+    {
+     "pattern": "aura-damage",
+     "dice": "3d10",
+     "damageType": "fire",
+     "timing": "owner-turn-end"
+    }
+   ]
+  },
+  "dnd.srd521.monster.salamander": {
+   "Fire Aura": [
+    {
+     "pattern": "aura-damage",
+     "dice": "2d6",
+     "damageType": "fire",
+     "timing": "owner-turn-end"
+    }
+   ]
+  },
+  "dnd.srd521.monster.satyr": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.shambling-mound": {
+   "Lightning Absorption": [
+    {
+     "pattern": "absorb",
+     "damageType": "lightning"
+    }
+   ]
+  },
+  "dnd.srd521.monster.shield-guardian": {
+   "Regeneration": [
+    {
+     "pattern": "regeneration",
+     "amount": 10
+    }
+   ]
+  },
+  "dnd.srd521.monster.solar": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.specter": {
+   "Sunlight Sensitivity": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "태양광 과민성 — 햇빛 아래라면 명중 굴림 불리",
+     "button": "햇빛 아래",
+     "grants": "disadvantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.sphinx-of-lore": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.sphinx-of-valor": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.sphinx-of-wonder": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.stone-golem": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.tarrasque": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.tough-boss": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.tough": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.troll-limb": {
+   "Regeneration": [
+    {
+     "pattern": "regeneration",
+     "amount": 5,
+     "suppressedByDamageTypes": [
+      "acid",
+      "fire"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.monster.troll": {
+   "Regeneration": [
+    {
+     "pattern": "regeneration",
+     "amount": 15,
+     "suppressedByDamageTypes": [
+      "acid",
+      "fire"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.monster.unicorn": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ],
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.vampire": {
+   "Legendary Resistance": [
+    {
+     "pattern": "legendary-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.vrock": {
+   "Magic Resistance": [
+    {
+     "pattern": "magic-resistance"
+    }
+   ]
+  },
+  "dnd.srd521.monster.vulture": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.warrior-infantry": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.werewolf": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.wight": {
+   "Sunlight Sensitivity": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "태양광 과민성 — 햇빛 아래라면 명중 굴림 불리",
+     "button": "햇빛 아래",
+     "grants": "disadvantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.winter-wolf": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.wolf": {
+   "Pack Tactics": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "무리 전술 — 동료가 대상 5피트 안에 있으면 유리",
+     "button": "동료가 대상 곁에 있음",
+     "grants": "advantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.wraith": {
+   "Sunlight Sensitivity": [
+    {
+     "pattern": "situational",
+     "side": "attacker",
+     "note": "태양광 과민성 — 햇빛 아래라면 명중 굴림 불리",
+     "button": "햇빛 아래",
+     "grants": "disadvantage"
+    }
+   ]
+  },
+  "dnd.srd521.monster.zombie": {
+   "Undead Fortitude": [
+    {
+     "pattern": "hold-at-one-hp",
+     "ability": "con",
+     "dcBase": 5,
+     "exceptDamageTypes": [
+      "radiant"
+     ],
+     "exceptCritical": true
+    }
+   ]
+  }
+ }
+}

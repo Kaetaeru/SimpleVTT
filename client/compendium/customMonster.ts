@@ -9,6 +9,7 @@
 import type { AbilityKey } from "../catalog/types";
 import type { MonsterAction, MonsterDamage, MonsterView } from "./monsters";
 import { CONDITION_KO } from "./spells";
+import { readTraitRules } from "./monsterTraits";
 
 const ABILITIES: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
 export const DAMAGE_TYPES = ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"];
@@ -99,6 +100,9 @@ function readAction(raw: unknown, where: string, warnings: string[]): MonsterAct
   }
   if (isObject(raw.recharge)) action.timing = { recharge: { min: num(raw.recharge.min, 6), sides: 6 } };
   if (typeof raw.legendaryCost === "number") action.legendaryCost = raw.legendaryCost;
+  // H1 (D238): a trait's rules, the same patterns the SRD index uses.
+  const rules = readTraitRules(raw.rules, `${where}.rules`, warnings);
+  if (rules.length) action.rules = rules;
   return action;
 }
 

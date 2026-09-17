@@ -33,7 +33,8 @@ import { describeSpellExec, spellExec, sustainedExec, sustainOf } from "../compe
 import type { CastMethod } from "../character/play";
 import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
-import { canOffHand, npcAttackSpec, trueStrikeList, weaponRange } from "../rules/attackSpec";
+import { canOffHand, monsterAuras, npcAttackSpec, trueStrikeList, weaponRange } from "../rules/attackSpec";
+import { traitRules } from "../compendium/monsterTraits";
 import { offeredRiders, type ContractRider } from "../rules/attackRiders";
 import { tableOutcome } from "../rules/contractTable";
 import { attackScopeFilter } from "../rules/contractEffects";
@@ -638,7 +639,11 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       const sustain = exec ? sustainOf(exec) : null;
       return sustain?.economy === "none" ? [{ casterId: holder.id, spellId, name: effect.name, move: sustain.move, casterName: other.name }] : [];
     });
-  }).filter((zone, index, all) => all.findIndex((item) => item.casterId === zone.casterId && item.spellId === zone.spellId) === index);
+  }).concat(page.tokens.flatMap((other) => {
+    // R103 (D238): a monster aura on the page — marking yourself inside means you take it at the end of its turn.
+    const holder = other.represents ? c.table.snapshot!.journal.find((item) => item.id === other.represents) : undefined;
+    return holder?.kind === "npc" ? monsterAuras(holder.statBlock).map((aura) => ({ casterId: holder.id, spellId: `aura:${aura.name}`, name: aura.name, move: undefined, casterName: other.name })) : [];
+  })).filter((zone, index, all) => all.findIndex((item) => item.casterId === zone.casterId && item.spellId === zone.spellId) === index);
   const zoneButtons = zones.map((zone) => {
     const inside = (entry.runtime.effects ?? []).some((effect) => effect.key === `zone:${zone.casterId}:${zone.spellId}`);
     const title = `${zone.casterName}의 ${zone.name}`;
@@ -743,7 +748,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
  * player controls. One row: the sheet's attacks and unarmed options, then menus for the 2024 action list, checks,
  * features, items and bonus actions (D97, D98). The economy chips only inform.
  */
-interface AttackAsk { name: string; /** R100 (D235): the attacker knows 진실의 일격. */ trueStrike?: boolean; /** R52 (D187): the riders this sheet's contracts let the player declare on this weapon, before the dice. */ riders?: ContractRider[]; /** R33 (D168): this weapon is Light, so it may be swung as the off-hand attack. */ offHand?: boolean; /** R33 (D168): the feat that keeps the ability modifier on that swing, when the sheet has one. */ offHandFeat?: string; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: string[]; resolve: (answer: AttackAnswer | null) => void }
+interface AttackAsk { name: string; /** R100 (D235): the attacker knows 진실의 일격. */ trueStrike?: boolean; /** R52 (D187): the riders this sheet's contracts let the player declare on this weapon, before the dice. */ riders?: ContractRider[]; /** R33 (D168): this weapon is Light, so it may be swung as the off-hand attack. */ offHand?: boolean; /** R33 (D168): the feat that keeps the ability modifier on that swing, when the sheet has one. */ offHandFeat?: string; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: SituationAsk[]; resolve: (answer: AttackAnswer | null) => void }
 export interface AttackAnswer { riders?: AttackRiders; overrides?: AttackOverrides }
 const attackAskListeners = new Set<(ask: AttackAsk) => void>();
 export const requestAttackOptions = (ask: Omit<AttackAsk, "resolve">) => new Promise<AttackAnswer | null>((resolve) => { if (!attackAskListeners.size) { resolve({}); return; } for (const listener of [...attackAskListeners]) listener({ ...ask, resolve }); });
@@ -752,20 +757,21 @@ export const requestAttackOptions = (ask: Omit<AttackAsk, "resolve">) => new Pro
  * A scene has no positions (D109), so the app cannot decide them — it names them next to the 유리·불리 buttons
  * instead of pretending they do not exist.
  */
-const SITUATIONAL: Array<[RegExp, "attacker" | "target", string]> = [
-  [/무리 전술|Pack Tactics/i, "attacker", "무리 전술 — 동료가 대상에게 붙어 있으면 유리"],
-  [/태양광 과민성|Sunlight Sensitivity/i, "attacker", "태양광 과민성 — 햇빛 아래라면 불리"],
-  [/태양광 과민성|Sunlight Sensitivity/i, "target", "대상이 태양광 과민성 — 햇빛 아래라면 대상의 판정이 불리"],
-  [/은폐|투명|Invisib/i, "target", "대상이 보이지 않는다면 불리"],
-];
-function situationalTraits(attacker: JournalEntry, targets: JournalEntry[]): string[] {
-  const notes: string[] = [];
-  const traitsOf = (entry: JournalEntry) => (entry.kind === "npc" ? entry.statBlock.traits : []);
-  for (const [pattern, side, text] of SITUATIONAL) {
-    const pool = side === "attacker" ? traitsOf(attacker) : targets.flatMap(traitsOf);
-    if (pool.some((trait) => pattern.test(trait.nameEn ?? trait.name)) && !notes.includes(text)) notes.push(text);
-  }
-  return notes;
+export interface SituationAsk { id: string; label: string; note: string; grants?: "advantage" | "disadvantage" }
+/** H1 (D238): the situational trait rules on the attacker (its own) and on the targets (theirs) — checkboxes when they decide a roll, notes otherwise. */
+function situationalTraits(attacker: JournalEntry, targets: JournalEntry[]): SituationAsk[] {
+  const asks: SituationAsk[] = [];
+  const add = (entry: JournalEntry, side: "attacker" | "target") => {
+    if (entry.kind !== "npc") return;
+    for (const { trait, rule } of traitRules(entry.statBlock)) {
+      if (rule.pattern !== "situational" || rule.side !== side) continue;
+      const id = `${entry.statBlock.id}:${trait.name}`;
+      if (!asks.some((item) => item.id === id)) asks.push({ id, label: rule.button ?? trait.name, note: rule.note, ...(rule.grants ? { grants: rule.grants } : {}) });
+    }
+  };
+  add(attacker, "attacker");
+  for (const target of targets) add(target, "target");
+  return asks;
 }
 
 function AttackAskBridge() {
@@ -785,12 +791,15 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
   const [facts, setFacts] = useState<string[]>([]);
   const [offHand, setOffHand] = useState(false);
   const [trueStrike, setTrueStrike] = useState(false);
+  const [situations, setSituations] = useState<string[]>([]);
   const [advantage, setAdvantage] = useState<"auto" | Advantage>("auto");
   const [cover, setCover] = useState<0 | 2 | 5>(0);
   const [outcome, setOutcome] = useState<"" | "hit" | "crit" | "miss">("");
   const done = () => {
     const overrides: AttackOverrides = {};
     if (advantage !== "auto") overrides.advantage = advantage;
+    const confirmed = (ask.notes ?? []).filter((situation) => situation.grants && situations.includes(situation.id)).map((situation) => ({ reason: situation.label, grants: situation.grants! }));
+    if (confirmed.length) overrides.situational = confirmed;
     if (ask.gm && cover) overrides.cover = cover;
     if (ask.gm && outcome) overrides.outcome = outcome;
     onDone({ riders: { offHand: Boolean(ask.offHand) && offHand, ...(ask.trueStrike && trueStrike ? { trueStrike: true } : {}), ...(declared.length ? { contracts: declared } : {}), ...(facts.length ? { facts } : {}) }, overrides: Object.keys(overrides).length ? overrides : undefined });
@@ -828,7 +837,7 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
           )) : null}
         </div>
       ))}
-      {ask.notes?.length ? <div className="cl-field"><label>자리에 따라 (표에서 판단)</label><ul className="cl-quiet cl-small" style={{ margin: 0, paddingLeft: 18 }}>{ask.notes.map((note) => <li key={note}>{note}</li>)}</ul></div> : null}
+      {ask.notes?.length ? <div className="cl-field"><label>자리에 따라 (앱이 볼 수 없는 사실)</label>{ask.notes.map((situation) => situation.grants ? <label key={situation.id} className="cl-row cl-small" style={{ gap: 6 }} title={situation.note}><input type="checkbox" checked={situations.includes(situation.id)} onChange={(event) => setSituations((list) => (event.target.checked ? [...list, situation.id] : list.filter((id) => id !== situation.id)))} /> {situation.label} <span className="cl-quiet">({situation.grants === "advantage" ? "유리" : "불리"})</span></label> : <div key={situation.id} className="cl-quiet cl-small">DM 판정 — {situation.note}</div>)}</div> : null}
       <p className="cl-quiet cl-small">진행 중인 효과의 추가 주사위(격노·사냥꾼의 표식 등)는 저절로 붙습니다. 암습·신성한 강타처럼 명중했을 때 고르는 것은 명중한 뒤에 묻습니다. 판정 뒤에도 DM 팔레트로 고칠 수 있습니다.</p>
     </RiderModal>
   );

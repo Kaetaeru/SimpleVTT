@@ -170,3 +170,26 @@
 ```
 
 주문 카드의 **소환** 버튼이 형태를 고르게 하고, 호스트가 시전자의 수치로 채운 크리처를 시전자 곁에 놓는다. 예시 8종은 `content/supplements/phb-2024.spell-mechanics-patch/module.json`에 있다.
+
+## 10. 특성 규칙 `traits[].rules` (D238)
+
+특성의 `text`는 사람이 읽는 설명일 뿐이고, 앱은 **`rules`만** 읽는다. 이름이나 문장으로 규칙을 추측하지 않는다. 모듈 몬스터도 같은 형식이다.
+
+| `pattern` | 필요한 값 | 앱이 하는 일 |
+|---|---|---|
+| `magic-resistance` | — | 주문에 대한 내성 굴림에 유리 |
+| `legendary-resistance` | (스탯 블록의 `legendaryResistance` 횟수) | 실패한 내성을 성공으로 바꾸는 버튼, 횟수 차감 |
+| `regeneration` | `amount`, 선택 `suppressedByDamageTypes` | 턴 시작에 HP 회복(1 이상일 때). 그 피해 유형을 받으면 다음 턴 한 번 멈춤 |
+| `absorb` | `damageType` | 그 피해만큼 HP 회복 |
+| `hold-at-one-hp` | `ability`, `dcBase`, 선택 `exceptDamageTypes`, `exceptCritical` | 0 HP가 될 때 내성(DC = dcBase + 받은 피해) 성공 시 HP 1 |
+| `bloodied-advantage` | `rolls`: `["attack"]` / `["attack","save"]` | HP 절반 이하일 때 그 굴림에 유리 |
+| `evasion` | — | 절반 피해 민첩 내성: 성공 0, 실패 절반 |
+| `aura-damage` | `dice`, `damageType`, `timing: "owner-turn-end"` | 오라 안에 있다고 표시한 크리처(상황 버튼 "들어감")에게 이 크리처의 턴 끝마다 피해, 한 번 굴림 |
+| `situational` | `side`(`attacker`/`target`), `note`, 선택 `button`, `grants`(`advantage`/`disadvantage`) | 앱이 볼 수 없는 사실. `grants`가 있으면 판정 전 창에 체크박스, 없으면 "DM 판정" 안내 |
+
+```json
+{ "name": "타오르는 몸", "text": "턴이 끝날 때 5피트 안의 크리처는 2d6 화염 피해를 받는다.",
+  "rules": [{ "pattern": "aura-damage", "dice": "2d6", "damageType": "fire", "timing": "owner-turn-end" }] }
+```
+
+모르는 `pattern`이나 빠진 값은 경고로 알려 주고 그 규칙만 무시한다. SRD 스탯 블록의 규칙은 `content/indexes/dnd-srd-5.2.1.monster-traits.json`에 같은 형식으로 있다.

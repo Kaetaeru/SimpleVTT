@@ -53,7 +53,7 @@ export interface Combatant {
   /** R31 (D161): 마법 저항 — advantage on saving throws against spells and other magical effects. */
   magicResistance?: boolean;
   /** R31 (D162): 재생 — hit points regained at the start of its turn, and the sentence that qualifies it. */
-  regeneration?: { amount: number; note: string };
+  regeneration?: { amount: number; suppressedByDamageTypes?: string[] };
   /** The token on the board, when there is one. */
   tokenId?: string;
   /** Token id of whoever holds this creature in a grapple (2024: attacks against anyone else are at disadvantage). */
@@ -86,10 +86,10 @@ export interface Combatant {
   markAdvantage?: boolean;
   /** R99 (D234): 연구된 공격. */
   studiedAttacks?: boolean;
-  /** R102 (D237): monster traits — damage types that heal instead (번개 흡수), a CON save to stay at 1 HP (언데드 인내), advantage while bloodied (피투성이 분노). */
+  /** H1 (D238): monster trait rules — damage types that heal instead, a save to stay at 1 HP, advantage while bloodied. */
   absorbs?: string[];
-  undeadFortitude?: boolean;
-  bloodiedAdvantage?: string;
+  holdAtOneHp?: { label: string; bonus: number; dcBase: number; exceptDamageTypes: string[]; exceptCritical: boolean };
+  bloodied?: { label: string; rolls: Array<"attack" | "save"> };
 }
 
 export interface DamagePart {
@@ -165,6 +165,8 @@ export interface AttackOverrides {
   damageDelta?: number;
   /** Multiplies the damage total (0, 0.5, 1). */
   damageScale?: number;
+  /** H1 (D238): situational facts the attacker confirmed, each giving advantage or disadvantage. */
+  situational?: Array<{ reason: string; grants: "advantage" | "disadvantage" }>;
   /** R37 (D177): added to the attack roll's total by a contract's `roll.modify` (탁월한 기술's 1d12). */
   rollDelta?: number;
   note?: string;
@@ -229,7 +231,7 @@ export function listCovers(list: string[], type: string) {
 /* ---------- advantage from conditions ---------- */
 
 /** Suggest advantage or disadvantage from both sides' conditions and effects (5e 2024 conditions), with reasons. */
-export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: AttackSpec): { advantage: Advantage; reasons: string[] } {
+export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: AttackSpec, situational?: AttackOverrides["situational"]): { advantage: Advantage; reasons: string[] } {
   const plus: string[] = [];
   const minus: string[] = [];
   const has = (who: Combatant, name: string) => who.conditions.includes(name);
@@ -244,7 +246,9 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (effect(attacker, "은신")) plus.push("공격자 은신");
   if (effect(attacker, "도움")) plus.push("도움 받음");
   // R102 (D237): 피투성이 분노 and its kin — advantage while at half hit points or fewer.
-  if (attacker.bloodiedAdvantage && attacker.hp.current <= Math.floor(attacker.hp.max / 2)) plus.push(`공격자 ${attacker.bloodiedAdvantage}`);
+  if (attacker.bloodied?.rolls.includes("attack") && attacker.hp.current <= Math.floor(attacker.hp.max / 2)) plus.push(`공격자 ${attacker.bloodied.label}`);
+  // H1 (D238): facts the scene cannot see, confirmed in the attack dialog (무리 전술, 태양광 과민성).
+  for (const fact of situational ?? []) (fact.grants === "advantage" ? plus : minus).push(fact.reason);
   if (has(attacker, "약화")) minus.push("약화 (Sap): 다음 공격 불리");
   if (target.vexedBy && attacker.tokenId && target.vexedBy === attacker.tokenId) plus.push("교란 (Vex): 이 대상에게 유리");
   if (has(target, "넘어짐")) (spec.mode === "melee" ? plus : minus).push(spec.mode === "melee" ? "대상 넘어짐 (근접)" : "대상 넘어짐 (원거리)");
@@ -377,7 +381,7 @@ export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides;
 
 export function resolveAttack(attacker: Combatant, target: Combatant, spec: AttackSpec, options: ResolveOptions): AttackResolution {
   const overrides = options.overrides ?? {};
-  const suggested = suggestAdvantage(attacker, target, spec);
+  const suggested = suggestAdvantage(attacker, target, spec, overrides.situational);
   const advantage = overrides.advantage ?? suggested.advantage;
   const reasons = [...(overrides.advantage && overrides.advantage !== suggested.advantage ? [...suggested.reasons, `DM: ${advantage === "advantage" ? "유리" : advantage === "disadvantage" ? "불리" : "보통"}`] : suggested.reasons), ...(overrides.note ? [overrides.note] : [])];
   const d20s = options.fixed?.d20s ?? (advantage === "normal" ? [options.dice.d(20)] : [options.dice.d(20), options.dice.d(20)]);
@@ -476,12 +480,13 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
   let hpLost = Math.min(target.hp.current, damageTotal - absorbed);
   let hpAfter = target.hp.current - hpLost;
   let trait: string | undefined;
-  // R102 (D237): 언데드 인내 — dropped to 0 by damage that is neither radiant nor a critical hit: CON save, DC 5 + the damage.
-  if (hpAfter === 0 && target.hp.current > 0 && target.undeadFortitude && !options.crit && !damage.some((item) => item.adjusted > 0 && damageTypeKey(item.part.type) === "radiant")) {
+  // H1 (D238): hold-at-one-hp — dropped to 0 by damage the rule does not except: a save against dcBase + the damage.
+  const hold = target.holdAtOneHp;
+  if (hpAfter === 0 && target.hp.current > 0 && hold && !(hold.exceptCritical && options.crit) && !damage.some((item) => item.adjusted > 0 && hold.exceptDamageTypes.some((type) => damageTypeKey(type) === damageTypeKey(item.part.type)))) {
     const d20 = dice.d(20);
-    const dc = 5 + damageTotal;
-    const saved = d20 + target.conSave >= dc;
-    trait = `언데드 인내: 건강 내성 ${d20 + target.conSave} vs DC ${dc} ${saved ? "성공 → HP 1" : "실패"}`;
+    const dc = hold.dcBase + damageTotal;
+    const saved = d20 + hold.bonus >= dc;
+    trait = `${hold.label}: 내성 ${d20 + hold.bonus} vs DC ${dc} ${saved ? "성공 → HP 1" : "실패"}`;
     if (saved) { hpAfter = 1; hpLost = target.hp.current - 1; }
   }
   if (absorbedHeal) { hpAfter = Math.min(target.hp.max, hpAfter + absorbedHeal); trait = [trait, `흡수: HP ${absorbedHeal} 회복`].filter(Boolean).join(" · "); }

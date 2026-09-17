@@ -12,6 +12,7 @@ import { CONDITION_MARKERS, MARKER_GLYPH } from "../campaign/page";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import type { MonsterAction, MonsterView } from "../compendium/monsters";
 import { damageFormula, SIZE_KO } from "../compendium/monsters";
+import { traitRuleHint, traitRules } from "../compendium/monsterTraits";
 import type { RollResult, RollSpec } from "../character/dice";
 import { Notice, Pill, signed } from "../ui/components";
 import { useDice } from "../ui/dice/DiceProvider";
@@ -187,16 +188,14 @@ export function StatBlock({ block, runtime, onRoll, onSpend, compact = false }: 
 }
 
 /** R31 (D163): what the engine actually does with this stat-block line, when it does anything. */
-function ruleFor(action: MonsterAction): string | null {
-  const name = action.nameEn ?? action.name;
+function ruleFor(action: MonsterAction, blockId: string): string | null {
   if (action.kind === "attack") return "명중·피해·저항·상태까지 앱이 해결합니다";
   if (action.kind === "save") return "대상별 내성과 피해를 앱이 해결합니다";
   if (action.kind === "multiattack") return action.multiattack?.routine?.length ? "한 번에 여러 공격 카드로 풀립니다" : null;
   if (action.kind === "spellcasting") return "슬롯과 하루 횟수를 앱이 셉니다";
-  if (/전설 저항|Legendary Resistance/i.test(name)) return "실패한 내성을 성공으로 바꾸고 횟수를 깎습니다";
-  if (/마법 저항|Magic Resistance/i.test(name)) return "주문 내성 굴림에 앱이 유리를 적용합니다";
-  if (/재생|Regeneration/i.test(name)) return "턴 시작마다 앱이 HP를 돌려줍니다 (막는 피해는 DM 판단)";
-  return null;
+  // H1 (D238): a trait's line says what its rules do, never what its name suggests.
+  const rules = traitRules({ id: blockId, traits: [action] }).map(({ rule }) => traitRuleHint(rule));
+  return rules.length ? rules.join(" · ") : null;
 }
 
 function ActionRow({ action, block, spent, onRoll, onSpend }: { action: MonsterAction; block: MonsterView; spent?: boolean; onRoll?: (spec: RollSpec) => Promise<RollResult> | void; onSpend?: (name: string, spent: boolean) => void }) {
@@ -213,7 +212,7 @@ function ActionRow({ action, block, spent, onRoll, onSpend }: { action: MonsterA
         {/* R31 (D163): the stat block says which lines the app runs and which the table does. Two thirds of the
             traits are prose the engine cannot put a number on, and on screen they used to look the same as the
             ones it really applies. */}
-        {ruleFor(action) ? <span title={ruleFor(action)!}><Pill tone="good">규칙 적용</Pill></span> : action.kind === "text" ? <span title="이 줄은 표에서 판단합니다 — 앱은 숫자를 바꾸지 않습니다"><Pill tone="accent">표에서 판단</Pill></span> : null}
+        {ruleFor(action, block.id) ? <span title={ruleFor(action, block.id)!}><Pill tone="good">규칙 적용</Pill></span> : action.kind === "text" ? <span title="이 줄은 표에서 판단합니다 — 앱은 숫자를 바꾸지 않습니다"><Pill tone="accent">표에서 판단</Pill></span> : null}
         {rollable && action.kind === "attack" && action.attack ? <>
           <button type="button" className="cl-roll" onClick={() => void onRoll!({ label: `${action.name} 명중`, formula: d20(action.attack!.bonus), kind: "attack" })}>명중 {signed(action.attack.bonus)}</button>
           {action.attack.damage.map((damage, index) => <button type="button" key={index} className="cl-roll" onClick={() => void onRoll!({ label: `${action.name} 피해`, formula: damageFormula(damage), note: damage.type, kind: "damage" })}>피해 {damageFormula(damage)} {damage.type}</button>)}

@@ -79,7 +79,7 @@ test("R101: a spell nothing computes says DM 판정 on its card; one the rules r
 test("R102: monster trait patterns — 언데드 인내, 흡수, 피투성이 분노, 회피술 (D237)", async () => {
   const { applyDamage } = await import("../../client/rules/resolve");
   const zombie = npcCombatant(newJournalNpc("c", "dm", monsterById("dnd.srd521.monster.zombie")!));
-  assert.equal(zombie.undeadFortitude, true);
+  assert.equal(zombie.holdAtOneHp?.dcBase, 5);
   const low = { ...zombie, hp: { ...zombie.hp, current: 3 } };
   const saved = applyDamage(low, [{ formula: "4", type: "참격" }], diceFrom(() => 0.99));
   assert.deepEqual([saved.hpAfter, saved.downed], [1, undefined], saved.trait);

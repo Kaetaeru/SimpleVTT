@@ -162,7 +162,9 @@ export function resolveSpell(input: CastInput): SpellResolution {
     const declared = advantageFor(stats, "saving-throw", { ability: key });
     // R90 (D225): a spell the target is under — 축복·액운's d4, 신속's advantage on Dexterity saves, 저주's disadvantage.
     const states = (target.rollStates ?? []).filter((item) => item.on === "save" && (!item.ability || item.ability === key));
-    const upBy = dodging ? "회피" : resistant ? "마법 저항" : declared ? declared.reason : states.find((item) => item.state === "advantage")?.label;
+    // H1 (D238): bloodied-advantage on saves (피투성이 광분).
+    const bloodied = target.bloodied?.rolls.includes("save") && target.hp.current <= Math.floor(target.hp.max / 2) ? target.bloodied.label : undefined;
+    const upBy = dodging ? "회피" : resistant ? "마법 저항" : declared ? declared.reason : bloodied ?? states.find((item) => item.state === "advantage")?.label;
     const downBy = states.find((item) => item.state === "disadvantage")?.label;
     const advantaged = Boolean(upBy) && !downBy;
     const disadvantaged = Boolean(downBy) && !upBy;
@@ -289,6 +291,16 @@ export function resolveSpell(input: CastInput): SpellResolution {
       }
       break;
     }
+    case "area-damage": {
+      const parts = once([unresisted({ formula: formulaOf(primary.dice, spec.level, exec, casterStats), type: primary.damageType, label: spec.name })]);
+      const rolled = input.fixedDamage ?? parts.map((part) => { const match = /^(\d+)d(\d+)/.exec(part.formula); if (!match) return []; return Array.from({ length: Number(match[1]) }, () => dice.d(Number(match[2]))); });
+      for (const { combatant } of all) {
+        const row = base(combatant);
+        afterDamage(row, applyDamage(combatant, parts, dice, { fixed: rolled }));
+        targets.push(row);
+      }
+      break;
+    }
     case "tracked-effect": {
       const duration = exec.trackedEffects?.[0]?.duration ?? primary.duration;
       for (const { combatant } of all) {
@@ -393,6 +405,7 @@ export function describeSpell(result: SpellResolution) {
     if (row.save) return `${row.target.name} ${ABILITY_KO[row.save.ability]} 내성 ${row.save.total} vs ${row.save.dc} ${row.save.success ? "성공" : "실패"}${row.damage?.damageTotal ? ` 피해 ${row.damage.damageTotal}` : ""}${row.marks.length ? ` (${row.marks.join(", ")})` : ""}`;
     if (row.healed !== undefined) return `${row.target.name} 회복 ${row.healed}`;
     if (row.tempHp !== undefined) return `${row.target.name} 임시 HP ${row.tempHp}`;
+    if (row.damage && row.projectiles === undefined) return `${row.target.name} 피해 ${row.damage.damageTotal}`;
     if (row.projectiles !== undefined) return `${row.target.name} 화살 ${row.projectiles} 피해 ${row.damage?.damageTotal ?? 0}`;
     if (row.effect) return `${row.target.name} ${row.effect.name} (${row.effect.duration})`;
     return row.target.name;

@@ -12,6 +12,7 @@ import { castSpell, spendResource, useSpellSlot } from "../character/play";
 import { CONDITION_KO, onHitOf, spellExec, type SpellOnHit } from "../compendium/spells";
 import { damageTypeKo } from "./resolve";
 import { bearerPartsOf } from "../compendium/spells";
+import { traitRules } from "../compendium/monsterTraits";
 import { offeredRiders, riderFitsAttack } from "./attackRiders";
 import type { HitOffer } from "../campaign/model";
 import { critRiders } from "./attackAftermath";
@@ -87,30 +88,22 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
 
 export const pcConcentrationKey = (entry: JournalCharacter) => (entry.runtime.effects ?? []).find((effect) => effect.concentration)?.key;
 
-/**
- * R31 (D162): 재생 — "regains N hit points at the start of its turn". The number is in the trait's own text, so the
- * host can heal it at the turn start and say so; the clause that switches it off (fire, acid …) is the table's.
- */
-export function regenerationOf(block: MonsterView): { amount: number; note: string } | undefined {
-  const trait = block.traits.find((item) => /재생|Regeneration/i.test(item.nameEn ?? item.name));
-  if (!trait) return undefined;
-  const match = /(\d+)\s*(?:\(|점|히트|hit)/.exec(trait.text) ?? /(\d+)/.exec(trait.text);
-  const amount = match ? Number(match[1]) : 0;
-  return amount > 0 ? { amount, note: trait.text } : undefined;
+/** H1 (D238): what a stat block's trait rules put on its combatant (compendium/monsterTraits.ts). */
+export function traitCombatant(block: MonsterView): Pick<Combatant, "magicResistance" | "regeneration" | "absorbs" | "holdAtOneHp" | "bloodied" | "evasion"> {
+  const out: Pick<Combatant, "magicResistance" | "regeneration" | "absorbs" | "holdAtOneHp" | "bloodied" | "evasion"> = {};
+  for (const { trait, rule } of traitRules(block)) {
+    if (rule.pattern === "magic-resistance") out.magicResistance = true;
+    else if (rule.pattern === "regeneration") out.regeneration = { amount: rule.amount, ...(rule.suppressedByDamageTypes ? { suppressedByDamageTypes: rule.suppressedByDamageTypes } : {}) };
+    else if (rule.pattern === "absorb") out.absorbs = [...(out.absorbs ?? []), rule.damageType];
+    else if (rule.pattern === "hold-at-one-hp") out.holdAtOneHp = { label: trait.name, bonus: block.saves[rule.ability] ?? 0, dcBase: rule.dcBase, exceptDamageTypes: rule.exceptDamageTypes ?? [], exceptCritical: Boolean(rule.exceptCritical) };
+    else if (rule.pattern === "bloodied-advantage") out.bloodied = { label: trait.name, rolls: rule.rolls };
+    else if (rule.pattern === "evasion") out.evasion = true;
+  }
+  return out;
 }
 
-/** R102 (D237): monster traits read by name — the SRD writes them the same way on every stat block that has them. */
-export function traitPatterns(block: MonsterView): Pick<Combatant, "absorbs" | "undeadFortitude" | "bloodiedAdvantage" | "evasion"> {
-  const names = block.traits.map((trait) => trait.nameEn ?? trait.name);
-  const absorbs = names.flatMap((name) => { const match = /^([A-Za-z]+) Absorption/i.exec(name); return match ? [match[1].toLowerCase()] : []; });
-  const bloodied = block.traits.find((trait) => /Bloodied (Fury|Frenzy)/i.test(trait.nameEn ?? trait.name));
-  return {
-    ...(absorbs.length ? { absorbs } : {}),
-    ...(names.some((name) => /Undead Fortitude/i.test(name)) ? { undeadFortitude: true } : {}),
-    ...(bloodied ? { bloodiedAdvantage: bloodied.name } : {}),
-    ...(names.some((name) => /^Evasion$/i.test(name)) ? { evasion: true } : {}),
-  };
-}
+/** H1 (D238): the damaging auras on a stat block, with the trait that carries each. */
+export const monsterAuras = (block: MonsterView) => traitRules(block).flatMap(({ trait, rule }) => (rule.pattern === "aura-damage" ? [{ name: trait.name, rule }] : []));
 
 /** An NPC through its token (unlinked bar = the token's own HP, D78) or its sheet. */
 export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
@@ -121,11 +114,8 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
   const markers = token?.markers.map((marker) => marker.name) ?? [];
   return {
     id: entry.id, name: token?.name ?? entry.name, kind: "npc", ac: block.ac, hp,
-    // R31 (D161): 마법 저항 is on 34 stat blocks and nothing read it — the resolver knows now.
-    magicResistance: block.traits.some((trait) => /마법 저항|Magic Resistance/i.test(trait.nameEn ?? trait.name)),
-    regeneration: regenerationOf(block),
-    // R102 (D237): the shared monster trait patterns the resolver computes.
-    ...traitPatterns(block),
+    // H1 (D238): 마법 저항, 재생, 흡수 and the rest come from the stat block's trait rules, never from its words.
+    ...traitCombatant(block),
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities, conditionImmunities: block.conditionImmunities },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),

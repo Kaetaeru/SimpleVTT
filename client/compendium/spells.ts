@@ -21,6 +21,8 @@ export type SpellPrimary =
   | { kind: "automatic-projectiles"; damageType: string; projectileDice: { sides: number; flat?: number }; baseProjectiles: number; projectilesPerSlotAboveBase?: number }
   | { kind: "multi-attack-damage"; damageType: string; dicePerAttack: { count: number; sides: number }; baseAttacks: number; attacksPerSlotAboveBase?: number; cantripAttackScaling?: boolean }
   | { kind: "tracked-effect"; summary?: string; duration?: SpellDuration }
+  /** R103 (D238): damage every target takes, one roll for all, no save (a monster aura at the end of its turn). */
+  | { kind: "area-damage"; damageType: string; dice: SpellDice }
   | { kind: "maximum-hp" | "dispel" | "full-healing" | "power-word-kill" | "revive"; summary?: string; [key: string]: unknown };
 
 export interface SpellExec {

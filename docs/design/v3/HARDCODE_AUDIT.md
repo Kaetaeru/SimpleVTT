@@ -27,7 +27,7 @@
 | S3 | `character/derive.ts` `invocation:agonizing-blast:` 플래그 파싱, `spellcast.ts` `damageModifier` | 기원술 이름을 코드가 읽음 | 기원술 계약 `property.modify` `spell.damage.ability-modifier` + 고른 대상 소마법 참조 | 선택된 대상 주문을 참조하는 속성 |
 | S4 | `tracks.ts` `picked === "thaumaturge"/"magician"/"protector"/"warden"`, `wis-skill-bonus:` 플래그 | 질서 선택지 ID 분기 | 선택지 계약: `proficiency.weapon/armor`, `cantrips.bonus`, `skill.<id>.bonus` 값 `max(1, wis)` | 기존 문법(표현식 `max`) |
 | S5 | `tracks.ts` `key === "body-and-mind"/"slippery-mind"/"scholar"`, 전승 학파 `bonus-proficiencies` | 특성 키 분기 | 특성 계약 `ability.score.bonus`(상한), `saving-throw.proficiency`, `choice.expertise`(목록), `choice.skills`(개수) | 만들기 단계 연산 (§3) |
-| S6 | `attackSpec.ts` `traitPatterns`, `monsterAuras`(R103, 커밋 전), `regenerationOf`, `magicResistance` 정규식, `NpcSheet.tsx` 특성 힌트 | 영문 특성 이름·한국어 설명문 정규식 | SRD 색인 `monster-traits.json`: `{ monsterId: [{ pattern: "absorb", type: "lightning" }, { pattern: "undead-fortitude" }, { pattern: "bloodied-advantage" }, { pattern: "evasion" }, { pattern: "magic-resistance" }, { pattern: "regeneration", amount: 10 }, { pattern: "aura-damage", dice: "1d10", type: "fire", when: "owner-turn-end" }] }`. 사용자 NPC JSON(D209)도 같은 `traits[].pattern` 사용 | 패턴 실행기(코드) + 색인(데이터) |
+| S6 ✔ H1 | `attackSpec.ts` `traitPatterns`, `monsterAuras`(R103, 커밋 전), `regenerationOf`, `magicResistance` 정규식, `NpcSheet.tsx` 특성 힌트 | 영문 특성 이름·한국어 설명문 정규식 | SRD 색인 `monster-traits.json`: `{ monsterId: [{ pattern: "absorb", type: "lightning" }, { pattern: "undead-fortitude" }, { pattern: "bloodied-advantage" }, { pattern: "evasion" }, { pattern: "magic-resistance" }, { pattern: "regeneration", amount: 10 }, { pattern: "aura-damage", dice: "1d10", type: "fire", when: "owner-turn-end" }] }`. 사용자 NPC JSON(D209)도 같은 `traits[].pattern` 사용 | 패턴 실행기(코드) + 색인(데이터) |
 | S7 | `host.ts` `WOUNDED_FACT = "target-below-max-hp"` | 사실 ID를 호스트가 이름으로 앎 | 계약 `when: { ref: "target.hp.below-max" }` — 스코프 참조로 표에서 계산되는 사실 | 명중 창 스코프에 대상 참조 |
 | S8 | `resolve.ts`·`spellcast.ts` 행동불능 목록 리터럴 중복 | 규칙 어휘인데 여러 곳에 복제 | 코드 유지하되 **한 곳**(`CANNOT_ACT` 재사용) — JSON 아님 | — |
 
@@ -50,7 +50,7 @@
 | P13 | `items.ts` `POTIONS` 정규식(치유 물약 등급), 소모품 판정 정규식 | 아이템 이름 정규식 | 아이템 메커닉 JSON `use: { heal: "2d4+2" }`, `consumable: true` | 아이템 사용 메커닉 |
 | P14 | `summons.ts` `SUMMON_RULES`(5), `CONJURES_NOTHING`(6), `STEEDS` | 주문 ID별 소환 규칙 | 주문 메커닉 `summon`(R84에 이미 있음)으로 합치고, 소환 없음은 `summon: false` + 사유 | 기존(R84) |
 | P15 | `host.ts` `COUNTERSPELL`, 방패 반응(`pcReactionSpell(… "shield")`), `Notify.tsx` 두 ID | 반응 주문 ID | 주문 메커닉 `reaction: { trigger: "attack.hit-self", acBonus: 5 }`, `reaction: { trigger: "spell.cast-seen", counter: true }` — 반응 창이 주문 목록을 읽음 | 반응 주문 트리거 |
-| P16 | `PageCanvas.tsx` `SITUATIONAL`(무리 전술·태양광 과민성·투명 정규식) | 특성 이름 정규식 | S6 색인 패턴 `pack-tactics`, `sunlight-sensitivity` → 상황 버튼 | S6 |
+| P16 ✔ H1 | `PageCanvas.tsx` `SITUATIONAL`(무리 전술·태양광 과민성·투명 정규식) | 특성 이름 정규식 | S6 색인 패턴 `pack-tactics`, `sunlight-sensitivity` → 상황 버튼 | S6 |
 | P17 | `classes.ts` `fiend-patron` 자원, `catalog.ts` 기본 기원 재주 `feat.skilled`, `tracks.ts` `ASI_FEAT_ID` | 콘텐츠 ID 기본값 | 배경 JSON `originFeat` 필수화, 직업 JSON `asiFeat` | 필드 |
 
 ## 3. 추가해야 할 범용 문법

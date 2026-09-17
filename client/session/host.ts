@@ -16,14 +16,15 @@ import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../c
 import { advanceRound, ageEffects, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
-import { npcAttackSpec, npcCombatant, npcSaveExec, regenerationOf } from "../rules/attackSpec";
+import { npcAttackSpec, npcCombatant, npcSaveExec } from "../rules/attackSpec";
+import { diceParts, traitRule, type TraitRule } from "../compendium/monsterTraits";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant, DamagePart } from "../rules/resolve";
-import { carryDice, describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
+import { carryDice, damageTypeKey, describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
-import { bearerRolls, HUNTERS_MARK, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
+import { bearerRolls, HUNTERS_MARK, monsterAuras, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -160,6 +161,8 @@ export interface TableHostOptions {
 
 /** R92 (D227): the on-hit fact the host answers itself from the target hit points. */
 const WOUNDED_FACT = "target-below-max-hp";
+/** H1 (D238): the mark a suppressed regeneration leaves until the creature's next turn start. */
+const REGEN_SUPPRESSED = "trait:regeneration-suppressed";
 
 export class TableHost {
   private campaign: Campaign;
@@ -1445,9 +1448,11 @@ export class TableHost {
       }
       case "act.zone": {
         const caster = this.journalEntries.get(command.casterEntryId);
-        const exec = spellExec(command.spellId);
-        const sustain = exec ? sustainOf(exec) : null;
-        if (!caster || caster.kind === "handout" || !sustain || !(caster.runtime.effects ?? []).some((effect) => effect.key === `spell:${command.spellId}`)) return refuse("그 구역은 더 없습니다");
+        // R103 (D238): a monster aura is a zone too — being inside only counts at the end of the monster's turn.
+        const aura = command.spellId.startsWith("aura:") && caster?.kind === "npc" && monsterAuras(caster.statBlock).some((item) => `aura:${item.name}` === command.spellId);
+        const exec = aura ? undefined : spellExec(command.spellId);
+        const sustain = aura ? { economy: "none" as const } : exec ? sustainOf(exec) : null;
+        if (!caster || caster.kind === "handout" || !sustain || (!aura && !(caster.runtime.effects ?? []).some((effect) => effect.key === `spell:${command.spellId}`))) return refuse("그 구역은 더 없습니다");
         const target = this.resolveActor(command.target);
         if (!target || target.entry.kind === "handout") return refuse("대상을 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, command.target, target.entry) && !this.mayAct(userId, { entryId: caster.id }, caster)) return refuse("자기 크리처나 자기 주문 구역만 조작합니다");
@@ -2137,6 +2142,8 @@ export class TableHost {
       if (killer?.kind === "character" && resolution.targets.some((row, index) => targets[index]?.entry.kind === "npc" && (row.attack?.downed ?? row.damage?.downed))) this.offerTriggers(killer, "kill");
       // R28 (D151): forcing a save and taking damage both keep a rage going.
       this.ragingDeeds([this.resolveActor({ entryId: resolution.caster.id }) ?? undefined, ...targets.filter((_, index) => (resolution.targets[index]?.damage?.damageTotal ?? 0) > 0)]);
+      // H1 (D238): damage of a type a creature's regeneration names stops it next turn.
+      resolution.targets.forEach((row, index) => { const target = targets[index]; if (target) this.suppressRegeneration(target.entry.id, (row.attack?.damage ?? row.damage?.damage ?? []).filter((part) => part.adjusted > 0).map((part) => part.part.type)); });
       const applied = { ...resolution, applied: true };
       this.spells.set(messageId, { resolution: applied, rows, restoreCaster, context: context ? { ...context, who: displayName, playerId: userId } : undefined, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
       this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: describeSpell(applied), spell: applied });
@@ -2520,6 +2527,7 @@ export class TableHost {
   private applyResolution(...args: Parameters<TableHost["applyResolutionNow"]>) {
     return this.asCause(args[3], () => {
       const out = this.applyResolutionNow(...args);
+      this.suppressRegeneration(args[1].entry.id, args[0].damage.filter((part) => part.adjusted > 0).map((part) => part.part.type));
       // R99 (D234): a swing that dropped a monster is the moment 어둠의 존재의 축복 waits for.
       const killer = this.journalEntries.get(args[2].entry.id);
       // R99 (D234): 연구된 공격 remembers the miss; any other attack by the same creature settles the last one.
@@ -2652,14 +2660,25 @@ export class TableHost {
       }
     } else if (started?.kind === "npc") {
       let runtime = { ...started.runtime, legendaryUsed: 0, spent: { ...started.runtime.spent } };
-      // R31 (D162): 재생 — hit points back at the start of its turn, while it still has any. The sentence that
-      // switches it off (fire, acid, …) is the table's call, so the line says so and the DM can adjust the bar.
-      const regen = regenerationOf(started.statBlock);
-      if (regen && runtime.hp.current > 0 && runtime.hp.current < runtime.hp.max) {
-        const healed = Math.min(regen.amount, runtime.hp.max - runtime.hp.current);
-        runtime = { ...runtime, hp: { ...runtime.hp, current: runtime.hp.current + healed } };
-        this.say({ type: "system", who: "", content: `${started.name}: 재생 +${healed} → HP ${runtime.hp.current}/${runtime.hp.max} (막는 피해를 받았다면 DM이 되돌리세요)` });
+      // H1 (D238): regeneration — hit points back at the start of its turn while it has any, unless a suppressing
+      // damage type hit it since its last turn (suppressRegeneration marked that).
+      const regen = traitRule(started.statBlock, "regeneration");
+      const suppressed = (runtime.effects ?? []).some((effect) => effect.key === REGEN_SUPPRESSED);
+      if (regen && suppressed) this.say({ type: "system", who: "", content: `${started.name}: ${regen.trait.name} 멈춤 (막는 피해를 받음)` });
+      else if (regen) {
+        // An unlinked token keeps its own hit points on its bar (D78); a linked one or no token uses the sheet.
+        const actor = this.actorOfTurn(result.started);
+        const bar = actor?.token?.bars[0];
+        const onToken = Boolean(actor?.token && actor.page && !bar?.link && bar?.value !== undefined);
+        const hp = onToken ? { current: bar!.value ?? 0, max: bar!.max ?? runtime.hp.max } : runtime.hp;
+        if (hp.current > 0 && hp.current < hp.max) {
+          const healed = Math.min(regen.rule.amount, hp.max - hp.current);
+          if (onToken) this.storeToken(actor!.page!, { ...actor!.token!, bars: [{ ...bar!, value: hp.current + healed }, actor!.token!.bars[1], actor!.token!.bars[2]] });
+          else runtime = { ...runtime, hp: { ...runtime.hp, current: runtime.hp.current + healed } };
+          this.say({ type: "system", who: "", content: `${started.name}: ${regen.trait.name} +${healed} → HP ${hp.current + healed}/${hp.max}` });
+        }
       }
+      if (suppressed) runtime = { ...runtime, effects: (runtime.effects ?? []).filter((effect) => effect.key !== REGEN_SUPPRESSED) };
       for (const action of [...started.statBlock.actions, ...started.statBlock.bonusActions, ...started.statBlock.legendaryActions]) {
         const recharge = action.timing?.recharge;
         if (!recharge || !runtime.spent[action.name]) continue;
@@ -2684,6 +2703,12 @@ export class TableHost {
       const sustain = exec ? sustainOf(exec) : null;
       if (!caster || !sustain || sustain.move || this.zoneHits.get(`${effect.key}|${endedEntry.id}`) === endedMark) continue;
       this.zoneHit(caster, spellId, endedAt, effect.key, endedMark);
+    }
+    // R103 (D238): a monster ending its turn burns everyone marked inside its aura, one roll for all.
+    if (endedEntry?.kind === "npc") for (const aura of monsterAuras(endedEntry.statBlock)) {
+      const key = `zone:${endedEntry.id}:aura:${aura.name}`;
+      const victims = [...this.journalEntries.values()].filter((item) => item.kind !== "handout" && (item.runtime.effects ?? []).some((effect) => effect.key === key)).map((item) => this.resolveActor({ entryId: item.id }) ?? { entry: item });
+      if (victims.length) this.auraCard(endedEntry, aura, victims);
     }
     if (result.started?.entryId) this.tickAnchored(result.started.entryId, "start");
     const endedActor = this.actorOfTurn(result.ended);
@@ -2808,15 +2833,42 @@ export class TableHost {
     const key = `zone:${caster.id}:${spellId}`;
     const live = this.journalEntries.get(target.entry.id) as JournalCharacter | JournalNpc;
     const inside = (live.runtime.effects ?? []).find((effect) => effect.key === key);
-    const name = caster.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.name ?? spellId;
+    const aura = spellId.startsWith("aura:");
+    const name = aura ? spellId.slice("aura:".length) : caster.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.name ?? spellId;
     const now = this.now();
     const store = (effects: ActiveEffect[]) => this.storeEntry({ ...live, runtime: { ...live.runtime, effects, updatedAt: now }, updatedAt: now } as JournalEntry);
     if (action === "leave") { if (inside) store((live.runtime.effects ?? []).filter((effect) => effect.key !== key)); this.say({ type: "system", who: "", content: `${target.token?.name ?? live.name}: ${name} 밖으로` }); return; }
     const turnMark = this.tracker.turns.length ? `${this.tracker.round}:${this.tracker.current}` : undefined;
-    const member: ActiveEffect = inside ?? { key, name: `${name} 안`, source: "spell", duration: "구역", concentration: false, elapsed: 0, startedAt: now, from: caster.id, fromConcentration: true };
+    const member: ActiveEffect = inside ?? { key, name: `${name} 안`, source: "spell", duration: "구역", concentration: false, elapsed: 0, startedAt: now, from: caster.id, ...(aura ? {} : { fromConcentration: true }) };
     if (!inside) store([...(live.runtime.effects ?? []), member]);
+    if (aura) return;
     const hits = action === "move" ? (sustain.move ? Math.max(1, Math.floor((feet ?? sustain.move) / sustain.move)) : 0) : sustain.move || (turnMark && this.zoneHits.get(`${key}|${live.id}`) === turnMark) ? 0 : 1;
     for (let n = 0; n < hits; n += 1) this.zoneHit(caster, spellId, target, key, turnMark);
+  }
+
+  /** H1 (D238): mark a regenerating creature that took a suppressing damage type; its next turn start reads and clears the mark. */
+  private suppressRegeneration(entryId: string, damageTypes: string[]) {
+    const live = this.journalEntries.get(entryId);
+    if (live?.kind !== "npc" || !damageTypes.length) return;
+    const stops = traitRule(live.statBlock, "regeneration")?.rule.suppressedByDamageTypes ?? [];
+    if (!stops.some((type) => damageTypes.some((taken) => damageTypeKey(taken) === damageTypeKey(type)))) return;
+    if ((live.runtime.effects ?? []).some((effect) => effect.key === REGEN_SUPPRESSED)) return;
+    const now = this.now();
+    this.storeEntry({ ...live, runtime: { ...live.runtime, effects: [...(live.runtime.effects ?? []), { key: REGEN_SUPPRESSED, name: "재생 멈춤", source: "feature", duration: "다음 턴 시작까지", concentration: false, elapsed: 0, startedAt: now }], updatedAt: now }, updatedAt: now });
+  }
+
+  /** R103 (D238): one aura card — the same damage roll for every creature marked inside. */
+  private auraCard(owner: JournalNpc, aura: { name: string; rule: Extract<TraitRule, { pattern: "aura-damage" }> }, victims: Array<{ entry: JournalEntry; token?: Token; page?: Page }>) {
+    const dice = diceParts(aura.rule.dice);
+    if (!dice) return;
+    const caster = this.combatantOf(this.resolveActor({ entryId: owner.id }) ?? { entry: owner });
+    const rows = victims.map((victim) => ({ victim, combatant: this.combatantOf(victim), stats: this.statsOf(victim) })).filter((row): row is { victim: typeof row.victim; combatant: Combatant; stats: ActorStats } => Boolean(row.combatant && row.stats));
+    if (!caster || !rows.length) return;
+    const exec: SpellExec = { spellId: `npc:${aura.name}`, baseLevel: 0, castingEconomy: "action", targeting: { kind: "creature", minTargets: 1, maxTargets: rows.length }, primary: { kind: "area-damage", damageType: aura.rule.damageType, dice: { count: dice.count, sides: dice.sides, ...(dice.flat ? { flat: dice.flat } : {}) } } };
+    const spec = { spellId: exec.spellId, name: aura.name, level: 0, exec };
+    const casterStats = { attackBonus: 0, saveDc: 0, modifier: 0, level: 1 };
+    const resolution = { ...resolveSpell({ caster, casterStats, spec, targets: rows.map((row) => ({ combatant: row.combatant, stats: row.stats })), dice: diceFrom(this.options.random ?? Math.random), apply: true }), source: "action" as const };
+    this.postSpell(resolution, rows.map((row) => row.victim), () => undefined, false, "", this.options.hostUserId, { spec, casterStats });
   }
 
   /** R89 (D224): the area repeat on one creature, cast by the caster at no cost, remembered for this turn. */
