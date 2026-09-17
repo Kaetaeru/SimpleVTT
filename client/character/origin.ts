@@ -7,8 +7,7 @@ import type { SpeciesChoice, SpeciesView } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import { SIZE_KO } from "../rules/tables";
-import { SRD_SPECIES } from "../data/srd";
-import type { SpeciesOptionEffect } from "../data/srd/species";
+import type { SpeciesOptionEffect } from "../data/srd";
 import { abilityOptions, featOptions, fixedOptions, gamingSetOptions, languageOptions, skillOptions, toolName, TOOL_ID_PREFIX } from "./choices";
 import { applyFeat } from "./feats";
 import { applyGainContract } from "./tracks";
@@ -18,7 +17,7 @@ const DAMAGE_KO: Record<string, string> = { acid: "산성", cold: "냉기", fire
 export const damageTypeKo = (type: string) => DAMAGE_KO[type] ?? type;
 
 function speciesEffect(species: SpeciesView, choiceId: string, optionId: string): SpeciesOptionEffect | undefined {
-  const authored = SRD_SPECIES[species.id]?.effects?.[choiceId]?.[optionId];
+  const authored = species.effects[choiceId]?.[optionId];
   if (authored) return authored;
   const semantic = species.semantics.byChoice?.[choiceId]?.[optionId];
   if (!semantic) return undefined;

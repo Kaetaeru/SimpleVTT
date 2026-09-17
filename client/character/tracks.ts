@@ -9,8 +9,6 @@ import type { IndexClassChoiceJson } from "../catalog/types";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import { COLUMN, numericColumn, type ArmorTraining, type WeaponTraining } from "../rules/classes";
-import { SRD_SUBCLASSES } from "../data/srd";
-import type { SrdSubclassData } from "../data/srd/subclasses";
 import {
   artisanToolOptions, classOptionList, featOptions, fixedOptions, instrumentOptions, invocationOptions, languageOptions, skillOptions, spellOptions,
   subclassOptions, toolName, weaponMasteryOptions, type FeatContext,
@@ -328,10 +326,6 @@ function askClassOption(ledger: Ledger, index: number, sourceLabel: string, id: 
   if (option) ledger.addFeature({ id: option.id, name: `${label}: ${option.name}`, nameEn: option.nameEn, source: "class", sourceLabel, description: option.description, descriptionSource: "srd-summary" });
 }
 
-function subclassData(subclassId: string): SrdSubclassData | undefined {
-  return SRD_SUBCLASSES.find((item) => item.id === subclassId);
-}
-
 function applySubclassLevel(ledger: Ledger, cls: ClassView, state: ClassState, index: number, sourceLabel: string) {
   const { catalog } = ledger;
   if (!state.subclassId) return;
@@ -350,9 +344,8 @@ function applySubclassLevel(ledger: Ledger, cls: ClassView, state: ClassState, i
     const entry = classSpellEntry(ledger, cls);
     for (const id of spellsAtLevel) { if (catalog.spellById(id)) entry.alwaysPrepared.add(id); else ledger.warnings.push(`${subclass.name}의 주문 "${id}"을(를) 찾을 수 없습니다.`); }
   }
-  const data = subclassData(subclass.id);
-  if (!data) return;
-  for (const choice of data.choices ?? []) {
+  // H7b (D252): the subclass's own choices, from the catalog — SRD extras or a module's subclass-definition.
+  for (const choice of subclass.choices) {
     if (choice.level === level) {
       const picked = ledger.askOne({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.${choice.id}`, label: choice.label, description: choice.description, options: fixedOptions(choice.options) });
       if (picked) {
@@ -363,7 +356,7 @@ function applySubclassLevel(ledger: Ledger, cls: ClassView, state: ClassState, i
     }
     const chosen = state.subclassChoices[choice.id];
     if (!chosen) continue;
-    const names = data.spellsByOption?.[choice.id]?.[chosen]?.[level] ?? [];
+    const names = subclass.spellsByOption[choice.id]?.[chosen]?.[level] ?? [];
     if (names.length) {
       const entry = classSpellEntry(ledger, cls);
       for (const name of names) { const spell = catalog.spellByName(name); if (spell) entry.alwaysPrepared.add(spell.id); else ledger.warnings.push(`${subclass.name} 주문 "${name}"을(를) 찾을 수 없습니다.`); }

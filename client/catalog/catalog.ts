@@ -4,7 +4,7 @@
  * The catalog turns RuleModule JSON into typed views the character engine reads: classes (with their level tables),
  * subclasses, species, backgrounds, feats, spells (with class lists), items and starting loadouts. Builtin data that the
  * modules do not carry (subclass feature tables, species choice details, feature descriptions, spell lists above
- * level 1) comes in through `SrdExtras`, authored under client/data/srd.
+ * level 1) comes in through `SrdExtras`, JSON under content/srd-extras (H7b, D252).
  */
 import type {
   AbilityKey, CatalogEntry, CreationIndexJson, EntryJson, IndexClassChoiceJson, IndexClassJson, IndexSpeciesSemanticsJson,
@@ -12,6 +12,7 @@ import type {
 } from "./types";
 import { parseContract, type CommonPlayContract } from "../rules/contract";
 import type { ClassRules } from "../rules/classes";
+import type { SpeciesOptionEffect, SrdSpeciesData, SrdSubclassChoice, SrdSubclassData } from "../data/srd";
 
 export interface FeatureRecord {
   /** Stable id such as `fighter.second-wind` or `dnd.srd521.feature.cleric.life-domain.preserve-life`. */
@@ -56,6 +57,9 @@ export interface SubclassView {
   features: SubclassFeature[];
   /** Always-prepared spells by class level (domain/oath/circle spells), resolved to spell ids. */
   spells: Record<number, string[]>;
+  /** H7b (D252): the choices the subclass adds, and the spells a chosen option prepares (English names). */
+  choices: SrdSubclassChoice[];
+  spellsByOption: NonNullable<SrdSubclassData["spellsByOption"]>;
   scope: "builtin" | "installed";
 }
 
@@ -83,6 +87,8 @@ export interface SpeciesView {
   traits: SpeciesTrait[];
   choices: SpeciesChoice[];
   semantics: IndexSpeciesSemanticsJson;
+  /** H7b (D252): what each option of a choice does (choice id → option id). */
+  effects: Record<string, Record<string, SpeciesOptionEffect>>;
   scope: "builtin" | "installed";
 }
 
@@ -177,11 +183,11 @@ export interface ClassOptionDefinition {
   targetKind?: string;
 }
 
-/** Builtin data the SRD modules do not carry; authored under client/data/srd. */
+/** Builtin data the SRD modules do not carry; JSON under content/srd-extras (H7b, D252). */
 export interface SrdExtras {
   classFeatures: Record<string, Array<{ level: number; name: string; nameEn: string; id: string; description: string }>>;
-  subclasses: Array<{ id: string; classId: string; name: string; nameEn: string; summary: string; features: Array<{ level: number; id: string; name: string; nameEn: string; description: string }>; spells?: Record<number, string[]> }>;
-  species: Record<string, { description?: string; traits: Record<string, { name: string; nameEn: string; description: string }>; choices?: SpeciesChoice[] }>;
+  subclasses: SrdSubclassData[];
+  species: Record<string, SrdSpeciesData>;
   feats: Record<string, { description: string }>;
   backgrounds: Record<string, { description: string }>;
   /** Class spell lists by level as English names (levels the index does not cover). */
@@ -441,11 +447,13 @@ export class ContentCatalog {
       if (this.entries.has(data.id)) continue;
       const spells: Record<number, string[]> = {};
       for (const [level, names] of Object.entries(data.spells ?? {})) spells[Number(level)] = names.map((name) => this.spellByName(name)?.id ?? name);
-      views.push({ id: data.id, classId: data.classId, name: data.name, nameEn: data.nameEn, summary: data.summary, features: data.features.map((feature) => ({ ...feature, descriptionSource: "srd-summary" as const })).sort((a, b) => a.level - b.level), spells, scope: "builtin" });
+      views.push({ id: data.id, classId: data.classId, name: data.name, nameEn: data.nameEn, summary: data.summary, features: data.features.map((feature) => ({ ...feature, descriptionSource: "srd-summary" as const })).sort((a, b) => a.level - b.level), spells, choices: data.choices ?? [], spellsByOption: data.spellsByOption ?? {}, scope: "builtin" });
     }
     for (const entry of this.byCategory("subclass")) {
       const classId = entry.relationships.find((rel) => rel.kind === "parent")?.target ?? "";
       const data = authored.get(entry.id);
+      // H7b (D252): a module subclass writes its choices in `subclass-definition`, as the SRD extras do.
+      const def = mechanic<Pick<SrdSubclassData, "choices" | "spellsByOption">>(entry, "subclass-definition") ?? {};
       const features: SubclassFeature[] = [];
       if (data) {
         for (const feature of data.features) features.push({ ...feature, descriptionSource: "srd-summary" });
@@ -459,7 +467,7 @@ export class ContentCatalog {
       }
       const spells: Record<number, string[]> = {};
       for (const [level, names] of Object.entries(data?.spells ?? {})) spells[Number(level)] = names.map((name) => this.spellByName(name)?.id ?? name);
-      views.push({ id: entry.id, classId, name: entry.name, nameEn: entry.nameEn, summary: entry.summary ?? data?.summary, description: entry.description, features: features.sort((a, b) => a.level - b.level), spells, scope: entry.scope });
+      views.push({ id: entry.id, classId, name: entry.name, nameEn: entry.nameEn, summary: entry.summary ?? data?.summary, description: entry.description, features: features.sort((a, b) => a.level - b.level), spells, choices: def.choices ?? data?.choices ?? [], spellsByOption: def.spellsByOption ?? data?.spellsByOption ?? {}, scope: entry.scope });
     }
     return views;
   }
@@ -467,7 +475,7 @@ export class ContentCatalog {
   private buildSpecies(): SpeciesView[] {
     const views: SpeciesView[] = [];
     for (const entry of this.byCategory("species")) {
-      const def = mechanic<{ size?: string[]; speed?: number; darkvision?: number; traits?: string[]; choices?: Record<string, unknown>; semantics?: IndexSpeciesSemanticsJson }>(entry, "species-definition") ?? {};
+      const def = mechanic<{ size?: string[]; speed?: number; darkvision?: number; traits?: string[]; choices?: Record<string, unknown>; semantics?: IndexSpeciesSemanticsJson; effects?: SrdSpeciesData["effects"] }>(entry, "species-definition") ?? {};
       const extras = this.inputs.extras.species[entry.id];
       const semantics = this.inputs.index.species[entry.id] ?? def.semantics ?? {};
       const traits: SpeciesTrait[] = (def.traits ?? []).map((raw, index) => {
@@ -485,7 +493,7 @@ export class ContentCatalog {
         };
       });
       const choices: SpeciesChoice[] = extras?.choices ? extras.choices : this.genericSpeciesChoices(def.choices ?? {}, semantics);
-      views.push({ id: entry.id, name: entry.name, nameEn: entry.nameEn, summary: entry.summary, description: entry.description ?? extras?.description, sizes: def.size ?? ["medium"], speed: def.speed ?? 30, darkvision: def.darkvision, traits, choices, semantics, scope: entry.scope });
+      views.push({ id: entry.id, name: entry.name, nameEn: entry.nameEn, summary: entry.summary, description: entry.description ?? extras?.description, sizes: def.size ?? ["medium"], speed: def.speed ?? 30, darkvision: def.darkvision, traits, choices, semantics, effects: def.effects ?? extras?.effects ?? {}, scope: entry.scope });
     }
     return views.sort((a, b) => a.name.localeCompare(b.name, "ko"));
   }

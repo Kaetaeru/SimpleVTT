@@ -203,6 +203,21 @@ test("H7a: a species trait gains through its contract — a module's pool and hi
   createCatalog();
 });
 
+test("H7b: a module subclass adds its own choice and a module species its own option effects, like the SRD extras (D252)", async () => {
+  const { createCatalog } = await import("../../client/catalog");
+  const { autofill } = await import("../../client/character/autofill");
+  const { sourceOf } = await import("./support");
+  const catalog = createCatalog([{ moduleId: "module.stances", moduleVersion: "1", content: [
+    { id: "module.subclass.fighter.stance-master", category: "subclass", presentation: { originalName: "Stance Master", defaultLocale: "ko-KR", locales: { "ko-KR": { name: "자세의 달인" } } }, relationships: [{ kind: "parent", target: "dnd.srd521.class.fighter" }],
+      mechanics: [{ kind: "subclass-definition", config: { choices: [{ id: "subclass.stance", level: 3, label: "자세", description: "하나를 고릅니다.", options: [{ id: "iron", name: "강철", nameEn: "Iron", summary: "버팁니다." }, { id: "wind", name: "바람", nameEn: "Wind", summary: "흐릅니다." }] }] } }] },
+    { id: "dnd.srd521.species.dragonborn", category: "species", mechanics: [{ kind: "species-definition", config: { effects: { "species.draconicAncestry": { red: { resistances: ["psychic"] } } } } }] },
+  ] } as never]);
+  const made = autofill(sourceOf({ name: "투사", classes: "fighter", level: 3, species: "dragonborn", choices: { "class.2.subclass": ["module.subclass.fighter.stance-master"], "class.2.subclass.stance": ["wind"], "origin.species.draconicAncestry": ["red"] } }), catalog);
+  assert.ok(made.derived.features.some((feature) => feature.name === "자세: 바람"), made.derived.features.map((feature) => feature.name).join(", "));
+  assert.ok(made.derived.defenses.resistances.some((type) => type === "정신" || type === "psychic"), JSON.stringify(made.derived.defenses));
+  createCatalog();
+});
+
 test("H4: a class module's definition carries its training, resources, option pools and multiclass rules (D243)", async () => {
   const { createCatalog } = await import("../../client/catalog");
   const { autofill } = await import("../../client/character/autofill");
