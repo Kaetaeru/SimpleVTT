@@ -41,18 +41,11 @@ test("contracts: all eight SRD contracts are read, and what this executor cannot
     "fighter.tactical-mind",
     "warlock.fiend.dark-ones-own-luck",
   ]);
-  // Six of the eight run whole. The two that do not are the ones that ask where everyone is standing, which a
-  // scene without positions cannot answer — so the table decides those, and the app says so instead of guessing.
+  // V4l (D274): all eight run whole. The facts about where everyone is standing are still not guessed — 날카로운 말
+  // says to ask the player instead, so its window carries those questions and the contract has no gap left.
   const gaps = [...all.entries()].filter(([, item]) => item.unsupported.length).map(([key, item]) => [key, item.unsupported] as const);
-  assert.deepEqual(gaps.map(([key]) => key), ["bard.college-of-lore.cutting-words"]);
-  assert.deepEqual(contract("bard.college-of-lore.cutting-words").unsupported, [
-    "interceptors[0].factQueries.same-trigger: identity.same-entity",
-    "interceptors[0].factQueries.trigger-distance: spatial.distance-feet",
-    "interceptors[0].factQueries.source-sees-trigger: sense.can-see",
-    "interceptors[1].factQueries.same-trigger: identity.same-entity",
-    "interceptors[1].factQueries.trigger-distance: spatial.distance-feet",
-    "interceptors[1].factQueries.source-sees-trigger: sense.can-see",
-  ]);
+  assert.deepEqual(gaps.map(([key]) => key), []);
+  assert.deepEqual(contract("bard.college-of-lore.cutting-words").interceptors[0].asksFacts?.map((fact) => fact.id), ["same-trigger", "trigger-distance", "source-sees-trigger"]);
 });
 
 test("contracts: a contract's payment and the hand-written activation spend the same pool (D172)", () => {

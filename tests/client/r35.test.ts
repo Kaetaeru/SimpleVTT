@@ -131,9 +131,11 @@ test("rescue: planRollModify runs the contract's own operations (D175)", () => {
   const added = planRollModify(tactical.operations, characterScope(fighter), scripted(6));
   assert.equal(added.d20, undefined);
   assert.equal(added.delta, 6);
-  // A `subtract-die` whose die comes from a pool this engine does not track contributes nothing rather than a guess.
+  // V4l (D274): 날카로운 말 takes the bard's own inspiration die off the roll — the die size is an expression, so a
+  // 14th-level bard's is a d10.
   const cutting = cat.contractFor("bard.college-of-lore.cutting-words")!.interceptors[0];
-  assert.deepEqual(planRollModify(cutting.operations, characterScope(fighter), scripted(5)), { delta: 0, parts: [] });
+  const lore = build({ name: "b", classes: "bard", level: 14 }, { "class.2.subclass": ["dnd.srd521.subclass.bard.college-of-lore"] }).derived;
+  assert.deepEqual(planRollModify(cutting.operations, characterScope(lore), scripted(5)), { delta: -5, parts: ["−1d10 = 5"] });
 });
 
 test("rescue: a rescue that fails costs nothing when the contract says so (D175)", () => {

@@ -1402,9 +1402,11 @@ export class TableHost {
         // restore the card, resolve again, supersede — so the rescue borrows it and only supplies the new numbers.
         const attackRecord = this.actions.get(cardId);
         if (attackRecord) {
-          const pick = (this.options.pcRescues?.(reactor.entry, "attack-roll", "failure") ?? []).find((item) => item.feature === command.feature);
+          // V4l (D274): an interfering sheet lowers somebody else's successful roll, so the reactor is not the attacker.
+          const interfere = promptMessage.prompt.rescue.interfere === true;
+          const pick = (this.options.pcRescues?.(reactor.entry, "attack-roll", interfere ? "success" : "failure") ?? []).find((item) => item.feature === command.feature);
           if (!pick) return refuse("그 특성으로는 다시 굴릴 수 없습니다");
-          if (!sameActor(attackRecord.inputs.attacker, promptMessage.prompt.reactor)) return refuse("그 공격을 한 쪽만 다시 굴립니다");
+          if (!interfere && !sameActor(attackRecord.inputs.attacker, promptMessage.prompt.reactor)) return refuse("그 공격을 한 쪽만 다시 굴립니다");
           if (!this.resolveActor(attackRecord.inputs.attacker) || !this.resolveActor(attackRecord.inputs.targets[attackRecord.inputs.targetIndex])) return refuse("공격자나 대상이 더 없습니다 (카드는 그대로 둡니다)");
           const dice = diceFrom(this.options.random ?? Math.random);
           const plan = planRollModify(pick.interceptor.operations, pick.scope, dice);
@@ -1989,6 +1991,11 @@ export class TableHost {
       return messageId;
     }
     this.applyResolution(resolution, target, attacker, messageId, false, inputs, supersedes, player?.displayName);
+    // V4l (D274): the swing landed — a sheet in the scene whose contract spoils somebody else's successful roll is
+    // asked now (신랄한 말). A re-resolved card (`supersedes`) never asks again, or the window would never close.
+    if (!supersedes && (resolution.outcome === "hit" || resolution.outcome === "crit")) {
+      this.offerInterfere(messageId, attacker, "attack-roll", `${resolution.attackTotal} vs AC ${resolution.targetAc}`, "명중 굴림");
+    }
     return messageId;
   }
 
@@ -2456,6 +2463,32 @@ export class TableHost {
       reactor: { name, entryId: actor.entry.id, pageId: actor.page?.id, tokenId: actor.token?.id },
       rescue: { cardId, features: offers.map((offer) => offer.feature), roll },
     } });
+  }
+
+  /**
+   * V4l (D274): somebody else's roll went well and a sheet in the scene can spoil it (날카로운 말). The window goes to
+   * that sheet, with the facts the contract says to ask (60피트 안에서 보고 있는지) written into the question.
+   */
+  private offerInterfere(cardId: string, roller: { entry: JournalEntry; token?: Token; page?: Page }, family: RollFamily, roll: string, what: string) {
+    const page = roller.page;
+    if (!this.options.pcRescues || !page) return;
+    const seen = new Set<string>([roller.entry.id]);
+    for (const token of page.tokens) {
+      if (!token.represents || seen.has(token.represents)) continue;
+      seen.add(token.represents);
+      const entry = this.journalEntries.get(token.represents);
+      if (entry?.kind !== "character") continue;
+      const offers = this.freshRescues(entry.id, this.options.pcRescues(entry, family, "success"));
+      if (!offers.length) continue;
+      const asked = offers.flatMap((offer) => offer.interceptor.asksFacts ?? []);
+      const name = token.name ?? entry.name;
+      this.say({ type: "prompt", who: "", content: `${roller.token?.name ?? roller.entry.name}: ${what} 성공 (${roll}) — ${name}이(가) ${offers.map((offer) => offer.feature).join(" / ")}로 깎을까요?${asked.length ? ` (${asked.map((fact) => fact.question).join(" · ")})` : ""}`, prompt: {
+        kind: "rescue",
+        mover: { name: roller.token?.name ?? roller.entry.name, entryId: roller.entry.id },
+        reactor: { name, entryId: entry.id, pageId: page.id, tokenId: token.id },
+        rescue: { cardId, features: offers.map((offer) => offer.feature), roll, interfere: true, ...(asked.length ? { facts: asked } : {}) },
+      } });
+    }
   }
 
   private offerRescues(cardId: string, resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>) {

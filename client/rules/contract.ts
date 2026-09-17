@@ -72,7 +72,7 @@ export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr }
   | { kind: "condition.apply"; condition: string; target: string; when?: Expr; /** R94 (D229): resisted with this save (기절 타격). */ save?: { ability: string; dc: Expr }; /** V4b (D264): how long it lasts (default: until the start of the source's next turn). */ duration?: ConditionDuration; /** V4b (D264): the bearer repeats the save at the end of each of its turns. */ repeatSave?: "turn-end"; /** V4b (D264): what a successful save still leaves on the target (충격의 일격). */ successMark?: TargetMark }
   | { kind: "healing.apply"; dice?: string; amount?: Expr; target: string; when?: Expr; /** V4a (D263): one amount shared out among the chosen creatures, none past half its maximum (생명 보존). */ pool?: "half-max" }
-  | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr }
+  | { kind: "roll.modify"; mode: string; dice?: string; /** V4l (D274): the die size an expression decides (바드의 영감 주사위: 레벨별 d6~d12). */ diceSides?: Expr; value?: Expr; diceResourceId?: string; when?: Expr }
   /**
    * R38 (D178): the general modifier. `property` names what changes in this engine's vocabulary (`ac.bonus`,
    * `attack-roll.bonus`, `speed.walk`…), `operation` how (`add`, `set`, `multiply`, `minimum`), and `value` or `dice`
@@ -163,8 +163,10 @@ export interface ContractInterceptor {
   outcomes: string[];
   /** The owner is asked before it fires. */
   asks: boolean;
+  /** V4l (D274): facts the window asks the player instead (날카로운 말: 60피트 안에서 보고 있는지). */
+  asksFacts?: Array<{ id: string; question: string }>;
   /** Facts about the table this executor cannot answer (distance, line of sight); named, never guessed. */
-  factQueries: Array<{ id: string; fact: string; unknownPolicy: string }>;
+  factQueries: Array<{ id: string; fact: string; unknownPolicy: string; question?: string }>;
   when?: Expr;
   /** V4d (D266): offered at most once each turn (전투 기량). */
   oncePerTurn?: boolean;
@@ -372,7 +374,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     }
     const mode = String(operation.mode ?? "");
     if (!ROLL_MODES.has(mode)) { unsupported.push(`${at}: roll.modify ${mode || "모드 없음"}`); return; }
-    out.push({ kind: "roll.modify", mode, dice: operation.dice ? String(operation.dice) : undefined, value: isExpr(operation.value) ? operation.value : operation.value === undefined ? undefined : { value: operation.value }, diceResourceId: operation.diceResource ? resourceIdOf(String(operation.diceResource)) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
+    out.push({ kind: "roll.modify", mode, dice: operation.dice ? String(operation.dice) : undefined, ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), value: isExpr(operation.value) ? operation.value : operation.value === undefined ? undefined : { value: operation.value }, diceResourceId: operation.diceResource ? resourceIdOf(String(operation.diceResource)) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
   });
   return out;
 }
@@ -441,18 +443,21 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const raw = item as Record<string, unknown>;
     const factQueries = (Array.isArray(raw.factQueries) ? raw.factQueries : []).map((query) => {
       const fact = query as Record<string, unknown>;
-      return { id: String(fact.id ?? ""), fact: String(fact.fact ?? ""), unknownPolicy: String(fact.unknownPolicy ?? "block") };
+      return { id: String(fact.id ?? ""), fact: String(fact.fact ?? ""), unknownPolicy: String(fact.unknownPolicy ?? "block"), ...(fact.question ? { question: String(fact.question) } : {}) };
     });
     // A fact about where everyone is standing cannot be answered on a scene without positions; the table decides it.
     // Facts the app does know (what kind of weapon swung) are not gaps and are not listed as such.
-    for (const query of factQueries) if (!KNOWN_FACTS.has(query.fact)) unsupported.push(`interceptors[${index}].factQueries.${query.id}: ${query.fact}`);
+    // V4l (D274): `unknownPolicy: "ask"` with a `question` is not a gap — the window asks the player that question
+    // instead of the engine answering it (날카로운 말: 60피트 안에서 보고 있는지).
+    const asksFacts = factQueries.filter((query) => query.unknownPolicy === "ask" && query.question).map((query) => ({ id: query.id, question: String(query.question) }));
+    for (const query of factQueries) if (!KNOWN_FACTS.has(query.fact) && !(query.unknownPolicy === "ask" && query.question)) unsupported.push(`interceptors[${index}].factQueries.${query.id}: ${query.fact}`);
     interceptors.push({
       id: String(raw.id ?? `interceptor${index}`), timing: String(raw.timing ?? ""), slot: String(raw.slot ?? ""),
       ...(raw.scope ? { scope: String(raw.scope) } : {}),
       ...(raw.trigger ? { trigger: String(raw.trigger) } : {}),
       families: (Array.isArray(raw.families) ? raw.families : []).map(String),
       outcomes: (Array.isArray(raw.outcomes) ? raw.outcomes : []).map(String),
-      asks: Boolean(raw.interaction), factQueries,
+      asks: Boolean(raw.interaction), factQueries, ...(asksFacts.length ? { asksFacts } : {}),
       ...(raw.oncePerTurn === true ? { oncePerTurn: true } : {}),
       ...(typeof raw.naturalOnly === "number" ? { naturalOnly: raw.naturalOnly } : {}),
       when: isExpr(raw.when) ? raw.when : undefined,
@@ -602,17 +607,23 @@ export function planRollModify(operations: ContractOperation[], scope: Scope, di
         break;
       }
       case "add-die": {
-        const rolled = rollDice(operation.dice ?? "");
+        // V4l (D274): the die size may be an expression (비할 데 없는 기술 rolls the bard's own inspiration die).
+        const sides = operation.diceSides === undefined ? undefined : Number(evaluate(operation.diceSides, scope));
+        const formula = sides && Number.isFinite(sides) ? `1d${Math.floor(sides)}` : operation.dice ?? "";
+        const rolled = rollDice(formula);
         if (!rolled) break;
         plan.delta += rolled.total;
-        plan.parts.push(`+${operation.dice} = ${rolled.total}`);
+        plan.parts.push(`+${formula} = ${rolled.total}`);
         break;
       }
       case "subtract-die": {
-        const sides = operation.dice ? rollDice(operation.dice)?.total : operation.diceResourceId ? poolDie?.(operation.diceResourceId) : undefined;
+        // V4l (D274): an expression may name the die size (날카로운 말 takes the bard's own inspiration die off).
+        const size = operation.diceSides === undefined ? undefined : Number(evaluate(operation.diceSides, scope));
+        const formula = size && Number.isFinite(size) ? `1d${Math.floor(size)}` : operation.dice;
+        const sides = formula ? rollDice(formula)?.total : operation.diceResourceId ? poolDie?.(operation.diceResourceId) : undefined;
         if (sides === undefined) break;
         plan.delta -= sides;
-        plan.parts.push(`−${sides}`);
+        plan.parts.push(`−${formula ?? ""}${formula ? " = " : ""}${sides}`);
         break;
       }
       // R51 (D186): 전투 기량의 은총 — "change the d20 to a 20". The mode the SRD feat's own `execution.reason`

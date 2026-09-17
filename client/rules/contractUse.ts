@@ -48,6 +48,7 @@ export function pcRescues(entry: JournalCharacter, derived: DerivedCharacter, ca
     const matching = interceptorsFor(contract, "d20.outcome-determined", family, outcome).filter((item) => item.slot === "d20.roll" && item.operations.some((operation) => operation.kind === "roll.modify") && (item.naturalOnly === undefined || d20 === undefined || item.naturalOnly === d20));
     if (!matching.length) continue;
     // Facts about where everyone is standing cannot be answered here, so those interceptors stay the table's call.
+    // V4l (D274): unless the contract says to ask the player that fact — then the window carries the question.
     if (contract.unsupported.length) continue;
     const payable = contract.payments.every((payment) => payment.kind !== "resource" || !payment.resourceId || poolLeft(derived, entry.runtime, payment.resourceId) > 0);
     if (!payable) continue;

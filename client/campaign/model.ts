@@ -119,7 +119,8 @@ export interface ReactionPrompt {
    * R35 (D174): the failed roll a contract may redo — the card it belongs to, the feature that would pay for it, and
    * what the roll was, so the player can decide without scrolling back.
    */
-  rescue?: { cardId: string; features: string[]; roll: string };
+  /** V4l (D274): `interfere` — the reactor is somebody else, lowering a roll that succeeded (날카로운 말). */
+  rescue?: { cardId: string; features: string[]; roll: string; interfere?: boolean; facts?: Array<{ id: string; question: string }> };
   /**
    * R54 (D189): the reactions a contract opened this window for — what each one is called and, in one line, what it
    * would do. The Shield spell rides here too when the reactor can cast it, so a player sees one question, not two.

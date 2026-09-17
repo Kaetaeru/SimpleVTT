@@ -528,3 +528,35 @@ test("V4k: 야생 변신 takes a beast's stat block — AC, speed, senses, Stren
   const spec = pcAttackSpec(entry, inForm, claw.id, { contracts: [offers.find((key) => key.startsWith("druid.elemental-fury.primal-strike#"))!] }, cat)!.spec;
   assert.ok(spec.riders?.some((rider) => rider.formula === "2d8"), JSON.stringify(spec.riders));
 });
+
+test("V4l: 날카로운 말 lowers somebody else's hit with the bard's own inspiration die, and its facts are asked instead of guessed (D274)", async () => {
+  // A fighter hits; the bard beside them spoils it. Every die rolls high so the hit is one the die can undo.
+  const t = await table([
+    { classes: "fighter", level: 5 },
+    { classes: "bard", level: 14, choices: { "class.2.subclass": ["dnd.srd521.subclass.bard.college-of-lore"] } },
+  ], [dummy("허수아비", 200, { ac: 15 })], () => 0.95);
+  const blade = t.made[0].derived.attacks[0];
+  t.dm.send({ type: "act.attack", attacker: t.ref(0), targets: [t.ref(2)], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
+  await tick();
+  for (const prompt of openHits(t)) t.dm.send({ type: "act.decline", messageId: prompt.id });
+  await tick();
+
+  // The window goes to the bard, not to the fighter, and it carries the questions the app cannot answer itself.
+  const ask = t.host.archive.filter((message) => message.type === "prompt" && message.prompt?.kind === "rescue" && message.prompt.rescue?.interfere && !message.supersedes).at(-1)!;
+  assert.ok(ask, JSON.stringify(t.host.archive.map((message) => [message.type, message.prompt?.kind, message.content?.slice(0, 40)])));
+  assert.equal(ask.prompt!.reactor!.entryId, t.ref(1).entryId);
+  assert.deepEqual(ask.prompt!.rescue!.features, ["신랄한 말"]);
+  assert.deepEqual(ask.prompt!.rescue!.facts?.map((fact) => fact.id), ["same-trigger", "trigger-distance", "source-sees-trigger"]);
+
+  const before = t.host.archive.filter((message) => message.type === "action").at(-1)!;
+  t.dm.send({ type: "act.rescue", messageId: ask.id, feature: "신랄한 말" });
+  await tick();
+  const after = t.host.archive.filter((message) => message.type === "action" && message.supersedes).at(-1)!;
+  assert.ok(after, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+  assert.ok(after.content.includes("17 vs AC 15"), after.content);
+  const answered = t.host.archive.filter((message) => message.supersedes === ask.id).at(-1)!;
+  assert.ok(answered.content.includes("신랄한 말"), answered.content);
+  const bard = t.entry(1) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(bard.runtime.resourcesUsed["resource.bard.bardic-inspiration"], 1, "한 번 쓰면 영감 하나");
+  void before;
+});
