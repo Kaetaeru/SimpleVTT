@@ -87,6 +87,14 @@
   "dnd.srd521.spell.vampiric-touch": {
    "economy": "action",
    "note": "행동으로 다시 손을 뻗음"
+  },
+  "dnd.srd521.spell.flame-blade": {
+   "economy": "action",
+   "note": "행동으로 불꽃 칼을 다시 휘두름"
+  },
+  "dnd.srd521.spell.produce-flame": {
+   "economy": "action",
+   "note": "행동으로 불꽃을 다시 던짐"
   }
  }
 }

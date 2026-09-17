@@ -942,3 +942,21 @@ test("V5d: 산성 화살 keeps burning — the hit starts an effect and that cre
   const after = (t.entry(0) as ReturnType<typeof newJournalCharacter>).runtime.hp.current;
   assert.ok(after < before, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
 });
+
+test("V5e: 얼음 칼 rolls its attack, 화염검 is a bonus action and swings again as an action (D293)", async () => {
+  const { spellExec, sustainOf } = await import("../../client/compendium/spells");
+  const knife = spellExec("dnd.srd521.spell.ice-knife")!;
+  assert.equal(knife.primary.kind, "attack-damage");
+  assert.equal("damageType" in knife.primary ? knife.primary.damageType : undefined, "piercing");
+
+  const blade = spellExec("dnd.srd521.spell.flame-blade")!;
+  assert.equal(blade.castingEconomy, "bonus-action");
+  assert.equal(sustainOf(blade)?.economy, "action");
+
+  // At the table the shard is an attack card, not a note.
+  const t = await table([{ classes: "druid", level: 5, abilities: { wis: 16 } }], [dummy("좀비", 40)], () => 0.9);
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.ice-knife", targets: [t.ref(1)], method: { kind: "slot", level: 1 }, overrides: { outcome: "hit" } });
+  await tick();
+  const card = t.host.archive.filter((message) => message.type === "spell").at(-1)!;
+  assert.ok(/적중|명중/.test(card.content ?? ""), card.content);
+});

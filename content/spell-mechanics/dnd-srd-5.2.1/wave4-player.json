@@ -403,6 +403,36 @@
     "somatic": true
    },
    "executionScope": "V4u (D283): a melee spell attack for 3d6 necrotic (+1d6 per slot above 3rd); the caster regains half the damage dealt. Reaching a target again each turn as the Magic action is the sustain index's."
+  },
+  {
+   "spellId": "dnd.srd521.spell.ice-knife",
+   "baseLevel": 1,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 60,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "requiresSight": true
+   },
+   "primary": {
+    "kind": "attack-damage",
+    "damageType": "piercing",
+    "dice": {
+     "count": 1,
+     "sides": 10
+    }
+   },
+   "components": {
+    "somatic": true,
+    "materials": [
+     {
+      "id": "drop-of-water"
+     }
+    ]
+   },
+   "executionScope": "V5e (D293): the shard is a ranged spell attack for 1d10 piercing. The 2d6 cold burst it leaves (Dexterity save, +1d6 per slot above 1st, five feet around the target) is an area a scene without positions cannot pick out, so the table rolls it."
   }
  ]
 }
