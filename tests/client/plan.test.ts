@@ -51,7 +51,8 @@ test("plan: the document's scoreboard is the measured one (D176)", () => {
   ]) assert.ok(spec.includes(row), `§14.1의 점수판이 측정값과 다릅니다: ${row} 가 없습니다`);
   // And the four-way split of the features.
   assert.equal(total, 223);
-  assert.deepEqual(counts, { contract: 158, activation: 9, mentioned: 56, silent: 0 });
+  // R72 (D207): Extra Attack moved from a name the code compared to a contract — five from "mentioned" to "contract".
+  assert.deepEqual(counts, { contract: 163, activation: 9, mentioned: 51, silent: 0 });
   // Every slot a contract asks for is one this executor actually opens; nothing is demanded and ignored.
   assert.deepEqual(wantedSlots().filter((slot) => !OPEN_SLOTS.includes(slot)), ["primary.damage"], "R42's one outstanding demand");
   for (const [label, value] of [["계약이 있다", counts.contract], ["사용 버튼이 있다", counts.activation], ["코드가 이름은 안다", counts.mentioned]] as Array<[string, number]>) {

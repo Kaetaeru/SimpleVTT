@@ -36,6 +36,8 @@ export interface EffectApplication {
   shillelagh?: boolean;
   /** R43 (D183): the lowest d20 that counts as a critical hit (Improved Critical 19, Superior Critical 18). */
   critRange?: number;
+  /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
+  attackActionAttacks?: number;
   /** Korean damage type labels. */
   resistances?: string[];
   conditionImmunities?: string[];
@@ -289,6 +291,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     // R28 (D153): an application that carries nothing but prose is the table's to run, and says so.
     // R43 (D183): 향상된 치명타 lowers the die that counts as a critical hit; the lowest wins if two effects say so.
     if (application.critRange !== undefined) { next = { ...next, critRange: Math.min(next.critRange ?? 20, application.critRange) }; notes.push(`치명타 범위 ${application.critRange}–20`); }
+    if (application.attackActionAttacks !== undefined) { next = { ...next, attackActionAttacks: Math.max(next.attackActionAttacks ?? 1, application.attackActionAttacks) }; notes.push(`공격 행동에 ${application.attackActionAttacks}번 공격`); }
     const mechanical = Object.keys(application).some((field) => field !== "notes" && application[field as keyof typeof application] !== undefined);
     applied.push({ key: effect.key, name: effect.name, applied: true, notes, ...(mechanical ? {} : { narrative: true }) });
   }

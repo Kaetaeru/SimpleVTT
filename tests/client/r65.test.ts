@@ -35,7 +35,9 @@ test("R65: only what pressing does something for becomes a button (D200)", () =>
   assert.equal(surge.economy, "free", "행동 폭증 costs nothing of the turn by itself");
   assert.equal(surge.pressable, true);
   assert.equal(named(fighter, "서브클래스").pressable, false, "a subclass line is a sentence, not a button");
-  assert.equal(named(fighter, "추가 공격").pressable, false, "and so is a reminder to press ⚔ three times");
+  // R72 (D207): Extra Attack is a number in a contract now, so it has no activation at all — still not a button.
+  const extra = named(fighter, "추가 공격");
+  assert.ok(!extra || !extra.pressable, "and neither is Extra Attack");
 
   const barbarian = usable("barbarian", 5);
   assert.equal(named(barbarian, "격노").economy, "bonus");

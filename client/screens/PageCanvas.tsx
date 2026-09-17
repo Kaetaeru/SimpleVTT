@@ -631,7 +631,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const legendaryPer = block?.legendaryActionsPerRound ?? 0;
   const legendaryLeft = entry.kind === "npc" ? Math.max(0, legendaryPer - entry.runtime.legendaryUsed) : 0;
   const legendaryItems = (block?.legendaryActions ?? []).map((action) => ({ key: action.name, label: `${action.name}${(action.legendaryCost ?? 1) > 1 ? ` (${action.legendaryCost})` : ""}`, hint: action.text.slice(0, 80), disabled: (action.legendaryCost ?? 1) > legendaryLeft, onSelect: () => { if (action.kind === "save" && action.save) void npcSaveWith(action.name, true); else c.legendary(me, action.name); } }));
-  const extraAttacks = derived ? (derived.features.some((feature) => feature.nameEn === "Two Extra Attacks") ? 3 : derived.features.some((feature) => feature.nameEn === "Extra Attack") ? 2 : 1) : 1;
+  // R72 (D207): from the sheet's contracts, not from feature names (which missed the fighter's fourth attack at 20).
+  const extraAttacks = derived?.attackActionAttacks ?? 1;
   const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
   const inTracker = tracker.turns.some((item) => item.tokenId === token.id && item.pageId === page.id);
   const chip = (label: string, used: boolean | undefined) => <span className={`cl-econ${used ? " used" : ""}`} title={used ? `${label} 사용함` : `${label} 남음`}><i />{label}</span>;
@@ -649,7 +650,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           button with its uses left, not an entry in a menu that has to be opened to be found. */}
       <div className={`cl-cmd-rows${mode === "turn" || inCombat ? " cl-turn-econ" : ""}`} role="toolbar" aria-label={`${token.name} 액션`}>
         <div className="cl-cmd-row attack">
-          <span className="cl-cmd-label">{mode === "turn" || inCombat ? chip("행동", turn?.actionUsed) : "행동"}</span>
+          <span className="cl-cmd-label">{mode === "turn" || inCombat ? chip(!turn?.actionUsed && (turn?.attacksMade ?? 0) > 0 && extraAttacks > 1 ? `행동 · 공격 ${turn!.attacksMade}/${extraAttacks}` : "행동", turn?.actionUsed) : "행동"}</span>
           {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={offAttack} title={extraAttacks > 1 ? `추가 공격: 공격 행동 하나로 ${extraAttacks}번 — 버튼을 ${extraAttacks}번 누르세요` : undefined} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b>{extraAttacks > 1 ? <small className="cl-extra">×{extraAttacks}</small> : null}{attack.masteryActive && attack.mastery ? <small className="cl-extra" title={`무기 통달: ${attack.mastery}`}>⚒{attack.mastery}</small> : null}</button>) : null}
           {entry.kind === "npc" && routine.length ? <button type="button" className="cl-btn small attack" disabled={offAttack} title={block?.actions.find((action) => action.kind === "multiattack")?.text} onClick={() => void multiattack()}>⚔⚔ 다중공격 <small className="cl-extra">{routine.map((step) => `${step.name}×${step.count}`).join(" ")}</small></button> : null}
           {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={offAttack || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}

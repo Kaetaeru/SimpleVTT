@@ -229,6 +229,8 @@ export interface DerivedCharacter {
   featEffects: DerivedFeatEffects;
   /** R43 (D183): the lowest d20 that is a critical hit for this character (19 with 향상된 치명타). */
   critRange?: number;
+  /** R72 (D207): attacks per Attack action, from whatever contract says so (1 when none does). */
+  attackActionAttacks?: number;
   /**
    * R51 (D186): what is worn, so a contract can ask. 평갑 달인 and 중갑 달인 are both written as "while wearing
    * <training> armour"; without this the expression grammar had no way to see the armour at all.

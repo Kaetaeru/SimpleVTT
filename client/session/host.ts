@@ -119,6 +119,8 @@ export interface TableHostOptions {
   pcGuards?: (entry: JournalCharacter, trigger: ReactionTrigger) => GuardOffer[];
   /** R63 (D198): what this character may still add to a swing that just landed (암습, 신성한 강타, on-hit contracts). */
   pcHitOffers?: (entry: JournalCharacter, attackId: string, riders: AttackRiders) => HitOffer[];
+  /** R72 (D207): how many attacks this sheet's Attack action makes. */
+  pcAttackActionAttacks?: (entry: JournalCharacter) => number;
   /** R58 (D193): the display name of a content id the host has no catalog to look up. */
   contentName?: (contentId: string) => string | undefined;
   /** The official actions (D97) need a PC's ability modifiers, saves and skills from the derived sheet. */
@@ -721,8 +723,8 @@ export class TableHost {
         for (let at = current; span.length <= turns.length; at = (at + 1) % turns.length) { span.push(at); if (at === targetIndex) break; }
         if (span[span.length - 1] !== targetIndex || !span.every((at) => !turns[at].custom && this.actorOfTurn(turns[at])?.entry.kind === "character")) return refuse("이어진 일행 차례끼리만 순서를 바꿉니다 (지금 차례 뒤의 같은 묶음)");
         const swapped = [...turns];
-        swapped[current] = { ...later, actionUsed: false, bonusUsed: false };
-        swapped[targetIndex] = { ...now, actionUsed: false, bonusUsed: false };
+        swapped[current] = { ...later, actionUsed: false, bonusUsed: false, attacksMade: 0 };
+        swapped[targetIndex] = { ...now, actionUsed: false, bonusUsed: false, attacksMade: 0 };
         this.setTracker({ ...this.tracker, turns: swapped });
         this.say({ type: "system", who: "", content: `${later.name}이(가) ${now.name}보다 먼저 행동합니다 (순서 교대)` });
         return;
@@ -780,7 +782,8 @@ export class TableHost {
           this.say({ ...promptMessage, prompt: { ...promptMessage.prompt!, outcome: { attacked: firstCardId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → 기회 공격` });
           this.markReactionUsed(command.attacker);
         } else if (command.readied && firstCardId) { this.markReactionUsed(command.attacker); this.mark(attackerEntry, ["준비"], false); }
-        else if (firstCardId) this.markUsed(command.attacker, "action");
+        // R72 (D207): a sheet whose Attack action makes several attacks spends the action on the last of them, not the first.
+        else if (firstCardId) this.countAttack(command.attacker, attackerEntry.entry.kind === "character" && command.attack.source === "weapon" ? this.options.pcAttackActionAttacks?.(attackerEntry.entry) ?? 1 : 1);
         // Attacking spends 도움 and ends 은신 (D97); R12: it also spends 약화 (Sap) on the attacker and 교란 (Vex) the attacker had on the target.
         if (firstCardId) this.mark(attackerEntry, [...TURN_MARKS.onAttack, "약화"], false);
         // R37 (D177): a miss is a d20 that came out a failure, and 탁월한 기술 says so in its own `families`.
@@ -1751,6 +1754,13 @@ export class TableHost {
     if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;
     this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, [which === "action" ? "actionUsed" : "bonusUsed"]: false } : item)) });
   }
+  /** R72 (D207): one more attack in the current turn's Attack action; the action is spent when they reach `perAction`. */
+  private countAttack(ref: ActorRef, perAction: number) {
+    const turn = this.turnOf(ref);
+    if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;
+    const made = (turn.attacksMade ?? 0) + 1;
+    this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, attacksMade: made, ...(made >= perAction ? { actionUsed: true } : {}) } : item)) });
+  }
   private markUsed(ref: ActorRef, which: "action" | "bonus") {
     const turn = this.turnOf(ref);
     if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;
@@ -2383,7 +2393,7 @@ export class TableHost {
     // The reaction and the action economy come back at the start of the creature's turn.
     // R28 (D151): `ragingDeed` is the same kind of per-turn flag, and is cleared with them.
     const startedId = result.started?.id;
-    this.setTracker(startedId ? { ...result.tracker, turns: result.tracker.turns.map((turn) => (turn.id === startedId ? { ...turn, reactionUsed: false, actionUsed: false, bonusUsed: false, ragingDeed: false } : turn)) } : result.tracker);
+    this.setTracker(startedId ? { ...result.tracker, turns: result.tracker.turns.map((turn) => (turn.id === startedId ? { ...turn, reactionUsed: false, actionUsed: false, bonusUsed: false, attacksMade: 0, ragingDeed: false } : turn)) } : result.tracker);
   }
 
   /** The ribbon or a bookmark moved: every mirror learns it, then every page is resent so each player ends up with exactly their page. */

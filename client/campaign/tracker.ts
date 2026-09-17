@@ -19,6 +19,8 @@ export interface TrackerTurn {
   /** Action economy for the current turn (D97): shown, never enforced — extra attacks and features still go. */
   actionUsed?: boolean;
   bonusUsed?: boolean;
+  /** R72 (D207): attacks made so far in this turn's Attack action; the action counts as spent once they reach the sheet's number. */
+  attacksMade?: number;
   /**
    * R28 (D151): 2024 Rage keeps going at the end of your turn only if, since your last turn, you attacked, forced a
    * saving throw, or took damage. The host sets this when any of those happens and clears it when the turn starts.

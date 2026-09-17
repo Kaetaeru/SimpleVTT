@@ -374,6 +374,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       pcGuards: (entry, trigger) => pcGuards(entry, derivedOf(entry, catalogRef.current), catalogRef.current, trigger),
       // R63 (D198): what the attacker may add once a swing has landed.
       pcHitOffers: (entry, attackId, riders) => hitOffers(entry, derivedOf(entry, catalogRef.current), attackId, riders),
+      pcAttackActionAttacks: (entry) => derivedOf(entry, catalogRef.current).attackActionAttacks ?? 1,
       // R53 (D188): what the attacker's contracts do once the swing has landed.
       pcAftermath: (entry, attackId, outcomes) => { const derived = derivedOf(entry, catalogRef.current); const attack = derived.attacks.find((item) => item.id === attackId); return attack ? attackAftermath(derived, catalogRef.current, attack, outcomes) : emptyAftermath(); },
       pcStats: (entry) => pcStats(derivedOf(entry, catalogRef.current)),

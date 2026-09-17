@@ -49,6 +49,8 @@ export const PROPERTIES = [
   "proficiency.armor", "proficiency.weapon", "skill.<id>.expertise",
   // R61 (D196): the other two kinds of d20 test, after R55 did attack rolls.
   "ability-check.advantage", "saving-throw.advantage", "skill.<id>.advantage",
+  // R72 (D207): the number of attacks in one Attack action — Extra Attack is content, not a name the code knows.
+  "attack-action.attacks",
   // R60 (D195): the weapon's own damage dice (read by the rider and crit paths, not as a standing effect).
   "damage.reroll-lowest", "damage.extra-die", "damage.die-minimum",
 ] as const;
@@ -128,6 +130,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "proficiency.weapon": application.weaponTraining = [...(application.weaponTraining ?? []), text(operation, scope) ?? ""]; break;
       case "damage.ignore-resistance": application.ignoresResistance = [...(application.ignoresResistance ?? []), text(operation, scope) ?? ""]; break;
       case "attack-roll.crit-range": application.critRange = Math.min(application.critRange ?? 20, number(operation, scope) ?? 20); break;
+      case "attack-action.attacks": application.attackActionAttacks = Math.max(application.attackActionAttacks ?? 1, number(operation, scope) ?? 1); break;
       case "resistance": application.resistances = [...(application.resistances ?? []), text(operation, scope) ?? ""]; break;
       case "condition-immunity": application.conditionImmunities = [...(application.conditionImmunities ?? []), text(operation, scope) ?? ""]; break;
       default: unknown.push(operation.property);
