@@ -22,10 +22,10 @@ import { build, catalog } from "./support";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-async function table(classes: string, runtimeOf: (runtime: CharacterRuntime, derived: ReturnType<typeof build>["derived"]) => CharacterRuntime) {
+async function table(classes: string, runtimeOf: (runtime: CharacterRuntime, derived: ReturnType<typeof build>["derived"]) => CharacterRuntime, setTimer?: (ms: number, run: () => void) => void) {
   const hub = new MemoryHub();
   const campaign = { ...newCampaign("R81 시험", { userId: "dm", displayName: "DM" }), joinCode: "R81AAA" };
-  new TableHost(hub.hostEndpoint(), { campaign, hostUserId: "dm", hostSecret: "s", random: () => 0.5,
+  new TableHost(hub.hostEndpoint(), { campaign, hostUserId: "dm", hostSecret: "s", random: () => 0.5, setTimer,
     attributeOf: (entry, link) => (link === "hp" ? { value: entry.runtime.hp.current, max: entry.runtime.hp.maxSeen } : undefined),
     pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalog())), pcConcentrationKey, pcStats: (entry) => pcStats(derivedOf(entry, catalog())),
     pcRest: (entry, kind) => { const derived = derivedOf(entry, catalog()); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
@@ -91,4 +91,18 @@ test("R79: a sheet set to always takes it without a window, and never skips it (
   await tick();
   assert.equal(never.prompts().length, 0);
   assert.deepEqual(never.sheet().slotsUsed, { 3: 1 });
+});
+
+test("R87: a window nobody answers takes its default answer after the table timeout (D222)", async () => {
+  const timers: Array<{ ms: number; run: () => void }> = [];
+  const { dm, sheet, prompts } = await table("wizard", (runtime, derived) => useSpellSlot(runtime, derived, 3), (ms, run) => timers.push({ ms, run }));
+  dm.send({ type: "table.rest", kind: "short" });
+  await tick();
+  assert.equal(prompts().length, 1);
+  const timer = timers.at(-1)!;
+  assert.equal(timer.ms, 90_000, "90 seconds unless the campaign says otherwise");
+  timer.run();
+  await tick();
+  assert.equal(prompts().length, 0, "declined for the absent player");
+  assert.deepEqual(sheet().slotsUsed, { 3: 1 }, "declining uses nothing");
 });

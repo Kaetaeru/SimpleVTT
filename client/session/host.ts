@@ -154,6 +154,8 @@ export interface TableHostOptions {
   pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
   random?: () => number;
+  /** R87 (D222): schedule a callback (tests pass their own clock); defaults to an unref'd setTimeout. */
+  setTimer?: (ms: number, run: () => void) => void;
 }
 
 export class TableHost {
@@ -173,6 +175,10 @@ export class TableHost {
   /** Set for the length of one resumed cast so the same would-be counterspellers are not asked twice. */
   private counterAsked: string[] | null = null;
   /** R11: attacks held while the target decides on Shield (prompt id → everything needed to finish the attack). */
+  /** R86 (D221): the card being applied right now, so an automatic consequence knows which card it belongs to. */
+  private causeCard: string | null = null;
+  /** R86 (D221): per card, how to take back what happened automatically because of it (effects shed, a smite save card). */
+  private readonly childUndos = new Map<string, Array<() => void>>();
   private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; /** R63 (D198): whose answer holds it — the target's reaction, or the attacker's on-hit choice. */ stage?: "reaction" | "on-hit"; /** R63 (D198): the result waits for the DM once it is let go (D90). */ waits?: boolean }>();
   private readonly actions = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; resolution: AttackResolution; restore: () => void }>();
   /**
@@ -1468,18 +1474,7 @@ export class TableHost {
       }
       case "act.undo": {
         if (!isGm) return refuse("되돌리기는 GM만 씁니다");
-        const spellRecord = this.spells.get(command.messageId);
-        if (spellRecord) {
-          spellRecord.restore();
-          this.spells.delete(command.messageId);
-          this.say({ type: "spell", who: player.displayName, playerId: userId, content: `되돌림: ${describeSpell(spellRecord.resolution)}`, spell: { ...spellRecord.resolution, applied: false }, supersedes: command.messageId, undone: true });
-          return;
-        }
-        const record = this.actions.get(command.messageId);
-        if (!record) return refuse("그 카드는 더 되돌릴 수 없습니다");
-        record.restore();
-        this.actions.delete(command.messageId);
-        this.say({ type: "action", who: player.displayName, playerId: userId, content: `되돌림: ${describeResolution(record.resolution)}`, action: { ...record.resolution, applied: false }, supersedes: command.messageId, undone: true });
+        if (!this.undoCard(command.messageId, player.displayName, userId)) return refuse("그 카드는 더 되돌릴 수 없습니다");
         return;
       }
       case "act.confirm": {
@@ -1644,7 +1639,11 @@ export class TableHost {
     // R82 (D218): a smite spell is cast as a bonus action.
     if (riders.spellSmite) this.markUsed(held.inputs.attacker, "bonus");
     const card = this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
-    if (riders.spellSmite && attacker.entry.kind === "character") this.smiteSave(attacker, target, riders.spellSmite, Boolean(held.waits), held.inputs.by);
+    if (riders.spellSmite && attacker.entry.kind === "character") {
+      const save = this.smiteSave(attacker, target, riders.spellSmite, Boolean(held.waits), held.inputs.by);
+      // R86 (D221): undoing the swing takes the smite save card back with it.
+      if (save) this.childOf(() => { if (this.spells.has(save)) this.undoCard(save, "", held.inputs.by); }, card);
+    }
     return card;
   }
 
@@ -1670,7 +1669,43 @@ export class TableHost {
     const spec = { ...cast.spec, exec };
     const resolution = resolveSpell({ caster, casterStats: cast.casterStats, spec, targets: [{ combatant, stats }], dice: diceFrom(this.options.random ?? Math.random), apply: !waits });
     const player = this.campaign.players.find((item) => item.userId === by);
-    this.postSpell(resolution, [live], () => undefined, waits, player?.displayName ?? "", by, { spec, casterStats: cast.casterStats });
+    return this.postSpell(resolution, [live], () => undefined, waits, player?.displayName ?? "", by, { spec, casterStats: cast.casterStats });
+  }
+
+  /**
+   * R86 (D221): take a card back — its own changes (D136) and, newest first, everything that happened automatically
+   * because of it: effects a lost concentration shed, the save card a smite spell posted.
+   */
+  private undoCard(messageId: string, displayName: string, userId: string): boolean {
+    const spellRecord = this.spells.get(messageId);
+    const record = spellRecord ? undefined : this.actions.get(messageId);
+    if (!spellRecord && !record) return false;
+    const children = this.childUndos.get(messageId) ?? [];
+    this.childUndos.delete(messageId);
+    for (const undo of [...children].reverse()) undo();
+    if (spellRecord) {
+      spellRecord.restore();
+      this.spells.delete(messageId);
+      this.say({ type: "spell", who: displayName, playerId: userId, content: `되돌림: ${describeSpell(spellRecord.resolution)}`, spell: { ...spellRecord.resolution, applied: false }, supersedes: messageId, undone: true });
+    } else if (record) {
+      record.restore();
+      this.actions.delete(messageId);
+      this.say({ type: "action", who: displayName, playerId: userId, content: `되돌림: ${describeResolution(record.resolution)}`, action: { ...record.resolution, applied: false }, supersedes: messageId, undone: true });
+    }
+    return true;
+  }
+
+  /** R86 (D221): remember how to take back an automatic consequence of the card being applied now. */
+  private childOf(undo: () => void, card = this.causeCard) {
+    if (!card) return;
+    this.childUndos.set(card, [...(this.childUndos.get(card) ?? []), undo]);
+  }
+
+  /** R86 (D221): run `work` as the application of `card`, so what it sets off is filed under that card. */
+  private asCause<T>(card: string, work: () => T): T {
+    const previous = this.causeCard;
+    this.causeCard = card;
+    try { return work(); } finally { this.causeCard = previous; }
   }
 
   /** The card, applied now or (D90) waiting for the DM. */
@@ -1997,7 +2032,7 @@ export class TableHost {
   /** A resolved spell (or an NPC save action) becomes a card: applied now, or held for the DM (D90) with its restores. */
   private postSpell(resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>, restoreCaster: () => void, waits: boolean, displayName: string, userId: string, context?: { spec: SpellCastSpec; casterStats: CasterStats }) {
     const messageId = newMessageId();
-    const apply = () => {
+    const apply = () => this.asCause(messageId, () => {
       const rows = resolution.targets.map((row, index) => this.applySpellRow(row, targets[index], resolution));
       // R28 (D151): forcing a save and taking damage both keep a rage going.
       this.ragingDeeds([this.resolveActor({ entryId: resolution.caster.id }) ?? undefined, ...targets.filter((_, index) => (resolution.targets[index]?.damage?.damageTotal ?? 0) > 0)]);
@@ -2006,7 +2041,7 @@ export class TableHost {
       this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: describeSpell(applied), spell: applied });
       this.offerRescues(messageId, applied, targets);
       if (this.spells.size > 100) this.spells.delete(this.spells.keys().next().value as string);
-    };
+    });
     if (waits) {
       this.spells.set(messageId, { resolution, restore: restoreCaster, apply: () => { this.spells.delete(messageId); apply(); } });
       this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: `${describeSpell(resolution)} (DM 확인 대기)`, spell: resolution });
@@ -2379,7 +2414,9 @@ export class TableHost {
   }
 
   /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
-  private applyResolution(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
+  private applyResolution(...args: Parameters<TableHost["applyResolutionNow"]>) { return this.asCause(args[3], () => this.applyResolutionNow(...args)); }
+
+  private applyResolutionNow(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
     const restores: Array<() => void> = [];
     const hit = resolution.outcome === "hit" || resolution.outcome === "crit" || Boolean(resolution.mastery?.grazed);
     if (hit && target.entry.kind === "character") {
@@ -2664,6 +2701,24 @@ export class TableHost {
     const shed = [...names, ...gone.flatMap((effect) => [...(effect.conditions ?? []), ...(effect.endSave?.conditions ?? [])])];
     const now = this.now();
     const live = this.journalEntries.get(entry.id) ?? entry;
+    // R86 (D221): if a card set this off, undoing that card puts the effects, conditions and markers back.
+    if (live.kind !== "handout") {
+      const takenConditions = live.runtime.conditions.filter((name) => shed.includes(name));
+      const takenMarkers = [...this.pages.values()].flatMap((page) => page.tokens.filter((token) => token.represents === entry.id).map((token) => ({ pageId: page.id, tokenId: token.id, names: token.markers.filter((marker) => shed.includes(marker.name)) })));
+      this.childOf(() => {
+        const back = this.journalEntries.get(entry.id);
+        if (back && back.kind !== "handout") {
+          const effects = [...(back.runtime.effects ?? []), ...gone.filter((effect) => !(back.runtime.effects ?? []).some((item) => item.key === effect.key))];
+          const conditions = [...back.runtime.conditions, ...takenConditions.filter((name) => !back.runtime.conditions.includes(name))];
+          this.storeEntry({ ...back, runtime: { ...back.runtime, effects, conditions, updatedAt: this.now() }, updatedAt: this.now() } as JournalEntry);
+        }
+        for (const taken of takenMarkers) {
+          const page = this.pages.get(taken.pageId);
+          const token = page?.tokens.find((item) => item.id === taken.tokenId);
+          if (page && token && taken.names.length) this.storeToken(page, { ...token, markers: [...token.markers, ...taken.names.filter((marker) => !token.markers.some((item) => item.name === marker.name))] });
+        }
+      });
+    }
     if (live.kind === "character") {
       const runtime = noteLog({ ...live.runtime, effects: (live.runtime.effects ?? []).filter((effect) => !keys.includes(effect.key)), conditions: live.runtime.conditions.filter((name) => !shed.includes(name)) }, `종료: ${names.join(", ")} (${why})`);
       this.storeEntry({ ...live, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
@@ -2705,6 +2760,21 @@ export class TableHost {
     this.chat = this.chat.some((item) => item.id === id) ? this.chat.map((item) => (item.id === id ? message : item)) : [...this.chat, message].slice(-CHAT_BUFFER);
     this.options.onChat?.(message);
     this.emit({ type: "chat", message });
+    // R87 (D222): a window nobody answers takes its default answer, so one absent player does not stop the table.
+    const seconds = this.campaign.settings.promptTimeoutSeconds ?? 90;
+    if (message.type === "prompt" && message.prompt && !message.prompt.outcome && !message.supersedes && seconds > 0) {
+      const run = () => this.timeoutPrompt(id);
+      if (this.options.setTimer) this.options.setTimer(seconds * 1000, run);
+      else { const handle = setTimeout(run, seconds * 1000) as unknown as { unref?: () => void }; handle.unref?.(); }
+    }
+  }
+
+  /** R87 (D222): the default answer — a death save is rolled, every other window is declined (its standing policies still apply). */
+  private timeoutPrompt(id: string) {
+    const message = this.chat.find((item) => item.id === id);
+    if (!message?.prompt || message.prompt.outcome || this.promptAnswered(id)) return;
+    if (message.prompt.kind === "death-save" && message.prompt.reactor.entryId) { this.rollDeathSave(message.prompt.reactor.entryId, ""); this.say({ ...message, prompt: { ...message.prompt, outcome: { rolled: "시간 초과" } }, supersedes: id, content: `${message.content} → 시간 초과로 자동 굴림` }); return; }
+    this.apply(this.options.hostUserId, { type: "act.decline", messageId: id }, "");
   }
 
   private peerLeft(peerId: string) {

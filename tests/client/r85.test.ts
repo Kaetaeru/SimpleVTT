@@ -41,8 +41,12 @@ async function table(target: "ogre" | "bandit", dice: number) {
   const pc = newJournalCharacter(campaign.id, "dm", made.source, initialRuntime(made.derived));
   const npc = newJournalNpc(campaign.id, "dm", monsterById(target === "ogre" ? "dnd.srd521.monster.ogre" : "dnd.srd521.monster.bandit")!);
   dm.send({ type: "journal.put", entry: pc });
+  const other = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.bandit")!, { name: "다른 산적" });
   dm.send({ type: "journal.put", entry: npc });
+  dm.send({ type: "journal.put", entry: other });
   await tick();
+  const otherToken = tokenForNpc(other);
+  dm.send({ type: "token.put", pageId: scene.id, token: otherToken });
   const pcToken = tokenForCharacter(pc);
   const npcToken = tokenForNpc(npc);
   dm.send({ type: "token.put", pageId: scene.id, token: pcToken });
@@ -52,7 +56,7 @@ async function table(target: "ogre" | "bandit", dice: number) {
   dm.send({ type: "tracker.add", turn: { name: "적", tokenId: npcToken.id, pageId: scene.id, entryId: npc.id, initiative: 1 } });
   dm.send({ type: "tracker.next" });
   await tick();
-  const refs = { pc: { entryId: pc.id, pageId: scene.id, tokenId: pcToken.id }, npc: { pageId: scene.id, tokenId: npcToken.id } };
+  const refs = { pc: { entryId: pc.id, pageId: scene.id, tokenId: pcToken.id }, npc: { pageId: scene.id, tokenId: npcToken.id }, other: { entryId: other.id, pageId: scene.id, tokenId: otherToken.id } };
   const cleric = () => host.journal.find((entry) => entry.id === pc.id) as JournalCharacter;
   const foe = () => host.journal.find((entry) => entry.id === npc.id) as JournalNpc;
   const markers = () => host.pageList.find((page) => page.id === scene.id)!.tokens.find((item) => item.id === npcToken.id)!.markers.map((marker) => marker.name);
@@ -73,6 +77,24 @@ test("R85: the target lets go when the caster stops concentrating (D220)", async
   await tick();
   assert.equal(t.foe().runtime.effects?.some((effect) => effect.key === `spell:${HOLD}`), false, "the spell is off the bandit");
   assert.ok(!t.markers().includes("마비"), `and so is the paralysis: ${JSON.stringify(t.markers())}`);
+});
+
+test("R86: undoing the hit that broke concentration puts the held spell back on the target too (D221)", async () => {
+  const t = await table("bandit", 0.01);
+  t.dm.send({ type: "act.cast", caster: t.refs.pc, spellId: HOLD, targets: [t.refs.npc], method: { kind: "slot", level: 2 } });
+  await tick();
+  assert.ok(t.markers().includes("마비"));
+  t.dm.send({ type: "act.attack", attacker: t.refs.other, targets: [t.refs.pc], attack: { source: "npc", actionName: "시미터" }, overrides: { outcome: "hit" } });
+  await tick();
+  const card = [...t.dm.snapshot!.chat].reverse().find((message) => message.type === "action")!;
+  assert.ok(card, JSON.stringify(t.dm.snapshot!.chat.slice(-3).map((message) => [message.type, message.content])));
+  assert.equal(card.action?.concentration?.success, false, JSON.stringify(card.action?.concentration));
+  assert.ok(!t.markers().includes("마비"), "the broken concentration freed the bandit");
+  t.dm.send({ type: "act.undo", messageId: card.id });
+  await tick();
+  assert.ok(t.cleric().runtime.effects.some((effect) => effect.key === `spell:${HOLD}`), "the cleric concentrates again");
+  assert.ok(t.foe().runtime.effects?.some((effect) => effect.key === `spell:${HOLD}`), "the bandit is held again");
+  assert.ok(t.markers().includes("마비"), JSON.stringify(t.markers()));
 });
 
 test("R85: 유도 화살 lasts until the end of the caster's next turn, not the target's (D220)", async () => {

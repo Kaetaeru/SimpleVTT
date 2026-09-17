@@ -38,6 +38,8 @@ export interface CampaignSettings {
   chatAvatars: boolean;
   /** D90: results wait for the GM's "적용" instead of landing at once. */
   dmConfirmsResults?: boolean;
+  /** R87 (D222): seconds an unanswered window waits before its default answer (0 = wait for ever). Unset: 90. */
+  promptTimeoutSeconds?: number;
   /**
    * R29 (D154): a downed character's death save is their player's to make. The host still rolls the die — the
    * player presses the button on their own card. Off means the host rolls it at the start of their turn, as before.
