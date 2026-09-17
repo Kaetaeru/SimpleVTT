@@ -38,7 +38,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D277 primal-knowledge (3) — 격노 중 기술을 근력으로가 없음. — [new-grammar]
 
 ## 파이터
-- action-surge / -2 (2/17) — 턴당 1회 안 셈, 없는 자원 `fighter.action-surge.turn`을 결제로 씀, 마법 행동 제외 없음. — [host-hook]
+- ✔ D288 (없는 자원 결제 제거, 턴당 제한은 사유 있는 라벨) action-surge / -2 (2/17) — 턴당 1회 안 셈, 없는 자원 `fighter.action-surge.turn`을 결제로 씀, 마법 행동 제외 없음. — [host-hook]
 - ✔ D270 champion.survivor (18) — 죽음 내성 18~20이 20으로 취급되지 않음. — [new-grammar] `death-save.crit-range`.
 - ✔ D265 champion.remarkable-athlete (3) — 운동 판정 유리가 문구(속성 있음). — [data-fix]
 
@@ -86,7 +86,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D263 channel-divinity#divine-spark-harm (2) — 건강 내성 절반이 문구. — [data-fix] D263 `save`.
 - ✔ D278 divine-intervention (10) — 5레벨 이하 클레릭 주문 무료 시전 선택 없음. — [picker]
 - ✔ D263 greater-divine-intervention (20) — 2d4 긴 휴식 잠금. — [data-fix] D263 `resource.lockout`.
-- improved-blessed-strikes#potent (14) — 선택지 없어도 표시, 소마법 피해 뒤 제시 아님. — [data-fix + host-hook]
+- ✔ D288 improved-blessed-strikes#potent (14) — 선택지 없어도 표시, 소마법 피해 뒤 제시 아님. — [data-fix + host-hook]
 - ✔ D263 life-domain.preserve-life (3) — 회복 유형 피해, 행동 결제 없음, 절반 최대 제한 없음. — [data-fix + picker]
 - ✔ D263 blessed-strikes.divine-strike — 광휘/괴저 선택. — [picker]
 - ✔ D263 life-domain.blessed-healer — 자신 회복 손 작업. — [data-fix] D263 `healing.self-on-slot-heal`.
@@ -94,7 +94,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 ## 팔라딘
 - ✔ D265 oath-of-devotion.sacred-weapon (3) — 신성 변환 소비·매력 명중 보너스·광휘 없음, 누르면 아무것도 안 바뀜. — [data-fix]
 - ✔ D264 abjure-foes (9) — 행동 결제·지혜 내성·공포·대상 수 없음. — [data-fix + host-hook]
-- channel-divinity (3) — "수동 적용" 안내, 신성 감지 계약 없음. — [button]
+- ✔ D288 (신성 감지는 팔라딘 계약에 이미 있음 — DM만 아는 정보라 사유 있는 라벨) channel-divinity (3) — "수동 적용" 안내, 신성 감지 계약 없음. — [button]
 - ✔ D265 lay-on-hands (1) — 남에게 쓰면 점수만 쓰고 치유 안 됨, 중독 해제 5점이 문구. — [data-fix + host-hook]
 - ✔ D278 oath-of-devotion.holy-nimbus (20) — 빈 효과. — [data-fix + host-hook]
 - ✔ D278 restoring-touch (14) — 안수 한 번에 여러 상태 해제가 아님. — [picker]

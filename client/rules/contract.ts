@@ -538,6 +538,8 @@ export interface ScopeCharacter {
   pactMagic?: { count: number; level: number };
   /** V4a (D263): the die a marked spell rolls on this sheet (적 학살자's d10). */
   markedSpellDice?: Record<string, number>;
+  /** V4z (D288): the features this character has, for a rule that only applies to one of two chosen options. */
+  features?: Array<{ id: string }>;
 }
 
 /**
@@ -547,6 +549,19 @@ export interface ScopeCharacter {
  * R51 (D186): `actor.level`, `armor.training`, `armor.dex-capped` and `equipment.shield` joined them, because the
  * PHB feats are written against what the character is wearing and how far along they are, not only their class.
  */
+/** V4z (D288): the rule key of a feature id, the same way `featureRuleKey` writes it (no import: this module has none). */
+const featureKeyOf = (id: string) => {
+  const feat = /\.feat\.(.+)$/.exec(id);
+  if (feat) return `feat:${feat[1]}`;
+  const cls = /^[a-z-]+\.\d+\.(.+)$/.exec(id);
+  if (cls) return cls[1];
+  const sub = /^dnd\.[a-z0-9]+\.feature\.(.+)$/.exec(id);
+  if (sub) return sub[1];
+  const trait = /\.trait\.([^.]+)$/.exec(id);
+  if (trait) return `species.${trait[1]}`;
+  return id;
+};
+
 export function characterScope(character: ScopeCharacter, extra: Record<string, ExprValue> = {}): Scope {
   return (ref) => {
     if (ref in extra) return extra[ref];
@@ -565,6 +580,9 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     if (ref === "armor.dex-capped") return Boolean(character.armor?.dexCapped);
     if (ref === "equipment.shield") return Boolean(character.armor?.shield);
     if (ref === "actor.pact-slots") return character.pactMagic?.count ?? 0;
+    // V4z (D288): `actor.has-feature:<rule key>` — true when this sheet carries that feature (향상된 축복받은 일격).
+    const feature = /^actor\.has-feature:(.+)$/.exec(ref);
+    if (feature) return (character.features ?? []).some((item) => item.id === feature[1] || item.id.endsWith(`.${feature[1]}`) || featureKeyOf(item.id) === feature[1]);
     const marked = /^actor\.marked-spell-die:(.+)$/.exec(ref);
     if (marked) return character.markedSpellDice?.[marked[1]] ?? 0;
     return undefined;

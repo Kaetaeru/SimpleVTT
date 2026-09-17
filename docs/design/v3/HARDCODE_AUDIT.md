@@ -89,6 +89,7 @@
 - 타깃 규칙의 `targetsPerSlotAboveBase`와 `targetCountOf` (D284)
 - 메타매직의 `needs`(무엇이 있는 시전에만 제시) · 없는 슬롯 레벨의 교환을 숨김 · 신속 주문이 추가 행동을 씀 (D285)
 - `economy.modify`의 `when` · 무료 공격의 횟수(`free`와 `count`) (D286)
+- 조건 참조 `actor.has-feature:<규칙 키>` (D288)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

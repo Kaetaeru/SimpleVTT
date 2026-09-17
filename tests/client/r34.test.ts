@@ -75,9 +75,9 @@ test("contracts: a contract's payment and the hand-written activation spend the 
     if (activation?.resourceId && !resources.includes(activation.resourceId)) gaps.push(`${key}: 코드가 쓰는 ${activation.resourceId}가 계약에 없습니다`);
     for (const resourceId of resources) if (!derived.resources.some((resource) => resource.id === resourceId)) gaps.push(`${key}: ${resourceId} 자원이 없습니다`);
   }
-  // Nothing disagrees. 어둠의 존재의 행운's pool did not exist anywhere in the client until this slice created it;
-  // what is left is Action Surge's once-a-turn limiter, which this engine does not model.
-  assert.deepEqual(gaps.sort(), ["fighter.action-surge: resource.fighter.action-surge.turn 자원이 없습니다"], gaps.join("\n"));
+  // Nothing disagrees any more: 어둠의 존재의 행운's pool exists and Action Surge names only pools that do.
+  // V4z (D288): the phantom once-a-turn pool is gone from the data — the limit is the table's, written as its own line.
+  assert.deepEqual(gaps.sort(), [], gaps.join(" | "));
   const warlock = owners["warlock.fiend.dark-ones-own-luck"].derived;
   assert.equal(warlock.resources.find((resource) => resource.id === "resource.warlock.fiend.dark-ones-own-luck")?.max, Math.max(1, warlock.abilities.cha.modifier));
   // It arrives at 6, not before, and it is tied to the patron — the SRD ships one warlock subclass, so the

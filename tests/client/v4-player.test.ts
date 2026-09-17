@@ -858,3 +858,16 @@ test("V4y: 잔혹한 일격 allows one effect, two from 17; 질풍 연타 puts i
   const swings = (monk.derived.bonusActions ?? []).find((item) => item.kind === "attack" && item.free)!;
   assert.deepEqual([swings.attackScope, swings.count, swings.free], ["unarmed", 3, true]);
 });
+
+test("V4z: a rule may wait on the option this sheet took — 향상된 축복받은 일격's temp HP only with 강력한 주문 시전 (D288)", async () => {
+  const cat = catalog();
+  const made = (option: string) => build({ name: "클레릭", classes: "cleric", level: 14, abilities: { wis: 18 }, choices: { "class.6.blessed-strikes": [`cleric.blessed-strikes.${option}`] } }, { "class.6.blessed-strikes": [`cleric.blessed-strikes.${option}`] });
+  assert.equal(tableOutcome(made("potent-spellcasting").derived, cat, "cleric.improved-blessed-strikes#potent")?.party.tempHp, "8");
+  assert.equal(tableOutcome(made("divine-strike").derived, cat, "cleric.improved-blessed-strikes#potent")?.party.tempHp, undefined, "신성한 일격을 골랐으면 임시 HP 줄은 없다");
+
+  // 행동 폭증: the payment names a pool that exists, and the once-a-turn limit says whose call it is.
+  const fighter = build({ name: "파이터", classes: "fighter", level: 17 });
+  const surge = cat.contractFor("fighter.action-surge")!;
+  assert.deepEqual(surge.payments.map((payment) => payment.resourceId), ["resource.fighter.action-surge"]);
+  assert.ok(fighter.derived.resources.some((resource) => resource.id === "resource.fighter.action-surge"));
+});
