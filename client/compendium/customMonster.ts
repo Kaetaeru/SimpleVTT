@@ -92,6 +92,7 @@ function readAction(raw: unknown, where: string, warnings: string[]): MonsterAct
       successDamage: text(save.onSuccess) === "none" ? "none" : "half",
       ...(Array.isArray(save.conditions) ? { failConditions: readConditions(save.conditions, `${where}.save.conditions`, warnings) } : {}),
       ...(typeof save.areaFeet === "number" ? { areaFeet: save.areaFeet } : {}),
+      ...(save.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}),
     };
   } else if (isObject(raw.multiattack)) {
     const routine = (Array.isArray(raw.multiattack.routine) ? raw.multiattack.routine : []).filter(isObject).map((step) => ({ name: text(step.name), count: num(step.count, 1) }));

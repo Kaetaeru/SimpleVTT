@@ -10,6 +10,7 @@ import bearerJson from "../../content/indexes/dnd-srd-5.2.1.spell-bearer.json";
 import weaponSpellJson from "../../content/indexes/dnd-srd-5.2.1.spell-weapon.json";
 import creaturesJson from "../../content/indexes/dnd-srd-5.2.1.spell-creatures.json";
 import reactionJson from "../../content/indexes/dnd-srd-5.2.1.spell-reaction.json";
+import repeatSaveJson from "../../content/indexes/dnd-srd-5.2.1.spell-repeat-save.json";
 import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
@@ -50,6 +51,8 @@ export interface SpellExec {
   creatures?: SpellCreatures;
   /** H6b (D249): the window this reaction spell answers (see `reactionSpellIds`). */
   reaction?: SpellReaction;
+  /** H6c (D250): the target repeats the save at the end of each of its turns (see `repeatSaveOf`). */
+  repeatSave?: "turn-end";
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
   repeat?: { economy: SpellSustain["economy"] };
 }
@@ -87,6 +90,10 @@ export const reactionSpellIds = (trigger: SpellReaction["trigger"]): string[] =>
   ...Object.entries(BUILTIN_REACTION).filter(([, rule]) => rule.trigger === trigger).map(([id]) => id),
   ...[...installed.values()].filter((exec) => exec.reaction?.trigger === trigger).map((exec) => exec.spellId),
 ];
+
+const BUILTIN_REPEAT_SAVE = (repeatSaveJson as unknown as { spells: Record<string, "turn-end"> }).spells;
+/** H6c (D250): when the target of this spell repeats its save, from the spell's mechanics or the SRD index. */
+export const repeatSaveOf = (exec: SpellExec): "turn-end" | undefined => exec.repeatSave ?? BUILTIN_REPEAT_SAVE[exec.spellId];
 
 /** H6a (D248): the spell's creature rule, from its mechanics or the SRD index. */
 export const creaturesOf = (spellId: string): SpellCreatures | undefined => spellExec(spellId)?.creatures ?? BUILTIN_CREATURES[spellId];
@@ -187,6 +194,7 @@ export function execForCatalogSpell(spell: CatalogSpell): SpellExec {
     ...(mechanic && isObject(mechanic.summon) && Array.isArray(mechanic.summon.forms) ? { summon: mechanic.summon as unknown as SpellSummon } : {}),
     ...(mechanic && isObject(mechanic.creatures) ? { creatures: mechanic.creatures as unknown as SpellCreatures } : {}),
     ...(mechanic && isObject(mechanic.reaction) ? { reaction: mechanic.reaction as unknown as SpellReaction } : {}),
+    ...(mechanic && mechanic.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}),
   };
 }
 

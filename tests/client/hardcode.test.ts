@@ -166,6 +166,27 @@ test("H6b: which spells answer a hit or a cast is data — a module reaction spe
   createCatalog();
 });
 
+test("H6c: a turn-end repeat save is a field — a pasted NPC and a module spell say so; spell effects are keyed by spell id (D250)", async () => {
+  const { parseCustomMonster } = await import("../../client/compendium/customMonster");
+  const { newJournalNpc } = await import("../../client/campaign/journal");
+  const { npcSaveExec } = await import("../../client/rules/attackSpec");
+  const { repeatsSaveAtTurnEnd } = await import("../../client/rules/spellcast");
+  const { createCatalog } = await import("../../client/catalog");
+  const { spellExec } = await import("../../client/compendium/spells");
+  const { effectRuleKey } = await import("../../client/rules/effects");
+  const parsed = parseCustomMonster(JSON.stringify({ name: "거미 마녀", ac: 13, hp: 30, abilities: { str: 10, dex: 14, con: 12, int: 10, wis: 10, cha: 10 }, actions: [{ name: "마비 독", save: { ability: "con", dc: 12, conditions: ["paralyzed"], repeatSave: "turn-end" } }, { name: "독 침", save: { ability: "con", dc: 12, conditions: ["poisoned"] } }] }));
+  assert.ok("monster" in parsed, JSON.stringify(parsed));
+  const npc = newJournalNpc("c", "dm", (parsed as { monster: Parameters<typeof newJournalNpc>[2] }).monster);
+  assert.equal(repeatsSaveAtTurnEnd(npcSaveExec(npc, "마비 독")!.spec.exec), true);
+  assert.equal(repeatsSaveAtTurnEnd(npcSaveExec(npc, "독 침")!.spec.exec), false);
+  const cat = createCatalog([{ moduleId: "module.web", moduleVersion: "1", content: [{ id: "module.spell.silk-bind", category: "spell", presentation: { originalName: "Silk Bind", defaultLocale: "ko-KR", locales: { "ko-KR": { name: "비단 속박" } } },
+    mechanics: [{ kind: "spell-definition", config: { level: 2, castingTimeText: "행동", rangeText: "30피트", durationText: "집중, 최대 1분", classes: ["wizard"] } }, { kind: "spell-mechanic", config: { repeatSave: "turn-end" } }] }] } as never]);
+  assert.equal(repeatsSaveAtTurnEnd(spellExec("module.spell.silk-bind")!), true);
+  assert.equal(effectRuleKey({ key: "spell:module.spell.silk-bind", source: "spell" } as never, cat), "spell:module.spell.silk-bind");
+  assert.equal(effectRuleKey({ key: "spell:bless", source: "spell" } as never, cat), "spell:dnd.srd521.spell.bless", "an effect saved with a bare key still finds its spell");
+  createCatalog();
+});
+
 test("H4: a class module's definition carries its training, resources, option pools and multiclass rules (D243)", async () => {
   const { createCatalog } = await import("../../client/catalog");
   const { autofill } = await import("../../client/character/autofill");

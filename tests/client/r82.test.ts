@@ -103,5 +103,5 @@ test("R82: the PHB patch gives the supplement's smites, auras and buffs their ru
   assert.deepEqual([wrathful?.damage?.type, wrathful?.save?.ability, wrathful?.save?.conditions], ["necrotic", "wis", ["frightened"]]);
   const vitality = sustainOf(spellExec("phb2024.spell.aura-of-vitality")!);
   assert.deepEqual([vitality?.economy, vitality?.primary?.kind], ["bonus-action", "healing"]);
-  assert.ok(cat.contractFor("spell:elemental-weapon"), "the buff is a sheet effect");
+  assert.ok(cat.contractFor("spell:phb2024.spell.elemental-weapon"), "the buff is a sheet effect");
 });

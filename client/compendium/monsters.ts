@@ -10,7 +10,7 @@ import type { TraitRule } from "./monsterTraits";
 
 export interface MonsterDamage { average: number; dice: string; count: number; sides: number; flat: number; type: string }
 export interface MonsterAttack { mode: "melee" | "ranged" | string; bonus: number; rangeFeet?: number; longRangeFeet?: number; damage: MonsterDamage[]; hitText?: string; riderConditions?: string[] }
-export interface MonsterSave { ability: AbilityKey; dc: number; areaText?: string; areaKind?: string; areaFeet?: number; failDamage?: MonsterDamage[]; failText?: string; successDamage?: "half" | "none" | string; successText?: string; failConditions?: string[] }
+export interface MonsterSave { ability: AbilityKey; dc: number; areaText?: string; areaKind?: string; areaFeet?: number; failDamage?: MonsterDamage[]; failText?: string; successDamage?: "half" | "none" | string; successText?: string; failConditions?: string[]; /** H6c (D250): the target repeats this save at the end of each of its turns. */ repeatSave?: "turn-end" }
 export interface MonsterSpellcasting { ability: AbilityKey; dc: number; lists: Array<{ frequency: string; uses?: number; spells: string[]; entries: Array<{ name: string; spellId?: string; note?: string; slotLevel?: number }> }> }
 export interface MonsterAction {
   name: string;

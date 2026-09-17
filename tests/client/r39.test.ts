@@ -61,7 +61,7 @@ test("effects: effect.remove ends what it names, effect.suppress pauses it inste
   // 야생 변신 replaces the form you were in rather than stacking with it.
   assert.deepEqual(contractRemovals(featureContract(cat, "druid.wild-shape")!, scope), ["feature:druid.wild-shape"]);
   // 반마법 지대 pauses every spell effect without ending any of them.
-  const field = contractSuppressions(cat.contractFor("spell:antimagic-field")!, scope)[0];
+  const field = contractSuppressions(cat.contractFor("spell:dnd.srd521.spell.antimagic-field")!, scope)[0];
   assert.deepEqual(field, { selector: "spell:*", suppressed: true, reason: "반마법 지대 안" });
   assert.equal(selectorMatches("spell:*", "spell:bless"), true);
   assert.equal(selectorMatches("spell:*", "feature:barbarian.rage"), false);

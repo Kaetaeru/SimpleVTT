@@ -13,7 +13,7 @@ import type { ContentCatalog } from "../catalog/catalog";
 import { castSpell, type CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
-import { spellExec, sustainedExec } from "../compendium/spells";
+import { repeatSaveOf, spellExec, sustainedExec } from "../compendium/spells";
 import { applyDamage, immuneToCondition, noDamage, resolveAttack, rollFormula as rollSigned, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
 import { scrollStats } from "./scrolls";
 import { effectRuleKey } from "./effects";
@@ -75,9 +75,8 @@ export interface SpellCastSpec {
 export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; /** R90 (D225): rolled with disadvantage, and why. */ disadvantage?: string; /** R90 (D225): spell dice in the bonus ("액운 −2"). */ dice?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
 export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R85 (D220): whose turn boundary counts the rounds. */ anchor?: { who: "source" | "bearer"; boundary: "start" | "end" }; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
 
-/** R10: the SRD text that lets a target repeat the save at the end of each of its turns (hold person, blindness/deafness, sleep breath …). */
-export const REPEAT_SAVE = /턴이 끝날 때[^.]{0,40}(내성 굴림을 반복|내성 굴림을 다시|내성을 반복|다시 내성)/;
-export const repeatsSaveAtTurnEnd = (exec: SpellExec) => REPEAT_SAVE.test(`${(exec.primary as { summary?: string }).summary ?? ""} ${(exec.trackedEffects ?? []).map((effect) => effect.summary).join(" ")}`);
+/** R10: a target repeats the save at the end of each of its turns. H6c (D250): read from the spell's data, not its summary text. */
+export const repeatsSaveAtTurnEnd = (exec: SpellExec) => repeatSaveOf(exec) === "turn-end";
 export interface SpellTargetResult {
   target: { id: string; name: string; kind: "pc" | "npc"; tokenId?: string };
   mode: "attack" | "save" | "heal" | "temp" | "projectiles" | "effect" | "note";

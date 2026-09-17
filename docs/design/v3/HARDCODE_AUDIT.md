@@ -51,8 +51,8 @@
 | P14 ✔ H6a | `summons.ts` `SUMMON_RULES`(5), `CONJURES_NOTHING`(6), `STEEDS` | 주문 ID별 소환 규칙 | 주문 메커닉 `summon`(R84에 이미 있음)으로 합치고, 소환 없음은 `summon: false` + 사유 | 기존(R84) |
 | P15 ✔ H6b | `host.ts` `COUNTERSPELL`, 방패 반응(`pcReactionSpell(… "shield")`), `Notify.tsx` 두 ID | 반응 주문 ID | 주문 메커닉 `reaction: { trigger: "attack.hit-self", acBonus: 5 }`, `reaction: { trigger: "spell.cast-seen", counter: true }` — 반응 창이 주문 목록을 읽음 | 반응 주문 트리거 |
 | P16 ✔ H1 | `PageCanvas.tsx` `SITUATIONAL`(무리 전술·태양광 과민성·투명 정규식) | 특성 이름 정규식 | S6 색인 패턴 `pack-tactics`, `sunlight-sensitivity` → 상황 버튼 | S6 |
-| P18 (H5d에서 발견) | `spellcast.ts` `REPEAT_SAVE` — 주문 요약문에서 "턴이 끝날 때 … 내성 굴림을 반복"을 정규식으로 찾음 | 설명문 정규식 | 주문 실행 데이터 필드(`repeatSave: "turn-end"`) | 주문 메커닉 필드 |
-| P19 (H5d에서 발견) | `effects.ts` `effectRuleKey` — 주문 효과 계약 키를 영문 주문 이름 slug로 만듦(`spell:aid`) | 이름에서 키를 만듦(모듈 주문이 같은 영문명이면 충돌) | 계약 키를 주문 ID로(`spell:<spellId>`) | ID 체계 |
+| P18 ✔ H6c | `spellcast.ts` `REPEAT_SAVE` — 주문 요약문에서 "턴이 끝날 때 … 내성 굴림을 반복"을 정규식으로 찾음 | 설명문 정규식 | 주문 실행 데이터 필드(`repeatSave: "turn-end"`) | 주문 메커닉 필드 |
+| P19 ✔ H6c | `effects.ts` `effectRuleKey` — 주문 효과 계약 키를 영문 주문 이름 slug로 만듦(`spell:aid`) | 이름에서 키를 만듦(모듈 주문이 같은 영문명이면 충돌) | 계약 키를 주문 ID로(`spell:<spellId>`) | ID 체계 |
 | P17 ✔ H4 | `classes.ts` `fiend-patron` 자원, `catalog.ts` 기본 기원 재주 `feat.skilled`, `tracks.ts` `ASI_FEAT_ID` | 콘텐츠 ID 기본값 | 배경 JSON `originFeat` 필수화, 직업 JSON `asiFeat` | 필드 |
 
 ## 3. 추가해야 할 범용 문법
@@ -82,6 +82,7 @@
 | 채팅 명령 정규식, `LIMITS`, UI 색·라벨, 지속시간 한국어 단위 파싱(`ROUNDS_PER`) | UI·통신·보안. |
 | `activation.ts` `featureRuleKey` ID 규칙 | ID 체계 해석. |
 | `model.ts` `ReactionPrompt.kind`의 `"shield"`·`"counterspell"` (H6b) | 저장된 캠페인 채팅 기록이 이 창 종류를 들고 있다. 이름을 바꾸면 옛 기록이 깨진다. 어떤 주문이 답하는지는 `spellId`와 색인이 정한다. |
+| `scripts/generate-monster-catalog.mjs` 스탯 블록 문장 해석(명중·피해·내성·`repeatSave`) (H6c) | 콘텐츠 생성기가 SRD 번역 문장을 한 번 읽어 몬스터 JSON 필드로 적는다. 실행 코드는 필드만 읽고, 모듈·붙여넣은 NPC는 필드를 직접 쓴다. |
 | `tracks.ts` 진행표 행 단어 `"Ability Score Improvement"`, `"Epic Boon"`, `"Subclass Feature"`, `/Subclass$/` (H4) | 직업 진행표 형식의 어휘. SRD와 모듈 직업표가 같은 단어로 행을 쓴다. |
 
 ## 5. 진행 순서 (제안)

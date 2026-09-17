@@ -333,6 +333,7 @@ export function npcSaveExec(entry: JournalNpc, actionName: string): { spec: Spel
     spellId: `npc:${action.name}`, baseLevel: 0, castingEconomy: "action",
     targeting: { kind: "creature", minTargets: 1, maxTargets: 64, ...(save.areaFeet ? { rangeFeet: save.areaFeet } : {}) },
     primary, effects: (save.failConditions ?? []).map((conditionId) => ({ conditionId, trigger: "failed-save" as const, duration })),
+    ...(save.repeatSave ? { repeatSave: save.repeatSave } : {}),
   };
   return { spec: { spellId: exec.spellId, name: action.name, level: 0, exec }, casterStats: { attackBonus: 0, saveDc: save.dc, modifier: 0, level: 1 }, action };
 }

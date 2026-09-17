@@ -258,6 +258,9 @@ function parseEntry(entry, slug, section) {
         successDamage: /절반/.test(success) ? "half" : /피해/.test(success) ? "other" : "none",
         successText: success.trim(),
         failConditions: conditionIds(fail),
+        // H6c (D250): the stat block says the target repeats the save at the end of each of its turns. Read once here,
+        // from the SRD text, so the table reads a field instead of matching the sentence at run time.
+        ...(/턴이 끝날 때[^.]{0,40}(내성 굴림을 반복|내성 굴림을 다시|내성을 반복|다시 내성)/.test(fail) ? { repeatSave: "turn-end" } : {}),
       };
     } else if (/^다중공격$/.test(entry.title) || /^Multiattack$/i.test(originalName)) {
       out.kind = "multiattack";

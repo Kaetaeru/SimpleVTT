@@ -125,13 +125,13 @@ export function castHook(spell: { id: string }, slotLevel: number, derived: Deri
   return undefined;
 }
 
-const spellSlug = (nameEn: string) => nameEn.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-
 export function effectRuleKey(effect: ActiveEffect, catalog: ContentCatalog): string {
   if (effect.source === "feature") return qualifyRuleKey(featureRuleKey(effect.key.replace(/^feature:/, "")));
   const spellId = effect.key.replace(/^spell:/, "");
-  const spell = catalog.spellById(spellId);
-  return `spell:${spellSlug(spell?.nameEn ?? spellId.split(".").pop() ?? spellId)}`;
+  // H6c (D250): a spell's effect contract is keyed by the spell's id, not a slug of its English name. An effect saved
+  // before ids were used (`spell:bless`) still finds its spell by the id's last segment.
+  const spell = catalog.spellById(spellId) ?? (spellId.includes(".") ? undefined : catalog.spells.find((item) => item.id.split(".").pop() === spellId));
+  return `spell:${spell?.id ?? spellId}`;
 }
 
 /**

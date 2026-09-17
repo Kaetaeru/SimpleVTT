@@ -396,7 +396,7 @@
      "config": {
       "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
       "schemaVersion": "0.2-draft",
-      "id": "spell:crusaders-mantle",
+      "id": "spell:phb2024.spell.crusaders-mantle",
       "entryPoints": [
        {
         "id": "while-active",
@@ -441,7 +441,7 @@
      "config": {
       "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
       "schemaVersion": "0.2-draft",
-      "id": "spell:elemental-weapon",
+      "id": "spell:phb2024.spell.elemental-weapon",
       "entryPoints": [
        {
         "id": "while-active",

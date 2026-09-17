@@ -80,6 +80,7 @@
 - `ability`: `str` `dex` `con` `int` `wis` `cha`
 - `onSuccess`: `half`(기본) 또는 `none`
 - `conditions`: 실패 시 상태
+- `repeatSave`: `"turn-end"`이면 대상이 자기 턴이 끝날 때마다 내성을 다시 굴려 성공하면 상태가 풀린다(D250)
 
 ### 다중공격 — `multiattack`
 
