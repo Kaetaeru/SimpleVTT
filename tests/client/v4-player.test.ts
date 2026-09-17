@@ -960,3 +960,20 @@ test("V5e: 얼음 칼 rolls its attack, 화염검 is a bonus action and swings a
   const card = t.host.archive.filter((message) => message.type === "spell").at(-1)!;
   assert.ok(/적중|명중/.test(card.content ?? ""), card.content);
 });
+
+test("V5f: 혼란 repeats its save, and the spells the app cannot finish say why on the sheet (D294)", async () => {
+  const { spellExec, repeatSaveOf } = await import("../../client/compendium/spells");
+  const cat = catalog();
+  assert.equal(repeatSaveOf(spellExec("dnd.srd521.spell.confusion")!), "turn-end");
+
+  // 수면 is already what the 2024 rule says: incapacitated until the end of its next turn, and damage ends it.
+  const sleep = spellExec("dnd.srd521.spell.sleep")!;
+  assert.deepEqual(sleep.effects?.map((effect) => [effect.conditionId, effect.termination?.targetTakesDamage]), [["incapacitated", true]]);
+
+  // What is left to the table carries its reason, spell by spell.
+  for (const key of ["divine-word", "prismatic-spray", "blink", "warding-bond", "grease"]) {
+    const contract = cat.contractFor(`spell:dnd.srd521.spell.${key}`);
+    const questions = (contract?.entryPoints ?? []).flatMap((entry) => entry.operations).flatMap((operation) => (operation.kind === "adjudication.request" ? [operation.question] : []));
+    assert.ok(questions.some((question) => question.startsWith("DM 판정 (")), `${key}: ${JSON.stringify(questions)}`);
+  }
+});
