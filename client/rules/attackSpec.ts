@@ -72,6 +72,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     exhaustion: runtime.exhaustion,
     ...(derived.evasion ? { evasion: true } : {}),
     ...(derived.elusive ? { elusive: true } : {}),
+    ...(derived.opportunityDisadvantage?.length ? { opportunityDisadvantage: derived.opportunityDisadvantage } : {}),
     ...(derived.markedSpellDice ? { markedSpellDice: derived.markedSpellDice } : {}),
     ...(derived.markedSpellAdvantage?.length ? { markedSpellAdvantage: derived.markedSpellAdvantage } : {}),
     ...(derived.studiedAttacks ? { studiedAttacks: true } : {}),
@@ -213,7 +214,9 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   // R55 (D190): the advantage a contract declared for *this* weapon — 무모한 공격 is Strength melee only.
   const advantageOn = (derived.advantageOn ?? []).filter((item) => { if (!item.scope) return true; const filter = attackScopeFilter(item.scope); return filter ? filter(attack) : false; }).map((item) => item.reason);
   const abilityMod = derived.abilities[attack.ability].modifier;
-  const mastery = attack.masteryActive && attack.masteryKey && !cleave ? attack.masteryKey : undefined;
+  // V3f (D260): a rider may swap the mastery property this swing uses (전술 통달).
+  const masterySwap = chosen.map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)?.mastery).find(Boolean);
+  const mastery = attack.masteryActive && attack.masteryKey && !cleave ? masterySwap ?? attack.masteryKey : undefined;
   // R32 (D166): 야만적 공격자 — the player asked for the reroll in the pre-roll dialog and has the feat.
   const savageFeat = riders.savage ? savageAttackerFeat(derived) : undefined;
   const savage = Boolean(savageFeat);

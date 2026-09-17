@@ -258,6 +258,8 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
       } else if (operation.kind === "resource.change") {
         const amount = number(operation.amount) ?? 0;
         if (amount < 0) rules.push(`${where} — ${-amount} 소비`);
+      } else if (operation.kind === "property.modify" && operation.property === "mastery.replace") {
+        rules.push(`${where} — 이번 공격의 통달 속성을 ${String(operation.params?.mastery ?? "")}(으)로`);
       } else if (operation.kind === "property.modify" && operation.property === "rider.forgo-dice") {
         rules.push(`${where} — 함께 고른 명중 피해의 주사위 ${number(operation.value) ?? 0}개 포기`);
       } else if (operation.kind === "adjudication.request") questions.push(operation.question);

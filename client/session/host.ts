@@ -822,7 +822,7 @@ export class TableHost {
         command.targets.forEach((ref, index) => {
           const targetEntry = this.resolveActor(ref);
           if (!targetEntry) { this.reply(peerId, { type: "refused", reason: "대상을 찾을 수 없습니다", commandType: command.type }); return; }
-          const id = this.runAttack({ attacker: command.attacker, targets: command.targets, attack: command.attack, riders: command.riders, by: userId, targetIndex: index }, attackerEntry, targetEntry, prepared!, overrides, undefined, undefined, index === 0 ? prepared!.spend : undefined);
+          const id = this.runAttack({ attacker: command.attacker, targets: command.targets, attack: command.attack, riders: command.riders, by: userId, targetIndex: index }, attackerEntry, targetEntry, promptMessage ? { ...prepared!, spec: { ...prepared!.spec, opportunity: true } } : prepared!, overrides, undefined, undefined, index === 0 ? prepared!.spend : undefined);
           if (index === 0) firstCardId = id;
         });
         if (promptMessage && firstCardId) {

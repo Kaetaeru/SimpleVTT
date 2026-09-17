@@ -265,6 +265,8 @@ export interface DerivedCharacter {
   minimumScoreRolls?: AbilityKey[];
   /** V3c (D257): the lowest d20 an ability check the character is proficient in counts (믿음직한 재능). */
   checkMinimumD20?: number;
+  /** V3f (D260): reasons opportunity attacks against the character are at disadvantage. */
+  opportunityDisadvantage?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll (원소의 친화력). */
   damageTypeModifier?: string[];
   schoolDamageModifier?: Array<{ school: string; classSlug: string }>;

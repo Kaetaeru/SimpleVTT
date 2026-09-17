@@ -178,3 +178,37 @@ test("V3e: 교활한 일격 takes its dice from 암습 taken with it; 안정된 
   assert.ok(card.action!.reasons.join(" ").includes("안정된 조준"), JSON.stringify(card.action!.reasons));
   assert.ok(!t.sheet().runtime.effects.some((effect) => effect.key === "feature:rogue.steady-aim"), "spent by the attack");
 });
+
+test("V3f: 전술 통달, 전술적 이동, 신성 변환의 사용, 회복의 손길, 기회 공격 회피 (D260)", async () => {
+  const { pcAttackSpec, pcCombatant } = await import("../../client/rules/attackSpec");
+  const { tableOutcome } = await import("../../client/rules/contractTable");
+  const { featureActivation } = await import("../../client/rules/activation");
+  const { resolveAttack, diceFrom } = await import("../../client/rules/resolve");
+  const cat = catalog();
+  // 전술 통달: the swing uses the chosen mastery instead of the weapon's own.
+  const fighter = build({ name: "투사", classes: "fighter", level: 9 });
+  const entry = newJournalCharacter("c", "p", fighter.source, initialRuntime(fighter.derived));
+  const mastered = fighter.derived.attacks.find((attack) => attack.masteryActive && attack.masteryKey && attack.masteryKey !== "sap")!;
+  assert.ok(mastered, "a weapon with an active mastery");
+  assert.equal(pcAttackSpec(entry, fighter.derived, mastered.id, { contracts: ["fighter.tactical-master#sap"] }, cat)!.spec.mastery, "sap");
+  // 전술적 이동: 재기의 바람 marks 이탈 from fighter 5.
+  assert.deepEqual(tableOutcome(fighter.derived, cat, "fighter.second-wind")?.selfMarks, ["이탈"]);
+  // 신성 변환: 언데드 퇴치 rolls 언데드 소각's radiant d8s.
+  const cleric = build({ name: "클레릭", classes: "cleric", level: 5, abilities: { wis: 16 } }).derived;
+  const turn = featureActivation(cleric.features.find((feature) => feature.name === "언데드 퇴치")!, cleric)!;
+  assert.equal(turn.roll?.(cleric).formula, `${cleric.abilities.wis.modifier}d8`);
+  assert.equal(turn.resourceId, "resource.cleric.channel-divinity");
+  // 회복의 손길: 5 points of 안수 take 실명 off the chosen creature.
+  const paladin = build({ name: "팔라딘", classes: "paladin", level: 14 }).derived;
+  const touch = paladin.features.find((feature) => feature.name === "회복의 손길: 실명")!;
+  assert.deepEqual([featureActivation(touch, paladin)?.resourceId, featureActivation(touch, paladin)?.cost], ["resource.paladin.lay-on-hands", 5]);
+  assert.deepEqual(tableOutcome(paladin, cat, "paladin.restoring-touch#blinded")?.conditionsRemoved, ["실명"]);
+  // 기회 공격 회피: an opportunity attack against the hunter is at disadvantage; an ordinary one is not.
+  const hunter = build({ name: "레인저", classes: "ranger", level: 7 }, { "class.2.subclass": ["dnd.srd521.subclass.ranger.hunter"], "class.6.subclass.defensive-tactics": ["escape-the-horde"] });
+  const target = pcCombatant(newJournalCharacter("c", "p", hunter.source, initialRuntime(hunter.derived)), hunter.derived);
+  assert.ok(target.opportunityDisadvantage?.length, JSON.stringify(hunter.derived.features.map((feature) => feature.name)));
+  const attacker = pcCombatant(entry, fighter.derived);
+  const spec = { name: "주먹", source: "npc" as const, attackBonus: 5, mode: "melee" as const, damage: [{ formula: "1d4", type: "타격" }] };
+  assert.ok(resolveAttack(attacker, target, { ...spec, opportunity: true }, { dice: diceFrom(() => 0.5) }).reasons.some((reason) => reason.includes("기회 공격")));
+  assert.ok(!resolveAttack(attacker, target, spec, { dice: diceFrom(() => 0.5) }).reasons.some((reason) => reason.includes("기회 공격")));
+});

@@ -55,6 +55,8 @@ export interface ContractRider {
   cost: number;
   /** V3e (D259): this rider gives up this many dice of another rider it must be taken with (교활한 일격 from 암습). */
   forgo?: { key: string; dice: number };
+  /** V3f (D260): the weapon mastery property this swing uses instead of the weapon's own (전술 통달). */
+  mastery?: string;
 }
 
 const SAVE_KO: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
@@ -96,6 +98,8 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
       } else if (operation.kind === "resource.change") {
         const amount = Number(evaluate(operation.amount, scope));
         if (Number.isFinite(amount) && amount < 0) { rider.resourceId = operation.resourceId; rider.cost = -amount; }
+      } else if (operation.kind === "property.modify" && operation.property === "mastery.replace") {
+        if (operation.params?.mastery) { rider.mastery = String(operation.params.mastery); hints.push(`통달 속성을 ${String(operation.params.mastery)}(으)로`); }
       } else if (operation.kind === "property.modify" && operation.property === "rider.forgo-dice") {
         const dice = Number(evaluate(operation.value, scope));
         if (operation.params?.rider && Number.isFinite(dice)) { rider.forgo = { key: String(operation.params.rider), dice }; hints.push(`주사위 ${dice}개 포기`); }

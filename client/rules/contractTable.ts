@@ -38,6 +38,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const outcome = contractOutcome(contract, scope);
   const applied: string[] = [];
   const selfMarks: string[] = [];
+  const removed: string[] = [];
   const party: TableOutcome["party"] = { grants: [] };
   const formula = (operation: { dice?: string; amount?: unknown }) => {
     const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
@@ -50,6 +51,8 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
       if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
       if (operation.kind === "condition.apply" && operation.target !== "self") { applied.push(operation.condition); continue; }
       if (operation.kind === "condition.apply") { selfMarks.push(operation.condition); continue; }
+      // V3f (D260): a condition the use takes off the people it is aimed at.
+      if (operation.kind === "condition.remove" && operation.target !== "self") { removed.push(operation.condition); continue; }
       // R58 (D193): the half aimed at other people. The sheet cannot answer any of it — it does not know who.
       if (!("target" in operation) || !atOthers(operation.target)) continue;
       if (operation.kind === "temp-hp.grant") party.tempHp = formula(operation);
@@ -62,14 +65,14 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const table: TableOutcome = {
     label: derived.features.find((feature) => feature.id.endsWith(ruleKey))?.name ?? ruleKey,
     conditionsApplied: applied,
-    conditionsRemoved: [],
+    conditionsRemoved: removed,
     selfMarks,
     deathSave: outcome.deathSave,
     notes: outcome.notes,
     artifacts: outcome.artifacts.map((item) => ({ kind: item.kind, monsterId: item.monsterId, count: item.count })),
     party,
   };
-  const asks = table.conditionsApplied.length || table.selfMarks.length || table.deathSave || table.notes.length || table.artifacts.length
+  const asks = table.conditionsApplied.length || table.conditionsRemoved.length || table.selfMarks.length || table.deathSave || table.notes.length || table.artifacts.length
     || party.tempHp || party.heal || party.grants.length;
   return asks ? table : null;
 }

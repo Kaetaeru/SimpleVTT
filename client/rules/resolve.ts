@@ -74,6 +74,8 @@ export interface Combatant {
   grantsAdvantage?: string[];
   /** R90 (D225): reasons attacks against this creature are at disadvantage (흐림). */
   grantsDisadvantage?: string[];
+  /** V3f (D260): reasons an opportunity attack against this creature is at disadvantage (기회 공격 회피). */
+  opportunityDisadvantage?: string[];
   /** R90 (D225): dice a spell it is under adds to its own attack rolls or saves (축복 +1d4, 액운 −1d4). */
   d20Dice?: Array<{ on: "attack" | "save"; dice: string; label: string }>;
   /** R90 (D225): advantage or disadvantage on its own attack rolls or saves, from a spell it is under. */
@@ -114,6 +116,8 @@ export interface AttackSpec {
   attackBonus: number;
   mode: "melee" | "ranged";
   damage: DamagePart[];
+  /** V3f (D260): this swing is an opportunity attack (the reaction to a creature leaving reach). */
+  opportunity?: boolean;
   /** Extra damage the attacker chose (암습, 신성한 강타 …), already as parts. */
   riders?: DamagePart[];
   /** H5b (D245): extra damage that lands only on a target of one of these creature types; the host adds it per target. */
@@ -265,6 +269,7 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   for (const reason of target.grantsAdvantage ?? []) plus.push(reason);
   // R90 (D225): spells on either side — 흐림 on the target, 액운·잔혹한 조롱·예지 on the attacker.
   for (const reason of target.grantsDisadvantage ?? []) minus.push(reason);
+  if (spec.opportunity) for (const reason of target.opportunityDisadvantage ?? []) minus.push(`기회 공격: ${reason}`);
   for (const state of (attacker.rollStates ?? []).filter((item) => item.on === "attack")) (state.state === "advantage" ? plus : minus).push(`공격자 ${state.label}`);
   // R96 (D231): 포착 불가 takes every reason for advantage away, unless the creature is incapacitated.
   if (target.elusive && plus.length && !CANNOT_ACT.some((name) => has(target, name))) plus.length = 0;
