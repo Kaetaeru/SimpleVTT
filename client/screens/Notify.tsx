@@ -111,7 +111,7 @@ function HitChoices({ message }: { message: ChatMessage }) {
   };
   const [picked, setPicked] = useState<string[]>([]);
   const [facts, setFacts] = useState<string[]>([]);
-  // R82 (D218): each offer with slots keeps its own pick — 신성한 강타 and a smite spell may both be on the list.
+  // R82 (D218): each offer with slots keeps its own pick.
   const [slotOf, setSlotOf] = useState<Record<string, number>>(() => Object.fromEntries(offers.filter((offer) => offer.slots?.length).map((offer) => [offer.key, offer.slots![0].level])));
   // A smite spell is one per hit: ticking one unticks another.
   const pickOne = (list: string[], key: string, on: boolean) => (on && key.startsWith("spell:") ? [...list.filter((item) => !item.startsWith("spell:")), key] : toggle(list, key, on));
@@ -142,7 +142,7 @@ function HitChoices({ message }: { message: ChatMessage }) {
       ))}
       {auto.length ? <p className="cl-quiet cl-small" style={{ margin: 0 }}>항상 사용: {auto.join(", ")} — 고르지 않아도 적용됩니다.</p> : null}
       <div className="cl-row" style={{ gap: 4 }}>
-        <button type="button" className="cl-btn small primary" disabled={!picked.length} onClick={() => { const spell = picked.find((key) => key.startsWith("spell:")); c.hitChoice(message.id, picked, facts, picked.includes("smite") ? slotOf.smite : undefined, spell ? { spellId: spell.slice("spell:".length), slot: slotOf[spell] } : undefined); }}>적용</button>
+        <button type="button" className="cl-btn small primary" disabled={!picked.length} onClick={() => { const spell = picked.find((key) => key.startsWith("spell:")); c.hitChoice(message.id, picked, facts, spell ? { spellId: spell.slice("spell:".length), slot: slotOf[spell] } : undefined); }}>적용</button>
         <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
       </div>
     </div>

@@ -28,7 +28,7 @@ export interface CharacterRuntime {
   log: RuntimeLogEntry[];
   effects: ActiveEffect[];
   /**
-   * R64 (D199): what to do with each thing a hit offers (`smite`, `savage`, a contract rule key such as `rogue.sneak-attack`) — ask every
+   * R64 (D199): what to do with each thing a hit offers (`savage`, `spell:<id>`, a contract rule key such as `rogue.sneak-attack`) — ask every
    * time (the default, and what a missing key means), take it without asking, or never offer it.
    */
   hitPolicy?: Record<string, HitPolicy>;

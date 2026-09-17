@@ -1,6 +1,7 @@
 {
-  "$comment": "R82 (D218): spells cast right after a weapon hit, offered in the on-hit window beside 신성한 강타. damage is added to the swing (dice doubled on a critical); inflicts lands with the hit; save is rolled by the target against the caster's spell save DC and posted as its own card. weapon: melee (default), ranged or any. Divine Smite stays the built-in rider. A module may put the same object under its spell-mechanic config as \"onHit\".",
+  "$comment": "R82 (D218): spells cast right after a weapon hit, offered in the on-hit window. damage is added to the swing (dice doubled on a critical); inflicts lands with the hit; save is rolled by the target against the caster's spell save DC and posted as its own card. weapon: melee (default), ranged or any. versus adds damage only against the listed creature types (H5b, D245: Divine Smite). A module may put the same object under its spell-mechanic config as \"onHit\".",
   "spells": {
+    "dnd.srd521.spell.divine-smite": { "weapon": "melee", "damage": { "count": 2, "sides": 8, "perSlot": 1, "type": "radiant" }, "versus": { "creatureTypes": ["fiend", "undead"], "damage": { "count": 1, "sides": 8, "type": "radiant" } } },
     "dnd.srd521.spell.searing-smite": { "weapon": "any", "damage": { "count": 1, "sides": 6, "perSlot": 1, "type": "fire" }, "note": "대상은 불붙음 — 매 턴 시작에 1d6 화염, 건강 내성 성공 시 종료 (표에서)" },
     "dnd.srd521.spell.shining-smite": { "weapon": "any", "damage": { "count": 2, "sides": 6, "perSlot": 1, "type": "radiant" }, "note": "대상은 빛남 — 대상을 향한 명중에 이점, 투명 불가 (표에서)" },
     "dnd.srd521.spell.ensnaring-strike": { "weapon": "any", "save": { "ability": "str", "conditions": ["restrained"], "note": "구속된 동안 매 턴 시작에 1d6 관통 (슬롯 레벨당 +1d6) — 표에서" } }

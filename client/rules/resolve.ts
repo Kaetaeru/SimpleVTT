@@ -116,6 +116,8 @@ export interface AttackSpec {
   damage: DamagePart[];
   /** Extra damage the attacker chose (암습, 신성한 강타 …), already as parts. */
   riders?: DamagePart[];
+  /** H5b (D245): extra damage that lands only on a target of one of these creature types; the host adds it per target. */
+  versusRiders?: Array<{ creatureTypes: string[]; part: DamagePart }>;
   /** Conditions the hit inflicts (from NPC riders or masteries). */
   inflicts?: string[];
   /** R12 (2024 weapon mastery): the active mastery property's key, the wielder's ability modifier and the mastery save DC (8 + mod + PB). */

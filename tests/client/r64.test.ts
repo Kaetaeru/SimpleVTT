@@ -88,13 +88,13 @@ test("R64: the window asks only what is still \"ask\", says what rides along, an
 });
 
 test("R64: 신성한 강타 is never taken unasked (D199)", async () => {
-  const t = await table("paladin", { smite: "always" });
+  const t = await table("paladin", { "spell:dnd.srd521.spell.divine-smite": "always" });
   await t.swing();
   const [prompt] = t.prompts();
   assert.ok(prompt, "a slot is the player's to pick");
-  const smite = prompt.prompt!.onHit!.offers.find((offer) => offer.key === "smite")!;
+  const smite = prompt.prompt!.onHit!.offers.find((offer) => offer.key === "spell:dnd.srd521.spell.divine-smite")!;
   assert.ok(smite);
   const runtime = initialRuntime(build({ classes: "paladin", level: 5 }).derived);
-  assert.equal(hitPolicyOf({ ...runtime, hitPolicy: { smite: "always" } }, smite), "ask");
-  assert.deepEqual(splitHitOffers({ ...runtime, hitPolicy: { smite: "never" } }, [smite]), { ask: [], auto: [] }, "but it can be switched off");
+  assert.equal(hitPolicyOf({ ...runtime, hitPolicy: { "spell:dnd.srd521.spell.divine-smite": "always" } }, smite), "ask");
+  assert.deepEqual(splitHitOffers({ ...runtime, hitPolicy: { "spell:dnd.srd521.spell.divine-smite": "never" } }, [smite]), { ask: [], auto: [] }, "but it can be switched off");
 });

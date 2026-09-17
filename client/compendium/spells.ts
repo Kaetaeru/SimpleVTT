@@ -56,6 +56,8 @@ export interface SpellOnHit {
   weapon?: "melee" | "ranged" | "any";
   damage?: { count: number; sides: number; perSlot?: number; type: string };
   inflicts?: string[];
+  /** H5b (D245): more damage only against these creature types (신성한 강타: 악마·언데드 +1d8), added per target. */
+  versus?: { creatureTypes: string[]; damage: { count: number; sides: number; type: string } };
   save?: { ability: string; conditions?: string[]; damage?: { count: number; sides: number; perSlot?: number; type: string }; successDamage?: "half" | "none"; note?: string };
   note?: string;
 }

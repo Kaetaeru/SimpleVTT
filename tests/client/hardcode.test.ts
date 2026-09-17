@@ -12,7 +12,7 @@ const CEILINGS = {
   /** A content id literal. */
   contentIds: 17,
   /** A branch on a feature, option or event key. */
-  keyBranches: 31,
+  keyBranches: 30,
   /** A branch on a class slug or a picked option id. */
   slugBranches: 0,
   /** A regex run over a name or a description. */

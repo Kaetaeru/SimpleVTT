@@ -131,14 +131,11 @@ export function weaponRange(attack: DerivedAttack): { mode: "melee" | "ranged" }
 /** H2 (D239): the spells this sheet can cast through a weapon attack, with the list that knows each. */
 export const weaponSpells = (derived: DerivedCharacter) => derived.spellcasting.flatMap((list) => [...new Set([...list.cantrips, ...list.prepared, ...list.alwaysPrepared])].flatMap((spellId) => { const rule = weaponSpellOf(spellId); return rule ? [{ spellId, list, rule }] : []; }));
 
-export const SMITE_LABEL = "신성한 강타";
-/** 2024 Divine Smite deals +1d8 against a Fiend or an Undead; the host adds it per target, since one attack may hit several. */
-export function smiteFiendBonus(spec: AttackSpec, creatureType?: string): DamagePart | null {
-  if (!creatureType || !["fiend", "undead"].includes(creatureType.toLowerCase())) return null;
-  if (!(spec.riders ?? []).some((part) => part.label?.startsWith(SMITE_LABEL))) return null;
-  return { formula: "1d8", type: "광휘", label: `${SMITE_LABEL} (악마·언데드 +1d8)` };
+/** H5b (D245): the parts of a spec that land on this target — its per-creature-type damage (신성한 강타 against a Fiend). */
+export function versusParts(spec: AttackSpec, creatureType?: string): DamagePart[] {
+  const type = creatureType?.toLowerCase();
+  return type ? (spec.versusRiders ?? []).filter((rider) => rider.creatureTypes.includes(type)).map((rider) => rider.part) : [];
 }
-export const hasSmite = (derived: DerivedCharacter) => derived.features.some((feature) => feature.id.includes("paladin") && feature.id.endsWith(".smite"));
 export const smiteSlots = (derived: DerivedCharacter, runtime: CharacterRuntime) => Object.entries(derived.spellSlots).map(([level, max]) => ({ level: Number(level), free: max - (runtime.slotsUsed[Number(level)] ?? 0) })).filter((slot) => slot.free > 0);
 
 /** The attack spec for a sheet attack row, with the chosen riders; `spend` applies their cost to the attacker's runtime. */
@@ -178,15 +175,10 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   const strikeDice = strike?.rule.extraDice?.filter((step) => derived.level >= step.level).at(-1);
   if (strike && strikeDice) extra.push({ formula: strikeDice.dice, type: damageTypeKo(strike.rule.damageType ?? attack.damageType), label: strikeName });
-  if (riders.smiteSlot && hasSmite(derived) && (derived.spellSlots[riders.smiteSlot] ?? 0) > 0) {
-    const level = riders.smiteSlot;
-    // 2024 Divine Smite: 2d8 from a 1st-level slot, +1d8 per slot level above that, with no cap.
-    extra.push({ formula: `${1 + level}d8`, type: "광휘", label: `${SMITE_LABEL} (${level}레벨 슬롯)` });
-    spenders.push((runtime) => useSpellSlot(runtime, derived, level));
-  }
   // R82 (D218): a smite spell chosen in the on-hit window — its dice join the swing, its slot is spent by casting it
   // (so a lasting one starts its effect), and what it inflicts outright lands with the hit.
   const inflicts: string[] = [];
+  const versusRiders: NonNullable<AttackSpec["versusRiders"]> = [];
   const smite = riders.spellSmite ? smiteSpells(derived, entry.runtime, attack).find((item) => item.spellId === riders.spellSmite!.spellId && item.slots.some((slot) => slot.level === riders.spellSmite!.slot)) : undefined;
   if (smite) {
     const slot = riders.spellSmite!.slot;
@@ -195,6 +187,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     const rolled = smite.rule.damage;
     if (rolled) extra.push({ formula: `${rolled.count + (rolled.perSlot ?? 0) * (slot - smite.exec.baseLevel)}d${rolled.sides}`, type: damageTypeKo(rolled.type), label: `${name} (${slot}레벨 슬롯)` });
     inflicts.push(...(smite.rule.inflicts ?? []).map((id) => CONDITION_KO[id] ?? id));
+    const versus = smite.rule.versus;
+    if (versus) versusRiders.push({ creatureTypes: versus.creatureTypes, part: { formula: `${versus.damage.count}d${versus.damage.sides}`, type: damageTypeKo(versus.damage.type), label: `${name} (대상 유형 추가)` } });
     spenders.push((runtime) => (view ? castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, { kind: "slot", level: slot }) : null) ?? useSpellSlot(runtime, derived, slot));
   }
   // R52 (D187): the open half of the riders — whatever the player ticked in the dialog, matched against the riders
@@ -226,7 +220,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const hitSaves = (riders.contracts ?? []).flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
   if (strike) declared.unshift(strikeName);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus + swap, mode: range.mode, damage, riders: extra, ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus + swap, mode: range.mode, damage, riders: extra, ...(versusRiders.length ? { versusRiders } : {}), ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 /**
@@ -256,12 +250,10 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return [];
   const offers: HitOffer[] = [];
-  const slots = !already.smiteSlot && hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
-  if (slots.length) offers.push({ key: "smite", label: SMITE_LABEL, hint: "슬롯 소비 · 2d8 + 슬롯 레벨당 1d8 광휘", slots });
   // R82 (D218): the smite spells (분노의 강타, 작열하는 강타 …) — cast on this hit with a slot, as a bonus action.
   for (const smite of smiteSpells(derived, entry.runtime, attack)) {
     if (already.spellSmite?.spellId === smite.spellId) continue;
-    const damage = smite.rule.damage ? `+${smite.rule.damage.count}d${smite.rule.damage.sides} ${damageTypeKo(smite.rule.damage.type)}${smite.rule.damage.perSlot ? " (슬롯 레벨당 +1주사위)" : ""}` : "";
+    const damage = smite.rule.damage ? `+${smite.rule.damage.count}d${smite.rule.damage.sides} ${damageTypeKo(smite.rule.damage.type)}${smite.rule.damage.perSlot ? " (슬롯 레벨당 +1주사위)" : ""}${smite.rule.versus ? ` · ${smite.rule.versus.creatureTypes.join("·")} +${smite.rule.versus.damage.count}d${smite.rule.versus.damage.sides}` : ""}` : "";
     const save = smite.rule.save ? `${ABILITY_SHORT[smite.rule.save.ability] ?? smite.rule.save.ability} 내성${smite.rule.save.conditions?.length ? ` 실패 시 ${smite.rule.save.conditions.map((id) => CONDITION_KO[id] ?? id).join("·")}` : ""}` : "";
     offers.push({ key: `spell:${smite.spellId}`, label: catalog?.spellById(smite.spellId)?.name ?? smite.spellId, hint: [damage, save, smite.rule.inflicts?.length ? smite.rule.inflicts.map((id) => CONDITION_KO[id] ?? id).join("·") : "", "슬롯 · 추가 행동", smite.rule.note ?? ""].filter(Boolean).join(" · "), slots: smite.slots });
   }
@@ -274,20 +266,19 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
 }
 
 /** R63 (D198): the riders an attack carries once the attacker answered the on-hit window. Built-in keys are named; the rest are contract rule keys. */
-export function withHitChoices(riders: AttackRiders, answer: { choices: string[]; facts?: string[]; smiteSlot?: number; spellSmite?: { spellId: string; slot: number } }): AttackRiders {
+export function withHitChoices(riders: AttackRiders, answer: { choices: string[]; facts?: string[]; spellSmite?: { spellId: string; slot: number } }): AttackRiders {
   const picked = new Set(answer.choices);
   const contracts = [...(riders.contracts ?? []), ...answer.choices.filter((key) => !HIT_BUILT_INS.has(key) && !key.startsWith("spell:"))];
   const facts = [...(riders.facts ?? []), ...(answer.facts ?? [])];
   return {
     ...riders,
     ...(picked.has("savage") ? { savage: true } : {}),
-    ...(picked.has("smite") && answer.smiteSlot ? { smiteSlot: answer.smiteSlot } : {}),
     ...(answer.spellSmite && picked.has(`spell:${answer.spellSmite.spellId}`) ? { spellSmite: answer.spellSmite } : {}),
     ...(contracts.length ? { contracts: [...new Set(contracts)] } : {}),
     ...(facts.length ? { facts: [...new Set(facts)] } : {}),
   };
 }
-const HIT_BUILT_INS = new Set(["smite", "savage"]);
+const HIT_BUILT_INS = new Set(["savage"]);
 
 /**
  * R64 (D199): the player's standing answer for one offer. 신성한 강타 is never "always" — it spends a slot the player

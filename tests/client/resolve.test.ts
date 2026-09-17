@@ -91,7 +91,7 @@ test("sheet specs: melee vs ranged, riders (암습, 신성한 강타 with a slot
   const { source: palSource, derived: palDerived } = build({ name: "팔라딘", classes: "paladin", level: 5 });
   const paladin = newJournalCharacter("camp", "p", palSource, initialRuntime(palDerived));
   const weapon = palDerived.attacks[0];
-  const smite = pcAttackSpec(paladin, palDerived, weapon.id, { smiteSlot: 2 })!;
+  const smite = pcAttackSpec(paladin, palDerived, weapon.id, { spellSmite: { spellId: "dnd.srd521.spell.divine-smite", slot: 2 } })!;
   assert.equal(smite.spec.riders?.[0]?.formula, "3d8");
   assert.equal(smite.spend(paladin.runtime).slotsUsed[2], 1, "the smite spends the slot");
   const concentrating = { ...paladin, runtime: startEffect(paladin.runtime, { key: "spell:bless", name: "축복", source: "spell", duration: "1 minute", concentration: true, rounds: 10 }) };

@@ -75,7 +75,7 @@ export type AttackRef = { source: "weapon"; attackId: string } | { source: "npc"
  * rule keys of `pre-roll-attack` entry points the player ticked in the dialog, resolved against the sheet's own
  * `attackRiders`. A key the sheet does not offer is ignored rather than trusted.
  */
-export interface AttackRiders { contracts?: string[]; /** R57 (D192): ids of the facts the player confirmed in the dialog ("I moved ten feet in a straight line"). */ facts?: string[]; smiteSlot?: number; /** R82 (D218): a smite spell cast on this hit, and the slot it spends. */ spellSmite?: { spellId: string; slot: number }; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean; /** R32 (D166): 야만적 공격자 — reroll this swing's weapon damage dice and keep the better set. */ savage?: boolean; /** R33 (D168): the off-hand swing of a two-weapon set — no ability modifier on its damage without 쌍수 전투. */ offHand?: boolean; /** H2 (D239): the swing is this weapon spell (진실의 일격) — its list's spellcasting ability for the roll and damage, and its dice. */ weaponSpell?: string }
+export interface AttackRiders { contracts?: string[]; /** R57 (D192): ids of the facts the player confirmed in the dialog ("I moved ten feet in a straight line"). */ facts?: string[]; /** R82 (D218): a smite spell cast on this hit, and the slot it spends. */ spellSmite?: { spellId: string; slot: number }; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean; /** R32 (D166): 야만적 공격자 — reroll this swing's weapon damage dice and keep the better set. */ savage?: boolean; /** R33 (D168): the off-hand swing of a two-weapon set — no ability modifier on its damage without 쌍수 전투. */ offHand?: boolean; /** H2 (D239): the swing is this weapon spell (진실의 일격) — its list's spellcasting ability for the roll and damage, and its dice. */ weaponSpell?: string }
 
 export interface RollPayload { formula: string; total: number; /** R17: a die kept out of the total (kh/kl), one that came from an explosion, or one that counted as a success. */ dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; /** R17: set when the formula counts successes instead of summing. */ successes?: number; /** R17: rows drawn from a rollable table. */ drawn?: string[] }
 
@@ -137,7 +137,7 @@ export type ClientCommand =
   /** R54 (D189): take a reaction a contract declared (`reaction.window`) against the attack the prompt is holding. */
   | { type: "act.guard"; messageId: string; feature: string; /** R57 (D192): the facts the reactor confirmed when taking it. */ facts?: string[] }
   /** R63 (D198): the attacker answers the window a hit opened — the offers they took, the facts they confirmed, the smite slot. "안 함" is `act.decline`. */
-  | { type: "act.onhit"; messageId: string; choices: string[]; facts?: string[]; smiteSlot?: number; /** R82 (D218) */ spellSmite?: { spellId: string; slot: number } }
+  | { type: "act.onhit"; messageId: string; choices: string[]; facts?: string[]; /** R82 (D218) */ spellSmite?: { spellId: string; slot: number } }
   | { type: "act.trigger"; messageId: string; choices: Array<{ featureId: string; slots?: number[] }> }
   /** D96: `mover` leaves `from`'s reach (the 벗어남 button); the host asks `from`'s controller for an opportunity attack. */
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }

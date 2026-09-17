@@ -15,7 +15,7 @@ import { newTurn } from "../../client/campaign/tracker";
 import { initialRuntime } from "../../client/character/runtime";
 import { monsterById } from "../../client/compendium/monsters";
 import { pcStats } from "../../client/rules/actions";
-import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey, smiteFiendBonus } from "../../client/rules/attackSpec";
+import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey, versusParts } from "../../client/rules/attackSpec";
 import { applyDamage, diceFrom, suggestAdvantage, type AttackSpec, type Combatant } from "../../client/rules/resolve";
 import { pcSpell } from "../../client/rules/spellcast";
 import { TableClient } from "../../client/session/client";
@@ -60,13 +60,14 @@ test("Divine Smite (2024): 2d8 from a 1st-level slot, +1d8 per level above with 
   const paladin = build({ name: "팔라딘", classes: "paladin", level: 17 });
   const entry = newJournalCharacter("c", "p", paladin.source, initialRuntime(paladin.derived));
   const weapon = paladin.derived.attacks[0];
-  const formulaFor = (level: number) => pcAttackSpec(entry, paladin.derived, weapon.id, { smiteSlot: level })!.spec.riders!.find((part) => part.label?.startsWith("신성한 강타"))!.formula;
+  // H5b (D245): Divine Smite is the spell, cast in the on-hit window with the slot the player picks.
+  const formulaFor = (level: number) => pcAttackSpec(entry, paladin.derived, weapon.id, { spellSmite: { spellId: "dnd.srd521.spell.divine-smite", slot: level } }, catalog())!.spec.riders!.find((part) => part.label?.startsWith("신성한 강타"))!.formula;
   assert.deepEqual([1, 2, 3, 4, 5].map(formulaFor), ["2d8", "3d8", "4d8", "5d8", "6d8"], "a 5th-level slot is 6d8, not the old 5d8 cap");
-  const smiting = pcAttackSpec(entry, paladin.derived, weapon.id, { smiteSlot: 2 })!.spec;
-  assert.equal(smiteFiendBonus(smiting, "undead")!.formula, "1d8");
-  assert.equal(smiteFiendBonus(smiting, "fiend")!.type, "광휘");
-  assert.equal(smiteFiendBonus(smiting, "beast"), null, "only Fiends and Undead");
-  assert.equal(smiteFiendBonus(pcAttackSpec(entry, paladin.derived, weapon.id)!.spec, "undead"), null, "no smite, no bonus");
+  const smiting = pcAttackSpec(entry, paladin.derived, weapon.id, { spellSmite: { spellId: "dnd.srd521.spell.divine-smite", slot: 2 } }, catalog())!.spec;
+  assert.equal(versusParts(smiting, "undead")[0].formula, "1d8");
+  assert.equal(versusParts(smiting, "Fiend")[0].type, "광휘");
+  assert.deepEqual(versusParts(smiting, "beast"), [], "only Fiends and Undead");
+  assert.deepEqual(versusParts(pcAttackSpec(entry, paladin.derived, weapon.id)!.spec, "undead"), [], "no smite, no bonus");
 });
 
 test("the optimistic sheet value stands only while the host's entry is unchanged (no clock comparison)", () => {

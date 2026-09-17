@@ -26,7 +26,7 @@ import { build, catalog } from "./support";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-async function table(cls: string, level: number, options: { guards?: GuardOffer[]; targetPc?: boolean } = {}) {
+async function table(cls: string, level: number, options: { guards?: GuardOffer[]; targetPc?: boolean; monster?: string } = {}) {
   const hub = new MemoryHub();
   const campaign = { ...newCampaign("R63 시험", { userId: "dm", displayName: "DM" }), joinCode: "R63AAA" };
   const host = new TableHost(hub.hostEndpoint(), { campaign, hostUserId: "dm", hostSecret: "s", random: () => 0.5,
@@ -46,7 +46,7 @@ async function table(cls: string, level: number, options: { guards?: GuardOffer[
   const pc = newJournalCharacter(campaign.id, "dm", made.source, initialRuntime(made.derived));
   dm.send({ type: "journal.put", entry: pc });
   const defender = options.targetPc ? build({ name: "방어자", classes: "fighter", level: 5 }) : null;
-  const target = defender ? newJournalCharacter(campaign.id, "dm", { ...defender.source, name: "방어자" }, initialRuntime(defender.derived)) : newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.ogre")!);
+  const target = defender ? newJournalCharacter(campaign.id, "dm", { ...defender.source, name: "방어자" }, initialRuntime(defender.derived)) : newJournalNpc(campaign.id, "dm", monsterById(options.monster ?? "dnd.srd521.monster.ogre")!);
   dm.send({ type: "journal.put", entry: target });
   await tick();
   const pcToken = tokenForCharacter(pc);
@@ -127,7 +127,7 @@ test("R63: 신성한 강타 spends its slot only when it is chosen (D198)", asyn
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: weapon.id }, overrides: { outcome: "hit" } });
   await tick();
   const [first] = t.open();
-  const smite = first.prompt!.onHit!.offers.find((offer) => offer.key === "smite")!;
+  const smite = first.prompt!.onHit!.offers.find((offer) => offer.key === "spell:dnd.srd521.spell.divine-smite")!;
   assert.ok(smite.slots!.length, "the slots it may spend travel with the offer");
   t.dm.send({ type: "act.decline", messageId: first.id });
   await tick();
@@ -136,13 +136,31 @@ test("R63: 신성한 강타 spends its slot only when it is chosen (D198)", asyn
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: weapon.id }, overrides: { outcome: "hit" } });
   await tick();
   const [second] = t.open();
-  t.dm.send({ type: "act.onhit", messageId: second.id, choices: ["smite"], smiteSlot: 1 });
+  t.dm.send({ type: "act.onhit", messageId: second.id, choices: ["spell:dnd.srd521.spell.divine-smite"], spellSmite: { spellId: "dnd.srd521.spell.divine-smite", slot: 1 } });
   await tick();
   assert.equal(t.sheet().runtime.slotsUsed[1], 1, "chosen: one 1st-level slot");
   const card = t.cards().at(-1)!;
   const part = card.action.damage.find((item) => item.part.label?.startsWith("신성한 강타"))!;
   assert.equal(part.dice.length, 2, "2d8 from a 1st-level slot");
   assert.equal(part.part.type, "광휘");
+});
+
+test("H5b: 신성한 강타 is the spell in the on-hit window, and its extra die lands only on an undead or a fiend (D245)", async () => {
+  for (const [monster, extra] of [["dnd.srd521.monster.zombie", 1], ["dnd.srd521.monster.ogre", 0]] as const) {
+    const t = await table("paladin", 5, { monster });
+    const weapon = t.derived.attacks.find((attack) => attack.itemId && !attack.range)!;
+    t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: weapon.id }, overrides: { outcome: "hit" } });
+    await tick();
+    const [prompt] = t.open();
+    const smite = "spell:dnd.srd521.spell.divine-smite";
+    assert.ok(prompt.prompt!.onHit!.offers.some((offer) => offer.key === smite), JSON.stringify(prompt.prompt!.onHit!.offers.map((offer) => offer.key)));
+    t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: [smite], spellSmite: { spellId: "dnd.srd521.spell.divine-smite", slot: 1 } });
+    await tick();
+    const card = t.cards().at(-1)!;
+    const versus = card.action.damage.filter((item) => item.part.label?.includes("대상 유형 추가"));
+    assert.equal(versus.reduce((sum, item) => sum + item.dice.length, 0), extra, `${monster}: ${card.action.damage.map((item) => item.part.label).join(", ")}`);
+    assert.equal(t.sheet().runtime.slotsUsed[1], 1);
+  }
 });
 
 test("R63: an offer that was not made is ignored rather than trusted (D198)", async () => {
@@ -153,7 +171,7 @@ test("R63: an offer that was not made is ignored rather than trusted (D198)", as
   // The soldier background's 야만적 공격자 is the fighter's only offer.
   const [prompt] = t.open();
   assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["savage"]);
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack", "smite"], smiteSlot: 1 });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack", "spell:dnd.srd521.spell.divine-smite"], spellSmite: { spellId: "dnd.srd521.spell.divine-smite", slot: 1 } });
   await tick();
   const [card] = t.cards();
   assert.equal(card.action.damage.length, 1, "neither 암습 nor a smite the sheet does not have");
@@ -210,7 +228,7 @@ test("R63: the dice a card showed follow their part, wherever new parts land (D1
 
 test("R63: withHitChoices adds the chosen keys to what was already declared (D198)", () => {
   assert.deepEqual(withHitChoices({ offHand: true, contracts: ["feature:frenzy"] }, { choices: ["rogue.sneak-attack", "feat:charger"], facts: ["charged"] }), { offHand: true, contracts: ["feature:frenzy", "rogue.sneak-attack", "feat:charger"], facts: ["charged"] });
-  assert.deepEqual(withHitChoices({}, { choices: ["smite"] }), {}, "a smite without a slot is nothing");
+  assert.deepEqual(withHitChoices({}, { choices: ["spell:dnd.srd521.spell.divine-smite"] }), {}, "a smite spell without a slot is nothing");
 });
 
 test("R91: 암습 is offered once per turn — taken on this turn, the next hit does not offer it until the turn changes (D226)", async () => {

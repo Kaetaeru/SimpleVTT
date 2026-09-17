@@ -24,7 +24,7 @@ import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
-import { bearerRolls, monsterAuras, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
+import { bearerRolls, monsterAuras, splitHitOffers, versusParts, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -1432,16 +1432,15 @@ export class TableHost {
         // R64 (D199): the window only ever offered the "ask" ones; the "always" ones ride along without a checkbox.
         const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}, target));
         const offered = new Map(ask.map((offer) => [offer.key, offer]));
-        const smiteSlot = command.choices.includes("smite") && offered.get("smite")?.slots?.some((slot) => slot.level === command.smiteSlot) ? command.smiteSlot : undefined;
         // R82 (D218): a smite spell counts only with a slot its offer listed, and only one on a hit.
         const spellSmite = command.spellSmite && offered.get(`spell:${command.spellSmite.spellId}`)?.slots?.some((slot) => slot.level === command.spellSmite!.slot) ? { spellId: String(command.spellSmite.spellId), slot: command.spellSmite.slot } : undefined;
-        const picked = [...new Set(command.choices)].filter((key) => offered.has(key) && (key !== "smite" || smiteSlot) && (!key.startsWith("spell:") || key === `spell:${spellSmite?.spellId}`));
+        const picked = [...new Set(command.choices)].filter((key) => offered.has(key) && (!key.startsWith("spell:") || key === `spell:${spellSmite?.spellId}`));
         const confirmable = new Set(picked.flatMap((key) => (offered.get(key)!.facts ?? []).map((fact) => fact.id)));
         const facts = (command.facts ?? []).filter((id) => confirmable.has(id));
-        const labels = picked.map((key) => `${offered.get(key)!.label}${key === "smite" ? ` (${smiteSlot}레벨 슬롯)` : key.startsWith("spell:") ? ` (${spellSmite!.slot}레벨 슬롯)` : ""}`);
+        const labels = picked.map((key) => `${offered.get(key)!.label}${key.startsWith("spell:") ? ` (${spellSmite!.slot}레벨 슬롯)` : ""}`);
         this.held.delete(command.messageId);
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: picked.length ? { chosen: labels } : { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${labels.length ? labels.join(", ") : "안 함"}` });
-        this.takeHitChoices({ ...held, attacker, target }, { choices: picked, facts, smiteSlot, spellSmite }, auto);
+        this.takeHitChoices({ ...held, attacker, target }, { choices: picked, facts, spellSmite }, auto);
         return;
       }
       case "act.zone": {
@@ -1574,18 +1573,18 @@ export class TableHost {
   }
 
   /**
-   * Damage that depends on who was hit, added per target: R15 Divine Smite's +1d8 against a Fiend or an Undead, and
+   * Damage that depends on who was hit, added per target: a spec's creature-type parts (H5b: 신성한 강타 against a Fiend), and
    * R90 (D225) 사냥꾼의 표식 and 주술, whose dice land only when their caster hits the creature they marked.
    */
   private perTargetRiders(spec: AttackSpec, attacker: { entry: JournalEntry }, target: { entry: JournalEntry }, targetCombatant: Combatant, attackerCombatant?: Combatant): AttackSpec {
-    const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(spec, target.entry.statBlock.creatureType) : null;
+    const versus = target.entry.kind === "npc" ? versusParts(spec, target.entry.statBlock.creatureType) : [];
     const mine = (targetCombatant.markedBy ?? []).filter((mark) => mark.from === attacker.entry.id);
     // H2 (D239): the attacker's sheet may change the mark's die (적 학살자) or give advantage against it (정밀한 사냥꾼), per marking spell.
     const marks = mine.map((mark): DamagePart => { const die = attackerCombatant?.markedSpellDice?.[mark.spellId]; return { formula: die ? mark.formula.replace(/d[0-9]+/, `d${die}`) : mark.formula, type: mark.type, label: mark.label }; });
     const precise = mine.filter((mark) => attackerCombatant?.markedSpellAdvantage?.includes(mark.spellId)).map((mark) => `${mark.label} 대상`);
     // R99 (D234): 연구된 공격 — the attack after a miss against this creature has advantage.
     if (attackerCombatant?.studiedAttacks && this.studied.get(attacker.entry.id) === target.entry.id) precise.push("연구된 공격");
-    return fiendBonus || marks.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...(fiendBonus ? [fiendBonus] : []), ...marks], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
+    return versus.length || marks.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...versus, ...marks], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
   }
 
   /**
@@ -1700,8 +1699,8 @@ export class TableHost {
    * resolved again on the same d20 and the same dice (new parts roll fresh, a reroll chosen now happens once). Only
    * these choices are paid for now; whatever was declared before the roll already was.
    */
-  private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; smiteSlot?: number; spellSmite?: { spellId: string; slot: number } }, auto: HitOffer[]): string {
-    const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], smiteSlot: answer.smiteSlot, spellSmite: answer.spellSmite };
+  private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; spellSmite?: { spellId: string; slot: number } }, auto: HitOffer[]): string {
+    const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], spellSmite: answer.spellSmite };
     if (!all.choices.length) return this.finishAttack(held);
     this.useThisTurn(held.attacker.entry.id, all.choices);
     // H2 (D239): the computed facts of what was chosen count as confirmed.
