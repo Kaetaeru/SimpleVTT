@@ -144,6 +144,8 @@ export interface HitOffer {
   facts?: Array<{ id: string; question: string }>;
   /** 신성한 강타: the slots it may spend. */
   slots?: Array<{ level: number; free: number }>;
+  /** R91 (D226): usable once per turn (암습, 야만적 공격자, a contract rider) — not offered again until the turn changes. */
+  oncePerTurn?: boolean;
 }
 
 export interface ChatMessage {

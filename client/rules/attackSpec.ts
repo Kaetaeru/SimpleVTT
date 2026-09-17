@@ -236,7 +236,7 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return [];
   const offers: HitOffer[] = [];
-  if (!already.sneak && hasSneakAttack(derived, attack)) offers.push({ key: "sneak", label: "암습", hint: `+${sneakDice(derived)}d6 · 유리하거나 아군이 대상 곁에 있을 때 · 턴당 한 번` });
+  if (!already.sneak && hasSneakAttack(derived, attack)) offers.push({ key: "sneak", label: "암습", oncePerTurn: true, hint: `+${sneakDice(derived)}d6 · 유리하거나 아군이 대상 곁에 있을 때 · 턴당 한 번` });
   const slots = !already.smiteSlot && hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
   if (slots.length) offers.push({ key: "smite", label: SMITE_LABEL, hint: "슬롯 소비 · 2d8 + 슬롯 레벨당 1d8 광휘", slots });
   // R82 (D218): the smite spells (분노의 강타, 작열하는 강타 …) — cast on this hit with a slot, as a bonus action.
@@ -247,10 +247,10 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
     offers.push({ key: `spell:${smite.spellId}`, label: catalog?.spellById(smite.spellId)?.name ?? smite.spellId, hint: [damage, save, smite.rule.inflicts?.length ? smite.rule.inflicts.map((id) => CONDITION_KO[id] ?? id).join("·") : "", "슬롯 · 추가 행동", smite.rule.note ?? ""].filter(Boolean).join(" · "), slots: smite.slots });
   }
   const savage = !already.savage ? savageAttackerFeat(derived) : undefined;
-  if (savage) offers.push({ key: "savage", label: savage, hint: "무기 피해 주사위를 한 번 더 굴려 높은 쪽 · 턴당 한 번" });
+  if (savage) offers.push({ key: "savage", label: savage, oncePerTurn: true, hint: "무기 피해 주사위를 한 번 더 굴려 높은 쪽 · 턴당 한 번" });
   const runtime = entry.runtime;
   const riders = offeredRiders(derived, attack, { moment: "on-hit", effects: (runtime.effects ?? []).map((effect) => effect.name), left: (resourceId) => (derived.resources.find((item) => item.id === resourceId)?.max ?? 0) - (runtime.resourcesUsed[resourceId] ?? 0) });
-  for (const rider of riders) if (!(already.contracts ?? []).includes(rider.key)) offers.push({ key: rider.key, label: rider.label, hint: rider.hint, ...(rider.facts.length ? { facts: rider.facts } : {}) });
+  for (const rider of riders) if (!(already.contracts ?? []).includes(rider.key)) offers.push({ key: rider.key, label: rider.label, hint: rider.hint, ...(rider.oncePerTurn ? { oncePerTurn: true } : {}), ...(rider.facts.length ? { facts: rider.facts } : {}) });
   return offers;
 }
 

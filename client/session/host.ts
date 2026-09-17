@@ -179,6 +179,8 @@ export class TableHost {
   private causeCard: string | null = null;
   /** R89 (D224): per area and creature, the tracker turn ("round:index") the area last hurt it — kept through leaving and coming back. ponytail: in memory, a host restart forgets this turn's hits. */
   private readonly zoneHits = new Map<string, string>();
+  /** R91 (D226): per creature, the once-per-turn offers it took and the tracker turn ("round:index") it took them in. */
+  private readonly turnUses = new Map<string, { mark: string; keys: string[] }>();
   /** R86 (D221): per card, how to take back what happened automatically because of it (effects shed, a smite save card). */
   private readonly childUndos = new Map<string, Array<() => void>>();
   private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; /** R63 (D198): whose answer holds it — the target's reaction, or the attacker's on-hit choice. */ stage?: "reaction" | "on-hit"; /** R63 (D198): the result waits for the DM once it is let go (D90). */ waits?: boolean }>();
@@ -1417,7 +1419,7 @@ export class TableHost {
         if (!attacker || attacker.entry.kind !== "character" || !target || held.inputs.attack.source !== "weapon") return refuse("공격자나 대상이 더 없습니다");
         if (!isGm && !this.mayAct(userId, held.inputs.attacker, attacker.entry)) return refuse("공격자의 조종자만 답할 수 있습니다");
         // R64 (D199): the window only ever offered the "ask" ones; the "always" ones ride along without a checkbox.
-        const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.options.pcHitOffers?.(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []);
+        const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}));
         const offered = new Map(ask.map((offer) => [offer.key, offer]));
         const smiteSlot = command.choices.includes("smite") && offered.get("smite")?.slots?.some((slot) => slot.level === command.smiteSlot) ? command.smiteSlot : undefined;
         // R82 (D218): a smite spell counts only with a slot its offer listed, and only one on a hit.
@@ -1568,6 +1570,27 @@ export class TableHost {
     return fiendBonus || marks.length ? { ...spec, riders: [...(spec.riders ?? []), ...(fiendBonus ? [fiendBonus] : []), ...marks] } : spec;
   }
 
+  /**
+   * R91 (D226): the sheet's on-hit offers, less the once-per-turn ones this creature already took this turn — 암습 on
+   * the rogue's own turn, and again on someone else's turn (an opportunity attack), but never twice in one. With no
+   * tracker running there is no turn to count, so nothing is held back. ponytail: in memory, a host restart forgets.
+   */
+  private hitOffersFor(entry: JournalCharacter, attackId: string, riders: AttackRiders): HitOffer[] {
+    const offers = this.options.pcHitOffers?.(entry, attackId, riders) ?? [];
+    const used = this.turnUses.get(entry.id);
+    return used && used.mark === this.turnMark() ? offers.filter((offer) => !(offer.oncePerTurn && used.keys.includes(offer.key))) : offers;
+  }
+
+  private turnMark() { return this.tracker.turns.length ? `${this.tracker.round}:${this.tracker.current}` : undefined; }
+
+  /** R91 (D226): remember what this creature took this turn. */
+  private useThisTurn(entryId: string, keys: string[]) {
+    const mark = this.turnMark();
+    if (!mark) return;
+    const used = this.turnUses.get(entryId);
+    this.turnUses.set(entryId, { mark, keys: [...(used?.mark === mark ? used.keys : []), ...keys] });
+  }
+
   /** R90 (D225): take off the effects that end once used — 유도 화살 by the attack against it, 잔혹한 조롱 by the attack it hindered. */
   private consumeOnUse(entryId: string, on: "attack" | "attacked") {
     const live = this.journalEntries.get(entryId);
@@ -1625,7 +1648,7 @@ export class TableHost {
     const landed = resolution.outcome === "hit" || resolution.outcome === "crit";
     if (allowOnHit && landed && attacker.entry.kind === "character" && inputs.attack.source === "weapon" && this.options.pcHitOffers) {
       // R64 (D199): what the player set to "always" is taken without a window; "never" is not offered at all.
-      const { ask: offers, auto } = splitHitOffers(attacker.entry.runtime, this.options.pcHitOffers(attacker.entry, inputs.attack.attackId, inputs.riders ?? {}));
+      const { ask: offers, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, inputs.attack.attackId, inputs.riders ?? {}));
       if (!offers.length && auto.length) return this.takeHitChoices(held, { choices: [] }, auto);
       if (offers.length) {
         const promptId = newMessageId();
@@ -1649,6 +1672,7 @@ export class TableHost {
   private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; smiteSlot?: number; spellSmite?: { spellId: string; slot: number } }, auto: HitOffer[]): string {
     const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], smiteSlot: answer.smiteSlot, spellSmite: answer.spellSmite };
     if (!all.choices.length) return this.finishAttack(held);
+    this.useThisTurn(held.attacker.entry.id, all.choices);
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
     const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
     const riders = withHitChoices(held.inputs.riders ?? {}, all);
@@ -2034,7 +2058,7 @@ export class TableHost {
     // R63 (D198): the attacker let the on-hit window go ("안 함") — the card lands as it was rolled.
     // R64 (D199): "안 함" answers the checkboxes; what the sheet takes without asking still lands.
     if (held.stage === "on-hit") {
-      const auto = attacker.entry.kind === "character" && held.inputs.attack.source === "weapon" ? splitHitOffers(attacker.entry.runtime, this.options.pcHitOffers?.(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []).auto : [];
+      const auto = attacker.entry.kind === "character" && held.inputs.attack.source === "weapon" ? splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {})).auto : [];
       this.takeHitChoices({ ...held, attacker, target }, { choices: [] }, auto);
       return;
     }

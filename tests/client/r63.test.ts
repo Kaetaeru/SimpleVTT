@@ -212,3 +212,25 @@ test("R63: withHitChoices adds the chosen keys to what was already declared (D19
   assert.deepEqual(withHitChoices({ offHand: true, contracts: ["feature:frenzy"] }, { choices: ["sneak", "feat:charger"], facts: ["charged"] }), { offHand: true, sneak: true, contracts: ["feature:frenzy", "feat:charger"], facts: ["charged"] });
   assert.deepEqual(withHitChoices({}, { choices: ["smite"] }), {}, "a smite without a slot is nothing");
 });
+
+test("R91: 암습 is offered once per turn — taken on this turn, the next hit does not offer it until the turn changes (D226)", async () => {
+  const t = await table("rogue", 5);
+  t.dm.send({ type: "tracker.add", turn: { name: "공격자", tokenId: t.refs.pc.tokenId, pageId: t.refs.pc.pageId, entryId: t.refs.pc.entryId, initiative: 20 } });
+  t.dm.send({ type: "tracker.add", turn: { name: "오우거", tokenId: t.refs.target.tokenId, pageId: t.refs.target.pageId, entryId: t.refs.target.entryId, initiative: 1 } });
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  const blade = t.derived.attacks.find((attack) => hasSneakAttack(t.derived, attack))!;
+  const swing = async () => { t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } }); await tick(); };
+  await swing();
+  const [first] = t.open();
+  t.dm.send({ type: "act.onhit", messageId: first.id, choices: ["sneak"] });
+  await tick();
+  await swing();
+  const again = t.open()[0];
+  assert.ok(!again?.prompt?.onHit?.offers.some((offer) => offer.key === "sneak"), "암습 is spent for this turn");
+  if (again) { t.dm.send({ type: "act.decline", messageId: again.id }); await tick(); }
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  await swing();
+  assert.ok(t.open()[0]?.prompt?.onHit?.offers.some((offer) => offer.key === "sneak"), "someone else's turn: 암습 again (an opportunity attack)");
+});
