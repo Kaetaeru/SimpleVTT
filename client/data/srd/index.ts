@@ -18,4 +18,4 @@ export const SRD_EXTRAS: SrdExtras = {
 };
 
 export { SRD_SUBCLASSES } from "./subclasses";
-export { SRD_SPECIES, SPECIES_BASE_CANTRIPS } from "./species";
+export { SRD_SPECIES } from "./species";

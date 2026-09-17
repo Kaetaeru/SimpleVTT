@@ -53,6 +53,7 @@
 | P16 ✔ H1 | `PageCanvas.tsx` `SITUATIONAL`(무리 전술·태양광 과민성·투명 정규식) | 특성 이름 정규식 | S6 색인 패턴 `pack-tactics`, `sunlight-sensitivity` → 상황 버튼 | S6 |
 | P18 ✔ H6c | `spellcast.ts` `REPEAT_SAVE` — 주문 요약문에서 "턴이 끝날 때 … 내성 굴림을 반복"을 정규식으로 찾음 | 설명문 정규식 | 주문 실행 데이터 필드(`repeatSave: "turn-end"`) | 주문 메커닉 필드 |
 | P19 ✔ H6c | `effects.ts` `effectRuleKey` — 주문 효과 계약 키를 영문 주문 이름 slug로 만듦(`spell:aid`) | 이름에서 키를 만듦(모듈 주문이 같은 영문명이면 충돌) | 계약 키를 주문 ID로(`spell:<spellId>`) | ID 체계 |
+| P20 ✔ H7a (H6c 뒤 발견) | `origin.ts` `traitKey === …` 분기, `SPECIES_TRAIT_RESOURCES`, `species.id.endsWith("gnome")`, `SPECIES_BASE_CANTRIPS` | 종족 특성 키·ID 분기(검사 정규식 `key === "`가 `traitKey`를 놓침) | 특성 gain 계약, 색인 `spellUses` | `grant.resource`, `per: character` |
 | P17 ✔ H4 | `classes.ts` `fiend-patron` 자원, `catalog.ts` 기본 기원 재주 `feat.skilled`, `tracks.ts` `ASI_FEAT_ID` | 콘텐츠 ID 기본값 | 배경 JSON `originFeat` 필수화, 직업 JSON `asiFeat` | 필드 |
 
 ## 3. 추가해야 할 범용 문법

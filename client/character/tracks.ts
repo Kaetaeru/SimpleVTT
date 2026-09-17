@@ -24,7 +24,7 @@ import type { ClassState, Ledger } from "./ledger";
 import { resolveToolId } from "./origin";
 import { applyClassSpellcasting, classSpellEntry } from "./spells";
 
-const RECOVERY_KO: Record<string, string> = { "short-rest": "짧은 휴식", "long-rest": "긴 휴식", "short-rest:1": "긴 휴식 (짧은 휴식마다 1회 회복)", "short-rest:half": "긴 휴식 (짧은 휴식에 절반 회복)" };
+export const RECOVERY_KO: Record<string, string> = { "short-rest": "짧은 휴식", "long-rest": "긴 휴식", "short-rest:1": "긴 휴식 (짧은 휴식마다 1회 회복)", "short-rest:half": "긴 휴식 (짧은 휴식에 절반 회복)" };
 
 const featContext = (ledger: Ledger, hasFightingStyle = false): FeatContext => ({
   level: ledger.level,
@@ -217,17 +217,22 @@ function askEpicBoon(ledger: Ledger, cls: ClassView, index: number, sourceLabel:
  * its contract's `gain` entry point. This code knows only the grammar; which feature asks what, how many and from
  * which list is data (content/modules/…effect-common-play), so a module feature works the same way.
  */
-export function applyGainContract(ledger: Ledger, cls: ClassView, index: number, featureId: string, featureName: string, sourceLabel: string, at?: { level: number; defaultLevel: number }) {
+export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, index: number, featureId: string, featureName: string, sourceLabel: string, at?: { level: number; defaultLevel: number }) {
   const { catalog } = ledger;
   const contract = featureContract(catalog, featureRuleKey(featureId));
-  const ask = { scope: "class" as const, sourceLabel, trackIndex: index };
+  // H7a (D251): a species trait gains through the same grammar; the operations that belong to a class say so.
+  const ask = owner ? { scope: "class" as const, sourceLabel, trackIndex: index } : { scope: "origin" as const, sourceLabel };
+  const scope = (ref: string) => (ref === "proficiency.bonus" ? ledger.proficiencyBonus : ref === "actor.level" ? ledger.level : undefined);
   const strings = (value: unknown) => (Array.isArray(value) ? value.map(String) : []);
   for (const operation of (contract?.entryPoints ?? []).filter((entry) => entry.invocation === GAIN_INVOCATION).flatMap((entry) => entry.operations)) {
     if (operation.kind !== "property.modify") continue;
     const p = operation.params ?? {};
     // H3d (D242): a choice kept across levels runs its operations at their own level (땅 유형's resistance at 10).
     if (at && Number(p.atLevel ?? at.defaultLevel) !== at.level) continue;
-    const amount = Number(evaluate(operation.value, () => undefined)) || 1;
+    const amount = Number(evaluate(operation.value, scope)) || 1;
+    const CLASS_ONLY = new Set(["choice.spell", "choice.spells", "choice.fighting-style", "grant.cantrips", "grant.speed-bonus", "grant.martial-arts"]);
+    if (!owner && (CLASS_ONLY.has(operation.property) || (operation.property === "choice.skills" && p.from === "class") || (operation.property === "grant.hp-per-level" && p.per !== "character"))) { ledger.warnings.push(`${featureName}: ${operation.property}은(는) 직업 특성에서만 씁니다`); continue; }
+    const cls = owner as ClassView;
     const id = `class.${index}.${String(p.id ?? operation.property)}`;
     const label = String(p.label ?? featureName);
     const description = p.description ? { description: String(p.description) } : {};
@@ -272,7 +277,17 @@ export function applyGainContract(ledger: Ledger, cls: ClassView, index: number,
       case "grant.speed": { const mode = String(p.mode ?? "") as keyof typeof ledger.extraSpeeds; ledger.extraSpeeds[mode] = p.equalsWalk === true ? -1 : amount; break; }
       case "grant.ac-formula": ledger.acFormulas.push({ abilities: strings(p.abilities) as AbilityKey[], shield: p.shield === true, label }); break;
       case "grant.speed-bonus": ledger.speedGrants.push({ amount: Number(evaluate(operation.value, () => undefined)) || 0, classId: cls.id, ...(p.column ? { column: String(p.column) } : {}), unless: String(p.unless ?? "none"), modes: strings(p.modes), label }); break;
-      case "grant.hp-per-level": ledger.hpPerClassLevel.push({ classId: cls.id, amount, label }); break;
+      case "grant.hp-per-level":
+        // H7a (D251): per character level (드워프의 강인함) or per level of the granting class (용의 회복력).
+        if (p.per === "character") { ledger.hpPerLevelBonus += amount; ledger.hpPerLevelSource = label; } else ledger.hpPerClassLevel.push({ classId: cls.id, amount, label });
+        break;
+      case "grant.resource": {
+        // H7a (D251): a pool the feature grants, its size an expression (숙련 보너스), from a level on.
+        if (p.minLevel !== undefined && ledger.level < Number(p.minLevel)) break;
+        const max = Number(evaluate(operation.value, scope)) || 0;
+        if (max > 0) ledger.addResource({ id: String(p.id ?? `resource.${featureRuleKey(featureId)}`), label, max, recovery: RECOVERY_KO[String(p.recovery ?? "long-rest")] ?? String(p.recovery ?? "긴 휴식"), source: sourceLabel });
+        break;
+      }
       case "grant.half-proficiency": ledger.halfProficiency = label; break;
       case "grant.martial-arts": ledger.martialArts = { classId: cls.id, column: String(p.column ?? ""), ability: String(p.ability ?? "dex") as AbilityKey }; break;
       case "grant.proficiency": for (const weapon of strings(p.weapons)) ledger.weapons.add(weapon as WeaponTraining); for (const armor of strings(p.armor)) ledger.armor.add(armor as ArmorTraining); break;

@@ -127,6 +127,8 @@ export interface IndexSpeciesSemanticsJson {
   baseFeatures?: string[];
   extraChoices?: IndexClassChoiceJson[];
   byChoice?: Record<string, Record<string, { cantrips?: string[]; prepared?: string[]; features?: string[]; speed?: number }>>;
+  /** H7a (D251): how often each always-prepared species spell is cast free — once, or the proficiency bonus times per long rest. */
+  spellUses?: "once" | "proficiency-bonus";
 }
 export interface CreationIndexJson {
   skills: Record<string, string>;

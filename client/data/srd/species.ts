@@ -152,4 +152,3 @@ export const SRD_SPECIES: Record<string, SrdSpeciesData> = {
 };
 
 /** Cantrips every member of the species knows regardless of choices. */
-export const SPECIES_BASE_CANTRIPS: Record<string, string[]> = { "dnd.srd521.species.tiefling": ["Thaumaturgy"] };

@@ -7,26 +7,15 @@ import type { SpeciesChoice, SpeciesView } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import { SIZE_KO } from "../rules/tables";
-import { SPECIES_BASE_CANTRIPS, SRD_SPECIES } from "../data/srd";
+import { SRD_SPECIES } from "../data/srd";
 import type { SpeciesOptionEffect } from "../data/srd/species";
 import { abilityOptions, featOptions, fixedOptions, gamingSetOptions, languageOptions, skillOptions, toolName, TOOL_ID_PREFIX } from "./choices";
 import { applyFeat } from "./feats";
+import { applyGainContract } from "./tracks";
 import type { Ledger } from "./ledger";
 
 const DAMAGE_KO: Record<string, string> = { acid: "산성", cold: "냉기", fire: "화염", lightning: "번개", poison: "독", necrotic: "괴저", radiant: "광휘", thunder: "천둥", psychic: "정신", force: "역장", bludgeoning: "타격", piercing: "관통", slashing: "참격" };
 export const damageTypeKo = (type: string) => DAMAGE_KO[type] ?? type;
-
-/** Resources SRD species traits grant, keyed by trait id (per long rest unless noted). */
-const SPECIES_TRAIT_RESOURCES: Record<string, { label: string; max: (pb: number) => number; recovery: string; minLevel?: number }> = {
-  "breath-weapon": { label: "브레스 무기", max: (pb) => pb, recovery: "긴 휴식" },
-  "draconic-flight": { label: "용의 비행", max: () => 1, recovery: "긴 휴식", minLevel: 5 },
-  stonecunning: { label: "돌 감각", max: (pb) => pb, recovery: "긴 휴식" },
-  "giant-ancestry-power": { label: "거인 혈통", max: (pb) => pb, recovery: "긴 휴식" },
-  "large-form": { label: "거대한 형태", max: () => 1, recovery: "긴 휴식", minLevel: 5 },
-  "adrenaline-rush": { label: "아드레날린 분출", max: (pb) => pb, recovery: "짧은 휴식" },
-  "relentless-endurance": { label: "끈질긴 인내", max: () => 1, recovery: "긴 휴식" },
-  luck: { label: "행운 (1 재굴림)", max: () => 0, recovery: "—" },
-};
 
 function speciesEffect(species: SpeciesView, choiceId: string, optionId: string): SpeciesOptionEffect | undefined {
   const authored = SRD_SPECIES[species.id]?.effects?.[choiceId]?.[optionId];
@@ -58,17 +47,11 @@ export function applySpecies(ledger: Ledger) {
   for (const trait of species.traits) {
     if (trait.minLevel && ledger.level < trait.minLevel) continue;
     ledger.addFeature({ id: trait.id, name: trait.name, nameEn: trait.nameEn, source: "species", sourceLabel, level: trait.minLevel, description: trait.description, descriptionSource: trait.descriptionSource });
-    const traitKey = trait.id.split(".trait.").pop() ?? trait.id;
-    if (traitKey === "dwarven-toughness") { ledger.hpPerLevelBonus += 1; ledger.hpPerLevelSource = trait.name; }
-    if (traitKey === "poison-resistance") ledger.resistances.add("poison");
-    if (traitKey === "trance") ledger.flags.add("trance");
-    const resource = SPECIES_TRAIT_RESOURCES[traitKey];
-    if (resource && (!resource.minLevel || ledger.level >= resource.minLevel) && resource.max(ledger.proficiencyBonus) > 0) {
-      ledger.addResource({ id: `resource.species.${traitKey}`, label: resource.label, max: resource.max(ledger.proficiencyBonus), recovery: resource.recovery, source: species.name });
-    }
+    // H7a (D251): what a trait grants — hit points, resistances, pools — is in its gain contract.
+    applyGainContract(ledger, undefined, -1, trait.id, trait.name, species.name);
   }
 
-  const cantrips = new Set<string>([...(SPECIES_BASE_CANTRIPS[species.id] ?? []), ...(species.semantics.baseCantrips ?? [])]);
+  const cantrips = new Set<string>(species.semantics.baseCantrips ?? []);
   const spellsByLevel: Record<number, string[]> = {};
   for (const names of [species.semantics.basePrepared ?? []]) if (names.length) spellsByLevel[1] = [...(spellsByLevel[1] ?? []), ...names];
   let castingAbility: AbilityKey | undefined;
@@ -113,7 +96,7 @@ export function applySpecies(ledger: Ledger) {
       if (!spell) { ledger.warnings.push(`종족 주문 "${name}"을(를) 찾을 수 없습니다.`); continue; }
       entry.alwaysPrepared.add(spell.id);
       entry.freeCasts.push(spell.id);
-      const usesPb = species.id.endsWith("gnome");
+      const usesPb = species.semantics.spellUses === "proficiency-bonus";
       ledger.addResource({ id: `resource.species.spell.${spell.id}`, label: `${spell.name} 무료 시전`, max: usesPb ? ledger.proficiencyBonus : 1, recovery: "긴 휴식", source: species.name, freeCastSpellId: spell.id });
     }
     if (!castingAbility && species.choices.some((choice) => choice.options === "spellcasting-ability")) ledger.warnings.push("종족 주문의 시전 능력치를 고르세요.");

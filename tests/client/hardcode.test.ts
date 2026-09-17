@@ -187,6 +187,22 @@ test("H6c: a turn-end repeat save is a field — a pasted NPC and a module spell
   createCatalog();
 });
 
+test("H7a: a species trait gains through its contract — a module's pool and hit points, no trait keys in code (D251)", async () => {
+  const { createCatalog } = await import("../../client/catalog");
+  const { autofill } = await import("../../client/character/autofill");
+  const { sourceOf } = await import("./support");
+  const contract = (key: string, operations: unknown[]) => ({ id: `effect.feature.species.${key}`, category: "option", mechanics: [{ kind: "common-play", config: { id: `feature:species.${key}`, entryPoints: [{ id: "gain", invocation: "gain", operations }] } }] });
+  const catalog = createCatalog([{ moduleId: "module.deep-dwarf", moduleVersion: "1", content: [
+    contract("stonecunning", [{ kind: "property.modify", property: "grant.resource", operation: "set", value: { op: "add", args: [{ ref: "proficiency.bonus" }, { value: 4 }] }, params: { id: "resource.module.deep-sense", label: "깊은 감각", recovery: "short-rest" } }]),
+    contract("dwarven-toughness", [{ kind: "property.modify", property: "grant.hp-per-level", operation: "add", value: { value: 2 }, params: { per: "character" } }]),
+  ] } as never]);
+  const derived = autofill(sourceOf({ name: "드워프", classes: "fighter", level: 5, species: "dwarf" }), catalog).derived;
+  assert.deepEqual(derived.resources.filter((item) => item.id === "resource.module.deep-sense").map((item) => [item.max, item.recovery]), [[3 + 4, "짧은 휴식"]]);
+  assert.ok(!derived.resources.some((item) => item.id === "resource.species.stonecunning"), "the SRD pool was the SRD contract's");
+  assert.ok(derived.hp.breakdown.some((line) => line.includes("레벨당 +2")), JSON.stringify(derived.hp.breakdown));
+  createCatalog();
+});
+
 test("H4: a class module's definition carries its training, resources, option pools and multiclass rules (D243)", async () => {
   const { createCatalog } = await import("../../client/catalog");
   const { autofill } = await import("../../client/character/autofill");
