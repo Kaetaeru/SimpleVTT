@@ -17,7 +17,7 @@ import type { RuleModuleJson } from "../catalog/types";
 // R63 (D198): 30 — a hit opens a window for the attacker (`on-hit` prompt, `act.onhit` answer).
 // R81 (D215): 31 — a trigger window (`trigger` prompt, `act.trigger` answer) for initiative and the end of a short rest.
 // R83 (D217): 32 — the snapshot lists the host's content modules; `content.fetch` / `content.data` carry one across.
-export const PROTOCOL_VERSION = 32;
+export const PROTOCOL_VERSION = 33;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -153,6 +153,8 @@ export type ClientCommand =
    */
   | { type: "act.rescue"; messageId: string; feature: string }
   /** D102: cast a spell at the chosen targets; the host pays the slot, resolves every target and applies. */
+  /** R89 (D224): a creature goes into, out of, or moves inside a caster area spell (영혼 수호자, 달빛 광선, 가시 성장). */
+  | { type: "act.zone"; casterEntryId: string; spellId: string; target: ActorRef; action: "enter" | "leave" | "move"; feet?: number }
   | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides; readied?: boolean; /** R11: answering a shield prompt (its message id): the reaction spell against the held attack. */ reaction?: string }
   /** R9 (D103): an NPC's save action (breath, gaze …) at the chosen targets — resolved like a save spell; recharge is spent. */
   | { type: "act.npcSave"; actor: ActorRef; actionName: string; targets: ActorRef[] }

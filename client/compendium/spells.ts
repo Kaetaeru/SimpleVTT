@@ -58,7 +58,7 @@ const BUILTIN_ON_HIT = (onHitJson as unknown as { spells: Record<string, SpellOn
 export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => (exec ? exec.onHit ?? BUILTIN_ON_HIT[exec.spellId] : undefined);
 
 /** R77 (D212): a concentration spell used again without a slot — its economy, and a different effect when it has one. */
-export interface SpellSustain { economy: "action" | "bonus-action" | "none"; primary?: SpellPrimary; note?: string }
+export interface SpellSustain { economy: "action" | "bonus-action" | "none"; primary?: SpellPrimary; note?: string; /** R89 (D224): the repeat happens per this many feet moved inside the area (가시 성장), not on entering. */ move?: number }
 
 const raw = catalogJson as unknown as { definitions: Record<string, SpellExec> | SpellExec[] };
 const list: SpellExec[] = Array.isArray(raw.definitions) ? raw.definitions : Object.values(raw.definitions);
@@ -79,7 +79,7 @@ export function sustainOf(exec: SpellExec): SpellSustain | null {
   if (authored === false) return null;
   if (!authored && !(exec.concentration && DAMAGE_KINDS.has(exec.primary.kind))) return null;
   const economy = authored?.economy ?? (exec.targeting.maxTargets > 1 ? "none" : exec.castingEconomy === "bonus-action" ? "bonus-action" : "action");
-  return { economy, ...(authored?.primary ? { primary: authored.primary } : {}), ...(authored?.note ? { note: authored.note } : {}) };
+  return { economy, ...(authored?.primary ? { primary: authored.primary } : {}), ...(authored?.note ? { note: authored.note } : {}), ...(authored?.move ? { move: authored.move } : {}) };
 }
 
 /** R77 (D212): the execution of one repeat — the sustain's effect, no new lasting effect, marked as a repeat. */

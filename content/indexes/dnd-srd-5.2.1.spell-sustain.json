@@ -7,6 +7,7 @@
     "dnd.srd521.spell.call-lightning": { "economy": "action", "note": "행동으로 번개를 다시 부름" },
     "dnd.srd521.spell.sunbeam": { "economy": "action", "note": "행동으로 광선을 다시 발사" },
     "dnd.srd521.spell.phantasmal-killer": { "economy": "none", "note": "대상의 턴이 끝날 때 내성 실패 시 피해" },
-    "dnd.srd521.spell.mind-spike": false
+    "dnd.srd521.spell.mind-spike": false,
+    "dnd.srd521.spell.spike-growth": { "economy": "none", "move": 5, "primary": { "kind": "automatic-projectiles", "damageType": "piercing", "projectileDice": { "sides": 4 }, "baseProjectiles": 2 }, "note": "구역 안에서 5피트 움직일 때마다 2d4 관통" }
   }
 }

@@ -25,7 +25,7 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { onHitOf, spellExec, sustainedExec, type SpellExec } from "../compendium/spells";
+import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
 import { summonMonster } from "../compendium/summonTemplate";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
@@ -177,6 +177,8 @@ export class TableHost {
   /** R11: attacks held while the target decides on Shield (prompt id → everything needed to finish the attack). */
   /** R86 (D221): the card being applied right now, so an automatic consequence knows which card it belongs to. */
   private causeCard: string | null = null;
+  /** R89 (D224): per area and creature, the tracker turn ("round:index") the area last hurt it — kept through leaving and coming back. ponytail: in memory, a host restart forgets this turn's hits. */
+  private readonly zoneHits = new Map<string, string>();
   /** R86 (D221): per card, how to take back what happened automatically because of it (effects shed, a smite save card). */
   private readonly childUndos = new Map<string, Array<() => void>>();
   private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; /** R63 (D198): whose answer holds it — the target's reaction, or the attacker's on-hit choice. */ stage?: "reaction" | "on-hit"; /** R63 (D198): the result waits for the DM once it is let go (D90). */ waits?: boolean }>();
@@ -858,7 +860,7 @@ export class TableHost {
         }
         const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
-        if (targetRefs.length > exec.targeting.maxTargets) return refuse(`대상은 최대 ${exec.targeting.maxTargets}명입니다`);
+        if (targetRefs.length > Math.max(exec.targeting.maxTargets, command.method?.kind === "sustain" ? 1 : 0)) return refuse(`대상은 최대 ${exec.targeting.maxTargets}명입니다`);
         const targets = targetRefs.map((ref) => this.resolveActor(ref)).filter((item): item is NonNullable<typeof item> => Boolean(item));
         if (targets.length !== targetRefs.length) return refuse("대상을 찾을 수 없습니다");
         const casterCombatant = this.combatantOf(caster);
@@ -1427,6 +1429,17 @@ export class TableHost {
         this.held.delete(command.messageId);
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: picked.length ? { chosen: labels } : { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${labels.length ? labels.join(", ") : "안 함"}` });
         this.takeHitChoices({ ...held, attacker, target }, { choices: picked, facts, smiteSlot, spellSmite }, auto);
+        return;
+      }
+      case "act.zone": {
+        const caster = this.journalEntries.get(command.casterEntryId);
+        const exec = spellExec(command.spellId);
+        const sustain = exec ? sustainOf(exec) : null;
+        if (!caster || caster.kind === "handout" || !sustain || !(caster.runtime.effects ?? []).some((effect) => effect.key === `spell:${command.spellId}`)) return refuse("그 구역은 더 없습니다");
+        const target = this.resolveActor(command.target);
+        if (!target || target.entry.kind === "handout") return refuse("대상을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.target, target.entry) && !this.mayAct(userId, { entryId: caster.id }, caster)) return refuse("자기 크리처나 자기 주문 구역만 조작합니다");
+        this.zoneAction(caster, command.spellId, sustain, target, command.action, command.feet);
         return;
       }
       case "act.trigger": {
@@ -2517,6 +2530,7 @@ export class TableHost {
    * starts rolls recharges (NPC), resets legendary actions, and a PC at 0 HP rolls a death save (D92, automatic).
    */
   private nextTurn() {
+    const endedMark = `${this.tracker.round}:${this.tracker.current}`;
     const result = advanceTurn(this.tracker);
     const random = this.options.random ?? Math.random;
     const ended = result.ended?.entryId ? this.journalEntries.get(result.ended.entryId) : undefined;
@@ -2556,6 +2570,18 @@ export class TableHost {
     // Turn-scoped marks (D97): 이탈·질주 end with the turn; 회피·도움·준비 last until the bearer's next turn starts.
     // R85 (D220): effects counted on a turn boundary — the caster (유도 화살, 잔혹한 모욕) or the bearer.
     if (result.ended?.entryId) this.tickAnchored(result.ended.entryId, "end");
+    // R89 (D224): a creature ending its turn inside an area takes the area once, unless entering already hit it this turn.
+    const endedEntry = result.ended?.entryId ? this.journalEntries.get(result.ended.entryId) : undefined;
+    const endedAt = this.actorOfTurn(result.ended);
+    if (endedEntry && endedEntry.kind !== "handout" && endedAt) for (const effect of (endedEntry.runtime.effects ?? []).filter((item) => item.key.startsWith("zone:"))) {
+      const [, casterId, ...spell] = effect.key.split(":");
+      const spellId = spell.join(":");
+      const caster = this.journalEntries.get(casterId);
+      const exec = spellExec(spellId);
+      const sustain = exec ? sustainOf(exec) : null;
+      if (!caster || !sustain || sustain.move || this.zoneHits.get(`${effect.key}|${endedEntry.id}`) === endedMark) continue;
+      this.zoneHit(caster, spellId, endedAt, effect.key, endedMark);
+    }
     if (result.started?.entryId) this.tickAnchored(result.started.entryId, "start");
     const endedActor = this.actorOfTurn(result.ended);
     if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }
@@ -2659,7 +2685,7 @@ export class TableHost {
     const lost = held(before).filter((key) => !kept.includes(key));
     if (lost.length) for (const other of [...this.journalEntries.values()]) {
       if (other.kind === "handout" || other.id === entry.id) continue;
-      this.shedEffects(other, (other.runtime.effects ?? []).filter((effect) => effect.fromConcentration && effect.from === entry.id && lost.includes(effect.key)), `${entry.name}의 집중이 끝남`);
+      this.shedEffects(other, (other.runtime.effects ?? []).filter((effect) => effect.fromConcentration && effect.from === entry.id && (lost.includes(effect.key) || lost.some((spellKey) => effect.key === `zone:${entry.id}:${spellKey.slice("spell:".length)}`))), `${entry.name}의 집중이 끝남`);
     }
     this.options.onJournal?.({ entry });
     this.emit({ type: "journal", entry });
@@ -2667,6 +2693,35 @@ export class TableHost {
     const ref = entry.avatar;
     if (ref?.startsWith("art:")) { const asset = this.artAssets.get(ref.slice(4)); if (asset) this.emit({ type: "art", asset }); }
     this.refreshTokensOf(entry);
+  }
+
+  /**
+   * R89 (D224): a creature and a caster area. Entering (or ending a turn inside, see `nextTurn`) runs the spell repeat on
+   * it once per tracker turn; a move-based area (가시 성장) runs once per `move` feet instead. Membership is an effect
+   * held by the caster concentration (D220), so it disappears when the spell does.
+   */
+  private zoneAction(caster: JournalEntry, spellId: string, sustain: { move?: number }, target: { entry: JournalEntry; token?: Token; page?: Page }, action: "enter" | "leave" | "move", feet?: number) {
+    if (caster.kind === "handout" || target.entry.kind === "handout") return;
+    const key = `zone:${caster.id}:${spellId}`;
+    const live = this.journalEntries.get(target.entry.id) as JournalCharacter | JournalNpc;
+    const inside = (live.runtime.effects ?? []).find((effect) => effect.key === key);
+    const name = caster.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.name ?? spellId;
+    const now = this.now();
+    const store = (effects: ActiveEffect[]) => this.storeEntry({ ...live, runtime: { ...live.runtime, effects, updatedAt: now }, updatedAt: now } as JournalEntry);
+    if (action === "leave") { if (inside) store((live.runtime.effects ?? []).filter((effect) => effect.key !== key)); this.say({ type: "system", who: "", content: `${target.token?.name ?? live.name}: ${name} 밖으로` }); return; }
+    const turnMark = this.tracker.turns.length ? `${this.tracker.round}:${this.tracker.current}` : undefined;
+    const member: ActiveEffect = inside ?? { key, name: `${name} 안`, source: "spell", duration: "구역", concentration: false, elapsed: 0, startedAt: now, from: caster.id, fromConcentration: true };
+    if (!inside) store([...(live.runtime.effects ?? []), member]);
+    const hits = action === "move" ? (sustain.move ? Math.max(1, Math.floor((feet ?? sustain.move) / sustain.move)) : 0) : sustain.move || (turnMark && this.zoneHits.get(`${key}|${live.id}`) === turnMark) ? 0 : 1;
+    for (let n = 0; n < hits; n += 1) this.zoneHit(caster, spellId, target, key, turnMark);
+  }
+
+  /** R89 (D224): the area repeat on one creature, cast by the caster at no cost, remembered for this turn. */
+  private zoneHit(caster: JournalEntry, spellId: string, target: { entry: JournalEntry; token?: Token; page?: Page }, key: string, turnMark?: string) {
+    const casterToken = [...this.pages.values()].flatMap((page) => page.tokens.filter((token) => token.represents === caster.id).map((token) => ({ pageId: page.id, tokenId: token.id })))[0];
+    const targetRef = this.refOf(target);
+    this.apply(this.options.hostUserId, { type: "act.cast", caster: { entryId: caster.id, ...(casterToken ?? {}) }, spellId, targets: [targetRef], method: { kind: "sustain" } }, "");
+    if (turnMark) this.zoneHits.set(`${key}|${target.entry.id}`, turnMark);
   }
 
   /** R85 (D220): "until the end of your next turn" cast on your own turn: the end of this turn does not count. */
@@ -2691,16 +2746,18 @@ export class TableHost {
 
   /**
    * R85 (D220): take effects off a creature with what they carried — the conditions on the sheet or the stat block,
-   * the markers on its tokens, the end-of-turn saves. ponytail: a condition two effects both gave comes off with
-   * the first; per-condition sources if that ever matters at the table.
+   * the markers on its tokens, the end-of-turn saves. A condition another remaining effect also carries stays.
    */
   private shedEffects(entry: JournalEntry, gone: ActiveEffect[], why: string) {
     if (!gone.length || entry.kind === "handout") return;
     const keys = gone.map((effect) => effect.key);
     const names = gone.map((effect) => effect.name);
-    const shed = [...names, ...gone.flatMap((effect) => [...(effect.conditions ?? []), ...(effect.endSave?.conditions ?? [])])];
-    const now = this.now();
     const live = this.journalEntries.get(entry.id) ?? entry;
+    // A condition another effect still on this creature carries stays (two 포박 sources, one ends).
+    const carried = (effect: ActiveEffect) => [effect.name, ...(effect.conditions ?? []), ...(effect.endSave?.conditions ?? [])];
+    const still = live.kind === "handout" ? [] : (live.runtime.effects ?? []).filter((effect) => !keys.includes(effect.key)).flatMap(carried);
+    const shed = gone.flatMap(carried).filter((name) => !still.includes(name));
+    const now = this.now();
     // R86 (D221): if a card set this off, undoing that card puts the effects, conditions and markers back.
     if (live.kind !== "handout") {
       const takenConditions = live.runtime.conditions.filter((name) => shed.includes(name));

@@ -625,6 +625,27 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, label: `${item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${Math.max(0, (list.uses ?? 1) - (entry.runtime.uses?.[item.spellId!] ?? 0))}/${list.uses ?? 1} 남음 (일)` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, disabled: list.frequency === "per-day" && (entry.runtime.uses?.[item.spellId!] ?? 0) >= (list.uses ?? 1), onSelect: () => void castIt(item.spellId!, item.name) })))
       : [];
   // R77 (D212): a bonus-action spell is found on the bonus-action row too, where the turn says it belongs.
+  // R89 (D224): the areas on this page held by some caster (영혼 수호자, 달빛 광선, 가시 성장) — in or out, and moving inside.
+  const zones = page.tokens.flatMap((other) => {
+    const holder = other.represents ? c.table.snapshot!.journal.find((item) => item.id === other.represents) : undefined;
+    if (!holder || holder.kind === "handout") return [];
+    return (holder.runtime.effects ?? []).filter((effect) => effect.key.startsWith("spell:")).flatMap((effect) => {
+      const spellId = effect.key.slice("spell:".length);
+      const exec = spellExec(spellId);
+      const sustain = exec ? sustainOf(exec) : null;
+      return sustain?.economy === "none" ? [{ casterId: holder.id, spellId, name: effect.name, move: sustain.move, casterName: other.name }] : [];
+    });
+  }).filter((zone, index, all) => all.findIndex((item) => item.casterId === zone.casterId && item.spellId === zone.spellId) === index);
+  const zoneButtons = zones.map((zone) => {
+    const inside = (entry.runtime.effects ?? []).some((effect) => effect.key === `zone:${zone.casterId}:${zone.spellId}`);
+    const title = `${zone.casterName}의 ${zone.name}`;
+    return (
+      <span key={`${zone.casterId}:${zone.spellId}`} className="cl-row" style={{ gap: 2 }}>
+        {inside ? <button type="button" className="cl-btn small" title={title} onClick={() => c.zone(zone.casterId, zone.spellId, me, "leave")}>{zone.name} 빠져나감</button> : <button type="button" className="cl-btn small attack" title={`${title} — 들어가면 바로 판정`} onClick={() => c.zone(zone.casterId, zone.spellId, me, "enter")}>{zone.name} 들어감</button>}
+        {inside && zone.move ? <button type="button" className="cl-btn small attack" title={`${title} 안에서 ${zone.move}피트 이동`} onClick={() => c.zone(zone.casterId, zone.spellId, me, "move", zone.move)}>{zone.move}피트 이동함</button> : null}
+      </span>
+    );
+  });
   const bonusSpellItems = spellItems.filter((item) => spellExec(item.key.split(":").pop() ?? "")?.castingEconomy === "bonus-action");
   // R9: the stat block's multiattack routine as one button (each attack its own card, one pre-roll dialog for all), its save
   // actions (breath, gaze) resolved like save spells (D103), and its legendary actions from the per-round pool (D104).
@@ -693,6 +714,12 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           <div className="cl-cmd-row">
             <span className="cl-cmd-label">{chip("반응", turn?.reactionUsed)}</span>
             {reactionItems.map((item) => <button type="button" key={item.key} className={`cl-btn small${item.key === "reaction:free" ? " quiet" : " feature"}`} disabled={Boolean(blocked) || Boolean(turn?.reactionUsed) || item.disabled} title={item.hint} onClick={item.onSelect}>{item.label}{item.uses ? <small className="cl-uses">{item.uses}</small> : null}</button>)}
+          </div>
+        ) : null}
+        {zoneButtons.length ? (
+          <div className="cl-cmd-row">
+            <span className="cl-cmd-label">상황</span>
+            {zoneButtons}
           </div>
         ) : null}
         <div className="cl-cmd-row quiet">
