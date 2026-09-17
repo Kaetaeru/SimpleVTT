@@ -32,7 +32,9 @@ test("done: every feature with a contract carries its own line on the sheet (D18
       assert.ok(feature.execution === "derived" || feature.execution === "descriptive", `${feature.name}: ${feature.execution}`);
       // A contract that only asks the table questions is marked as such, and one with operations is not.
       const summary = contractSummary(contract, characterScope(made.derived));
-      assert.deepEqual(feature.rules, summary.rules, feature.name);
+      // V4n (D276): a feat may carry its config's own line (R33) as well as its contract's, so the contract's lines
+      // have to be there, not to be everything there.
+      for (const line of summary.rules) assert.ok(feature.rules!.includes(line), `${feature.name}: ${line}`);
       assert.equal(feature.execution, summary.execution, feature.name);
     }
   }

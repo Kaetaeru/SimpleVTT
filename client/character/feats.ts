@@ -197,12 +197,12 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
    * exactly why 운명의 은총's own `execution.reason` reads "needs feat-granted resources … before the 2d4
    * interceptor can be paid". A contract keyed `feat:<slug>` names the same id in its `payments`.
    */
-  const pools = config.resources as Array<{ id?: string; label?: string; max?: number | string; reset?: string }> | undefined;
+  const pools = config.resources as Array<{ id?: string; label?: string; max?: number | string; reset?: string; /** V4n (D276): the pool pays for any spell up to this level (주문 회상의 은총). */ freeCastMaxLevel?: number }> | undefined;
   for (const pool of pools ?? []) {
     const slug = feat.id.split(".").pop() ?? feat.id;
     const id = pool.id ?? `resource.feat.${slug}`;
     const max = pool.max === "proficiency-bonus" ? ledger.proficiencyBonus : typeof pool.max === "number" ? pool.max : 1;
-    if (max > 0) ledger.addResource({ id, label: pool.label ?? feat.name, max, recovery: resetKo(pool.reset ?? "long-rest"), source: feat.name });
+    if (max > 0) ledger.addResource({ id, label: pool.label ?? feat.name, max, recovery: resetKo(pool.reset ?? "long-rest"), source: feat.name, ...(typeof pool.freeCastMaxLevel === "number" ? { freeCastMaxLevel: pool.freeCastMaxLevel } : {}) });
   }
 
   // R33 (D168): the mechanical numbers. Every one of these keys used to sit in the code as a constant next to a

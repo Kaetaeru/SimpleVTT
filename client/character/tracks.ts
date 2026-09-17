@@ -287,7 +287,7 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
         const max = Number(evaluate(operation.value, scope)) || 0;
         // V3g (D261): `spell` — the pool casts that spell free (용 동료).
         const freeCast = p.spell ? catalog.spellById(String(p.spell))?.id : undefined;
-        if (max > 0) ledger.addResource({ id: String(p.id ?? `resource.${featureRuleKey(featureId)}`), label, max, recovery: p.atWill === true ? "무제한" : RECOVERY_KO[String(p.recovery ?? "long-rest")] ?? String(p.recovery ?? "긴 휴식"), source: sourceLabel, ...(freeCast ? { freeCastSpellId: freeCast } : {}), ...(p.atWill === true ? { atWill: true } : {}) });
+        if (max > 0) ledger.addResource({ id: String(p.id ?? `resource.${featureRuleKey(featureId)}`), label, max, recovery: p.atWill === true ? "무제한" : RECOVERY_KO[String(p.recovery ?? "long-rest")] ?? String(p.recovery ?? "긴 휴식"), source: sourceLabel, ...(freeCast ? { freeCastSpellId: freeCast } : {}), ...(p.atWill === true ? { atWill: true } : {}), ...(typeof p.maxLevel === "number" ? { freeCastMaxLevel: p.maxLevel } : {}) });
         break;
       }
       case "grant.half-proficiency": ledger.halfProficiency = label; break;

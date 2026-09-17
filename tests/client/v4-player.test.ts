@@ -596,3 +596,35 @@ test("V4m: species traits are rules — 용감함 gives advantage only against f
   const large = deriveCharacter(goliath.source, cat, { effects: [{ key: "feature:species.large-form", name: "거대한 형태", source: "feature", duration: "10분 (100라운드)", concentration: false, rounds: 100, elapsed: 0, startedAt: "" }] });
   assert.equal(large.speed.walk, 45);
 });
+
+test("V4n: feats — 저항할 수 없는 공격 uses the score it raised, 그림자 형상 resists all but radiant, 붙잡기 전문가 grapples on a hit, 주문 회상 pays for any 4th-level spell (D276)", async () => {
+  const { pcAttackSpec } = await import("../../client/rules/attackSpec");
+  const { castSpell } = await import("../../client/character/play");
+  const cat = catalog();
+
+  // 붙잡기 전문가: the unarmed hit offers a grapple with the feat owner's own DC, and a held target is easier to hit.
+  const t = await table([{ classes: "monk", level: 8, abilities: { str: 16, dex: 16 }, runtime: (runtime) => runtime }], [dummy("좀비", 60, { abilities: { str: 6, dex: 6, con: 16, int: 3, wis: 6, cha: 5 } })], () => 0);
+  const grappler = build({ name: "붙잡기", classes: "fighter", level: 8, abilities: { str: 18 }, choices: { "class.3.asi": ["dnd.srd521.feat.grappler"] } });
+  const entry = newJournalCharacter("c", "p", grappler.source, initialRuntime(grappler.derived));
+  const fist = grappler.derived.attacks.find((attack) => !attack.itemId)!;
+  const offers = (await import("../../client/rules/attackSpec")).hitOffers(entry, grappler.derived, fist.id, {}, cat);
+  const grab = offers.find((offer) => offer.key.startsWith("feat:grappler#") || offer.key.startsWith("grappler#"));
+  assert.ok(grab, JSON.stringify(offers.map((offer) => offer.key)));
+  const spec = pcAttackSpec(entry, grappler.derived, fist.id, { contracts: [grab!.key] }, cat)!.spec;
+  assert.deepEqual(spec.hitSaves?.map((save) => [save.ability, save.dc, save.condition]), [["str", 8 + grappler.derived.abilities.str.modifier + grappler.derived.proficiencyBonus, "붙잡힘"]]);
+  void t;
+
+  // 밤의 영혼의 은총: the shadowy form resists everything but radiant and doubles the walking speed.
+  const night = build({ name: "밤", classes: "rogue", level: 19, choices: { "class.18.epic-boon": ["dnd.srd521.feat.epic.night-spirit"] } });
+  const shadowed = deriveCharacter(night.source, cat, { effects: [{ key: "feat:epic.night-spirit", name: "그림자 형상", source: "feature", duration: "빛 속으로 나가거나 공격·시전할 때까지", concentration: false, elapsed: 0, startedAt: "" }] });
+  assert.ok(shadowed.defenses.resistances.some((type) => type.startsWith("화염")) && !shadowed.defenses.resistances.some((type) => type.startsWith("광휘")), JSON.stringify(shadowed.defenses.resistances));
+  assert.equal(shadowed.speed.walk, night.derived.speed.walk * 2);
+
+  // 주문 회상의 은총: one pool that pays for any spell of 4th level or lower.
+  const wizard = build({ name: "위저드", classes: "wizard", level: 19, choices: { "class.18.epic-boon": ["dnd.srd521.feat.epic.spell-recall"] } });
+  const pool = wizard.derived.resources.find((resource) => resource.freeCastMaxLevel !== undefined)!;
+  assert.equal(pool.freeCastMaxLevel, 4);
+  const cast = castSpell(initialRuntime(wizard.derived), wizard.derived, { id: "x", name: "4레벨 주문", level: 4 }, { kind: "resource", id: pool.id });
+  assert.ok(cast, "4레벨 주문을 그 풀로 시전할 수 있다");
+  assert.equal(cast!.resourcesUsed[pool.id], 1);
+});

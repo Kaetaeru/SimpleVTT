@@ -1755,6 +1755,8 @@ export class TableHost {
     const combatant = this.combatantOf(actor);
     if (!combatant) return false;
     if (ref === "target.hp.below-max") return combatant.hp.current < combatant.hp.max;
+    // V4n (D276): the target is Grappled — who holds it is the table's, but that it is held is on the sheet.
+    if (ref === "target.grappled") return combatant.conditions.includes("붙잡힘");
     return false;
   }
 

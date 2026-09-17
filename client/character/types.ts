@@ -198,6 +198,8 @@ export interface DerivedResource {
   freeCastSpellId?: string;
   /** V3g (D261): the free cast is never used up (주문 숙련). */
   atWill?: boolean;
+  /** V4n (D276): the pool casts any prepared spell up to this level for free (주문 회상의 은총). */
+  freeCastMaxLevel?: number;
 }
 
 export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean }

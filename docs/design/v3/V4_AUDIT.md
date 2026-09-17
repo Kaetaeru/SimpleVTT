@@ -149,12 +149,12 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 ### 재주
 - ✔ D266 epic.combat-prowess — 빗나감이 치명타로 바뀜(SRD는 명중), 턴당 1회 없음. — [data-fix + new-grammar] 명중으로 바꾸기 모드, 턴 시작 초기화.
 - epic.fate — 자신의 실패에만 2d4, 60피트 안 다른 이의 판정·감점 불가, 이니셔티브 회복 없음. — [picker + host-hook]
-- epic.irresistible-offense — 치명타 추가 피해가 항상 근력 점수. — [data-fix] 올린 능력치.
-- epic.night-spirit — 전부 문구, 저항 범위 틀림. — [button + data-fix]
-- epic.spell-recall — 1~4레벨 무슬롯 시전 없음. — [picker]
-- epic.dimensional-travel — 표시 없음. — [DM-label/button]
-- grappler — 붙잡은 대상 유리 계산 가능(grappledBy), 맨손 명중 시 붙잡기. — [new-grammar + picker]
-- alert — 이니셔티브 교환이 손 작업. — [picker]
+- ✔ D276 epic.irresistible-offense — 치명타 추가 피해가 항상 근력 점수. — [data-fix] 올린 능력치.
+- ✔ D276 epic.night-spirit — 전부 문구, 저항 범위 틀림. — [button + data-fix]
+- ✔ D276 epic.spell-recall — 1~4레벨 무슬롯 시전 없음. — [picker]
+- ✔ D276 epic.dimensional-travel — 표시 없음. — [DM-label/button]
+- ✔ D276 grappler — 붙잡은 대상 유리 계산 가능(grappledBy), 맨손 명중 시 붙잡기. — [new-grammar + picker]
+- ✔ D276 alert — 이니셔티브 교환이 손 작업. — [picker]
 
 ### 종족
 - ✔ D275 goliath 거대한 형태 — 5레벨부터 +10 속도가 항상 켜짐, 내성 유리는 틀림, 크기 그대로. — [data-fix] 추가 행동 10분 효과.
