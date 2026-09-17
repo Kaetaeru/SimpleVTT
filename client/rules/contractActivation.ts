@@ -194,7 +194,7 @@ export function longRestGains(derived: { features: Array<{ id: string }> }, cata
 }
 
 /** V4r (D280): one metamagic the cast window may offer — what it costs, what it does, and what it leaves to the table. */
-export interface MetamagicOption { key: string; name: string; cost: number; resourceId: string; effect?: string; note?: string }
+export interface MetamagicOption { key: string; name: string; cost: number; resourceId: string; effect?: string; note?: string; /** V4w (D285): what the cast must have for this to do anything (`save`, `damage`, `action`, `duration`, `attack`). */ needs?: string }
 
 /**
  * V4r (D280): the metamagics this character knows, from their own contracts. `spell.metamagic` names what the cast
@@ -211,6 +211,7 @@ export function metamagicOptions(derived: { features: Array<{ id: string; name: 
     let resourceId = "";
     let effect: string | undefined;
     let note: string | undefined;
+    let needs: string | undefined;
     for (const operation of contract.entryPoints.flatMap((entry) => entry.operations)) {
       if (operation.kind === "resource.change") {
         const amount = Number(evaluate(operation.amount, scope));
@@ -220,10 +221,11 @@ export function metamagicOptions(derived: { features: Array<{ id: string; name: 
         const p = operation.params ?? {};
         if (p.effect) effect = String(p.effect);
         if (p.note) note = String(p.note);
+        if (p.needs) needs = String(p.needs);
       }
       if (operation.kind === "adjudication.request" && !note && !/마법 점수/.test(operation.question)) note = operation.question;
     }
-    out.push({ key, name: feature.name, cost, resourceId, ...(effect ? { effect } : {}), ...(note ? { note } : {}) });
+    out.push({ key, name: feature.name, cost, resourceId, ...(effect ? { effect } : {}), ...(note ? { note } : {}), ...(needs ? { needs } : {}) });
   }
   return out;
 }

@@ -4,6 +4,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 공통 엔진
 
+- ✔ D285 화면을 열어 확인한 것: 브라우저로 테이블을 열어 소서러의 시전 창·명령 바를 눌러 보고 세 가지를 고쳤다(없는 슬롯 레벨의 교환 버튼, 내성 없는 주문에 뜬 고양 주문, 신속 주문이 행동을 쓴 표시). 새 캡처 `scripts/capture-client-v4.mjs`가 그 흐름을 E2E 게이트에서 지킨다.
+
 - ✔ D268 주문 효과의 방어 데이터(`damageDefenses`, `armorClass`, `retaliation`, `preventsDeath`)를 엔진이 어디서도 읽지 않았다 — `bearerDefenses`가 전투원 방어·NPC AC에, 호스트가 화염 방패 반격과 죽음 방비에 쓴다.
 
 - ✔ D265 효과의 턴마다 유지 조건(격노)이 코드의 콘텐츠 키 `"feature:barbarian.rage"`로 박혀 있었다(§2 위반, 검사가 놓침). — 효과 계약 `effect.upkeep`, 면제 `effect.upkeep-waived`, 검사 패턴 `contractKeys` 상한 0.

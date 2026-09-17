@@ -146,6 +146,9 @@ export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRunt
     const pressable = Boolean(activation.resourceId || activation.points || activation.roll || activation.duration || activation.heal || activation.tempHp || activation.hitDie
       || contract?.entryPoints.some((entry) => entry.invocation === "manual" && entry.operations.some((operation) => operation.kind !== "adjudication.request")));
     const economy = featureEconomy(activation.economy);
-    return [{ feature, activation, pool, left, bonus: economy === "bonus", economy, pressable }];
+    // V4w (D285): a slot level this sheet has no slots of cannot be spent or handed back, so it is not offered.
+    const slotLevel = activation.slotLevel ?? activation.slotGain;
+    const hasSlot = slotLevel === undefined || (derived.spellSlots[slotLevel] ?? 0) > 0;
+    return [{ feature, activation, pool, left, bonus: economy === "bonus", economy, pressable: pressable && hasSlot }];
   });
 }

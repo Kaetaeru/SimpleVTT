@@ -964,7 +964,8 @@ export class TableHost {
         const restoreCaster = () => { restoreNpcUse?.(); if (casterBefore.kind === "character" && spent) this.undoOnCaster(casterBefore.id, casterBefore.runtime, spent); else if (casterBefore.kind === "npc" && resolution.concentration && !exec.repeat) { this.mark(caster, ["집중"], false); this.dropNpcConcentration({ entry: casterBefore }); } };
         if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
         else if (exec.repeat?.economy === "none") { /* R77 (D212): an area spell's roll when somebody walks in costs the caster nothing */ }
-        else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
+        // V4w (D285): 신속 주문 makes this one cast a bonus action instead of an action.
+        else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, meta?.bonusAction || exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
         // V3g (D261): an effect spent by the next cast (과부하).
         if (!exec.repeat) this.consumeOnUse(caster.entry.id, "cast");

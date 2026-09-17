@@ -642,7 +642,18 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (entry.kind === "character" && derived && forced?.kind !== "sustain") {
       const points = derived.resources.find((resource) => resource.id === "resource.sorcerer.sorcery-points");
       const left = points ? points.max - (currentRuntime().resourcesUsed[points.id] ?? 0) : 0;
-      const known = metamagicOptions(derived, catalog, characterScope(derived)).filter((option) => option.cost <= left);
+      // V4w (D285): a metamagic that needs something this cast has not got is not offered (내성 없는 주문에 고양 주문).
+      const has = (need: string | undefined) => {
+        if (!need) return true;
+        if (need === "save") return Boolean("saveAbility" in exec.primary && exec.primary.saveAbility);
+        if (need === "damage") return Boolean("damageType" in exec.primary && exec.primary.damageType);
+        if (need === "attack") return exec.primary.kind === "attack-damage";
+        if (need === "action") return exec.castingEconomy === "action";
+        if (need === "duration") return Boolean(exec.concentration) || Boolean("duration" in exec.primary && exec.primary.duration);
+        if (need === "range") return Boolean(exec.targeting.rangeFeet);
+        return true;
+      };
+      const known = metamagicOptions(derived, catalog, characterScope(derived)).filter((option) => option.cost <= left && has(option.needs));
       if (known.length) {
         const answer = await requestCastMethod({ name, title: `${name} — 메타매직 (마법 점수 ${left})`, options: [{ label: "쓰지 않음", method: "" }, ...known.map((option) => ({ label: `${option.name} (${option.cost}점)${option.note ? ` · ${option.note}` : ""}`, method: option.key }))] });
         if (answer === null) return;
