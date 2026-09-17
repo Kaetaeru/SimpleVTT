@@ -72,8 +72,8 @@ export const contractDurations = (catalog: { contractFor(key: string): CommonPla
  * Only entry points are read, never interceptors: a swing bought by a critical hit (대형 무기 달인's 베어 넘기기) is
  * earned at a moment, and R53's aftermath hands it over then. A menu entry would offer it all turn.
  */
-export function contractBonusActions(derived: { features: Array<{ id: string; name: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }) {
-  const out: Array<{ kind: string; source: string; attackScope?: string; /** V4p (D278): it costs no part of the turn. */ free?: boolean }> = [];
+export function contractBonusActions(derived: { features: Array<{ id: string; name: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }, scope?: Scope) {
+  const out: Array<{ kind: string; source: string; attackScope?: string; /** V4p (D278): it costs no part of the turn. */ free?: boolean; /** V4x (D286): how many swings it is worth (질풍 연타). */ count?: number }> = [];
   const seen = new Set<string>();
   for (const feature of derived.features) {
     const key = featureRuleKey(feature.id);
@@ -84,6 +84,8 @@ export function contractBonusActions(derived: { features: Array<{ id: string; na
     for (const entry of contract.entryPoints) {
       for (const operation of entry.operations) {
         if (operation.kind !== "economy.modify") continue;
+        // V4x (D286): a line gated on the level only counts when that gate holds (질풍 연타 2회 → 10레벨 3회).
+        if (scope && !live(operation, scope)) continue;
         const kind = economyAsAction(operation.bucket);
         if (kind && !out.some((item) => item.kind === kind)) out.push({ kind, source: feature.name });
         // R61 (D196): one more swing as a bonus action, narrowed to the weapons it covers.
@@ -91,7 +93,8 @@ export function contractBonusActions(derived: { features: Array<{ id: string; na
         if (weapons && !out.some((item) => item.attackScope === weapons && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: weapons });
         // V4p (D278): a swing that costs nothing of the turn (무리 파괴자) — the menu offers it without spending.
         const free = economyFreeAttack(operation.bucket);
-        if (free && !out.some((item) => item.attackScope === free && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: free, free: true });
+        const swings = Math.max(1, Number((operation.amount as { value?: number } | undefined)?.value ?? 1) || 1);
+        if (free && !out.some((item) => item.attackScope === free && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: free, free: true, ...(swings > 1 ? { count: swings } : {}) });
       }
     }
   }

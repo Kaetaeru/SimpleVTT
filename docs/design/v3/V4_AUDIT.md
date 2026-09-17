@@ -46,14 +46,14 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D263 open-hand.wholeness-of-body (6) — 고른 생물에게 피해 1d12. 자신 회복(무예 주사위+지혜)·지혜 수정치 횟수 풀 없음. — [data-fix]
 - ✔ D270 open-hand.quivering-palm (17) — 해방이 내성 없이 10d12 전부. 공격 행동의 공격 하나 대신. 대상 표식·하나만 제한 없음. — [data-fix + new-grammar]
 - ✔ D270 martial-arts (1) — 추가 행동 맨손 타격 없음. — [data-fix]
-- focus#flurry (2/10) — 2·3회 타격이 문구, 공격 경제 부여 없음. — [data-fix]
+- ✔ D286 focus#flurry (2/10) — 2·3회 타격이 문구, 공격 경제 부여 없음. — [data-fix]
 - ✔ D264 stunning-strike (5) — 무기 범위 없음(활에도), 성공 시 속도 절반·다음 공격 유리가 문구. — [data-fix + new-grammar]
 - ✔ D270 deflect-attacks (3) — 되돌리기(기 1, 민첩 내성, 무예 주사위×2+민첩)가 문구. — [new-grammar]
 - ✔ D265 superior-defense (18) — 기 3 소비·역장 외 저항 없음. — [data-fix]
 - ✔ D266 disciplined-survivor (14) — 실패한 내성 기 1로 재굴림 없음. — [data-fix]
 - ✔ D265 perfect-focus (15) — 수동 +4. 이니셔티브 때 4까지 채우기. — [new-grammar] "N까지 회복".
 - ✔ D270 self-restoration (10) — 세 상태를 한 번에 버튼. 턴 끝마다 하나. — [host-hook + picker]
-- open-hand.fleet-step (11) — 무료라는 문구가 틀림, 결제 중복. — [data-fix]
+- ✔ D286 open-hand.fleet-step (11) — 무료라는 문구가 틀림, 결제 중복. — [data-fix]
 - ✔ D264 open-hand.open-hand-technique (3) — 밀어내기 내성 굴림 없음, 교란의 기회 공격 불가가 문구, 넘어짐 1라운드. — [new-grammar]
 - ✔ D263 slow-fall (4) — DM 팔레트 손 작업 안내. — [button] 마지막 낙하 피해 감소 반응.
 
@@ -76,7 +76,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D265 superior-inspiration (18) — 수동 +2. 이니셔티브 때 2까지. — [data-fix + new-grammar]
 - countercharm (7) — 매혹·공포 내성 실패 시 반응 재굴림 계산 가능. — [host-hook]
 - words-of-creation (20) — 두 번째 대상. — [picker]
-- expertise (2/9) — 9레벨 두 번째 선택 확인 필요. — [data-fix?]
+- ✔ D286 (확인: 2레벨·9레벨 각각 2개, 9레벨에 4개 전문화) expertise (2/9) — 9레벨 두 번째 선택 확인 필요. — [data-fix?]
 - ✔ D263 font-of-inspiration (5) — 슬롯으로 영감 회복이 손 작업. — [data-fix] D263 슬롯 결제·풀 회복으로.
 
 ## 클레릭

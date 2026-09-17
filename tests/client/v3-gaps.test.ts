@@ -129,7 +129,9 @@ test("V3d: 몽크의 기 is three uses, each with its cost, economy and effect; 
   const use = (name: string) => { const feature = monk.features.find((item) => item.name === name)!; assert.ok(feature, monk.features.map((item) => item.name).join(", ")); return featureActivation(feature, monk)!; };
   const flurry = use("질풍 연타");
   assert.deepEqual([flurry.resourceId, flurry.economy, flurry.duration?.(monk).rounds], ["resource.monk.focus", "bonus-action", 1]);
-  assert.ok(flurry.note?.includes("3회"), flurry.note);
+  // V4x (D286): the unarmed strikes it buys are real swings on the menu now, not a sentence in the note.
+  const swings = (monk.bonusActions ?? []).find((item) => item.kind === "attack" && item.free);
+  assert.deepEqual([swings?.attackScope, swings?.count], ["unarmed", 3]);
   assert.equal(use("인내의 방어").tempHp?.(monk), "2d8");
   assert.equal(use("바람의 걸음").economy, "bonus-action");
   assert.equal(monk.features.find((item) => item.name === "몽크의 기")?.execution, "derived");

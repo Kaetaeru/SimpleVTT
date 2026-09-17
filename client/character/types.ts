@@ -336,7 +336,7 @@ export interface DerivedCharacter {
    * R59 (D194): official actions a contract said this character may take as a bonus action instead (예리한 정신's
    * 빠른 연구, 관찰력's 빠른 수색). The turn panel offers them in the 추가 행동 menu as well as the action one.
    */
-  bonusActions?: Array<{ kind: string; source: string; /** R61 (D196): for `attack`, the weapon filter the extra swing is limited to (`any`, `light`, `heavy` …). */ attackScope?: string; /** V4p (D278): the swing costs no part of the turn (무리 파괴자). */ free?: boolean }>;
+  bonusActions?: Array<{ kind: string; source: string; /** R61 (D196): for `attack`, the weapon filter the extra swing is limited to (`any`, `light`, `heavy` …). */ attackScope?: string; /** V4p (D278): the swing costs no part of the turn (무리 파괴자). */ free?: boolean; /** V4x (D286): how many swings it is worth (질풍 연타). */ count?: number }>;
   /**
    * R52 (D187): the riders this character's contracts let them declare before an attack roll. Carried on the sheet
    * for the same reason `featureContracts` is: a caller that forgets to ask the catalog would silently lose the rule.
