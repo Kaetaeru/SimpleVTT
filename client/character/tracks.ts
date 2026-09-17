@@ -421,7 +421,7 @@ function applyClassWide(ledger: Ledger, cls: ClassView, state: ClassState) {
     const max = rule.column ? numericColumn(row.columns[rule.column]) : Number(evaluate(rule.max, scope)) || 0;
     if (max <= 0) continue;
     const recovery = rule.recoveryFrom && level >= rule.recoveryFrom.level ? rule.recoveryFrom.recovery : rule.recovery;
-    ledger.addResource({ id: rule.id, label: rule.label, max, recovery: RECOVERY_KO[recovery] ?? recovery, source: cls.name, freeCastSpellId: rule.spell ? catalog.spellByName(rule.spell)?.id : undefined });
+    ledger.addResource({ id: rule.id, label: rule.label, max, recovery: RECOVERY_KO[recovery] ?? recovery, source: cls.name, freeCastSpellId: rule.spell ? catalog.spellByName(rule.spell)?.id : undefined, ...(typeof rule.freeCastMaxLevel === "number" ? { freeCastMaxLevel: rule.freeCastMaxLevel } : {}) });
   }
 
   applyClassSpellcasting(ledger, cls, state, row);

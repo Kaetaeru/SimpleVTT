@@ -36,6 +36,8 @@ export interface ClassResourceRule {
   subclassId?: string;
   /** English spell name this pool casts for free. */
   spell?: string;
+  /** V4p (D278): the pool pays for any prepared spell up to this level (신성 개입). */
+  freeCastMaxLevel?: number;
 }
 
 /** A list of class options known in growing numbers by class level (메타매직: 2 at 2, 3 at 10, 4 at 17). */

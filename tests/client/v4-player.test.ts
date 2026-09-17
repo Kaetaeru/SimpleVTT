@@ -659,3 +659,29 @@ test("V4o: 불굴의 힘 floors a Strength check, 원초적 지식 rolls five sk
   assert.deepEqual(offeredRiders(berserker.derived, axe, { moment: "pre-roll", effects }).map((rider) => rider.key), []);
   assert.deepEqual(offeredRiders(berserker.derived, axe, { moment: "on-hit", effects }).map((rider) => rider.key), ["barbarian.berserker.frenzy"]);
 });
+
+test("V4p: 최상급 치유 maximizes a contract's healing, 신성 개입 pays for a 5th-level spell, 무리 파괴자 is a swing that costs nothing (D278)", async () => {
+  const { castSpell } = await import("../../client/character/play");
+  const cat = catalog();
+
+  // 최상급 치유: the sheet's own healing use rolls its dice at maximum.
+  const cleric = build({ name: "클레릭", classes: "cleric", level: 17, abilities: { wis: 18 }, choices: { "class.2.subclass": ["dnd.srd521.subclass.cleric.life-domain"] } });
+  assert.equal(cleric.derived.healingMaximized, true);
+  const spark = tableOutcome(cleric.derived, cat, "cleric.channel-divinity#divine-spark-heal")!;
+  assert.equal(spark.party.healMaximized, true, JSON.stringify(spark.party));
+  const younger = build({ name: "16레벨 클레릭", classes: "cleric", level: 16, abilities: { wis: 18 } });
+  assert.notEqual(tableOutcome(younger.derived, cat, "cleric.channel-divinity#divine-spark-heal")?.party.healMaximized, true, "17레벨이 되기 전에는 최대값이 아니다");
+
+  // 신성 개입: the class pool pays for any prepared cleric spell of 5th level or lower.
+  const pool = cleric.derived.resources.find((resource) => resource.id === "resource.cleric.divine-intervention")!;
+  assert.equal(pool.freeCastMaxLevel, 5);
+  const cast = castSpell(initialRuntime(cleric.derived), cleric.derived, { id: "x", name: "5레벨 주문", level: 5 }, { kind: "resource", id: pool.id });
+  assert.ok(cast && cast.resourcesUsed[pool.id] === 1, "5레벨까지는 그 풀로");
+  assert.equal(castSpell(initialRuntime(cleric.derived), cleric.derived, { id: "y", name: "6레벨 주문", level: 6 }, { kind: "resource", id: pool.id }), null, "6레벨은 아니다");
+
+  // 무리 파괴자: the extra swing is offered and costs no part of the turn.
+  const ranger = build({ name: "레인저", classes: "ranger", level: 5, choices: { "class.2.subclass": ["dnd.srd521.subclass.ranger.hunter"], "class.2.subclass.hunters-prey": ["horde-breaker"] } });
+  const swing = (ranger.derived.bonusActions ?? []).find((item) => item.kind === "attack" && item.free);
+  assert.ok(swing, JSON.stringify(ranger.derived.bonusActions));
+  assert.equal(swing!.attackScope, "weapon");
+});

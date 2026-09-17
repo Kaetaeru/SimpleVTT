@@ -513,6 +513,8 @@ export const economyAsAction = (bucket: string) => /^bonus-action\.as:(.+)$/.exe
  * bonus action. The turn panel offers it as a real attack instead of a sentence about one; `any` means any weapon.
  */
 export const economyBonusAttack = (bucket: string) => /^bonus-action\.attack:(.+)$/.exec(bucket)?.[1];
+/** V4p (D278): `free.attack:<scope>` — one more swing that costs no part of the turn (무리 파괴자). */
+export const economyFreeAttack = (bucket: string) => /^free\.attack:(.+)$/.exec(bucket)?.[1];
 
 export function economyBucketOf(bucket: string): "action" | "bonus" | "reaction" | null {
   const head = bucket.split(".")[0];

@@ -600,8 +600,9 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     ...(derived?.bonusActions ?? []).filter((item) => item.kind === "attack").flatMap((item) => {
       const filter = item.attackScope && item.attackScope !== "any" ? attackScopeFilter(item.attackScope) : undefined;
       return (derived?.attacks ?? []).filter((attack) => attack.itemId && (!filter || filter(attack))).map((attack) => ({
-        key: `bonus-attack:${item.source}:${attack.id}`, label: `⚔ ${attack.name}`, hint: `${item.source} · 추가 행동`,
-        onSelect: () => { void attackWith({ source: "weapon", attackId: attack.id }); c.spendEconomy(me, "bonus"); },
+        key: `bonus-attack:${item.source}:${attack.id}`, label: `⚔ ${attack.name}`, hint: `${item.source} · ${item.free ? "턴 소모 없음" : "추가 행동"}`,
+        // V4p (D278): 무리 파괴자's swing costs nothing of the turn, so nothing is spent for it.
+        onSelect: () => { void attackWith({ source: "weapon", attackId: attack.id }); if (!item.free) c.spendEconomy(me, "bonus"); },
       }));
     }),
     { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },

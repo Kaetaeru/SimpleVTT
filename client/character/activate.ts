@@ -89,7 +89,15 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
     extras.form = picked;
   }
   const lines: string[] = [];
-  if (activation.heal) extras.healRoll = await rollTotal(rollDice, { label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" }, lines);
+  if (activation.heal) {
+    const formula = activation.heal(derived);
+    // V4p (D278): 최상급 치유 — the dice of a healing this sheet rolls come up at their maximum, contract or spell.
+    const parsed = derived.healingMaximized ? parseFormula(formula) : null;
+    if (parsed) {
+      extras.healRoll = parsed.dice.reduce((sum, group) => sum + group.count * group.sides, 0) + parsed.modifier;
+      lines.push(`${feature.name}: ${formula} 최대값 = ${extras.healRoll}`);
+    } else extras.healRoll = await rollTotal(rollDice, { label: feature.name, formula, note: "회복", kind: "custom" }, lines);
+  }
   if (activation.tempHp) extras.tempRoll = await rollTotal(rollDice, { label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" }, lines);
   // V4a (D263): the long rests a pool stays spent for, rolled now.
   const lockRests = activation.lockout ? await rollTotal(rollDice, { label: `${feature.name} — 잠기는 긴 휴식 수`, formula: activation.lockout.dice, kind: "custom" }, lines) : undefined;

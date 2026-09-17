@@ -6,7 +6,7 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { resourceIdOf, ATTACK_INVOCATIONS, GAIN_INVOCATION, LONG_REST_INVOCATION, TURN_END_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { economyFreeAttack, resourceIdOf, ATTACK_INVOCATIONS, GAIN_INVOCATION, LONG_REST_INVOCATION, TURN_END_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
@@ -73,7 +73,7 @@ export const contractDurations = (catalog: { contractFor(key: string): CommonPla
  * earned at a moment, and R53's aftermath hands it over then. A menu entry would offer it all turn.
  */
 export function contractBonusActions(derived: { features: Array<{ id: string; name: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }) {
-  const out: Array<{ kind: string; source: string; attackScope?: string }> = [];
+  const out: Array<{ kind: string; source: string; attackScope?: string; /** V4p (D278): it costs no part of the turn. */ free?: boolean }> = [];
   const seen = new Set<string>();
   for (const feature of derived.features) {
     const key = featureRuleKey(feature.id);
@@ -89,6 +89,9 @@ export function contractBonusActions(derived: { features: Array<{ id: string; na
         // R61 (D196): one more swing as a bonus action, narrowed to the weapons it covers.
         const weapons = economyBonusAttack(operation.bucket);
         if (weapons && !out.some((item) => item.attackScope === weapons && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: weapons });
+        // V4p (D278): a swing that costs nothing of the turn (무리 파괴자) — the menu offers it without spending.
+        const free = economyFreeAttack(operation.bucket);
+        if (free && !out.some((item) => item.attackScope === free && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: free, free: true });
       }
     }
   }

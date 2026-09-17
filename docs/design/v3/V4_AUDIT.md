@@ -15,7 +15,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D263 사용의 대상 피해(`damage.apply` target/area)가 굴림만 하고 HP를 깎지 않았다. — 표의 `strikes`, 주문 해석기로 내성·저항·되돌리기.
 - ✔ D264 표의 `condition.apply`가 `save`를 무시한다(`act.contract`). — [host-hook] 대상마다 내성.
 - ✔ D264 대상 표식 효과(다음 내성 불리, 다른 이의 다음 명중 +5, 기회 공격 불가, 속도 감소, 다음 명중 유리)가 없다. — [new-grammar]
-- 계약 치유에 최상급 치유(최대값)가 적용되지 않는다. — [host-hook]
+- ✔ D278 계약 치유에 최상급 치유(최대값)가 적용되지 않는다. — [host-hook]
 - (D266: `hp.zero.hold` ✔ 불굴의 격노·끈질긴 인내, 보호자의 선물·죽음 방비 남음) 전투 중 0 HP가 되는 순간의 가로채기(무모한 격노, 보호자의 선물)가 없다. — [new-grammar + host-hook]
 - ✔ D273 야생 변신 형태(능력치 덮어쓰기)가 없다. — [new-grammar + picker]
 - ✔ D272 슬롯↔점수 변환(마법의 원천)이 없다. — [new-grammar + picker]
@@ -79,10 +79,10 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 클레릭
 - ✔ D263 channel-divinity#divine-spark-heal — 치유가 사용자에게도 들어감(공통 항목).
-- life-domain.supreme-healing (17) — 계약 치유에 최대값 없음. — [host-hook]
+- ✔ D278 life-domain.supreme-healing (17) — 계약 치유에 최대값 없음. — [host-hook]
 - ✔ D264 channel-divinity#turn-undead (2) — 지혜 내성·공포·행동불능이 문구, 소각 피해에 내성 조건 없음, 피해 받으면 끝 없음. — [host-hook + data-fix]
 - ✔ D263 channel-divinity#divine-spark-harm (2) — 건강 내성 절반이 문구. — [data-fix] D263 `save`.
-- divine-intervention (10) — 5레벨 이하 클레릭 주문 무료 시전 선택 없음. — [picker]
+- ✔ D278 divine-intervention (10) — 5레벨 이하 클레릭 주문 무료 시전 선택 없음. — [picker]
 - ✔ D263 greater-divine-intervention (20) — 2d4 긴 휴식 잠금. — [data-fix] D263 `resource.lockout`.
 - improved-blessed-strikes#potent (14) — 선택지 없어도 표시, 소마법 피해 뒤 제시 아님. — [data-fix + host-hook]
 - ✔ D263 life-domain.preserve-life (3) — 회복 유형 피해, 행동 결제 없음, 절반 최대 제한 없음. — [data-fix + picker]
@@ -94,8 +94,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D264 abjure-foes (9) — 행동 결제·지혜 내성·공포·대상 수 없음. — [data-fix + host-hook]
 - channel-divinity (3) — "수동 적용" 안내, 신성 감지 계약 없음. — [button]
 - ✔ D265 lay-on-hands (1) — 남에게 쓰면 점수만 쓰고 치유 안 됨, 중독 해제 5점이 문구. — [data-fix + host-hook]
-- oath-of-devotion.holy-nimbus (20) — 빈 효과. — [data-fix + host-hook]
-- restoring-touch (14) — 안수 한 번에 여러 상태 해제가 아님. — [picker]
+- ✔ D278 oath-of-devotion.holy-nimbus (20) — 빈 효과. — [data-fix + host-hook]
+- ✔ D278 restoring-touch (14) — 안수 한 번에 여러 상태 해제가 아님. — [picker]
 - ✔ D267 (D265: 자신 면역 ✔, 아군 남음) aura-of-courage / aura-of-devotion (10/7) — 해제 버튼, 면역이어야. 아군 쪽 오라. — [data-fix + button]
 - ✔ D267 aura-of-protection — 아군 내성 보너스 손 작업. — [button] "오라 안" 표식.
 - ✔ D267 aura-expansion (18) — 오라 반경. — [DM-label] 오라 안 버튼과 함께.
@@ -104,7 +104,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 레인저
 - ✔ D267 hunter.superior-hunters-defense (15) — 13개 수동 버튼, 피해 받음 반응 창이어야, 맞은 피해 절반 손 작업. — [data-fix + host-hook]
-- hunter.hunters-prey 무리 파괴자 (3) — 계약 없음. — [button]
+- ✔ D278 hunter.hunters-prey 무리 파괴자 (3) — 계약 없음. — [button]
 - (D265: 추가 행동·횟수·투명 ✔, 투명 자동 해제 남음) natures-veil (14) — 추가 행동·투명 없음. — [data-fix]
 - ✔ D265 tireless (10) — 임시 HP에 지혜 수정치 빠짐, 짧은 휴식 탈진 −1 없음. — [data-fix + new-grammar]
 - ✔ D263 hunter.superior-hunters-prey (11) — 표식 주사위 크기. — [data-fix] D263 `diceSides`.
