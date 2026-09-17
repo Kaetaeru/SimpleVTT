@@ -403,7 +403,9 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
     case "resource": {
       const resource = derived.resources.find((item) => item.id === method.id);
       const used = next.resourcesUsed[method.id] ?? 0;
-      if (!resource || used >= resource.max) return null;
+      if (!resource || (!resource.atWill && used >= resource.max)) return null;
+      // V3g (D261): an at-will free cast spends nothing.
+      if (resource.atWill) { how = `${resource.label} (무제한)`; break; }
       next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + 1 } };
       how = `${resource.label}, 남은 ${resource.max - used - 1}/${resource.max}`;
       break;

@@ -266,7 +266,7 @@ function finalize(ledger: Ledger): DerivedCharacter {
       classId: entry.classId, className: entry.className, ability: entry.ability, saveDc: 8 + pb + abilityMod, attackBonus: pb + abilityMod,
       saveDcTerms: [{ label: "기본", value: 8 }, { label: "숙련 보너스", value: pb }, { label: `${ABILITY_KO[entry.ability]} 수정치`, value: abilityMod }],
       attackTerms: [{ label: "숙련 보너스", value: pb }, { label: `${ABILITY_KO[entry.ability]} 수정치`, value: abilityMod }],
-      cantrips, prepared: [...entry.prepared], alwaysPrepared: [...entry.alwaysPrepared], spellbook: entry.spellbook ? [...entry.spellbook] : undefined,
+      cantrips, prepared: [...entry.prepared], alwaysPrepared: [...entry.alwaysPrepared], spellbook: entry.spellbook ? [...entry.spellbook] : undefined, ...(entry.ritualFromSpellbook ? { ritualFromSpellbook: true } : {}),
       preparedMax: entry.preparedMax, cantripsMax: entry.cantripsMax,
     });
   }

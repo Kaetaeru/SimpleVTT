@@ -63,6 +63,7 @@
 - `saving-throw.proficiency` { abilities | "all" }
 - `choice.skills` { count, from } · `choice.expertise` { count, from } · `choice.languages` { count } · `choice.spells` { count, list, level, prepared | alwaysPrepared, freeCast }
 - `choice.class-option` { list } · `choice.fighting-style`
+- `choice.spell` { resourceId, recovery, atWill } · `grant.resource` { id, recovery, spell } · `grant.ritual-casting` · `grant.spellbook-picks` { school } (D261)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

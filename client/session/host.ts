@@ -914,6 +914,8 @@ export class TableHost {
         else if (exec.repeat?.economy === "none") { /* R77 (D212): an area spell's roll when somebody walks in costs the caster nothing */ }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
+        // V3g (D261): an effect spent by the next cast (과부하).
+        if (!exec.repeat) this.consumeOnUse(caster.entry.id, "cast");
         if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → ${prepared.spec.name} 시전` }); this.releaseHeld(heldPrompt.id, true, { reduce: 0, label: `${prepared.spec.name} 반응` }); }
         if (counterPrompt) {
           // 2024: the caster of the held spell makes a Constitution save against the counterspeller's save DC.
@@ -1626,7 +1628,7 @@ export class TableHost {
   }
 
   /** R90 (D225): take off the effects that end once used — 유도 화살 by the attack against it, 잔혹한 조롱 by the attack it hindered. */
-  private consumeOnUse(entryId: string, on: "attack" | "attacked") {
+  private consumeOnUse(entryId: string, on: "attack" | "attacked" | "cast") {
     const live = this.journalEntries.get(entryId);
     if (!live || live.kind === "handout") return;
     const keys = [...(bearerRolls(live.runtime.effects, false).consumable ?? []).filter((item) => item.on === on).map((item) => item.key), ...(live.runtime.effects ?? []).filter((effect) => effect.consumeOn === on).map((effect) => effect.key)];

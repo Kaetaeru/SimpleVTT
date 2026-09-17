@@ -48,7 +48,7 @@ export const PROPERTIES = [
   // R95 (D230): 회피술 on a sheet, and 기묘한 회피 inside a reaction window.
   "saving-throw.evasion", "damage-taken.halve",
   // R96 (D231): 강력한 주문 시전, 생명의 제자, 최상급 치유, 포착 불가.
-  "spell.cantrip-damage.ability-modifier", "healing.spell-slot-bonus", "healing.maximize", "attack-roll.against-me.no-advantage", "initiative.advantage",
+  "spell.cantrip-damage.ability-modifier", "healing.spell-slot-bonus", "healing.maximize", "spell.damage.maximize", "attack-roll.against-me.no-advantage", "initiative.advantage",
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
@@ -159,6 +159,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "saving-throw.minimum-score": application.minimumScoreRolls = [...(application.minimumScoreRolls ?? []), ...((operation.abilities ?? []) as AbilityKey[])]; break;
       case "spell.school-damage.ability-modifier": if (operation.school) application.schoolDamageModifier = [...(application.schoolDamageModifier ?? []), { school: operation.school, classSlug: text(operation, scope) ?? "" }]; break;
       case "healing.maximize": application.healingMaximized = true; break;
+      // V3g (D261): damage dice of spells up to this level count as their maximum (과부하).
+      case "spell.damage.maximize": application.spellDamageMaximizedUpTo = Math.max(application.spellDamageMaximizedUpTo ?? 0, number(operation, scope) ?? 0); break;
       case "attack-roll.against-me.no-advantage": application.elusive = true; break;
       // R61 (D196): advantage on a check or a save, narrowed to the abilities the contract named.
       case "ability-check.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], ...(operation.abilities?.length ? { abilities: operation.abilities as AbilityKey[] } : {}) }]; break;

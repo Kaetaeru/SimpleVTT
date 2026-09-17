@@ -6,6 +6,7 @@
 import type { ClassLevelRow, ClassView } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { COLUMN, numericColumn } from "../rules/classes";
+import { evaluate } from "../rules/contract";
 import { fullCasterSlots, multiclassCasterLevel, pactMagicSlots } from "../rules/tables";
 import { spellOption, spellOptions } from "./choices";
 import type { ClassState, Ledger, SpellcastingAccumulator } from "./ledger";
@@ -77,6 +78,13 @@ export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: Cl
     entry.spellbook = new Set();
     const picked = ledger.ask({ ...ask, id: `class.${first}.spellbook`, label: `주문서 (${spellbookMax}개)`, description: `1레벨에 ${cls.spells.spellbook}개${perLevel ? `, 이후 레벨마다 ${perLevel}개씩` : ""} 적습니다. 발견한 주문은 별도로 필사합니다.`, count: spellbookMax, options: spellOptions(catalog, lists, levels) });
     for (const id of picked) entry.spellbook.add(id);
+    // V3g (D261): the school picks a feature adds, free, up to the highest spell level this class can cast.
+    for (const picks of entry.schoolPicks ?? []) {
+      const count = Number(evaluate(picks.count as Parameters<typeof evaluate>[0], (ref) => (ref === "class.level" ? state.level : undefined))) || 0;
+      if (count <= 0) continue;
+      const chosen = ledger.ask({ ...ask, id: `class.${first}.${picks.id}`, label: `${picks.label} (${count}개)`, description: `주문서에 무료로 적는 ${picks.school} 주문`, count, options: spellOptions(catalog, lists, levels, (spell) => spell.school === picks.school, (spell) => (entry.spellbook!.has(spell.id) ? "이미 주문서에 있음" : undefined)) });
+      for (const id of chosen) entry.spellbook.add(id);
+    }
     if (entry.preparedMax > 0) {
       const options = picked.map((id) => catalog.spellById(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)).map((spell) => spellOption(spell));
       const prepared = ledger.ask({ ...ask, id: `class.${first}.spells`, label: `준비 주문 (주문서에서 ${entry.preparedMax}개)`, count: entry.preparedMax, minimum: 0, options });

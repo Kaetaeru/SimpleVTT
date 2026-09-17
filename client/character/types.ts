@@ -115,7 +115,7 @@ export interface ActiveEffect {
   /** R85 (D220): the turn that counts its rounds — the caster ("until the end of your next turn") or the bearer. */
   anchor?: { who: "source" | "bearer"; boundary: "start" | "end" };
   /** V3e (D259): the effect ends when its bearer next attacks (안정된 조준). */
-  consumeOn?: "attack";
+  consumeOn?: "attack" | "cast";
   /** R85 (D220): conditions the effect put on the bearer, which come off with it. */
   conditions?: string[];
   /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */
@@ -170,6 +170,8 @@ export interface DerivedSpellcasting {
   prepared: string[];
   alwaysPrepared: string[];
   spellbook?: string[];
+  /** V3g (D261): ritual spells in the spellbook are cast as rituals without being prepared (의식 숙련). */
+  ritualFromSpellbook?: boolean;
   preparedMax: number;
   cantripsMax: number;
 }
@@ -185,6 +187,8 @@ export interface DerivedResource {
   source: string;
   /** Spell this pool casts for free (Paladin's Smite, Find Steed, Mystic Arcanum, species/feat spells): the spell row offers it. */
   freeCastSpellId?: string;
+  /** V3g (D261): the free cast is never used up (주문 숙련). */
+  atWill?: boolean;
 }
 
 export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean }
@@ -254,6 +258,8 @@ export interface DerivedCharacter {
   cantripModifierClasses?: string[];
   healingSlotBonus?: boolean;
   healingMaximized?: boolean;
+  /** V3g (D261): damage dice of spells up to this level count as their maximum (과부하, while its effect runs). */
+  spellDamageMaximizedUpTo?: number;
   elusive?: boolean;
   /** H2 (D239): see EffectApplication. */
   markedSpellDice?: Record<string, number>;

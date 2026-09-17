@@ -257,7 +257,8 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
         const picked = ledger.askOne({ ...ask, id, label, ...description, options: spellOptions(catalog, [cls.id], [amount]) });
         if (!picked) break;
         classSpellEntry(ledger, cls).alwaysPrepared.add(picked);
-        if (p.resourceId) ledger.addResource({ id: String(p.resourceId), label: `${label} (${catalog.spellById(picked)?.name ?? picked}) 무료 시전`, max: 1, recovery: String(p.recovery ?? "긴 휴식"), source: cls.name, freeCastSpellId: picked });
+        // V3g (D261): `atWill` — the free cast is never used up (주문 숙련).
+        if (p.resourceId) ledger.addResource({ id: String(p.resourceId), label: `${label} (${catalog.spellById(picked)?.name ?? picked}) 무료 시전`, max: 1, recovery: p.atWill === true ? "무제한" : String(p.recovery ?? "긴 휴식"), source: cls.name, freeCastSpellId: picked, ...(p.atWill === true ? { atWill: true } : {}) });
         break;
       }
       case "choice.spells": {
@@ -283,7 +284,9 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
         // H7a (D251): a pool the feature grants, its size an expression (숙련 보너스), from a level on.
         if (p.minLevel !== undefined && ledger.level < Number(p.minLevel)) break;
         const max = Number(evaluate(operation.value, scope)) || 0;
-        if (max > 0) ledger.addResource({ id: String(p.id ?? `resource.${featureRuleKey(featureId)}`), label, max, recovery: RECOVERY_KO[String(p.recovery ?? "long-rest")] ?? String(p.recovery ?? "긴 휴식"), source: sourceLabel });
+        // V3g (D261): `spell` — the pool casts that spell free (용 동료).
+        const freeCast = p.spell ? catalog.spellById(String(p.spell))?.id : undefined;
+        if (max > 0) ledger.addResource({ id: String(p.id ?? `resource.${featureRuleKey(featureId)}`), label, max, recovery: RECOVERY_KO[String(p.recovery ?? "long-rest")] ?? String(p.recovery ?? "긴 휴식"), source: sourceLabel, ...(freeCast ? { freeCastSpellId: freeCast } : {}) });
         break;
       }
       case "grant.half-proficiency": ledger.halfProficiency = label; break;
@@ -293,6 +296,10 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
       case "grant.skill-ability-bonus": for (const skill of strings(p.skills)) ledger.skillAbilityBonuses.push({ skill, ability: String(p.ability ?? "wis") as AbilityKey, min: Number(p.min ?? 0), label }); break;
       case "grant.resistance": for (const type of strings(p.types)) ledger.resistances.add(type); break;
       case "grant.condition-immunity": for (const condition of strings(p.conditions)) ledger.conditionImmunities.add(condition); break;
+      // V3g (D261): ritual spells in the spellbook cast as rituals without being prepared (의식 숙련).
+      case "grant.ritual-casting": classSpellEntry(ledger, cls).ritualFromSpellbook = true; break;
+      // V3g (D261): extra spellbook picks of one school; the count is worked out with the final class level (방출술 전문가).
+      case "grant.spellbook-picks": { const entry = classSpellEntry(ledger, cls); entry.schoolPicks = [...(entry.schoolPicks ?? []), { id: String(p.id ?? "school-picks"), label, school: String(p.school ?? ""), count: operation.value }]; break; }
       case "grant.spell-lists":
       default: ledger.warnings.push(`${featureName}: 알 수 없는 획득 연산 ${operation.property}`);
     }

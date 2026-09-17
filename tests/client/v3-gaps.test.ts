@@ -212,3 +212,65 @@ test("V3f: 전술 통달, 전술적 이동, 신성 변환의 사용, 회복의 �
   assert.ok(resolveAttack(attacker, target, { ...spec, opportunity: true }, { dice: diceFrom(() => 0.5) }).reasons.some((reason) => reason.includes("기회 공격")));
   assert.ok(!resolveAttack(attacker, target, spec, { dice: diceFrom(() => 0.5) }).reasons.some((reason) => reason.includes("기회 공격")));
 });
+
+test("V3g: 주문 숙련 casts at will, 의식 숙련 casts spellbook rituals, 방출술 전문가 adds school picks, 과부하 maximizes the next spell (D261)", async () => {
+  const { castSpell } = await import("../../client/character/play");
+  const { castableSpells, pcSpell } = await import("../../client/rules/spellcast");
+  const { castOptions } = await import("../../client/screens/SheetView");
+  const { activateFeature } = await import("../../client/character/activate");
+  const { pcAttackSpec } = await import("../../client/rules/attackSpec");
+  const cat = catalog();
+  // 주문 숙련: the free cast never runs out.
+  const sage = build({ name: "위저드", classes: "wizard", level: 18 }).derived;
+  const mastery = sage.resources.find((resource) => resource.atWill)!;
+  assert.ok(mastery?.freeCastSpellId, JSON.stringify(sage.resources));
+  const spell = cat.spellById(mastery.freeCastSpellId!)!;
+  let runtime: ReturnType<typeof initialRuntime> | null = initialRuntime(sage);
+  for (let cast = 0; cast < 3; cast += 1) runtime = castSpell(runtime!, sage, spell, { kind: "resource", id: mastery.id });
+  assert.equal(runtime?.resourcesUsed[mastery.id] ?? 0, 0);
+  // 방출술 전문가: an ask for free evocation spells, 2 + 1 for every two levels past 3.
+  const savant = sage.choices.find((choice) => choice.id.endsWith(".evocation-savant"))!;
+  assert.equal(savant.count, 9);
+  assert.ok(savant.options.every((option) => cat.spellById(option.id)?.school === "evocation"));
+  // 의식 숙련: a ritual in the book that is not prepared is castable, only as a ritual.
+  const wizard = build({ name: "위저드", classes: "wizard", level: 14 });
+  const list = wizard.derived.spellcasting.find((entry) => entry.source === "class")!;
+  const ritual = list.spellbook!.find((id) => cat.spellById(id)?.ritual && !list.prepared.includes(id))!;
+  assert.ok(ritual && castableSpells(wizard.derived).some((item) => item === ritual || (item as { id?: string }).id === ritual));
+  const entry = newJournalCharacter("c", "p", wizard.source, initialRuntime(wizard.derived));
+  assert.ok(pcSpell(entry, wizard.derived, cat, ritual, { kind: "ritual" }));
+  assert.deepEqual(castOptions(cat.spellById(ritual)!, wizard.derived, entry.runtime, true).map((option) => option.method.kind), ["ritual"]);
+
+  // 과부하 at the table: magic missile's darts count as 5 each, and the effect is spent by the cast.
+  const t = await soloTable("wizard", 14, {}, () => 0, (base) => ({ ...base, effects: [{ key: "feature:wizard.evoker.overchannel", name: "과부하", source: "feature", duration: "다음 주문까지", concentration: false, elapsed: 0, startedAt: "", consumeOn: "cast" }] }));
+  const parsed = parseCustomMonster(JSON.stringify({ name: "허수아비", ac: 10, hp: 60, abilities: { str: 10, dex: 10, con: 10, int: 1, wis: 1, cha: 1 }, actions: [] }));
+  const npc = newJournalNpc(t.pc.campaignId, "dm", (parsed as { monster: Parameters<typeof newJournalNpc>[2] }).monster);
+  t.dm.send({ type: "journal.put", entry: npc });
+  await tick();
+  const npcToken = tokenForNpc(npc);
+  t.dm.send({ type: "token.put", pageId: t.scene.id, token: npcToken });
+  await tick();
+  t.dm.send({ type: "act.cast", caster: t.ref, spellId: "dnd.srd521.spell.magic-missile", targets: [{ entryId: npc.id, pageId: t.scene.id, tokenId: npcToken.id }], method: { kind: "slot", level: 1 } });
+  await tick();
+  // At d4 = 1 the darts would deal 6; maximized they deal 15.
+  assert.ok(t.host.archive.some((message) => message.content?.includes("피해 15")), JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+  assert.ok(!t.sheet().runtime.effects.some((effect) => effect.key === "feature:wizard.evoker.overchannel"), "spent by the cast");
+
+  // 원초의 일격: the chosen element rides a weapon hit, 2d8 at druid 15.
+  const druid = build({ name: "드루이드", classes: "druid", level: 15 }, { "class.6.elemental-fury": ["druid.elemental-fury.primal-strike"] });
+  const druidEntry = newJournalCharacter("c", "p", druid.source, initialRuntime(druid.derived));
+  const staff = druid.derived.attacks.find((attack) => attack.itemId) ?? druid.derived.attacks[0];
+  const strike = pcAttackSpec(druidEntry, druid.derived, staff.id, { contracts: ["druid.elemental-fury.primal-strike#fire"] }, cat)!.spec;
+  assert.ok(strike.riders?.some((part) => part.formula === "2d8"), JSON.stringify(strike.riders));
+
+  // 마귀의 회복력: a new type replaces the last one.
+  const fiend = build({ name: "워락", classes: "warlock", level: 10 }, { "class.2.subclass": ["dnd.srd521.subclass.warlock.fiend-patron"] });
+  let sheet = initialRuntime(fiend.derived);
+  const deps = { source: fiend.source, catalog: cat, derived: fiend.derived, get runtime() { return sheet; }, rollDice: async (spec: { label: string; formula: string }) => ({ id: "r", at: "", label: spec.label, formula: spec.formula, total: 0, dice: [], modifier: 0 }), save: (update: (current: typeof sheet) => typeof sheet) => { sheet = update(sheet); } };
+  for (const name of ["마귀의 회복력: 화염", "마귀의 회복력: 냉기"]) {
+    const feature = fiend.derived.features.find((item) => item.name === name)!;
+    assert.ok(feature, fiend.derived.features.map((item) => item.name).join(", "));
+    assert.equal(await activateFeature(feature, deps as Parameters<typeof activateFeature>[1]), "done");
+  }
+  assert.deepEqual(sheet.effects.map((effect) => effect.name), ["마귀의 회복력: 냉기"]);
+});

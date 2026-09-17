@@ -44,6 +44,7 @@ export interface EffectApplication {
   healingSlotBonus?: boolean;
   /** R96 (D231): healing spell dice count as their maximum (최상급 치유). */
   healingMaximized?: boolean;
+  spellDamageMaximizedUpTo?: number;
   /** R96 (D231): attacks against this character cannot have advantage unless it is incapacitated (포착 불가). */
   elusive?: boolean;
   /** H2 (D239): per marking spell id, the die its extra damage rolls (적 학살자); the marking spells whose target this character attacks with advantage (정밀한 사냥꾼); the spells whose concentration damage never breaks (끈질긴 사냥꾼). */
@@ -328,6 +329,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     // R43 (D183): 향상된 치명타 lowers the die that counts as a critical hit; the lowest wins if two effects say so.
     if (application.cantripModifierClasses?.length) { next = { ...next, cantripModifierClasses: [...new Set([...(next.cantripModifierClasses ?? []), ...application.cantripModifierClasses])] }; notes.push("소마법 피해에 주문 능력 수정치"); }
     if (application.healingSlotBonus) { next = { ...next, healingSlotBonus: true }; notes.push("슬롯 치유 주문 +2+슬롯 레벨"); }
+    if (application.spellDamageMaximizedUpTo) { next = { ...next, spellDamageMaximizedUpTo: Math.max(next.spellDamageMaximizedUpTo ?? 0, application.spellDamageMaximizedUpTo) }; notes.push(`${application.spellDamageMaximizedUpTo}레벨 이하 주문 피해 최대값`); }
     if (application.healingMaximized) { next = { ...next, healingMaximized: true }; notes.push("치유 주사위 최대값"); }
     if (application.markedSpellDice) { next = { ...next, markedSpellDice: { ...(next.markedSpellDice ?? {}), ...application.markedSpellDice } }; notes.push(`표식 추가 피해 d${Object.values(application.markedSpellDice).join("/d")}`); }
     if (application.markedSpellAdvantage?.length) { next = { ...next, markedSpellAdvantage: [...new Set([...(next.markedSpellAdvantage ?? []), ...application.markedSpellAdvantage])] }; notes.push("표식한 대상 공격에 유리"); }

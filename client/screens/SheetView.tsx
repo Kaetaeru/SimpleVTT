@@ -257,6 +257,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
                   {entry.cantrips.length ? <div className="cl-spell-level"><h4>소마법 {entry.cantripsMax ? `(${entry.cantrips.length}/${entry.cantripsMax})` : ""}</h4>{live ? spellRows(entry.cantrips) : <div className="cl-small">{entry.cantrips.map(spellName).join(", ")}</div>}</div> : null}
                   {entry.alwaysPrepared.length ? <div className="cl-spell-level"><h4>항상 준비</h4>{live ? spellRows(entry.alwaysPrepared) : byLevel(entry.alwaysPrepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
                   {entry.preparedMax ? <div className="cl-spell-level"><h4>준비 주문 ({entry.prepared.length}/{entry.preparedMax})</h4>{live ? spellRows(entry.prepared) : byLevel(entry.prepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
+                  {entry.ritualFromSpellbook && live && entry.spellbook ? (() => { const rituals = entry.spellbook.filter((id) => catalog.spellById(id)?.ritual && !entry.prepared.includes(id) && !entry.alwaysPrepared.includes(id)); return rituals.length ? <div className="cl-spell-level"><h4>의식 (주문서에서, 준비 없이)</h4><SpellRows ids={rituals} catalog={catalog} derived={derived} runtime={runtime} actions={actions} casting={casting} setCasting={setCasting} ritualOnly /></div> : null; })() : null}
                   {entry.spellbook ? <div className="cl-spell-level"><h4>주문서 ({entry.spellbook.length}) <span className="cl-quiet">— 준비한 주문만 시전</span></h4>{byLevel(entry.spellbook).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
                 </div>
               ))}
@@ -313,8 +314,10 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
 }
 
 /** Ways to pay for a spell right now: slots at or above its level with uses left, the pact slot, a free-cast pool, ritual. */
-export function castOptions(spell: SpellView, derived: DerivedCharacter, runtime: CharacterRuntime | undefined): Array<{ label: string; method: CastMethod }> {
+export function castOptions(spell: SpellView, derived: DerivedCharacter, runtime: CharacterRuntime | undefined, ritualOnly = false): Array<{ label: string; method: CastMethod }> {
   if (spell.level === 0) return [{ label: "소마법", method: { kind: "cantrip" } }];
+  // V3g (D261): a spellbook ritual that is not prepared is cast only as a ritual (의식 숙련).
+  if (ritualOnly) return spell.ritual ? [{ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } }] : [];
   const options: Array<{ label: string; method: CastMethod }> = [];
   for (const [level, count] of Object.entries(derived.spellSlots).map(([key, value]) => [Number(key), value] as const).sort((a, b) => a[0] - b[0])) {
     const left = count - (runtime?.slotsUsed[level] ?? 0);
@@ -323,14 +326,14 @@ export function castOptions(spell: SpellView, derived: DerivedCharacter, runtime
   if (derived.pactMagic && derived.pactMagic.level >= spell.level && derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0) > 0) options.push({ label: `계약 슬롯 ${derived.pactMagic.level}레벨 (${derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0)})`, method: { kind: "pact" } });
   for (const resource of derived.resources) {
     const left = resource.max - (runtime?.resourcesUsed[resource.id] ?? 0);
-    if (left > 0 && resource.freeCastSpellId === spell.id) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
+    if ((left > 0 || resource.atWill) && resource.freeCastSpellId === spell.id) options.push({ label: `${resource.label} (${resource.atWill ? "무제한" : left})`, method: { kind: "resource", id: resource.id } });
   }
   if (spell.ritual) options.push({ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } });
   return options;
 }
 
 /** Spell rows grouped by level with a "시전" button (or a picker when several ways to pay exist) and "종료" while the spell is in effect. */
-function SpellRows({ ids, catalog, derived, runtime, actions, casting, setCasting }: { ids: string[]; catalog: ContentCatalog; derived: DerivedCharacter; runtime?: CharacterRuntime; actions?: SheetActions; casting: string | null; setCasting: (id: string | null) => void }) {
+function SpellRows({ ids, catalog, derived, runtime, actions, casting, setCasting, ritualOnly = false }: { ids: string[]; catalog: ContentCatalog; derived: DerivedCharacter; runtime?: CharacterRuntime; actions?: SheetActions; casting: string | null; ritualOnly?: boolean; setCasting: (id: string | null) => void }) {
   const live = Boolean(actions && runtime);
   const spellLevel = (id: string) => catalog.spellById(id)?.level ?? 0;
   const groups = new Map<number, string[]>();
@@ -346,7 +349,7 @@ function SpellRows({ ids, catalog, derived, runtime, actions, casting, setCastin
             const name = spell?.name ?? catalog.name(id);
             const duration = parseDuration(spell?.duration);
             const active = isActive(effectKeyForSpell(id));
-            const options = spell && live ? castOptions(spell, derived, runtime) : [];
+            const options = spell && live ? castOptions(spell, derived, runtime, ritualOnly) : [];
             return (
               <div className={`cl-spell-row${active ? " active" : ""}`} key={id}>
                 <span className="cl-spell-name">{name}{spell?.ritual ? <span className="cl-quiet cl-small"> 의식</span> : null}{duration.concentration ? <Pill tone="accent">집중</Pill> : null}</span>

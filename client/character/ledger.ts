@@ -28,6 +28,10 @@ export interface SpellcastingAccumulator {
   preparedMax: number;
   /** Spells prepared through class features that cast once free per long rest (species, feats). */
   freeCasts: string[];
+  /** V3g (D261): ritual spells in the spellbook are castable as rituals (의식 숙련). */
+  ritualFromSpellbook?: boolean;
+  /** V3g (D261): extra spellbook picks of a school, their count an expression over the class level (방출술 전문가). */
+  schoolPicks?: Array<{ id: string; label: string; school: string; count: unknown }>;
 }
 
 export interface ClassState {

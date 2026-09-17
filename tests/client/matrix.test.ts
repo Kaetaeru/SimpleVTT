@@ -97,7 +97,7 @@ function check(species: string, cls: string, background: string, level: number) 
     assert.equal(casting!.preparedMax, Number(row.columns["준비 주문"] ?? 0), `${label}: prepared max`);
     assert.equal(casting!.prepared.length, casting!.preparedMax, `${label}: prepared`);
     assert.equal(casting!.saveDc, 8 + derived.proficiencyBonus + derived.abilities[casting!.ability].modifier, label);
-    if (cls === "wizard") assert.equal(casting!.spellbook?.length, 6 + 2 * (level - 1), `${label}: spellbook`);
+    if (cls === "wizard") assert.equal(casting!.spellbook?.length, 6 + 2 * (level - 1) + (derived.choices.find((item) => item.id.endsWith(".evocation-savant"))?.count ?? 0), `${label}: spellbook`);
   }
 
   // Attacks: one per carried weapon kind plus the unarmed strike, with proficiency applied.

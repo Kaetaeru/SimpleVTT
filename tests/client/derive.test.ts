@@ -174,7 +174,7 @@ test("wizard: spellbook 6 (+2/level), prepared from the spellbook, cantrips 3, s
   assert.deepEqual(w1.spellSlots, { 1: 2 });
   assert.ok(w1.resources.some((resource) => resource.id === "resource.wizard.arcane-recovery"));
   const w5 = build({ classes: "wizard", level: 5 }).derived;
-  assert.equal(classCasting(w5, "wizard")!.spellbook?.length, 14);
+  assert.equal(classCasting(w5, "wizard")!.spellbook?.length, 14 + 3, "V3g (D261): the default Evoker writes 3 evocation spells free at level 5");
   assert.deepEqual(w5.spellSlots, { 1: 4, 2: 3, 3: 2 });
   const spellbook = choice(w5, "class.0.spellbook")!;
   assert.ok(spellbook.options.every((option) => (catalog().spellById(option.id)?.level ?? 0) <= 3), "spellbook options stop at the highest slot level");
@@ -260,7 +260,7 @@ test("multiclass: prerequisites block, grants apply, spell slots combine and eac
   // ceil(2/2) + 3 = 4 → 4/3
   assert.deepEqual(ok.spellSlots, { 1: 4, 2: 3 });
   const wizard = classCasting(ok, "wizard")!;
-  assert.equal(wizard.spellbook?.length, 10);
+  assert.equal(wizard.spellbook?.length, 10 + 2, "V3g (D261): and 2 at wizard 3");
   assert.ok(choice(ok, "class.2.spellbook")!.options.every((option) => (catalog().spellById(option.id)?.level ?? 0) <= 2), "wizard 3 prepares up to level 2");
   assert.ok(!ok.proficiencies.armor.includes("중장 방어구") === false, "paladin first: heavy armor stays");
   assert.deepEqual(ok.hitDice, { d10: 2, d6: 3 });
