@@ -301,8 +301,9 @@ export function endEffect(runtime: CharacterRuntime, key: string, reason?: strin
 export function ageEffects<T extends { effects?: ActiveEffect[] }>(runtime: T, rounds = 1): { runtime: T; ended: ActiveEffect[]; running: ActiveEffect[] } {
   const effects = runtime.effects ?? [];
   if (!effects.length || rounds <= 0) return { runtime, ended: [], running: effects.filter((effect) => effect.rounds !== undefined) };
-  const aged = effects.map((effect) => (effect.rounds !== undefined ? { ...effect, elapsed: effect.elapsed + rounds } : effect));
-  const ended = aged.filter((effect) => effect.rounds !== undefined && effect.elapsed >= effect.rounds);
+  // R85 (D220): an anchored effect counts on its anchor turn boundary (the host ticks it), not on the bearer clock.
+  const aged = effects.map((effect) => (effect.rounds !== undefined && !effect.anchor ? { ...effect, elapsed: effect.elapsed + rounds } : effect));
+  const ended = aged.filter((effect) => effect.rounds !== undefined && !effect.anchor && effect.elapsed >= effect.rounds);
   const kept = aged.filter((effect) => !ended.includes(effect));
   return { runtime: { ...runtime, effects: kept }, ended, running: kept.filter((effect) => effect.rounds !== undefined) };
 }

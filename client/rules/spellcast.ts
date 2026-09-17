@@ -40,7 +40,7 @@ export interface SpellCastSpec {
 }
 
 export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
-export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
+export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R85 (D220): whose turn boundary counts the rounds. */ anchor?: { who: "source" | "bearer"; boundary: "start" | "end" }; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
 
 /** R10: the SRD text that lets a target repeat the save at the end of each of its turns (hold person, blindness/deafness, sleep breath …). */
 export const REPEAT_SAVE = /턴이 끝날 때[^.]{0,40}(내성 굴림을 반복|내성 굴림을 다시|내성을 반복|다시 내성)/;
@@ -114,7 +114,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const exec = spec.exec;
   const primary = exec.primary;
   const endSave = repeatsSaveAtTurnEnd(exec) && "saveAbility" in primary ? { ability: ((primary as { saveAbility: string }).saveAbility in ABILITY_KO ? (primary as { saveAbility: string }).saveAbility : "wis") as AbilityKey, dc: casterStats.saveDc } : undefined;
-  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(endSave ? { endSave } : {}) });
+  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(duration?.anchorActorId ? { anchor: { who: duration.anchorActorId === "$target" ? "bearer" as const : "source" as const, boundary: duration.boundary === "start" ? "start" as const : "end" as const } } : {}), ...(endSave ? { endSave } : {}) });
   // R51 (D186): 원소 숙련자 — "your spells ignore resistance to the chosen damage type". Applied where the parts are
   // built, so every shape of spell damage (attack, save, projectiles, components) goes through the same door.
   const unresisted = (part: DamagePart): DamagePart => ((casterStats.ignoresResistance ?? []).includes(part.type) ? { ...part, ignoresResistance: true } : part);

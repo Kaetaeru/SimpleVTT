@@ -106,6 +106,14 @@ export interface ActiveEffect {
   suppressed?: string;
   /** R77 (D212): the slot level a spell was cast at, so a repeat rolls the same dice. */
   level?: number;
+  /** R85 (D220): the creature whose spell put this effect here, when that is not the bearer. */
+  from?: string;
+  /** R85 (D220): the effect lasts only while `from` keeps concentrating on the spell. */
+  fromConcentration?: boolean;
+  /** R85 (D220): the turn that counts its rounds — the caster ("until the end of your next turn") or the bearer. */
+  anchor?: { who: "source" | "bearer"; boundary: "start" | "end" };
+  /** R85 (D220): conditions the effect put on the bearer, which come off with it. */
+  conditions?: string[];
 }
 
 /** What an active effect changed on the sheet, for the effects card. `applied` false: no rule yet, apply the text by hand. */

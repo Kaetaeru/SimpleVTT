@@ -2183,7 +2183,7 @@ export class TableHost {
       if (downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       runtime = this.takeDeathFailures(runtime, row.attack?.deathFailures ?? row.damage?.deathFailures, row.target.name, resolution.name);
       // A lasting effect on a target: on the caster's own sheet castSpell already started it (with concentration); others get it without.
-      if (row.effect && !(runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
+      if (row.effect && !(runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed) this.releaseGrapples(target.page, target.token?.id);
       // R26 (D136): reverse this row, not the sheet as it was — healing, damage, marks and the effect it started.
@@ -2210,7 +2210,7 @@ export class TableHost {
     if (row.effect) {
       const key = row.effect.key;
       const already = (npcBefore.runtime.effects ?? []).some((effect) => effect.key === key);
-      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
+      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(resolution.caster.id !== npcBefore.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
       const endSaves = row.effect.endSave
         ? [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== key), { key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }]
         : npcBefore.runtime.endSaves;
@@ -2517,6 +2517,9 @@ export class TableHost {
       this.storeEntry({ ...started, runtime, updatedAt: this.now() });
     }
     // Turn-scoped marks (D97): 이탈·질주 end with the turn; 회피·도움·준비 last until the bearer's next turn starts.
+    // R85 (D220): effects counted on a turn boundary — the caster (유도 화살, 잔혹한 모욕) or the bearer.
+    if (result.ended?.entryId) this.tickAnchored(result.ended.entryId, "end");
+    if (result.started?.entryId) this.tickAnchored(result.started.entryId, "start");
     const endedActor = this.actorOfTurn(result.ended);
     if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }
     // R28 (D151): the rage is judged at the end of its bearer's turn, on what happened since their last one.
@@ -2611,13 +2614,68 @@ export class TableHost {
   }
 
   private storeEntry(entry: JournalEntry) {
+    const before = this.journalEntries.get(entry.id);
     this.journalEntries.set(entry.id, entry);
+    // R85 (D220): a caster who stops concentrating takes the spell off everyone it was holding.
+    const held = (item: JournalEntry | undefined) => (item && item.kind !== "handout" ? (item.runtime.effects ?? []).filter((effect) => effect.concentration).map((effect) => effect.key) : []);
+    const kept = held(entry);
+    const lost = held(before).filter((key) => !kept.includes(key));
+    if (lost.length) for (const other of [...this.journalEntries.values()]) {
+      if (other.kind === "handout" || other.id === entry.id) continue;
+      this.shedEffects(other, (other.runtime.effects ?? []).filter((effect) => effect.fromConcentration && effect.from === entry.id && lost.includes(effect.key)), `${entry.name}의 집중이 끝남`);
+    }
     this.options.onJournal?.({ entry });
     this.emit({ type: "journal", entry });
     // The entry's avatar may now be visible to more (or fewer) viewers: resend that asset so mirrors converge.
     const ref = entry.avatar;
     if (ref?.startsWith("art:")) { const asset = this.artAssets.get(ref.slice(4)); if (asset) this.emit({ type: "art", asset }); }
     this.refreshTokensOf(entry);
+  }
+
+  /** R85 (D220): "until the end of your next turn" cast on your own turn: the end of this turn does not count. */
+  private castOnOwnTurn(effect: { anchor?: { who: string; boundary: string }; rounds?: number }, casterId: string) {
+    return effect.anchor?.who === "source" && effect.anchor.boundary === "end" && effect.rounds !== undefined && this.tracker.turns[this.tracker.current]?.entryId === casterId;
+  }
+
+  /** R85 (D220): one round passes for every effect anchored to this creature turn boundary; the finished ones end. */
+  private tickAnchored(entityId: string, boundary: "start" | "end") {
+    for (const entry of [...this.journalEntries.values()]) {
+      if (entry.kind === "handout") continue;
+      const counts = (effect: ActiveEffect) => effect.anchor?.boundary === boundary && effect.rounds !== undefined && (effect.anchor.who === "source" ? (effect.from ?? entry.id) : entry.id) === entityId;
+      if (!(entry.runtime.effects ?? []).some(counts)) continue;
+      const effects = (entry.runtime.effects ?? []).map((effect) => (counts(effect) ? { ...effect, elapsed: effect.elapsed + 1 } : effect));
+      const done = effects.filter((effect) => counts(effect) && effect.elapsed >= effect.rounds!);
+      const now = this.now();
+      const aged = { ...entry, runtime: { ...entry.runtime, effects, updatedAt: now }, updatedAt: now } as JournalEntry;
+      this.storeEntry(aged);
+      this.shedEffects(aged, done, "지속 시간 끝");
+    }
+  }
+
+  /**
+   * R85 (D220): take effects off a creature with what they carried — the conditions on the sheet or the stat block,
+   * the markers on its tokens, the end-of-turn saves. ponytail: a condition two effects both gave comes off with
+   * the first; per-condition sources if that ever matters at the table.
+   */
+  private shedEffects(entry: JournalEntry, gone: ActiveEffect[], why: string) {
+    if (!gone.length || entry.kind === "handout") return;
+    const keys = gone.map((effect) => effect.key);
+    const names = gone.map((effect) => effect.name);
+    const shed = [...names, ...gone.flatMap((effect) => [...(effect.conditions ?? []), ...(effect.endSave?.conditions ?? [])])];
+    const now = this.now();
+    const live = this.journalEntries.get(entry.id) ?? entry;
+    if (live.kind === "character") {
+      const runtime = noteLog({ ...live.runtime, effects: (live.runtime.effects ?? []).filter((effect) => !keys.includes(effect.key)), conditions: live.runtime.conditions.filter((name) => !shed.includes(name)) }, `종료: ${names.join(", ")} (${why})`);
+      this.storeEntry({ ...live, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
+    } else if (live.kind === "npc") {
+      this.storeEntry({ ...live, runtime: { ...live.runtime, effects: (live.runtime.effects ?? []).filter((effect) => !keys.includes(effect.key)), conditions: live.runtime.conditions.filter((name) => !shed.includes(name)), endSaves: (live.runtime.endSaves ?? []).filter((item) => !keys.includes(item.key)), updatedAt: now }, updatedAt: now });
+    }
+    for (const page of this.pages.values()) for (const token of page.tokens) {
+      if (token.represents !== entry.id) continue;
+      const markers = token.markers.filter((marker) => !shed.includes(marker.name));
+      if (markers.length !== token.markers.length) this.storeToken(page, { ...token, markers });
+    }
+    this.say({ type: "system", who: "", content: `${entry.name}: ${names.join(", ")} 끝남 (${why})` });
   }
 
   /** R16: take a token off a page (a summon going away); the tracker forgets its turn too. */
