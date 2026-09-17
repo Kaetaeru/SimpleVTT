@@ -329,6 +329,8 @@ export function castOptions(spell: SpellView, derived: DerivedCharacter, runtime
     if ((left > 0 || resource.atWill) && resource.freeCastSpellId === spell.id) options.push({ label: `${resource.label} (${resource.atWill ? "무제한" : left})`, method: { kind: "resource", id: resource.id } });
     // V4n (D276): a pool that pays for any spell up to a level (주문 회상의 은총: 1~4레벨).
     else if (left > 0 && resource.freeCastMaxLevel !== undefined && spell.level > 0 && spell.level <= resource.freeCastMaxLevel) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
+    // V4q (D279): a pool that pays for any one of the spells it names (자연 회복: 회합 주문).
+    else if (left > 0 && resource.freeCastSpellIds?.includes(spell.id)) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
   }
   if (spell.ritual) options.push({ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } });
   return options;

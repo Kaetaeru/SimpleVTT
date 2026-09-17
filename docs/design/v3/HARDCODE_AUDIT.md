@@ -81,6 +81,7 @@
 - 계산 사실 `target.grappled` · 재주 풀의 `freeCastMaxLevel`(레벨 이하 아무 주문 무료 시전) (D276)
 - 속성 `ability-check.minimum-score`·`skill.ability-swap` · 조건 참조 `effect.running:<이름>` (D277)
 - 계약 치유의 최대값(시트·표 양쪽) · 직업 풀의 `freeCastMaxLevel` · 경제 버킷 `free.attack:<범위>` (D278)
+- 풀의 `freeCastSpellIds`(이름 붙은 주문 목록만 무료 시전) (D279)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

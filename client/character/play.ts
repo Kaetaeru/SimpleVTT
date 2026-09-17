@@ -431,6 +431,8 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
       if (!resource || (!resource.atWill && used >= resource.max)) return null;
       // V4p (D278): a pool that pays for spells up to a level pays for nothing above it (신성 개입, 주문 회상).
       if (resource.freeCastMaxLevel !== undefined && resource.freeCastSpellId !== spell.id && (spell.level < 1 || spell.level > resource.freeCastMaxLevel)) return null;
+      // V4q (D279): a pool that names its spells pays for those and nothing else (자연 회복).
+      if (resource.freeCastSpellIds?.length && resource.freeCastSpellId !== spell.id && !resource.freeCastSpellIds.includes(spell.id)) return null;
       // V3g (D261): an at-will free cast spends nothing.
       if (resource.atWill) { how = `${resource.label} (무제한)`; break; }
       next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + 1 } };

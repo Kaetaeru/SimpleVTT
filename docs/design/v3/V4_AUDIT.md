@@ -115,9 +115,9 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D273 elemental-fury.primal-strike (7) — 야생 변신 공격에 안 붙음. — [host-hook] 형태와 함께.
 - ✔ D272 wild-resurgence (5) — 슬롯↔야생 변신 교환 둘 다 없음. — [data-fix] D263 슬롯 결제·풀 회복.
 - (D265: 이니셔티브 회복 ✔, 자연 마법사 남음) archdruid (20) — 수동 +1, 이니셔티브 때 0이면. 자연 마법사 문구. — [data-fix + picker]
-- circle-of-the-land.natures-sanctuary (14) — 사용 소비·행동·엄폐·저항 없음. — [data-fix + button]
-- wild-companion (2) — 사역마 찾기 무료 시전 없음. — [new-grammar]
-- circle-of-the-land.natural-recovery (6) — 회합 주문 무료 시전이 문구. — [picker]
+- ✔ D279 circle-of-the-land.natures-sanctuary (14) — 사용 소비·행동·엄폐·저항 없음. — [data-fix + button]
+- ✔ D279 wild-companion (2) — 사역마 찾기 무료 시전 없음. — [new-grammar]
+- ✔ D279 circle-of-the-land.natural-recovery (6) — 회합 주문 무료 시전이 문구. — [picker]
 - ✔ D263 circle-of-the-land.lands-aid (3) — 내성 없음, 아군 회복 없음. — [data-fix]
 
 ## 소서러

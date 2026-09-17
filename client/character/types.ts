@@ -200,6 +200,8 @@ export interface DerivedResource {
   atWill?: boolean;
   /** V4n (D276): the pool casts any prepared spell up to this level for free (주문 회상의 은총). */
   freeCastMaxLevel?: number;
+  /** V4q (D279): the pool casts any one of these spells for free (자연 회복의 회합 주문). */
+  freeCastSpellIds?: string[];
 }
 
 export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean }

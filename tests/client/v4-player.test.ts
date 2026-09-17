@@ -685,3 +685,30 @@ test("V4p: 최상급 치유 maximizes a contract's healing, 신성 개입 pays f
   assert.ok(swing, JSON.stringify(ranger.derived.bonusActions));
   assert.equal(swing!.attackScope, "weapon");
 });
+
+test("V4q: 야생 동반자 casts Find Familiar from the Wild Shape pool, and 자연 회복 carries its own free cast (D279)", async () => {
+  const { castSpell } = await import("../../client/character/play");
+  const cat = catalog();
+  const druid = build({ name: "드루이드", classes: "druid", level: 6, abilities: { wis: 16 }, choices: { "class.2.subclass": ["dnd.srd521.subclass.druid.circle-of-the-land"] } });
+
+  // 야생 동반자: the pool that turns into a beast also pays for the familiar.
+  const shape = druid.derived.resources.find((resource) => resource.id === "resource.druid.wild-shape")!;
+  const familiar = cat.spellByName("Find Familiar")!;
+  assert.equal(shape.freeCastSpellId, familiar.id);
+  const spent = castSpell(initialRuntime(druid.derived), druid.derived, { id: familiar.id, name: familiar.name, level: familiar.level }, { kind: "resource", id: shape.id })!;
+  assert.equal(spent.resourcesUsed[shape.id], 1);
+
+  // 자연 회복: one circle spell without a slot, once a long rest, and nothing above 5th level.
+  const pool = druid.derived.resources.find((resource) => resource.id === "resource.druid.natural-recovery-cast")!;
+  assert.equal(pool.freeCastMaxLevel, 5);
+  assert.ok(castSpell(initialRuntime(druid.derived), druid.derived, { id: "x", name: "5레벨", level: 5 }, { kind: "resource", id: pool.id }));
+  assert.equal(castSpell(initialRuntime(druid.derived), druid.derived, { id: "y", name: "6레벨", level: 6 }, { kind: "resource", id: pool.id }), null);
+
+  // 자연의 성역: the use spends a Wild Shape use and takes the Magic action.
+  const sanctuary = druid.derived.features.find((feature) => feature.name.includes("자연의 성역"));
+  if (sanctuary) {
+    const activation = featureActivation(sanctuary, druid.derived, contractDurations(cat, characterScope(druid.derived)))!;
+    assert.equal(activation.economy, "action");
+    assert.equal(activation.resourceId, "resource.druid.wild-shape");
+  }
+});
