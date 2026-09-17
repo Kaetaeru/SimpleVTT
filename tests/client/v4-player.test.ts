@@ -320,3 +320,27 @@ test("V4d: 불굴의 격노 holds a raging barbarian at twice their level; 끈�
   assert.equal(held.runtime.hp.current, 1, JSON.stringify(orc.host.archive.slice(-3).map((message) => message.content)));
   assert.equal(held.runtime.resourcesUsed["resource.species.relentless-endurance"], 1);
 });
+
+test("V4e: 보복 opens an attack back; 보호의 오라 marked on an ally adds the paladin's Charisma to its saves and 용기의 오라 blocks fear (D267)", async () => {
+  const swing = dummy("오우거", 200, { actions: [{ name: "몽둥이", attack: { mode: "melee", bonus: 30, rangeFeet: 5, damage: [{ formula: "5", type: "bludgeoning" }] } }] });
+  const t = await table([{ classes: "barbarian", level: 10, choices: { "class.2.subclass": ["dnd.srd521.subclass.barbarian.path-of-the-berserker"] } }], [swing]);
+  t.dm.send({ type: "act.attack", attacker: t.ref(1), targets: [t.ref(0)], attack: { source: "npc", actionName: "몽둥이" } });
+  await tick();
+  const guard = t.host.archive.find((message) => message.type === "prompt" && message.prompt?.kind === "guard" && message.prompt.guard?.features.some((feature) => feature.name === "보복"));
+  assert.ok(guard, JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
+  t.dm.send({ type: "act.guard", messageId: guard!.id, feature: "보복" });
+  await tick();
+  assert.ok(t.host.archive.some((message) => message.type === "prompt" && message.prompt?.kind === "opportunity" && message.prompt.mover.tokenId === t.ref(1).tokenId), JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
+
+  // Low dice: every save fails, so the bonus is read off the card and the condition off the token.
+  const party = await table([{ classes: "paladin", level: 10, abilities: { cha: 16 } }, { classes: "fighter", level: 5 }, { classes: "cleric", level: 5 }], [], () => 0.05);
+  const fighterToken = party.host.pageList.find((page) => page.id === party.scene.id)!.tokens.find((token) => token.id === party.ref(1).tokenId)!;
+  party.dm.send({ type: "token.put", pageId: party.scene.id, token: { ...fighterToken, markers: [...fighterToken.markers, { name: "보호의 오라", from: party.ref(0).tokenId }] } });
+  await tick();
+  party.dm.send({ type: "act.contract", actor: party.ref(2), ruleKey: "cleric.channel-divinity#turn-undead", targets: [party.ref(1)] });
+  await tick();
+  const saveCard = party.host.archive.filter((message) => message.type === "spell" && message.spell?.targets[0]?.save).at(-1)!.spell!.targets[0];
+  const base = party.made[1].derived.saves.wis.bonus;
+  assert.equal(saveCard.save!.bonus, base + 3, JSON.stringify(saveCard.save));
+  assert.ok(!markers(party, 1).includes("공포"), JSON.stringify(markers(party, 1)));
+});

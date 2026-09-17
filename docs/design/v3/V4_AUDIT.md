@@ -28,7 +28,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - berserker.mindless-rage (6) — 언제든 누르는 해제 버튼. 격노 중 면역이어야. — [new-grammar] 효과 중 조건부 속성.
 - berserker.frenzy (3) — 판정 전이지만 "처음 맞힌 대상"이라 명중 창이어야. 턴당 1회 안 셈. — [data-fix + host-hook]
 - brutal-strike 계열 (9/13/17) — 턴당 1회·효과 수 제한 안 셈, 절뚝·휘청·무너뜨림 효과가 문구. — [new-grammar + host-hook]
-- berserker.retaliation (10) — 피해 받음 반응 창 없음. — [host-hook + button]
+- ✔ D267 berserker.retaliation (10) — 피해 받음 반응 창 없음. — [host-hook + button]
 - ✔ D265 primal-champion (20) — cap 24, SRD는 25. — [data-fix]
 - indomitable-might (18) — 근력 판정 최소값이 문구. — [new-grammar] `ability-check.minimum-score`.
 - primal-knowledge (3) — 격노 중 기술을 근력으로가 없음. — [new-grammar]
@@ -94,14 +94,14 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D265 lay-on-hands (1) — 남에게 쓰면 점수만 쓰고 치유 안 됨, 중독 해제 5점이 문구. — [data-fix + host-hook]
 - oath-of-devotion.holy-nimbus (20) — 빈 효과. — [data-fix + host-hook]
 - restoring-touch (14) — 안수 한 번에 여러 상태 해제가 아님. — [picker]
-- (D265: 자신 면역 ✔, 아군 남음) aura-of-courage / aura-of-devotion (10/7) — 해제 버튼, 면역이어야. 아군 쪽 오라. — [data-fix + button]
-- aura-of-protection — 아군 내성 보너스 손 작업. — [button] "오라 안" 표식.
-- aura-expansion (18) — 오라 반경. — [DM-label] 오라 안 버튼과 함께.
-- smite-of-protection (15) — 신성한 강타 뒤 효과 + 오라 안 버튼. — [host-hook]
+- ✔ D267 (D265: 자신 면역 ✔, 아군 남음) aura-of-courage / aura-of-devotion (10/7) — 해제 버튼, 면역이어야. 아군 쪽 오라. — [data-fix + button]
+- ✔ D267 aura-of-protection — 아군 내성 보너스 손 작업. — [button] "오라 안" 표식.
+- ✔ D267 aura-expansion (18) — 오라 반경. — [DM-label] 오라 안 버튼과 함께.
+- ✔ D267 smite-of-protection (15) — 신성한 강타 뒤 효과 + 오라 안 버튼. — [host-hook]
 - ✔ D265 favored-enemy / paladin.smite / faithful-steed 자체 버튼 — 주문 없이 횟수만 소비. — [data-fix] 버튼 제거.
 
 ## 레인저
-- hunter.superior-hunters-defense (15) — 13개 수동 버튼, 피해 받음 반응 창이어야, 맞은 피해 절반 손 작업. — [data-fix + host-hook]
+- ✔ D267 hunter.superior-hunters-defense (15) — 13개 수동 버튼, 피해 받음 반응 창이어야, 맞은 피해 절반 손 작업. — [data-fix + host-hook]
 - hunter.hunters-prey 무리 파괴자 (3) — 계약 없음. — [button]
 - (D265: 추가 행동·횟수·투명 ✔, 투명 자동 해제 남음) natures-veil (14) — 추가 행동·투명 없음. — [data-fix]
 - ✔ D265 tireless (10) — 임시 HP에 지혜 수정치 빠짐, 짧은 휴식 탈진 −1 없음. — [data-fix + new-grammar]

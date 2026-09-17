@@ -290,6 +290,8 @@ export interface DerivedCharacter {
   upkeepWaived?: string[];
   /** V4d (D266): what keeps this character on its feet when it would drop to 0 hit points. */
   zeroHolds?: ZeroHold[];
+  /** V4e (D267): the auras this character carries, and what a creature marked inside one gets. */
+  auras?: Array<{ name: string; saveBonus: number; conditionImmunities: string[] }>;
   /** V4a (D263): spells whose casting shows the caster the target's defenses. */
   revealDefenses?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll (원소의 친화력). */

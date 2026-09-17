@@ -76,6 +76,7 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     },
     pcExtraTurns: (entry) => derivedOf(entry, catalog()).extraTurns ?? [],
     pcHitDefense: (entry) => derivedOf(entry, catalog()).hitDefense,
+    pcAuras: (entry) => derivedOf(entry, catalog()).auras ?? [],
     pcZeroHolds: (entry) => {
       const derived = derivedOf(entry, catalog());
       const running = new Set((entry.runtime.effects ?? []).map((effect) => effect.name));

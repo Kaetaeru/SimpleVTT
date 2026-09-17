@@ -141,6 +141,8 @@ export interface TableHostOptions {
   pcExtraTurns?: (entry: JournalCharacter) => Array<{ offset: number; label: string }>;
   /** V3h (D262): who hits this sheet attacks it at disadvantage for the rest of the turn — the rule's name, or nothing. */
   pcHitDefense?: (entry: JournalCharacter) => string | undefined;
+  /** V4e (D267): the auras this sheet carries. */
+  pcAuras?: (entry: JournalCharacter) => Array<{ name: string; saveBonus: number; conditionImmunities: string[] }>;
   /** V4d (D266): what may keep this sheet up when it drops to 0 hit points, with the DC already grown by earlier uses. */
   pcZeroHolds?: (entry: JournalCharacter) => ZeroHold[];
   /**
@@ -1503,10 +1505,12 @@ export class TableHost {
         const paid = this.options.pcPayContract?.(reactor.entry, offer.payments, "success");
         if (paid === null) return refuse("남은 횟수가 없습니다");
         if (paid) this.storeEntry({ ...reactor.entry, runtime: { ...paid, updatedAt: this.now() }, updatedAt: this.now() });
-        this.markReactionUsed(promptMessage.prompt.reactor);
+        // V4e (D267): a strike back spends the reaction when the attack is made, from the window it opens.
+        if (!offer.strikeBack) this.markReactionUsed(promptMessage.prompt.reactor);
         const rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
         this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}) });
+        if (offer.strikeBack && (!offer.facts.length || offer.facts.every((item) => confirmed.has(item.id)))) this.say({ type: "prompt", who: "", content: `${promptMessage.prompt.reactor.name}: ${command.feature} — ${promptMessage.prompt.mover.name}에게 공격`, prompt: { kind: "opportunity", mover: promptMessage.prompt.mover, reactor: promptMessage.prompt.reactor } });
         return;
       }
       /**
@@ -1654,7 +1658,10 @@ export class TableHost {
   }
 
   private combatantOf(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
-    const base = this.combatantBase(actor);
+    const unmarked = this.combatantBase(actor);
+    // V4e (D267): a creature inside an ally's aura is immune to what the aura names.
+    const immune = unmarked ? [...new Set(this.aurasOn(actor).flatMap((aura) => aura.conditionImmunities))] : [];
+    const base = unmarked && immune.length ? { ...unmarked, defenses: { ...unmarked.defenses, conditionImmunities: [...(unmarked.defenses.conditionImmunities ?? []), ...immune] } } : unmarked;
     const marks = actor.token ? this.targetMarks.get(actor.token.id) ?? [] : [];
     if (!base || !marks.length) return base;
     const saves = marks.filter((item) => item.mark.nextSave).map((item) => ({ on: "save" as const, state: "disadvantage" as const, label: item.mark.name }));
@@ -2173,7 +2180,32 @@ export class TableHost {
     if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;
     this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, [which === "action" ? "actionUsed" : "bonusUsed"]: true } : item)) });
   }
-  private statsOf(actor: { entry: JournalEntry }): ActorStats | null {
+  /**
+   * V4e (D267): the auras a token is marked inside — a marker named after the aura, from the token of the character who
+   * carries it. The best save bonus counts (auras of the same kind do not stack); the immunities add up.
+   */
+  private aurasOn(actor: { entry: JournalEntry; token?: Token }) {
+    const tokens = [...this.pages.values()].flatMap((page) => page.tokens);
+    const token = actor.token ? tokens.find((item) => item.id === actor.token!.id) ?? actor.token : undefined;
+    const found: Array<{ name: string; saveBonus: number; conditionImmunities: string[] }> = [];
+    for (const marker of token?.markers ?? []) {
+      if (!marker.from) continue;
+      const owner = tokens.find((item) => item.id === marker.from);
+      const sheet = owner?.represents ? this.journalEntries.get(owner.represents) : undefined;
+      if (sheet?.kind !== "character" || sheet.id === actor.entry.id) continue;
+      const aura = (this.options.pcAuras?.(sheet) ?? []).find((item) => item.name === marker.name);
+      if (aura) found.push(aura);
+    }
+    return found;
+  }
+
+  private statsOf(actor: { entry: JournalEntry; token?: Token }): ActorStats | null {
+    const base = this.statsBase(actor);
+    const bonus = base ? Math.max(0, ...this.aurasOn(actor).map((aura) => aura.saveBonus)) : 0;
+    return base && bonus ? { ...base, saves: Object.fromEntries(Object.entries(base.saves).map(([ability, value]) => [ability, value + bonus])) as ActorStats["saves"] } : base;
+  }
+
+  private statsBase(actor: { entry: JournalEntry }): ActorStats | null {
     if (actor.entry.kind === "npc") return npcStats(actor.entry.statBlock);
     if (actor.entry.kind === "character") return this.options.pcStats?.(actor.entry) ?? null;
     return null;

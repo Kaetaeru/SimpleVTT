@@ -72,6 +72,7 @@ export interface EffectApplication {
   slotHealSelf?: number;
   upkeepWaived?: string[];
   zeroHolds?: ZeroHold[];
+  auras?: Array<{ name: string; saveBonus: number; conditionImmunities: string[] }>;
   revealDefenses?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll. */
   damageTypeModifier?: string[];
@@ -349,6 +350,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.opportunityDisadvantage?.length) { next = { ...next, opportunityDisadvantage: [...(next.opportunityDisadvantage ?? []), ...application.opportunityDisadvantage.map((reason) => reason || label)] }; notes.push("나를 향한 기회 공격 불리"); }
     if (application.hitDefense !== undefined) { next = { ...next, hitDefense: application.hitDefense || label }; notes.push("나를 맞힌 생물은 이번 턴 다른 공격이 불리"); }
     if (application.extraTurns?.length) { next = { ...next, extraTurns: [...(next.extraTurns ?? []), ...application.extraTurns.map((turn) => ({ ...turn, label: turn.label || label }))] }; notes.push("전투 첫 라운드에 턴 하나 더"); }
+    if (application.auras?.length) { const merged = (next.auras ?? []).map((item) => ({ ...item })); for (const aura of application.auras) { const same = merged.find((item) => item.name === aura.name); if (same) { same.saveBonus = Math.max(same.saveBonus, aura.saveBonus); same.conditionImmunities = [...new Set([...same.conditionImmunities, ...aura.conditionImmunities])]; } else merged.push({ ...aura }); } next = { ...next, auras: merged }; notes.push("오라 안으로 표시한 생물에게"); }
     if (application.zeroHolds?.length) { next = { ...next, zeroHolds: [...(next.zeroHolds ?? []), ...application.zeroHolds.map((hold) => ({ ...hold, label: hold.label || label }))] }; notes.push("0 HP가 될 때 버팀"); }
     if (application.upkeepWaived?.length) { next = { ...next, upkeepWaived: [...new Set([...(next.upkeepWaived ?? []), ...application.upkeepWaived])] }; notes.push("효과가 턴마다의 조건 없이 유지"); }
     if (application.slotHealSelf) { next = { ...next, slotHealSelf: Math.max(next.slotHealSelf ?? 0, application.slotHealSelf) }; notes.push(`슬롯 주문으로 남을 치유하면 자신도 ${application.slotHealSelf} + 슬롯 레벨 회복`); }

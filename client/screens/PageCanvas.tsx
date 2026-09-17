@@ -4,6 +4,7 @@
  * its menu, the 벗어남 button provokes an opportunity attack (D96), and the command bar under the board is where
  * the selected creature acts. The grid map, with its cells, drag-and-snap, layers, zoom and ruler, is gone.
  */
+import { derivedOf } from "../rules/attackSpec";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useCampaigns } from "../app/campaigns";
@@ -1098,6 +1099,18 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
     put({ ...token, markers: has ? token.markers.filter((marker) => marker.name !== name) : [...token.markers, { name }] });
   };
   const activeMarkers = new Set([...token.markers.map((marker) => marker.name), ...(character ? character.runtime.conditions : [])]);
+  // V4e (D267): the auras of the other characters on this scene — marking a token inside one is a fact the board cannot see.
+  const { catalog } = useClient();
+  const auraSources = useMemo(() => page.tokens.flatMap((other) => {
+    if (other.id === token.id || !other.represents) return [];
+    const sheet = journal.find((item) => item.id === other.represents);
+    if (sheet?.kind !== "character") return [];
+    return (derivedOf(sheet, catalog).auras ?? []).map((aura) => ({ name: aura.name, from: other.id, owner: other.name }));
+  }), [page.tokens, token.id, journal, catalog]);
+  const toggleAura = (aura: { name: string; from: string }) => {
+    const has = token.markers.some((marker) => marker.name === aura.name && marker.from === aura.from);
+    put({ ...token, markers: has ? token.markers.filter((marker) => !(marker.name === aura.name && marker.from === aura.from)) : [...token.markers, { name: aura.name, from: aura.from }] });
+  };
   const setBadge = (name: string, badge: number | undefined) => put({ ...token, markers: token.markers.map((marker) => (marker.name === name ? { ...marker, badge } : marker)) });
   const reorder = (direction: 1 | -1) => put({ ...token, z: token.z + direction });
   /**
@@ -1140,6 +1153,11 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
               {MARKER_GLYPH[name]}{marker?.badge !== undefined ? <small>{marker.badge}</small> : null}
             </button>
           ); })}
+        </div>
+      ) : null}
+      {controls && auraSources.length ? (
+        <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }} aria-label="오라 안">
+          {auraSources.map((aura) => { const on = token.markers.some((marker) => marker.name === aura.name && marker.from === aura.from); return <button type="button" key={`${aura.from}:${aura.name}`} className={`cl-btn small${on ? " primary" : ""}`} aria-pressed={on} title="이 토큰이 그 오라 안에 있으면 켜세요" onClick={() => toggleAura(aura)}>{on ? "✓ " : ""}{aura.owner}의 {aura.name} 안</button>; })}
         </div>
       ) : null}
       <div className="cl-token-menu-actions">
