@@ -666,11 +666,8 @@
          },
          {
           "kind": "property.modify",
-          "property": "saving-throw.advantage",
+          "property": "death-save.advantage",
           "operation": "add",
-          "abilities": [
-           "con"
-          ],
           "note": "죽음 내성"
          },
          {

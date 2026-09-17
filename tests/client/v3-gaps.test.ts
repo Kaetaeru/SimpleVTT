@@ -71,3 +71,52 @@ test("V3b: 공격 흘리기 opens only for bludgeoning, piercing or slashing bel
   await tick();
   assert.equal(guardPrompts().length, 1, "bludgeoning: 공격 흘리기 is offered");
 });
+
+async function soloTable(cls: string, level: number, choices: Record<string, string[]>, random: () => number, runtimeOf?: (runtime: ReturnType<typeof initialRuntime>) => ReturnType<typeof initialRuntime>) {
+  const cat = catalog();
+  const hub = new MemoryHub();
+  const campaign = { ...newCampaign("V3c", { userId: "dm", displayName: "DM" }), joinCode: "V3CAAA" };
+  const host = new TableHost(hub.hostEndpoint(), { campaign, hostUserId: "dm", hostSecret: "s", random, ...pcHostOptions(() => cat) });
+  const dm = new TableClient(hub.connect("dm-seat"), { userId: "dm", displayName: "DM", joinCode: "V3CAAA", hostSecret: "s" });
+  await tick();
+  const scene = newScene(campaign.id, "막사", 0);
+  dm.send({ type: "page.put", page: scene });
+  const made = build({ name: "주인공", classes: cls, level, abilities: { con: 14 } }, choices);
+  const runtime = initialRuntime(made.derived);
+  const pc = newJournalCharacter(campaign.id, "dm", made.source, runtimeOf ? runtimeOf(runtime) : runtime);
+  dm.send({ type: "journal.put", entry: pc });
+  await tick();
+  const token = tokenForCharacter(pc);
+  dm.send({ type: "token.put", pageId: scene.id, token });
+  await tick();
+  const ref = { entryId: pc.id, pageId: scene.id, tokenId: token.id };
+  const sheet = () => host.journal.find((entry) => entry.id === pc.id) as ReturnType<typeof newJournalCharacter>;
+  return { host, dm, ref, sheet, made, scene, token, pc };
+}
+
+test("V3c: 생존자 heals at the start of the champion's turn while bloodied, and gives advantage on death saves (D257)", async () => {
+  const champion = { "class.2.subclass": ["dnd.srd521.subclass.fighter.champion"] };
+  const t = await soloTable("fighter", 18, champion, () => 0.5, (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 20 } }));
+  const max = t.made.derived.hp.max;
+  assert.ok(20 * 2 <= max, `bloodied at 20 of ${max}`);
+  t.dm.send({ type: "tracker.add", turn: { name: "투사", tokenId: t.token.id, pageId: t.scene.id, entryId: t.pc.id, initiative: 10 } });
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  assert.equal(t.sheet().runtime.hp.current, 20 + 5 + t.made.derived.abilities.con.modifier, JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
+  // At 0 HP there is no healing (it needs 1 HP), and the death save rolls two dice and keeps the better: 3 and 19.
+  const values = [0.1, 0.9];
+  const down = await soloTable("fighter", 18, champion, () => values.shift() ?? 0.5, (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 0 }, conditions: ["무의식"] }));
+  down.dm.send({ type: "tracker.add", turn: { name: "투사", tokenId: down.token.id, pageId: down.scene.id, entryId: down.pc.id, initiative: 10 } });
+  down.dm.send({ type: "tracker.next" });
+  await tick();
+  assert.equal(down.sheet().runtime.hp.current, 0, "no healing at 0 HP");
+  assert.equal(down.sheet().runtime.deathSaves.success, 1, `19 kept: ${JSON.stringify(down.host.archive.slice(-2).map((message) => message.content))}`);
+});
+
+test("V3c: 믿음직한 재능 turns a proficient check's low d20 into 10 at the table (D257)", async () => {
+  const t = await soloTable("rogue", 7, { "class.0.skills": ["stealth", "perception", "acrobatics", "insight"] }, () => 0.05);
+  t.dm.send({ type: "act.action", actor: t.ref, kind: "hide" });
+  await tick();
+  const card = t.host.archive.filter((message) => message.type === "act" && message.act).at(-1)!;
+  assert.equal(card.act!.check?.d20, 10, JSON.stringify(card.act!.check));
+});

@@ -6,14 +6,14 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { ATTACK_INVOCATIONS, GAIN_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, GAIN_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
 // readers that answer "what does the 사용 button do" leave it out. `contractSummary` still prints it as a rule.
 // R63 (D198): so is an `on-hit` one, chosen in the window a hit opens.
 // R78 (D213): nor a `short-rest` one, which the rest window runs. R81 (D215): nor an `initiative` one.
-const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && !TRIGGER_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION);
+const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && !TRIGGER_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION && entry.invocation !== TURN_START_INVOCATION);
 const operationsOf = (contract: CommonPlayContract) => [...livePoints(contract).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
 const live = (operation: ContractOperation, scope: Scope) => !("when" in operation && operation.when) || evaluate((operation as { when?: Parameters<typeof evaluate>[0] }).when, scope) === true;
 
@@ -262,6 +262,12 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
     mechanical = true;
     const label = String(operation.params?.label ?? "");
     rules.push(`얻을 때 — ${GAIN_KO[operation.property] ?? operation.property}${label ? `: ${label}` : ""}`);
+  }
+  // V3c (D257): what the start of the owner's turn does by itself.
+  for (const operation of contract.entryPoints.filter((item) => item.invocation === TURN_START_INVOCATION).flatMap((item) => item.operations)) {
+    if (operation.kind !== "healing.apply") continue;
+    mechanical = true;
+    rules.push(`턴 시작에 자동 — HP ${operation.dice ?? ""}${operation.amount ? `${operation.dice ? "+" : ""}${number(operation.amount) ?? 0}` : ""} 회복 (조건이 맞을 때)`);
   }
   // R78 (D213): what a short rest's end does is said where the player looks for it — the rest window runs it.
   for (const entry of contract.entryPoints.filter((item) => TRIGGER_INVOCATIONS.has(item.invocation))) {

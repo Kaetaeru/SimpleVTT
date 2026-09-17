@@ -80,12 +80,14 @@ export interface ActorStats {
   advantage?: RollAdvantage[];
   /** H3 (D240): saves whose total is at least this ability score (불굴의 힘). */
   minimumScore?: Partial<Record<AbilityKey, number>>;
+  /** V3c (D257): on a check in one of these skills, a d20 below `value` counts as `value` (믿음직한 재능). */
+  checkMinimum?: { value: number; skills: string[] };
 }
 
 export interface RollAdvantage {
   reason: string;
   /** Which kind of roll it covers; empty means every kind. */
-  families?: Array<"ability-check" | "saving-throw">;
+  families?: Array<"ability-check" | "saving-throw" | "death-save">;
   /** Abilities it is limited to (a save, or the ability behind a check); empty means all. */
   abilities?: AbilityKey[];
   /** Skill ids it is limited to; empty means all. */
@@ -93,7 +95,7 @@ export interface RollAdvantage {
 }
 
 /** Whether any of these reasons covers this roll, and the first one that does. */
-export function advantageFor(stats: ActorStats, family: "ability-check" | "saving-throw", options: { ability?: AbilityKey; skill?: string } = {}) {
+export function advantageFor(stats: ActorStats, family: "ability-check" | "saving-throw" | "death-save", options: { ability?: AbilityKey; skill?: string } = {}) {
   return (stats.advantage ?? []).find((item) => {
     if (item.families?.length && !item.families.includes(family)) return false;
     if (item.skills?.length) return Boolean(options.skill && item.skills.includes(options.skill));
@@ -108,6 +110,7 @@ export const pcStats = (derived: DerivedCharacter): ActorStats => ({
   skills: Object.fromEntries(derived.skills.map((skill) => [skill.id, skill.bonus])),
   proficiencyBonus: derived.proficiencyBonus,
   ...(derived.rollAdvantage?.length ? { advantage: derived.rollAdvantage } : {}),
+  ...(derived.checkMinimumD20 ? { checkMinimum: { value: derived.checkMinimumD20, skills: derived.skills.filter((skill) => skill.proficient).map((skill) => skill.id) } } : {}),
   ...(derived.minimumScoreRolls?.length ? { minimumScore: Object.fromEntries(derived.minimumScoreRolls.map((key) => [key, derived.abilities[key].score])) } : {}),
 });
 
@@ -183,7 +186,10 @@ export function resolveAction(input: ActInput): ActResult {
   const check = (label: string, bonus: number, dc?: number, covers: { ability?: AbilityKey; skill?: string } = {}): ActCheck => {
     const lucky = input.forceD20 === undefined ? advantageFor(input.actor.stats, "ability-check", covers) : undefined;
     const rolls = input.forceD20 !== undefined ? [input.forceD20] : lucky ? [d20(input.random), d20(input.random)] : [d20(input.random)];
-    const die = Math.max(...rolls);
+    const rolled = Math.max(...rolls);
+    // V3c (D257): 믿음직한 재능 — a proficient check's d20 below the floor counts as the floor.
+    const floor = covers.skill && input.actor.stats.checkMinimum?.skills.includes(covers.skill) ? input.actor.stats.checkMinimum.value : 0;
+    const die = Math.max(rolled, floor);
     const total = die + bonus + (input.rollDelta ?? 0);
     return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc, ...(rolls.length > 1 ? { advantage: rolls.length, dropped: Math.min(...rolls), reason: lucky!.reason } : {}), ...(input.rescue ? { rescue: input.rescue } : {}) };
   };

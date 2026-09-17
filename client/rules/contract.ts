@@ -239,6 +239,11 @@ export const KILL_INVOCATION = "kill";
 export const GAIN_INVOCATION = "gain";
 /** R81 (D215): the moments the table asks about instead of a button: the end of a short rest, an initiative roll. */
 export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATION, KILL_INVOCATION]);
+/**
+ * V3c (D257): what happens by itself at the start of the owner's turn, with no window (생존자's healing). Its
+ * operations run when their `when` holds against the sheet and its hit points (`actor.hp.current`, `actor.hp.max`).
+ */
+export const TURN_START_INVOCATION = "turn-start";
 export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION | typeof KILL_INVOCATION;
 /**
  * R78 (D213): reserved resource ids a `resource.change` restores that are not pools — spell slots whose levels add up to
@@ -364,7 +369,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const invocation = String(entry.invocation ?? "manual");
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
     // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
-    if (invocation !== "manual" && invocation !== GAIN_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    if (invocation !== "manual" && invocation !== GAIN_INVOCATION && invocation !== TURN_START_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
     const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;

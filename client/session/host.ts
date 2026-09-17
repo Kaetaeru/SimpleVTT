@@ -133,6 +133,8 @@ export interface TableHostOptions {
   pcSpell?: (entry: JournalCharacter, spellId: string, method?: CastMethod) => { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
   /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
   pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;
+  /** V3c (D257): the healing the sheet's turn-start contracts give now, with the maximum it stops at. */
+  pcTurnStart?: (entry: JournalCharacter) => Array<{ label: string; amount: number; max: number }>;
   /**
    * R35 (D174): the contract rescues this sheet could pay for a d20 of this family that came out this way, and what
    * paying one costs it. The host owns no catalog, so both arrive as functions like every other sheet question.
@@ -1855,7 +1857,10 @@ export class TableHost {
     const entry = this.journalEntries.get(entryId);
     if (entry?.kind !== "character" || !this.needsDeathSave(entry)) return false;
     const runtime = entry.runtime;
-    const die = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
+    // V3c (D257): a contract may give advantage on death saves (생존자, 튼튼함): two dice, the better kept.
+    const lucky = this.options.pcStats ? advantageFor(this.options.pcStats(entry), "death-save") : undefined;
+    const rolls = Array.from({ length: lucky ? 2 : 1 }, () => 1 + Math.floor((this.options.random ?? Math.random)() * 20));
+    const die = Math.max(...rolls);
     let next = runtime;
     let note: string;
     // R28 (D149): "깨어남" now takes 무의식 off too — it used to stay on, handing every attacker advantage and
@@ -2664,6 +2669,16 @@ export class TableHost {
     if (result.started) this.say({ type: "system", who: "", content: `${result.started.name}의 턴` });
     const started = result.started?.entryId ? this.journalEntries.get(result.started.entryId) : undefined;
     if (started?.kind === "character") {
+      // V3c (D257): what the sheet's contracts do by themselves at the start of the turn (생존자's healing).
+      for (const heal of this.options.pcTurnStart?.(started) ?? []) {
+        const live = this.journalEntries.get(started.id);
+        if (live?.kind !== "character" || heal.amount <= 0) continue;
+        const current = live.runtime.hp.current;
+        const next = Math.min(heal.max, current + heal.amount);
+        if (next <= current) continue;
+        this.storeEntry({ ...live, runtime: { ...live.runtime, hp: { ...live.runtime.hp, current: next }, updatedAt: this.now() }, updatedAt: this.now() });
+        this.say({ type: "system", who: "", content: `${live.name}: ${heal.label} +${next - current} → HP ${next}/${heal.max}` });
+      }
       // R29 (D154): the save belongs to the player. When someone is there to make it, the turn opens with their
       // card instead of an anonymous line nobody rolled; the DM can always take it over or the setting can be off.
       if (this.needsDeathSave(started)) {

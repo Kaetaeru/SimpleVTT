@@ -60,6 +60,8 @@ export interface EffectApplication {
   schoolDamageModifier?: Array<{ school: string; classSlug: string }>;
   /** H3 (D240): abilities whose saves total at least the ability score. */
   minimumScoreRolls?: AbilityKey[];
+  /** V3c (D257): the lowest d20 a proficient check counts (믿음직한 재능). */
+  checkMinimumD20?: number;
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll. */
   damageTypeModifier?: string[];
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
@@ -332,6 +334,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.studiedAttacks) { next = { ...next, studiedAttacks: true }; notes.push("빗나간 대상에게 다음 공격 유리"); }
     if (application.potentCantrip) { next = { ...next, potentCantrip: true }; notes.push("피해 소마법: 빗나감·내성 성공에도 절반"); }
     if (application.damageTypeModifier?.length) { next = { ...next, damageTypeModifier: [...new Set([...(next.damageTypeModifier ?? []), ...application.damageTypeModifier])] }; notes.push(`${application.damageTypeModifier.join("·")} 주문 피해 한 번에 주문 능력 수정치`); }
+    if (application.checkMinimumD20) { next = { ...next, checkMinimumD20: Math.max(next.checkMinimumD20 ?? 0, application.checkMinimumD20) }; notes.push(`숙련 판정 d20 최소 ${application.checkMinimumD20}`); }
     if (application.minimumScoreRolls?.length) { next = { ...next, minimumScoreRolls: [...new Set([...(next.minimumScoreRolls ?? []), ...application.minimumScoreRolls])] }; notes.push(`${application.minimumScoreRolls.join("·")} 내성은 최소 능력치 점수`); }
     if (application.schoolDamageModifier?.length) { next = { ...next, schoolDamageModifier: [...(next.schoolDamageModifier ?? []), ...application.schoolDamageModifier] }; notes.push("그 학파 주문 피해 한 번에 주문 능력 수정치"); }
     if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }

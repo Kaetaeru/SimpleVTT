@@ -68,7 +68,8 @@ test("R61: a character without the feat still rolls one die (D196)", () => {
   const stats = pcStats(derived);
   assert.equal(advantageFor(stats, "ability-check", { skill: "stealth" }), undefined);
   const result = resolveAction({ kind: "hide", actor: { name: "도적", stats, conditions: [] }, random: scripted(4, 17) });
-  assert.equal(result.check!.d20, 4, "the first die stands");
+  // V3c (D257): a rogue of 7+ has 믿음직한 재능, so a proficient Stealth d20 below 10 counts as 10.
+  assert.equal(result.check!.d20, stats.checkMinimum?.skills.includes("stealth") ? Math.max(4, stats.checkMinimum.value) : 4, "the first die stands");
   assert.equal(result.check!.dropped, undefined);
 });
 
@@ -79,11 +80,11 @@ test("R61: 배우 narrows itself to the two skills it names (D196)", () => {
   assert.equal(advantageFor(stats, "ability-check", { skill: "persuasion" }), undefined);
 });
 
-test("R61: 튼튼함 and 전투 시전자 put their advantage on saving throws (D196)", () => {
+test("R61: 튼튼함 on death saves and 전투 시전자 on Constitution saves (D196, D257)", () => {
   const durable = pcStats(rogueWith("durable", "튼튼함").derived);
-  const found = advantageFor(durable, "saving-throw", { ability: "con" });
-  assert.ok(found, JSON.stringify(durable.advantage));
-  assert.equal(advantageFor(durable, "saving-throw", { ability: "dex" }), undefined, "the ability it named, not all of them");
+  // V3c (D257): 튼튼함 is advantage on death saves, not on every Constitution save.
+  assert.ok(advantageFor(durable, "death-save"), JSON.stringify(durable.advantage));
+  assert.equal(advantageFor(durable, "saving-throw", { ability: "con" }), undefined, "a Constitution save is not a death save");
   assert.equal(advantageFor(durable, "ability-check", { ability: "con" }), undefined, "a save is not a check");
   const caster = pcStats(rogueWith("war-caster", "전투 시전자").derived);
   assert.ok(advantageFor(caster, "saving-throw", { ability: "con" }), JSON.stringify(caster.advantage));

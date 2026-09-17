@@ -52,7 +52,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "spell.damage-type.ability-modifier",
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -86,7 +86,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
   const notes: string[] = [];
   // R52 (D187): a pre-roll rider is not a standing property; it belongs to the attack dialog. R63 (D198): nor an on-hit one.
   // H3 (D240): a gain entry point runs once while the character is built, never as a standing property.
-  const operations = [...contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
+  const operations = [...contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION && entry.invocation !== "turn-start").flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
   let describes = false;
   for (const operation of operations) {
     // R49 (D184): a question for the table is a line on the sheet too — that is what the hand-written rules' `notes`
@@ -150,6 +150,10 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.studied": application.studiedAttacks = true; break;
       case "spell.cantrip-potent": application.potentCantrip = true; break;
       case "spell.damage-type.ability-modifier": application.damageTypeModifier = [...(application.damageTypeModifier ?? []), ...(operation.damageTypes ?? [])]; break;
+      // V3c (D257): advantage on death saving throws (생존자, 튼튼함).
+      case "death-save.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["death-save"] }]; break;
+      // V3c (D257): a d20 below this counts as this on checks the character adds its proficiency bonus to (믿음직한 재능).
+      case "ability-check.minimum-d20": application.checkMinimumD20 = Math.max(application.checkMinimumD20 ?? 0, number(operation, scope) ?? 0); break;
       case "saving-throw.minimum-score": application.minimumScoreRolls = [...(application.minimumScoreRolls ?? []), ...((operation.abilities ?? []) as AbilityKey[])]; break;
       case "spell.school-damage.ability-modifier": if (operation.school) application.schoolDamageModifier = [...(application.schoolDamageModifier ?? []), { school: operation.school, classSlug: text(operation, scope) ?? "" }]; break;
       case "healing.maximize": application.healingMaximized = true; break;

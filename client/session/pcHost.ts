@@ -17,6 +17,9 @@ import { tableOutcome } from "../rules/contractTable";
 import { payContract, pcRescues } from "../rules/contractUse";
 import { itemUse } from "../rules/items";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
+import { characterScope, evaluate, TURN_START_INVOCATION } from "../rules/contract";
+import { featureContract } from "../rules/contractActivation";
+import { featureRuleKey } from "../rules/activation";
 import type { TableHostOptions } from "./host";
 
 /** Token bar links (D78): what a character attribute is worth right now. */
@@ -62,6 +65,15 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     },
     pcRest: (entry, kind) => { const derived = derivedOf(entry, catalog()); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
     pcReactionSpell: (entry, spellId) => { const derived = derivedOf(entry, catalog()); if (!castableSpells(derived).includes(spellId)) return null; const view = catalog().spellById(spellId); return view ? cheapestCast(derived, entry.runtime, view.level) : null; },
+    // V3c (D257): turn-start contracts — healing whose `when` holds against the sheet's hit points right now.
+    pcTurnStart: (entry) => {
+      const derived = derivedOf(entry, catalog());
+      const scope = characterScope(derived, { "actor.hp.current": entry.runtime.hp.current, "actor.hp.max": derived.hp.max });
+      return derived.features.flatMap((feature) => (featureContract(catalog(), featureRuleKey(feature.id))?.entryPoints ?? [])
+        .filter((point) => point.invocation === TURN_START_INVOCATION)
+        .flatMap((point) => point.operations)
+        .flatMap((operation) => (operation.kind === "healing.apply" && (!operation.when || evaluate(operation.when, scope) === true) ? [{ label: feature.name, amount: Number(evaluate(operation.amount, scope)) || 0, max: derived.hp.max }] : [])));
+    },
     pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalog()); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item, catalog()); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
   };
 }
