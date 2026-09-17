@@ -155,7 +155,7 @@ export type ClientCommand =
   /** D102: cast a spell at the chosen targets; the host pays the slot, resolves every target and applies. */
   /** R89 (D224): a creature goes into, out of, or moves inside a caster area spell (영혼 수호자, 달빛 광선, 가시 성장). */
   | { type: "act.zone"; casterEntryId: string; spellId: string; target: ActorRef; action: "enter" | "leave" | "move"; feet?: number }
-  | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides; readied?: boolean; /** V4f (D268): the variant the caster chose (에너지 보호's damage type). */ variant?: string; /** R11: answering a shield prompt (its message id): the reaction spell against the held attack. */ reaction?: string }
+  | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides; readied?: boolean; /** V4f (D268): the variant the caster chose (에너지 보호's damage type). */ variant?: string; /** V4r (D280): the metamagics the caster put on this cast, by rule key. */ metamagic?: string[]; /** R11: answering a shield prompt (its message id): the reaction spell against the held attack. */ reaction?: string }
   /** R9 (D103): an NPC's save action (breath, gaze …) at the chosen targets — resolved like a save spell; recharge is spent. */
   | { type: "act.npcSave"; actor: ActorRef; actionName: string; targets: ActorRef[] }
   /** R9 (D104): a legendary action from the pool (reset at the monster's turn start); a save action takes targets, the rest is a card. */

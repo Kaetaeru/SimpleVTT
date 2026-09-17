@@ -132,6 +132,8 @@ export interface TableHostOptions {
   /** The official actions (D97) need a PC's ability modifiers, saves and skills from the derived sheet. */
   pcStats?: (entry: JournalCharacter) => ActorStats;
   /** Spells (D102): the spec and caster stats for a spell the PC can cast, and how its cost is paid (null when it cannot). */
+  /** V4r (D280): the metamagics the caster put on this cast — what they cost, what they change, what stays the table's. */
+  pcMetamagic?: (entry: JournalCharacter, keys: string[]) => { labels: string[]; notes: string[]; saveDisadvantage?: string; bonusAction?: boolean; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
   pcSpell?: (entry: JournalCharacter, spellId: string, method?: CastMethod) => { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
   /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
   pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;
@@ -892,8 +894,13 @@ export class TableHost {
         const preparedBase = this.prepareSpell(caster, command.spellId, command.method);
         if (!preparedBase) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
         // V4f (D268): the variant chosen when casting patches the execution; the card names it.
+        // V4r (D280): the metamagics chosen for this cast — their points, their name on the card, what they change.
+        const meta = caster.entry.kind === "character" && Array.isArray(command.metamagic) && command.metamagic.length
+          ? this.options.pcMetamagic?.(caster.entry, command.metamagic.slice(0, 4).map((key) => String(key).slice(0, LIMITS.name))) ?? null
+          : null;
         const chosenVariant = withVariant(preparedBase.spec.exec, typeof command.variant === "string" ? command.variant.slice(0, LIMITS.name) : undefined);
-        const prepared = chosenVariant.label ? { ...preparedBase, spec: { ...preparedBase.spec, exec: chosenVariant.exec, name: `${preparedBase.spec.name} (${chosenVariant.label})`, variant: command.variant } } : preparedBase;
+        const preparedVariant = chosenVariant.label ? { ...preparedBase, spec: { ...preparedBase.spec, exec: chosenVariant.exec, name: `${preparedBase.spec.name} (${chosenVariant.label})`, variant: command.variant } } : preparedBase;
+        const prepared = meta?.labels.length ? { ...preparedVariant, spec: { ...preparedVariant.spec, name: `${preparedVariant.spec.name} (${meta.labels.join(" · ")})` } } : preparedVariant;
         const exec = prepared.spec.exec;
         if (!isGm && !command.readied && exec.castingEconomy !== "reaction" && exec.repeat?.economy !== "none" && this.tracker.turns.length && this.turnOf(command.caster)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 시전할 수 있습니다 (남의 턴에는 반응 주문·준비한 행동만)");
         // R11: answering a shield prompt — the reaction spell against the held attack.
@@ -943,11 +950,11 @@ export class TableHost {
           }
         }
         const waits = Boolean(this.campaign.settings.dmConfirmsResults) && !isGm;
-        const resolution = resolveSpell({ caster: casterCombatant, casterStats: prepared.casterStats, spec: prepared.spec, targets: rows.map((row) => ({ combatant: row.combatant!, stats: row.stats! })), dice: diceFrom(this.options.random ?? Math.random), overrides, apply: !waits });
+        const resolution = resolveSpell({ ...(meta?.saveDisadvantage ? { saveDisadvantage: meta.saveDisadvantage } : {}), caster: casterCombatant, casterStats: prepared.casterStats, spec: prepared.spec, targets: rows.map((row) => ({ combatant: row.combatant!, stats: row.stats! })), dice: diceFrom(this.options.random ?? Math.random), overrides, apply: !waits });
         // The cost is paid on casting (a slot, concentration on the caster) even when the DM still has to confirm the result.
         const casterBefore = caster.entry;
         let spent: CharacterRuntime | null = null;
-        if (casterBefore.kind === "character") { const next = prepared.spend(casterBefore.runtime); if (!next) return refuse("슬롯이나 횟수가 없습니다"); spent = next; this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
+        if (casterBefore.kind === "character") { const withMeta = meta ? meta.spend(casterBefore.runtime) : casterBefore.runtime; if (!withMeta) return refuse("마법 점수가 없습니다"); const next = prepared.spend(withMeta); if (!next) return refuse("슬롯이나 횟수가 없습니다"); spent = next; this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
         else if (resolution.concentration && !exec.repeat) { this.mark(caster, ["집중"], true); this.startNpcConcentration(caster.entry.id, prepared.spec.spellId, prepared.spec.name, prepared.spec.level); }
         const restoreNpcUse = casterBefore.kind === "npc" && prepared.npcSpend ? prepared.npcSpend() : undefined;
         // R26 (D136): undoing an old cast used to write the caster's whole pre-cast ledger back, refunding every

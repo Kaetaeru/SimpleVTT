@@ -193,6 +193,41 @@ export function longRestGains(derived: { features: Array<{ id: string }> }, cata
   return Object.keys(gains).length ? gains : undefined;
 }
 
+/** V4r (D280): one metamagic the cast window may offer — what it costs, what it does, and what it leaves to the table. */
+export interface MetamagicOption { key: string; name: string; cost: number; resourceId: string; effect?: string; note?: string }
+
+/**
+ * V4r (D280): the metamagics this character knows, from their own contracts. `spell.metamagic` names what the cast
+ * does differently (`bonus-action`, `target-save-disadvantage`); anything else is the table's, with its reason.
+ */
+export function metamagicOptions(derived: { features: Array<{ id: string; name: string; source: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }, scope: Scope): MetamagicOption[] {
+  const out: MetamagicOption[] = [];
+  for (const feature of derived.features) {
+    if (feature.source !== "metamagic") continue;
+    const key = featureRuleKey(feature.id);
+    const contract = featureContract(catalog, key);
+    if (!contract) continue;
+    let cost = 0;
+    let resourceId = "";
+    let effect: string | undefined;
+    let note: string | undefined;
+    for (const operation of contract.entryPoints.flatMap((entry) => entry.operations)) {
+      if (operation.kind === "resource.change") {
+        const amount = Number(evaluate(operation.amount, scope));
+        if (Number.isFinite(amount) && amount < 0) { cost = -amount; resourceId = operation.resourceId; }
+      }
+      if (operation.kind === "property.modify" && operation.property === "spell.metamagic") {
+        const p = operation.params ?? {};
+        if (p.effect) effect = String(p.effect);
+        if (p.note) note = String(p.note);
+      }
+      if (operation.kind === "adjudication.request" && !note && !/마법 점수/.test(operation.question)) note = operation.question;
+    }
+    out.push({ key, name: feature.name, cost, resourceId, ...(effect ? { effect } : {}), ...(note ? { note } : {}) });
+  }
+  return out;
+}
+
 export function contractUse(contract: CommonPlayContract, scope: Scope, label: string): ContractUse | undefined {
   const use: ContractUse = {};
   let found = false;

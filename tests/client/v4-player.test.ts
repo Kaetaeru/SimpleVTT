@@ -712,3 +712,27 @@ test("V4q: 야생 동반자 casts Find Familiar from the Wild Shape pool, and �
     assert.equal(activation.resourceId, "resource.druid.wild-shape");
   }
 });
+
+test("V4r: a metamagic rides on the cast — 고조된 주문 spends its points and the target saves at disadvantage (D280)", async () => {
+  const { metamagicOptions } = await import("../../client/rules/contractActivation");
+  const cat = catalog();
+  // Every die rolls high so a save at disadvantage is visibly the lower of two.
+  const t = await table([{ classes: "sorcerer", level: 5, abilities: { cha: 18 }, choices: { "class.0.metamagic": ["metamagic.heightened-spell", "metamagic.quickened-spell"] } }], [dummy("좀비", 60)], () => 0.9);
+  const sorcerer = t.made[0].derived;
+  const options = metamagicOptions(sorcerer, cat, characterScope(sorcerer));
+  const heightened = options.find((option) => option.key === "metamagic.heightened-spell")!;
+  assert.ok(heightened, JSON.stringify(options.map((option) => option.name)));
+  assert.equal(heightened.cost, 2);
+  assert.equal(heightened.effect, "target-save-disadvantage");
+  assert.equal(options.find((option) => option.key === "metamagic.quickened-spell")?.effect, "bonus-action");
+
+  const burning = cat.spellByName("Burning Hands")?.id ?? "dnd.srd521.spell.burning-hands";
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: burning, targets: [t.ref(1)], method: { kind: "slot", level: 1 }, metamagic: [heightened.key] });
+  await tick();
+  const card = t.host.archive.filter((message) => message.type === "spell").at(-1)!;
+  assert.ok(card.content.includes(heightened.name), card.content);
+  const row = card.spell!.targets[0];
+  assert.equal(row.save?.disadvantage, heightened.name, JSON.stringify(row.save));
+  const sheet = t.entry(0) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(sheet.runtime.resourcesUsed["resource.sorcerer.sorcery-points"], 2, "마법 점수 2점");
+});

@@ -39,6 +39,7 @@ import { traitRules } from "../compendium/monsterTraits";
 import { offeredRiders, type ContractRider } from "../rules/attackRiders";
 import { tableOutcome } from "../rules/contractTable";
 import { attackScopeFilter } from "../rules/contractEffects";
+import { metamagicOptions } from "../rules/contractActivation";
 import type { AttackRef, AttackRiders } from "../session/protocol";
 import { Modal as RiderModal } from "../ui/components";
 import { toggleCondition } from "../character/play";
@@ -632,7 +633,20 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, gm: true }); if (answer === null) return; overrides = answer.overrides; }
     const variant = forced?.kind === "sustain" ? undefined : await requestSpellVariant(spellId, name);
     if (variant === null) return;
-    c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined, undefined, variant);
+    // V4r (D280): the metamagics this sheet knows and can pay for, offered once the method is settled.
+    let metamagic: string[] | undefined;
+    if (entry.kind === "character" && derived && forced?.kind !== "sustain") {
+      const points = derived.resources.find((resource) => resource.id === "resource.sorcerer.sorcery-points");
+      const left = points ? points.max - (currentRuntime().resourcesUsed[points.id] ?? 0) : 0;
+      const known = metamagicOptions(derived, catalog, characterScope(derived)).filter((option) => option.cost <= left);
+      if (known.length) {
+        const answer = await requestCastMethod({ name, title: `${name} — 메타매직 (마법 점수 ${left})`, options: [{ label: "쓰지 않음", method: "" }, ...known.map((option) => ({ label: `${option.name} (${option.cost}점)${option.note ? ` · ${option.note}` : ""}`, method: option.key }))] });
+        if (answer === null) return;
+        const chosenKey = typeof answer === "string" ? answer : "";
+        if (chosenKey) metamagic = [chosenKey];
+      }
+    }
+    c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined, undefined, variant, metamagic);
   };
   // R77 (D212): a concentration spell that is still going can be used again without a slot — 영적 무기 as a bonus
   // action, 흡혈의 손길 as an action, 달빛 광선's damage when somebody walks in (no economy at all).

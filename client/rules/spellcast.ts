@@ -142,6 +142,8 @@ export interface CastInput {
    * was rolled and `delta` is added to the total; `label` names what paid for it, so the card says so.
    */
   saveAdjust?: { d20?: number; delta?: number; label?: string };
+  /** V4r (D280): the targets roll this spell's save at disadvantage, with the reason (고조된 주문). */
+  saveDisadvantage?: string;
   fixedDamage?: number[][];
 }
 
@@ -174,7 +176,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
     // H1 (D238): bloodied-advantage on saves (피투성이 광분).
     const bloodied = target.bloodied?.rolls.includes("save") && target.hp.current <= Math.floor(target.hp.max / 2) ? target.bloodied.label : undefined;
     const upBy = dodging ? "회피" : resistant ? "마법 저항" : declared ? declared.reason : bloodied ?? states.find((item) => item.state === "advantage")?.label;
-    const downBy = states.find((item) => item.state === "disadvantage")?.label;
+    const downBy = states.find((item) => item.state === "disadvantage")?.label ?? input.saveDisadvantage;
     const advantaged = Boolean(upBy) && !downBy;
     const disadvantaged = Boolean(downBy) && !upBy;
     const first = dice.d(20); const second = advantaged || disadvantaged ? dice.d(20) : undefined; const rolled = second === undefined ? first : advantaged ? Math.max(first, second) : Math.min(first, second);

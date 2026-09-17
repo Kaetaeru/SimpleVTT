@@ -6,8 +6,9 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import type { JournalCharacter } from "../campaign/journal";
+import type { CharacterRuntime } from "../character/runtime";
 import { deriveCharacter } from "../character/derive";
-import { longRest, setItemQuantity, shortRest } from "../character/play";
+import { longRest, setItemQuantity, shortRest, spendResource } from "../character/play";
 import { restFeatures, spentSlots, useRestFeature } from "../character/rest";
 import { pcStats } from "../rules/actions";
 import { attackAftermath, emptyAftermath } from "../rules/attackAftermath";
@@ -17,6 +18,7 @@ import { tableOutcome } from "../rules/contractTable";
 import { payContract, pcRescues } from "../rules/contractUse";
 import { itemUse } from "../rules/items";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
+import { metamagicOptions } from "../rules/contractActivation";
 import { characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
@@ -47,6 +49,19 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     pcAftermath: (entry, attackId, outcomes) => { const derived = derivedOf(entry, catalog()); const attack = derived.attacks.find((item) => item.id === attackId); return attack ? attackAftermath(derived, catalog(), attack, outcomes) : emptyAftermath(); },
     pcStats: (entry) => pcStats(derivedOf(entry, catalog())),
     pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalog()), catalog(), spellId, method),
+    // V4r (D280): the metamagics the caster chose — their points come off the sheet, and what they change rides along.
+    pcMetamagic: (entry, keys) => {
+      const derived = derivedOf(entry, catalog());
+      const options = metamagicOptions(derived, catalog(), characterScope(derived)).filter((option) => keys.includes(option.key));
+      if (!options.length) return null;
+      return {
+        labels: options.map((option) => option.name),
+        notes: options.flatMap((option) => (option.note ? [`${option.name}: ${option.note}`] : [])),
+        ...(options.some((option) => option.effect === "target-save-disadvantage") ? { saveDisadvantage: options.find((option) => option.effect === "target-save-disadvantage")!.name } : {}),
+        ...(options.some((option) => option.effect === "bonus-action") ? { bonusAction: true } : {}),
+        spend: (runtime) => options.reduce<CharacterRuntime | null>((acc, option) => (acc && option.cost ? spendResource(acc, derived, option.resourceId, option.cost, option.name) : acc), runtime),
+      };
+    },
     // R35 (D174): the contract rescues a sheet could pay for, and what paying one costs it.
     pcRescues: (entry, family, outcome, d20) => pcRescues(entry, derivedOf(entry, catalog()), catalog(), family, outcome, d20),
     // R42 (D182): the table-level half of a feature's contract.
