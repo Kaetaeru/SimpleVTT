@@ -107,7 +107,22 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     // V4h (D270): the conditions a turn-end contract sheds, one of them per turn (자기 회복).
     pcTurnEnd: (entry) => {
       const derived = derivedOf(entry, catalog());
-      return derived.features.flatMap((feature) => { const contract = featureContract(catalog(), featureRuleKey(feature.id)); const conditions = (contract?.entryPoints ?? []).filter((point) => point.invocation === TURN_END_INVOCATION).flatMap((point) => point.operations).flatMap((operation) => (operation.kind === "condition.remove" ? [operation.condition] : [])); return conditions.length ? [{ label: feature.name, conditions }] : []; });
+      // V5c (D291): the effects this sheet is under carry turn-end rules too, and one of them may be damage.
+      const scope = characterScope(derived, { "actor.hp.current": entry.runtime.hp.current, "actor.hp.max": derived.hp.max });
+      const sources = [
+        ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)) })),
+        ...(entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").map((effect) => ({ label: effect.name, contract: catalog().contractFor(effect.key) })),
+      ];
+      return sources.flatMap(({ label, contract }) => {
+        const operations = (contract?.entryPoints ?? []).filter((point) => point.invocation === TURN_END_INVOCATION).flatMap((point) => point.operations);
+        const conditions = operations.flatMap((operation) => (operation.kind === "condition.remove" ? [operation.condition] : []));
+        const hurt = operations.find((operation) => operation.kind === "damage.apply");
+        if (hurt && hurt.kind === "damage.apply") {
+          const rolled = contractFormula(hurt.dice, hurt.amount, scope, hurt.diceCount, hurt.diceSides);
+          if (rolled) return [{ label, conditions: [], damage: { formula: rolled, type: hurt.damageType, ...(hurt.save ? { save: { ability: hurt.save.ability, dc: Number(evaluate(hurt.save.dc, scope)) || 10 } } : {}) } }];
+        }
+        return conditions.length ? [{ label, conditions }] : [];
+      });
     },
     pcZeroHolds: (entry) => {
       const derived = derivedOf(entry, catalog());

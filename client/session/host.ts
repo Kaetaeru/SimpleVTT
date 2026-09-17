@@ -146,7 +146,7 @@ export interface TableHostOptions {
   /** V4e (D267): the auras this sheet carries. */
   pcAuras?: (entry: JournalCharacter) => Array<{ name: string; saveBonus: number; conditionImmunities: string[] }>;
   /** V4h (D270): conditions this sheet sheds at the end of its turn — one of each list (자기 회복). */
-  pcTurnEnd?: (entry: JournalCharacter) => Array<{ label: string; conditions: string[] }>;
+  pcTurnEnd?: (entry: JournalCharacter) => Array<{ label: string; conditions: string[]; /** V5c (D291): damage the effect deals when that turn ends, with the save that avoids it. */ damage?: { formula: string; type: string; save?: { ability: string; dc: number } } }>;
   /** V4d (D266): what may keep this sheet up when it drops to 0 hit points, with the DC already grown by earlier uses. */
   pcZeroHolds?: (entry: JournalCharacter) => ZeroHold[];
   /**
@@ -3073,6 +3073,12 @@ export class TableHost {
     if (endedActor?.entry.kind === "character") for (const shed of this.options.pcTurnEnd?.(endedActor.entry) ?? []) {
       const live = this.journalEntries.get(endedActor.entry.id);
       if (live?.kind !== "character") break;
+      // V5c (D291): damage an effect deals when this turn ends (환영 살인마), with its save.
+      if (shed.damage) {
+        const actor = this.resolveActor({ entryId: live.id });
+        if (actor) this.contractStrike(actor, [actor], shed.label, { formula: shed.damage.formula, damageType: shed.damage.type, ...(shed.damage.save ? { save: { ability: shed.damage.save.ability, dc: shed.damage.save.dc, success: "none" as const } } : {}) }, this.options.hostUserId, "");
+        continue;
+      }
       const gone = shed.conditions.find((condition) => live.runtime.conditions.includes(condition));
       if (!gone) continue;
       this.storeEntry({ ...live, runtime: { ...live.runtime, conditions: live.runtime.conditions.filter((condition) => condition !== gone), updatedAt: this.now() }, updatedAt: this.now() });

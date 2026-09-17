@@ -913,3 +913,16 @@ test("V5b: 빛나는 강타 marks what it hit, 신속한 후퇴 puts Dash in the
   const cloud = spellExec("dnd.srd521.spell.stinking-cloud")!;
   assert.deepEqual(cloud.effects?.map((effect) => [effect.conditionId, effect.duration?.kind]), [["poisoned", "rounds"]]);
 });
+
+test("V5c: 환영 살인마 hurts its victim when that turn ends, with the save that avoids it (D291)", async () => {
+  const t = await table([{ classes: "fighter", level: 5, runtime: (runtime) => ({ ...runtime, conditions: ["공포"], effects: [{ key: "spell:dnd.srd521.spell.phantasmal-killer", name: "환영 살인마", source: "spell", duration: "집중, 최대 1분", concentration: false, rounds: 10, elapsed: 0, startedAt: "", bearer: true }] }) }], [], () => 0.99);
+  t.dm.send({ type: "tracker.add", turn: { name: "파이터", tokenId: t.ref(0).tokenId, pageId: t.scene.id, entryId: t.ref(0).entryId, initiative: 20 } });
+  t.dm.send({ type: "tracker.next" });
+  const before = (t.entry(0) as ReturnType<typeof newJournalCharacter>).runtime.hp.current;
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  const after = (t.entry(0) as ReturnType<typeof newJournalCharacter>).runtime.hp.current;
+  assert.ok(after <= before, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+  const card = t.host.archive.filter((message) => message.type === "spell" || message.type === "system").at(-1)!;
+  assert.ok(/환영 살인마/.test(card.content ?? ""), card.content);
+});
