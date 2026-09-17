@@ -35,6 +35,8 @@ export interface GuardOffer {
   acBonus?: number;
   /** Damage it takes off, as a formula the host rolls ("1d10+8"). */
   reduce?: string;
+  /** R95 (D230): the damage of the attack that just landed is halved (기묘한 회피). */
+  halve?: boolean;
   /** R57 (D192): facts those two numbers wait on — unticked, the reaction does nothing but say its line. */
   acBonusFact?: string;
   reduceFact?: string;
@@ -75,6 +77,8 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
         if (operation.kind === "property.modify" && operation.property === "ac.bonus") {
           const value = Number(evaluate(operation.value, scope));
           if (Number.isFinite(value)) { offer.acBonus = (offer.acBonus ?? 0) + value; if (factId) offer.acBonusFact = factId; }
+        } else if (operation.kind === "property.modify" && operation.property === "damage-taken.halve") {
+          offer.halve = true;
         } else if (operation.kind === "property.modify" && operation.property === "damage-taken.reduce") {
           const flat = Number(evaluate(operation.value, scope));
           const parts = [operation.dice, Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""].filter(Boolean);
@@ -84,7 +88,7 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
           else offer.notes.push(operation.question);
         }
       }
-      if (offer.acBonus === undefined && !offer.reduce && !offer.notes.length && !offer.facts.length) continue;
+      if (offer.acBonus === undefined && !offer.reduce && !offer.halve && !offer.notes.length && !offer.facts.length) continue;
       const payable = offer.payments.every((payment) => payment.kind !== "resource" || !payment.resourceId || poolLeft(derived, entry.runtime, payment.resourceId) > 0);
       if (payable) offers.push(offer);
     }
@@ -94,7 +98,7 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
 
 /** One line for the prompt, so the player can choose without opening their sheet. */
 export const guardHint = (offer: GuardOffer) =>
-  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}` : "", ...offer.notes, ...offer.facts.map((fact) => fact.question)].filter(Boolean).join(" · ");
+  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}` : "", offer.halve ? "피해 절반" : "", ...offer.notes, ...offer.facts.map((fact) => fact.question)].filter(Boolean).join(" · ");
 
 /** Roll a plain `NdX+M` formula with the host's own roller, so a reaction's number is as reproducible as any other. */
 export function rollGuard(formula: string, random: () => number): number {

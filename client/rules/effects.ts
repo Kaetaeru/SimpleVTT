@@ -36,6 +36,8 @@ export interface EffectApplication {
   shillelagh?: boolean;
   /** R43 (D183): the lowest d20 that counts as a critical hit (Improved Critical 19, Superior Critical 18). */
   critRange?: number;
+  /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
+  evasion?: boolean;
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
   attackActionAttacks?: number;
   /** Korean damage type labels. */
@@ -290,6 +292,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     notes.push(...(application.notes ?? []));
     // R28 (D153): an application that carries nothing but prose is the table's to run, and says so.
     // R43 (D183): 향상된 치명타 lowers the die that counts as a critical hit; the lowest wins if two effects say so.
+    if (application.evasion) { next = { ...next, evasion: true }; notes.push("회피술: 민첩 내성 절반 피해 — 성공 0, 실패 절반"); }
     if (application.critRange !== undefined) { next = { ...next, critRange: Math.min(next.critRange ?? 20, application.critRange) }; notes.push(`치명타 범위 ${application.critRange}–20`); }
     if (application.attackActionAttacks !== undefined) { next = { ...next, attackActionAttacks: Math.max(next.attackActionAttacks ?? 1, application.attackActionAttacks) }; notes.push(`공격 행동에 ${application.attackActionAttacks}번 공격`); }
     const mechanical = Object.keys(application).some((field) => field !== "notes" && application[field as keyof typeof application] !== undefined);

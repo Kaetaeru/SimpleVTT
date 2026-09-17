@@ -1405,7 +1405,7 @@ export class TableHost {
         this.markReactionUsed(promptMessage.prompt.reactor);
         const rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
-        this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature });
+        this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}) });
         return;
       }
       /**
@@ -2082,7 +2082,7 @@ export class TableHost {
     return undefined;
   }
 
-  private releaseHeld(promptId: string, shielded: boolean, guard?: { acBonus?: number; reduce: number; label: string }) {
+  private releaseHeld(promptId: string, shielded: boolean, guard?: { acBonus?: number; reduce: number; label: string; halve?: boolean }) {
     const held = this.held.get(promptId);
     if (!held) return;
     this.held.delete(promptId);
@@ -2101,13 +2101,13 @@ export class TableHost {
     // and a higher AC, so a hit that is now a miss really misses. `damageDelta` is how a reaction that soaks damage
     // instead of raising AC reaches the card.
     const acBonus = shielded ? 5 : guard?.acBonus ?? 0;
-    const note = shielded ? "방패 반응: AC +5" : guard ? `${guard.label}${guard.acBonus ? `: AC +${guard.acBonus}` : ""}${guard.reduce ? `: 피해 −${guard.reduce}` : ""}` : "";
-    if (acBonus || guard?.reduce) {
+    const note = shielded ? "방패 반응: AC +5" : guard ? `${guard.label}${guard.acBonus ? `: AC +${guard.acBonus}` : ""}${guard.reduce ? `: 피해 −${guard.reduce}` : ""}${guard.halve ? ": 피해 절반" : ""}` : "";
+    if (acBonus || guard?.reduce || guard?.halve) {
       const attackerCombatant = this.combatantOf(attacker);
       const targetCombatant = this.combatantOf(target);
       if (attackerCombatant && targetCombatant) {
         if (acBonus && targetCombatant.ac < held.resolution.targetAc + acBonus) targetCombatant.ac = held.resolution.targetAc + acBonus;
-        overrides = { ...(held.overrides ?? {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
+        overrides = { ...(held.overrides ?? {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), ...(guard?.halve ? { damageScale: (held.overrides?.damageScale ?? 1) * 0.5 } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
         resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed: { d20s: held.resolution.d20s, bonusDice: held.resolution.bonusDice?.map((item) => item.total), damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
       }
     }

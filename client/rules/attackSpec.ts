@@ -68,6 +68,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     conditions: runtime.conditions, defenses: derived.defenses, conSave: derived.saves.con.bonus, concentration: concentration?.name, effects: (runtime.effects ?? []).map((effect) => effect.name),
     // R28 (D147): exhaustion reaches the dice at last.
     exhaustion: runtime.exhaustion,
+    ...(derived.evasion ? { evasion: true } : {}),
     // R51 (D186): 중갑 달인 — flat reduction per damage type, from whatever effect or feat contract granted it.
     ...(derived.damageReduction?.length ? { reduction: derived.damageReduction } : {}),
     // R55 (D190): what this character gives away by attacking recklessly — anyone swinging at them gets advantage.

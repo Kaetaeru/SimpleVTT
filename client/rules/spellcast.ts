@@ -187,8 +187,10 @@ export function resolveSpell(input: CastInput): SpellResolution {
         const row = base(combatant);
         row.mode = "save";
         row.save = save(combatant, stats, primary.saveAbility);
-        if (row.save.success && primary.successDamage === "none") afterDamage(row, noDamage(combatant));
-        else afterDamage(row, applyDamage(combatant, parts, dice, { fixed: rolled, half: row.save.success }));
+        // R95 (D230): 회피술 — on a Dexterity save that halves, nothing on a success and half on a failure, unless incapacitated.
+        const evades = Boolean(combatant.evasion) && row.save.ability === "dex" && primary.successDamage === "half" && !["행동불능", "충격", "마비", "석화", "무의식"].some((name) => combatant.conditions.includes(name));
+        if (row.save.success && (primary.successDamage === "none" || evades)) afterDamage(row, noDamage(combatant));
+        else afterDamage(row, applyDamage(combatant, parts, dice, { fixed: rolled, half: row.save.success || evades }));
         if (!row.save.success) { row.marks = conditionMarks("failed-save", combatant); if (exec.effects?.length || exec.trackedEffects?.some((effect) => effect.trigger === "failed-save")) row.effect = effectStart(exec.effects?.[0]?.duration ?? exec.trackedEffects?.find((effect) => effect.trigger === "failed-save")?.duration); }
         targets.push(row);
       }

@@ -46,6 +46,8 @@ export interface Combatant {
    * throws). It was stored, set, decremented by a long rest and shown on the sheet, and read by no roll anywhere.
    */
   exhaustion?: number;
+  /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
+  evasion?: boolean;
   /** R31 (D161): 마법 저항 — advantage on saving throws against spells and other magical effects. */
   magicResistance?: boolean;
   /** R31 (D162): 재생 — hit points regained at the start of its turn, and the sentence that qualifies it. */

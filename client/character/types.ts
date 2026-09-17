@@ -242,6 +242,8 @@ export interface DerivedCharacter {
   featEffects: DerivedFeatEffects;
   /** R43 (D183): the lowest d20 that is a critical hit for this character (19 with 향상된 치명타). */
   critRange?: number;
+  /** R95 (D230): 회피술. */
+  evasion?: boolean;
   /** R72 (D207): attacks per Attack action, from whatever contract says so (1 when none does). */
   attackActionAttacks?: number;
   /**

@@ -49,7 +49,7 @@ test("R54: the formula is rolled with the host's own roller and never goes negat
 });
 
 /** A monk under attack from an ogre, with the reaction window wired exactly as the app wires it. */
-async function table(level = 5) {
+async function table(level = 5, classes = "monk") {
   const hub = new MemoryHub();
   const base = newCampaign("R54 시험", { userId: "dm", displayName: "DM" });
   const campaign = { ...base, joinCode: "R54AAA" };
@@ -70,7 +70,7 @@ async function table(level = 5) {
   const scene = newScene(campaign.id, "복도", 0);
   dm.send({ type: "page.put", page: scene });
   dm.send({ type: "page.ribbon", pageId: scene.id });
-  const made = build({ name: "몽크", classes: "monk", level, abilities: { dex: 16, wis: 14 } });
+  const made = build({ name: "몽크", classes, level, abilities: { dex: 16, wis: 14 } });
   const pc = newJournalCharacter(campaign.id, "alice", made.source, initialRuntime(made.derived), { owner: "alice" });
   alice.send({ type: "journal.put", entry: pc });
   const ogre = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.ogre")!);
@@ -128,4 +128,36 @@ test("R54: declining leaves the attack exactly as it was rolled (D189)", async (
   await tick();
   const applied = card()!;
   assert.equal(before - applied.hpAfter, applied.damage.reduce((sum, part) => sum + part.adjusted, 0), "every point lands");
+});
+
+test("R95: 기묘한 회피 halves the damage of the hit that landed on the rogue (D230)", async () => {
+  const { alice, dm, me, ogreRef, prompt, card, ogre } = await table(5, "rogue");
+  dm.send({ type: "act.attack", actor: ogreRef, attacker: ogreRef, targets: [me], attack: { source: "npc", actionName: ogre.statBlock.actions.find((action) => action.kind === "attack")!.name }, overrides: { outcome: "hit" } } as never);
+  await tick();
+  const ask = prompt()!;
+  assert.deepEqual(ask.prompt!.guard!.features.map((feature) => [feature.name, feature.hint]), [["기묘한 회피", "피해 절반"]]);
+  alice.send({ type: "act.guard", messageId: ask.id, feature: "기묘한 회피" });
+  await tick();
+  const applied = card()!;
+  const raw = applied.damage.reduce((sum, part) => sum + part.adjusted, 0);
+  assert.equal(applied.damageTotal, Math.floor(raw / 2), JSON.stringify([applied.damageTotal, raw]));
+});
+
+test("R95: 회피술 — a Dexterity save for half damage takes nothing on a success and half on a failure (D230)", async () => {
+  const { pcSpell, resolveSpell } = await import("../../client/rules/spellcast");
+  const { diceFrom } = await import("../../client/rules/resolve");
+  const rogue = build({ name: "로그", classes: "rogue", level: 7, abilities: { dex: 16 } });
+  assert.equal(rogue.derived.evasion, true);
+  const wizard = build({ name: "위저드", classes: "wizard", level: 5 }, { "class.0.spells": ["dnd.srd521.spell.fireball"] });
+  const wizardEntry = { runtime: initialRuntime(wizard.derived) } as never;
+  const cast = pcSpell(wizardEntry, wizard.derived, catalog(), "dnd.srd521.spell.fireball", { kind: "slot", level: 3 })!;
+  const rogueEntry = { id: "r", name: "로그", runtime: initialRuntime(rogue.derived) } as never;
+  const target = { combatant: pcCombatant(rogueEntry, rogue.derived), stats: pcStats(rogue.derived) };
+  const roll = (value: number) => resolveSpell({ caster: pcCombatant(wizardEntry, wizard.derived), casterStats: cast.casterStats, spec: cast.spec, targets: [target], dice: diceFrom(() => value), fixedDamage: [[6, 6, 6, 6, 6, 6, 6, 6]] }).targets[0];
+  const saved = roll(0.99);
+  assert.equal(saved.save?.success, true);
+  assert.equal(saved.damage?.damageTotal, 0, "success: nothing");
+  const failed = roll(0.01);
+  assert.equal(failed.save?.success, false);
+  assert.equal(failed.damage?.damageTotal, 24, "failure: half of 48");
 });
