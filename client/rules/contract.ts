@@ -69,7 +69,7 @@ export interface ContractPayment {
 export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr }
   | { kind: "condition.apply"; condition: string; target: string; when?: Expr; /** R94 (D229): resisted with this save (기절 타격). */ save?: { ability: string; dc: Expr } }
-  | { kind: "healing.apply"; dice?: string; amount?: Expr; target: string; when?: Expr }
+  | { kind: "healing.apply"; dice?: string; amount?: Expr; target: string; when?: Expr; /** V4a (D263): one amount shared out among the chosen creatures, none past half its maximum (생명 보존). */ pool?: "half-max" }
   | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr }
   /**
    * R38 (D178): the general modifier. `property` names what changes in this engine's vocabulary (`ac.bonus`,
@@ -95,7 +95,7 @@ export type ContractOperation =
   /** R40 (D180): dice rolled and applied as healing or temporary hit points; `dice` and `amount` add up to the formula. */
   | { kind: "temp-hp.grant"; dice?: string; amount?: Expr; target: string; when?: Expr }
   /** R40 (D180): dice rolled and logged as damage a feature deals (Breath Weapon), without choosing who takes it. */
-  | { kind: "damage.apply"; dice?: string; /** R52 (D187): how many of `dice` to roll, when a level table decides it (광란's 격노 피해 보너스만큼의 d6). */ diceCount?: Expr; amount?: Expr; damageType: string; target: string; when?: Expr }
+  | { kind: "damage.apply"; dice?: string; /** R52 (D187): how many of `dice` to roll, when a level table decides it (광란's 격노 피해 보너스만큼의 d6). */ diceCount?: Expr; /** V4a (D263): the die size, when an expression decides it (a marked spell's die). */ diceSides?: Expr; amount?: Expr; damageType: string; target: string; when?: Expr; /** V4a (D263): the targets save against it; a success halves it or takes it all away. */ save?: { ability: string; dc: Expr; success: "half" | "none" } }
   /** R41 (D181): the last of the vocabulary — the rest of what a contract may ask this engine to do. */
   | { kind: "condition.remove"; condition: string; target: string; when?: Expr }
   | { kind: "hp.maximum.change"; amount: Expr; target: string; when?: Expr }
@@ -112,7 +112,7 @@ export type ContractOperation =
    * if the player ticked it. That is how a rule gated on where people are standing runs in a scene with no
    * positions (D109) — the app does every number, the person answers the one fact it cannot see.
    */
-  | { kind: "adjudication.request"; question: string; /** H2 (D239): `auto` names a fact the table computes itself (`target.hp.below-max`), so it is never asked. */ fact?: { id: string; at: string; auto?: string }; when?: Expr }
+  | { kind: "adjudication.request"; question: string; /** V4a (D263): a number the line shows, worked out for this character (느린 낙하's 몽크 레벨×5). */ amount?: Expr; /** H2 (D239): `auto` names a fact the table computes itself (`target.hp.below-max`), so it is never asked. */ fact?: { id: string; at: string; auto?: string }; when?: Expr }
   | { kind: "artifact.spawn"; template: { monsterId?: string; name?: string; count?: Expr }; when?: Expr }
   | { kind: "artifact.remove" | "artifact.repair" | "artifact.damage" | "artifact.relocate" | "artifact.update"; artifact: string; amount?: Expr; damageType?: string; placementRef?: string; metadataPatch?: Record<string, unknown>; when?: Expr };
 
@@ -141,6 +141,8 @@ export interface ContractEntryPoint {
   attack?: { scope?: string; oncePerTurn: boolean; requiresEffects: string[] };
   /** V3d (D258): the name of this use when a feature has several — the sheet gets a line and a button per use. */
   label?: string;
+  /** V4a (D263): a kill entry point also answers another creature's kill, when the owner confirms they were close (어둠의 존재의 축복). */
+  killer?: "self" | "nearby";
   /** V3d (D258): what this use costs, in place of the contract's own payments. */
   payments?: ContractPayment[];
 }
@@ -268,7 +270,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: isExpr(operation.amount) ? operation.amount : { value: operation.amount ?? 0 } }); return; }
     if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}) }); return; }
     if (kind === "condition.remove") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
-    if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.pool === "half-max" ? { pool: "half-max" as const } : {}) }); return; }
     const expr = (raw: unknown, fallback = 0) => (isExpr(raw) ? raw : { value: raw === undefined ? fallback : raw });
     if (kind === "hp.maximum.change") { out.push({ kind, amount: expr(operation.amount), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "life.stabilize") { out.push({ kind, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
@@ -286,7 +288,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "adjudication.request") {
       const fact = operation.fact as { id?: string; at?: string; auto?: string } | undefined;
       if (fact && !FACT_MOMENTS.has(String(fact.at ?? ""))) { unsupported.push(`${at}: fact.at ${String(fact.at)}`); return; }
-      out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), ...(fact?.id ? { fact: { id: String(fact.id), at: String(fact.at), ...(fact.auto ? { auto: String(fact.auto) } : {}) } } : {}), when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), ...(isExpr(operation.amount) ? { amount: operation.amount } : {}), ...(fact?.id ? { fact: { id: String(fact.id), at: String(fact.at), ...(fact.auto ? { auto: String(fact.auto) } : {}) } } : {}), when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     if (kind === "artifact.spawn") {
@@ -308,7 +310,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "temp-hp.grant" || kind === "damage.apply") {
       const raw = operation.amount;
       const amount = isExpr(raw) ? raw : raw === undefined ? undefined : { value: raw };
-      if (kind === "damage.apply") out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, diceCount: isExpr(operation.diceCount) ? operation.diceCount : operation.diceCount === undefined ? undefined : { value: operation.diceCount }, amount, damageType: String(operation.damageType ?? "타격"), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined });
+      if (kind === "damage.apply") out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, diceCount: isExpr(operation.diceCount) ? operation.diceCount : operation.diceCount === undefined ? undefined : { value: operation.diceCount }, ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), ...(operation.save && typeof operation.save === "object" ? { save: { ability: String((operation.save as Record<string, unknown>).ability ?? "con"), dc: expr((operation.save as Record<string, unknown>).dc, 10), success: (operation.save as Record<string, unknown>).success === "none" ? "none" as const : "half" as const } } : {}), amount, damageType: String(operation.damageType ?? "타격"), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined });
       else out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
@@ -398,6 +400,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
       id: String(entry.id ?? `entry${index}`), invocation,
       // V3d (D258): a labelled entry point is a use of its own (몽크의 기: 질풍 연타 …), with its own payments.
       ...(typeof entry.label === "string" ? { label: entry.label } : {}),
+      ...(entry.killer === "nearby" ? { killer: "nearby" as const } : {}),
       ...(Array.isArray(entry.payments) ? { payments: parsePayments(entry.payments, `entryPoints[${index}].payments`, unsupported) } : {}),
       ...(targeting ? { targeting: { from: String(targeting.from ?? "targets"), min: targeting.min ?? 1, max: targeting.max ?? 1 } } : {}),
       ...(test ? { test } : {}),
@@ -494,6 +497,8 @@ export interface ScopeCharacter {
   armor?: { training: string; dexCapped: boolean; shield: boolean };
   /** R78 (D213): Pact Magic, for "half your Pact Magic slots". */
   pactMagic?: { count: number; level: number };
+  /** V4a (D263): the die a marked spell rolls on this sheet (적 학살자's d10). */
+  markedSpellDice?: Record<string, number>;
 }
 
 /**
@@ -521,6 +526,8 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     if (ref === "armor.dex-capped") return Boolean(character.armor?.dexCapped);
     if (ref === "equipment.shield") return Boolean(character.armor?.shield);
     if (ref === "actor.pact-slots") return character.pactMagic?.count ?? 0;
+    const marked = /^actor\.marked-spell-die:(.+)$/.exec(ref);
+    if (marked) return character.markedSpellDice?.[marked[1]] ?? 0;
     return undefined;
   };
 }

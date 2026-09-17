@@ -32,6 +32,8 @@ export interface CharacterRuntime {
    * time (the default, and what a missing key means), take it without asking, or never offer it.
    */
   hitPolicy?: Record<string, HitPolicy>;
+  /** V4a (D263): pools that do not come back for this many more long rests (더 강한 신성 개입). */
+  resourceLockouts?: Record<string, number>;
   updatedAt: string;
 }
 

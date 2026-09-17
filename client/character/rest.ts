@@ -39,11 +39,12 @@ export interface RestFeature {
   unavailable?: string;
 }
 
-export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntime, catalog: ContentCatalog, event: TriggerEvent = REST_INVOCATION): RestFeature[] {
+export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntime, catalog: ContentCatalog, event: TriggerEvent = REST_INVOCATION, options: { nearby?: boolean } = {}): RestFeature[] {
   const scope = characterScope(derived);
   return derived.features.flatMap((feature) => {
     const contract = featureContract(catalog, featureRuleKey(feature.id));
-    const entries = contract?.entryPoints.filter((entry) => entry.invocation === event) ?? [];
+    // V4a (D263): somebody else's kill is answered only by entries that say a nearby kill counts.
+    const entries = contract?.entryPoints.filter((entry) => entry.invocation === event && (!options.nearby || entry.killer === "nearby")) ?? [];
     if (!entries.length) return [];
     const out: RestFeature = { featureId: feature.id, name: feature.name, event, pools: [] };
     for (const operation of entries.flatMap((entry) => entry.operations)) {

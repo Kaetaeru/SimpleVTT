@@ -139,6 +139,10 @@ export interface TableHostOptions {
   pcExtraTurns?: (entry: JournalCharacter) => Array<{ offset: number; label: string }>;
   /** V3h (D262): who hits this sheet attacks it at disadvantage for the rest of the turn — the rule's name, or nothing. */
   pcHitDefense?: (entry: JournalCharacter) => string | undefined;
+  /** V4a (D263): what healing someone else with a slot spell gives back to the caster (plus the slot level). */
+  pcSlotHealSelf?: (entry: JournalCharacter) => number | undefined;
+  /** V4a (D263): whether casting this spell shows this sheet the target's defenses. */
+  pcRevealsDefenses?: (entry: JournalCharacter, spellId: string) => boolean;
   /**
    * R35 (D174): the contract rescues this sheet could pay for a d20 of this family that came out this way, and what
    * paying one costs it. The host owns no catalog, so both arrive as functions like every other sheet question.
@@ -149,13 +153,13 @@ export interface TableHostOptions {
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number } } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" } } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
   contentModules?: () => readonly RuleModuleJson[];
   /** R79 (D216), R81 (D215): what this character's features offer at a moment, and using one of them (dice rolled by `roll`). */
-  pcTriggers?: (entry: JournalCharacter, event: "short-rest" | "initiative" | "kill") => TriggerOffer[];
+  pcTriggers?: (entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", /** V4a (D263): only what answers somebody else's kill nearby. */ nearby?: boolean) => TriggerOffer[];
   pcTriggerApply?: (entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", choice: { featureId: string; slots?: number[] }, roll: (formula: string) => number) => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
   pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
@@ -750,14 +754,16 @@ export class TableHost {
           const initiativeStats = initiativeActor ? this.statsOf({ entry: initiativeActor }) : null;
           const advantaged = initiativeStats ? advantageFor(initiativeStats, "ability-check", { skill: "initiative" }) : undefined;
           const first = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
-          const die = advantaged ? Math.max(first, 1 + Math.floor((this.options.random ?? Math.random)() * 20)) : first;
+          // V4a (D263): 2024 surprise — disadvantage on the initiative roll (advantage and disadvantage cancel).
+          const surprised = command.surprised === true;
+          const die = advantaged && !surprised ? Math.max(first, 1 + Math.floor((this.options.random ?? Math.random)() * 20)) : surprised && !advantaged ? Math.min(first, 1 + Math.floor((this.options.random ?? Math.random)() * 20)) : first;
           initiative = die + command.rollBonus;
-          this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turnName} · 이니셔티브`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turnName} · 이니셔티브` } });
+          this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turnName} · 이니셔티브${command.surprised ? " (기습당함)" : ""}`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turnName} · 이니셔티브` } });
         }
         this.setTracker(withTurn(this.tracker, newTurn({ ...trusted, name: turnName, initiative })));
         // V3h (D262): a sheet that acts twice in its first round gets its second row, gone when the round ends.
         const joining = trusted.entryId ? this.journalEntries.get(trusted.entryId) : undefined;
-        if (joining?.kind === "character" && trusted.tokenId) for (const extra of this.options.pcExtraTurns?.(joining) ?? []) {
+        if (joining?.kind === "character" && trusted.tokenId && command.surprised !== true) for (const extra of this.options.pcExtraTurns?.(joining) ?? []) {
           if (this.tracker.turns.some((item) => item.extra && item.tokenId === trusted.tokenId && item.pageId === trusted.pageId)) break;
           this.setTracker(withTurn(this.tracker, newTurn({ ...trusted, name: `${turnName} (${extra.label})`, initiative: initiative + extra.offset, extra: { untilRound: this.tracker.round } })));
         }
@@ -929,6 +935,22 @@ export class TableHost {
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
         // V3g (D261): an effect spent by the next cast (과부하).
         if (!exec.repeat) this.consumeOnUse(caster.entry.id, "cast");
+        if (caster.entry.kind === "character" && !exec.repeat) {
+          // V4a (D263): a slot spell that healed somebody else heals its caster too (축복받은 치유사).
+          const selfHeal = this.options.pcSlotHealSelf?.(caster.entry);
+          const bySlot = prepared.spec.level >= 1 && (!command.method || command.method.kind === "slot" || command.method.kind === "pact");
+          if (selfHeal && bySlot && resolution.targets.some((row) => (row.healed ?? 0) > 0 && row.target.id !== caster.entry.id)) {
+            const live = this.resolveActor({ entryId: caster.entry.id });
+            if (live) { this.healActor(live, selfHeal + prepared.spec.level); this.say({ type: "system", who: "", content: `${caster.token?.name ?? caster.entry.name}: 자신도 ${selfHeal + prepared.spec.level} 회복` }); }
+          }
+          // V4a (D263): the marker learns what the target resists (사냥꾼의 지식).
+          if (this.options.pcRevealsDefenses?.(caster.entry, prepared.spec.spellId)) for (const row of rows) {
+            const defenses = row.combatant?.defenses;
+            if (!defenses || row.target.entry.kind !== "npc") continue;
+            const listed = [defenses.resistances.length ? `저항 ${defenses.resistances.join("·")}` : "", defenses.immunities.length ? `면역 ${defenses.immunities.join("·")}` : "", defenses.vulnerabilities.length ? `취약 ${defenses.vulnerabilities.join("·")}` : ""].filter(Boolean);
+            this.say({ type: "system", who: "", content: `${row.target.token?.name ?? row.target.entry.name}: ${listed.join(" · ") || "저항·면역·취약 없음"}` });
+          }
+        }
         if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → ${prepared.spec.name} 시전` }); this.releaseHeld(heldPrompt.id, true, { reduce: 0, label: `${prepared.spec.name} 반응` }); }
         if (counterPrompt) {
           // 2024: the caster of the held spell makes a Constitution save against the counterspeller's save DC.
@@ -1054,6 +1076,24 @@ export class TableHost {
           }
           if (party.max && targets.length > party.max) lines.push(`${party.max}명까지만 적용했습니다`);
         } else if (party.tempHp || party.heal || party.grants.length) lines.push("대상을 고르지 않았습니다");
+        // V4a (D263): one amount shared out, the most hurt first, nobody past half their maximum (생명 보존).
+        if (party.healPool && targets.length) {
+          let left = party.healPool.amount;
+          const hp = (target: (typeof targets)[number]) => (target.entry.kind === "handout" ? { current: 0, max: 0 } : { current: target.entry.runtime.hp.current, max: target.entry.kind === "character" ? target.entry.runtime.hp.maxSeen : target.entry.runtime.hp.max });
+          for (const target of [...targets].sort((a, b) => hp(a).current / Math.max(1, hp(a).max) - hp(b).current / Math.max(1, hp(b).max))) {
+            const room = Math.max(0, Math.floor(hp(target).max / 2) - hp(target).current);
+            const given = Math.min(left, room);
+            if (given <= 0) continue;
+            this.healActor(target, given);
+            left -= given;
+            lines.push(`${target.token?.name ?? target.entry.name}: 회복 ${given}`);
+          }
+          if (left === party.healPool.amount) lines.push("최대 HP 절반 아래인 대상이 없습니다");
+        } else if (party.healPool) lines.push("대상을 고르지 않았습니다");
+        // V4a (D263): damage the use deals to the chosen creatures — resolved like an area spell, so saves, resistances,
+        // concentration, undo and the DM's confirmation all work as they do for one.
+        if (outcome.strikes?.length && targets.length) for (const strike of outcome.strikes) this.contractStrike(actor, targets, outcome.label, strike, player.displayName, userId);
+        else if (outcome.strikes?.length) lines.push("대상을 고르지 않았습니다");
         if (outcome.deathSave) { this.rollDeathSave(actor.entry.id, player.displayName); lines.push("죽음 내성"); }
         lines.push(...outcome.notes);
         this.say({ type: "act", who: player.displayName, playerId: userId, content: `${who}: ${outcome.label}${lines.length ? ` — ${lines.join(" · ")}` : ""}`, act: {
@@ -2175,7 +2215,7 @@ export class TableHost {
       const rows = resolution.targets.map((row, index) => this.applySpellRow(row, targets[index], resolution));
       // R99 (D234): a spell that dropped a monster is the moment 어둠의 존재의 축복 waits for.
       const killer = this.journalEntries.get(resolution.caster.id);
-      if (killer?.kind === "character" && resolution.targets.some((row, index) => targets[index]?.entry.kind === "npc" && (row.attack?.downed ?? row.damage?.downed))) this.offerTriggers(killer, "kill");
+      if (resolution.targets.some((row, index) => targets[index]?.entry.kind === "npc" && (row.attack?.downed ?? row.damage?.downed))) { if (killer?.kind === "character") this.offerTriggers(killer, "kill"); this.offerNearbyKill(resolution.caster.id, targets.find((target, index) => target?.entry.kind === "npc" && (resolution.targets[index]?.attack?.downed ?? resolution.targets[index]?.damage?.downed))?.page?.id); }
       // R28 (D151): forcing a save and taking damage both keep a rage going.
       this.ragingDeeds([this.resolveActor({ entryId: resolution.caster.id }) ?? undefined, ...targets.filter((_, index) => (resolution.targets[index]?.damage?.damageTotal ?? 0) > 0)]);
       // H1 (D238): damage of a type a creature's regeneration names stops it next turn.
@@ -2295,15 +2335,29 @@ export class TableHost {
    * (`hitPolicy["trigger:<feature>"]`): taken at once, never offered, or — the default — asked in a window the
    * character's owner answers. Nothing waits on the answer; the rest of the table carries on.
    */
-  private offerTriggers(entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", where: { pageId?: string; tokenId?: string } = {}) {
-    const offers = this.options.pcTriggers?.(entry, event) ?? [];
-    const policy = (offer: TriggerOffer) => entry.runtime.hitPolicy?.[triggerPolicyKey(offer.featureId)] ?? "ask";
+  private offerTriggers(entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", where: { pageId?: string; tokenId?: string } = {}, nearby = false) {
+    const offers = this.options.pcTriggers?.(entry, event, nearby) ?? [];
+    // V4a (D263): whether somebody else's kill was close enough is the owner's to say, so it is always asked.
+    const policy = (offer: TriggerOffer) => (nearby ? "ask" : entry.runtime.hitPolicy?.[triggerPolicyKey(offer.featureId)] ?? "ask");
     const auto = offers.filter((offer) => policy(offer) === "always");
     const ask = offers.filter((offer) => policy(offer) === "ask");
-    const moment = event === "initiative" ? "이니셔티브" : event === "kill" ? "적을 쓰러뜨림" : "짧은 휴식";
+    const moment = event === "initiative" ? "이니셔티브" : event === "kill" ? (nearby ? "근처에서 적이 쓰러짐 (가까이 있었다면)" : "적을 쓰러뜨림") : "짧은 휴식";
     if (auto.length) { const used = this.applyTriggers(entry.id, event, auto.map((offer) => ({ featureId: offer.featureId })), auto); if (used.length) this.say({ type: "system", who: "", content: `${entry.name}: ${moment} — ${used.join(", ")} (자동)` }); }
     if (!ask.length) return;
     this.say({ type: "prompt", who: "", content: `${entry.name}: ${moment} — ${ask.map((offer) => offer.name).join(", ")}`, prompt: { kind: "trigger", mover: { name: entry.name }, reactor: { name: entry.name, entryId: entry.id, ...where }, trigger: { event, offers: ask } } });
+  }
+
+  /** V4a (D263): the other characters on the scene may answer this kill if they were close (어둠의 존재의 축복). */
+  private offerNearbyKill(killerId: string, pageId: string | undefined) {
+    const page = pageId ? this.pages.get(pageId) : undefined;
+    if (!page) return;
+    const seen = new Set<string>([killerId]);
+    for (const token of page.tokens) {
+      if (!token.represents || seen.has(token.represents)) continue;
+      seen.add(token.represents);
+      const entry = this.journalEntries.get(token.represents);
+      if (entry?.kind === "character") this.offerTriggers(entry, "kill", { pageId: page.id, tokenId: token.id }, true);
+    }
   }
 
   /** Use the chosen trigger features one after another on the live sheet; returns what was used, by name. */
@@ -2568,7 +2622,7 @@ export class TableHost {
       const killer = this.journalEntries.get(args[2].entry.id);
       // R99 (D234): 연구된 공격 remembers the miss; any other attack by the same creature settles the last one.
       if (!args[6] && this.combatantOf(args[2])?.studiedAttacks) { if (args[0].outcome === "miss" || args[0].outcome === "fumble") this.studied.set(args[2].entry.id, args[1].entry.id); else this.studied.delete(args[2].entry.id); }
-      if (args[0].downed && args[1].entry.kind === "npc" && killer?.kind === "character" && !args[6]) this.offerTriggers(killer, "kill");
+      if (args[0].downed && args[1].entry.kind === "npc" && !args[6]) { if (killer?.kind === "character") this.offerTriggers(killer, "kill"); this.offerNearbyKill(args[2].entry.id, args[1].page?.id); }
       // R90 (D225): after the card has written its own changes, so they do not put the spent effect back.
       this.consumeOnUse(args[2].entry.id, "attack");
       this.consumeOnUse(args[1].entry.id, "attacked");
@@ -2914,6 +2968,22 @@ export class TableHost {
   }
 
   /** R103 (D238): one aura card — the same damage roll for every creature marked inside. */
+  /** V4a (D263): one damage line of a feature use against the creatures its user chose. */
+  private contractStrike(actor: { entry: JournalEntry; token?: Token; page?: Page }, victims: Array<{ entry: JournalEntry; token?: Token; page?: Page }>, label: string, strike: { formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }, who: string, userId: string) {
+    const dice = diceParts(strike.formula);
+    const caster = this.combatantOf(actor);
+    const rows = victims.map((victim) => ({ victim, combatant: this.combatantOf(victim), stats: this.statsOf(victim) })).filter((row): row is { victim: typeof row.victim; combatant: Combatant; stats: ActorStats } => Boolean(row.combatant && row.stats));
+    if (!dice || !caster || !rows.length) return;
+    const parts = { count: dice.count, sides: dice.sides, ...(dice.flat ? { flat: dice.flat } : {}) };
+    const primary: SpellExec["primary"] = strike.save ? { kind: "save-damage", saveAbility: strike.save.ability, damageType: strike.damageType, dice: parts, successDamage: strike.save.success } : { kind: "area-damage", damageType: strike.damageType, dice: parts };
+    const exec: SpellExec = { spellId: `feature:${label}`, baseLevel: 0, castingEconomy: "action", targeting: { kind: "creature", minTargets: 1, maxTargets: rows.length }, primary };
+    const spec = { spellId: exec.spellId, name: label, level: 0, exec };
+    const casterStats = { attackBonus: 0, saveDc: strike.save?.dc ?? 0, modifier: 0, level: 1 };
+    const waits = Boolean(this.campaign.settings.dmConfirmsResults) && userId !== this.options.hostUserId;
+    const resolution = { ...resolveSpell({ caster, casterStats, spec, targets: rows.map((row) => ({ combatant: row.combatant, stats: row.stats })), dice: diceFrom(this.options.random ?? Math.random), apply: !waits }), source: "action" as const };
+    this.postSpell(resolution, rows.map((row) => row.victim), () => undefined, waits, who, userId, { spec, casterStats });
+  }
+
   private auraCard(owner: JournalNpc, aura: { name: string; rule: Extract<TraitRule, { pattern: "aura-damage" }> }, victims: Array<{ entry: JournalEntry; token?: Token; page?: Page }>) {
     const dice = diceParts(aura.rule.dice);
     if (!dice) return;

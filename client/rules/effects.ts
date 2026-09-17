@@ -68,6 +68,8 @@ export interface EffectApplication {
   hitDefense?: string;
   extraTurns?: Array<{ offset: number; label: string }>;
   attunementBonus?: number;
+  slotHealSelf?: number;
+  revealDefenses?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll. */
   damageTypeModifier?: string[];
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
@@ -344,6 +346,8 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.opportunityDisadvantage?.length) { next = { ...next, opportunityDisadvantage: [...(next.opportunityDisadvantage ?? []), ...application.opportunityDisadvantage.map((reason) => reason || label)] }; notes.push("나를 향한 기회 공격 불리"); }
     if (application.hitDefense !== undefined) { next = { ...next, hitDefense: application.hitDefense || label }; notes.push("나를 맞힌 생물은 이번 턴 다른 공격이 불리"); }
     if (application.extraTurns?.length) { next = { ...next, extraTurns: [...(next.extraTurns ?? []), ...application.extraTurns.map((turn) => ({ ...turn, label: turn.label || label }))] }; notes.push("전투 첫 라운드에 턴 하나 더"); }
+    if (application.slotHealSelf) { next = { ...next, slotHealSelf: Math.max(next.slotHealSelf ?? 0, application.slotHealSelf) }; notes.push(`슬롯 주문으로 남을 치유하면 자신도 ${application.slotHealSelf} + 슬롯 레벨 회복`); }
+    if (application.revealDefenses?.length) { next = { ...next, revealDefenses: [...new Set([...(next.revealDefenses ?? []), ...application.revealDefenses])] }; notes.push("표식 주문 대상의 저항·면역·취약을 앎"); }
     if (application.attunementBonus) { next = { ...next, attunementBonus: (next.attunementBonus ?? 0) + application.attunementBonus }; notes.push(`조율 슬롯 +${application.attunementBonus}`); }
     if (application.checkMinimumD20) { next = { ...next, checkMinimumD20: Math.max(next.checkMinimumD20 ?? 0, application.checkMinimumD20) }; notes.push(`숙련 판정 d20 최소 ${application.checkMinimumD20}`); }
     if (application.minimumScoreRolls?.length) { next = { ...next, minimumScoreRolls: [...new Set([...(next.minimumScoreRolls ?? []), ...application.minimumScoreRolls])] }; notes.push(`${application.minimumScoreRolls.join("·")} 내성은 최소 능력치 점수`); }

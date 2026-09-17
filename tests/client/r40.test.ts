@@ -10,6 +10,7 @@ import test from "node:test";
 import { featureActivation, featureRuleKey } from "../../client/rules/activation";
 import { characterScope } from "../../client/rules/contract";
 import { contractDurations, contractUse, featureContract } from "../../client/rules/contractActivation";
+import { tableOutcome } from "../../client/rules/contractTable";
 import { build, catalog } from "./support";
 
 const USES: Array<[string, string, number]> = [
@@ -50,7 +51,7 @@ test("uses: the level-dependent numbers are read off the character, not written 
   assert.equal(at(5).resourceId, "resource.fighter.second-wind");
   // 생명 보존 is five times the cleric's level, worked out by the expression rather than a table of twenty numbers.
   const cleric = build({ name: "c", classes: "cleric", level: 7 }).derived;
-  assert.equal(contractUse(featureContract(cat, "cleric.life-domain.preserve-life")!, characterScope(cleric), "생명 보존")!.roll!.formula, "35");
+  assert.equal(tableOutcome(cleric, cat, "cleric.life-domain.preserve-life")?.party.healPool?.amount, 35);
 });
 
 test("uses: a contract that says nothing about a use leaves the table's answer alone (D180)", () => {

@@ -8,7 +8,7 @@
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedCharacter } from "../character/types";
 import { ATTACK_INVOCATIONS, characterScope, evaluate } from "./contract";
-import { contractOutcome, featureContract } from "./contractActivation";
+import { atOthers, contractOutcome, featureContract, formula as useFormula } from "./contractActivation";
 
 export interface TableOutcome {
   label: string;
@@ -24,11 +24,11 @@ export interface TableOutcome {
    * 치유사 heals, 요리사 and 독 제조자 put an item in somebody's bag. `max` is how many may be chosen, when the rule
    * says so. Everything here needs a target, which is why it could not live on the sheet.
    */
-  party: { tempHp?: string; heal?: string; grants: string[]; max?: number };
+  party: { tempHp?: string; heal?: string; grants: string[]; max?: number; /** V4a (D263): an amount shared out among the chosen creatures, none past half its maximum. */ healPool?: { amount: number; cap: "half-max" } };
+  /** V4a (D263): damage the use deals to the chosen creatures, rolled once, with the save that resists it. */
+  strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>;
 }
 
-/** Whether an operation is aimed at somebody other than the user. */
-const atOthers = (target: string) => target === "allies" || target === "party" || target === "target" || target === "targets";
 
 /** What this feature's contract asks the table for, or null when it asks for nothing. */
 export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog, ruleKey: string): TableOutcome | null {
@@ -40,6 +40,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const selfMarks: string[] = [];
   const removed: string[] = [];
   const party: TableOutcome["party"] = { grants: [] };
+  const strikes: NonNullable<TableOutcome["strikes"]> = [];
   const formula = (operation: { dice?: string; amount?: unknown }) => {
     const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
     const parts = [operation.dice, Number.isFinite(flat) && flat ? `${operation.dice ? (flat > 0 ? "+" : "-") : ""}${Math.abs(flat as number)}` : ""].filter(Boolean);
@@ -55,7 +56,9 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
       if (operation.kind === "condition.remove" && operation.target !== "self") { removed.push(operation.condition); continue; }
       // R58 (D193): the half aimed at other people. The sheet cannot answer any of it — it does not know who.
       if (!("target" in operation) || !atOthers(operation.target)) continue;
+      if (operation.kind === "damage.apply") { const rolled = useFormula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides); if (rolled) strikes.push({ formula: rolled, damageType: operation.damageType, ...(operation.save ? { save: { ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10, success: operation.save.success } } : {}) }); continue; }
       if (operation.kind === "temp-hp.grant") party.tempHp = formula(operation);
+      else if (operation.kind === "healing.apply" && operation.pool) party.healPool = { amount: Number(evaluate(operation.amount, scope)) || 0, cap: operation.pool };
       else if (operation.kind === "healing.apply") party.heal = formula(operation);
       else if (operation.kind === "content.grant") party.grants.push(operation.contentId);
     }
@@ -71,8 +74,9 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     notes: outcome.notes,
     artifacts: outcome.artifacts.map((item) => ({ kind: item.kind, monsterId: item.monsterId, count: item.count })),
     party,
+    ...(strikes.length ? { strikes } : {}),
   };
   const asks = table.conditionsApplied.length || table.conditionsRemoved.length || table.selfMarks.length || table.deathSave || table.notes.length || table.artifacts.length
-    || party.tempHp || party.heal || party.grants.length;
+    || party.tempHp || party.heal || party.healPool || party.grants.length || strikes.length;
   return asks ? table : null;
 }

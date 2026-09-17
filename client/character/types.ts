@@ -279,6 +279,10 @@ export interface DerivedCharacter {
   extraTurns?: Array<{ offset: number; label: string }>;
   /** V3h (D262): magic items attuned at once beyond the three the rules allow. */
   attunementBonus?: number;
+  /** V4a (D263): a slot spell that heals someone else also heals this character for this much plus the slot level. */
+  slotHealSelf?: number;
+  /** V4a (D263): spells whose casting shows the caster the target's defenses. */
+  revealDefenses?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll (원소의 친화력). */
   damageTypeModifier?: string[];
   schoolDamageModifier?: Array<{ school: string; classSlug: string }>;
@@ -318,7 +322,7 @@ export interface DerivedCharacter {
    * carried as plain data. Without this every caller of `featureActivation` would have to remember to hand it the
    * catalog, and the one that forgot would silently lose the feature's rule.
    */
-  featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string }; acts?: boolean; trigger?: string }>;
+  featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string; spellSlot?: boolean; lockout?: { resourceId: string; dice: string } }; acts?: boolean; trigger?: string }>;
   hitDice: Record<string, number>;
   choices: ChoiceRequest[];
   validation: { blocking: string[]; warnings: string[] };

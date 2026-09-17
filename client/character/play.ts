@@ -131,12 +131,17 @@ export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter): 
     if (back > 0) { hitDiceSpent[die] = spent - back; toRestore -= back; }
     if (hitDiceSpent[die] === 0) delete hitDiceSpent[die];
   }
+  // V4a (D263): a locked pool stays spent, and the lock counts one long rest down.
+  const locked = Object.entries(runtime.resourceLockouts ?? {}).filter(([, rests]) => rests > 0);
+  const stillUsed = Object.fromEntries(locked.map(([id]) => [id, derived.resources.find((resource) => resource.id === id)?.max ?? 1]));
+  const resourceLockouts = Object.fromEntries(locked.map(([id, rests]) => [id, rests - 1] as const).filter(([, rests]) => rests > 0));
   return stamp({
     ...runtime,
     hp: { ...runtime.hp, current: derived.hp.max, temp: 0 },
     slotsUsed: {},
     pactSlotsUsed: 0,
-    resourcesUsed: {},
+    resourcesUsed: stillUsed,
+    ...(runtime.resourceLockouts ? { resourceLockouts } : {}),
     hitDiceSpent,
     exhaustion: Math.max(0, runtime.exhaustion - 1),
     deathSaves: { success: 0, failure: 0 },
@@ -361,6 +366,13 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
     if (!die) return null;
     next = { ...next, hitDiceSpent: { ...next.hitDiceSpent, [die]: (next.hitDiceSpent[die] ?? 0) + 1 } };
     parts.push(`히트 다이스 ${die} 소비`);
+  }
+  // V4a (D263): a spell slot as the cost — the lowest one left.
+  if (activation.spellSlot) {
+    const level = Object.keys(derived.spellSlots).map(Number).sort((a, b) => a - b).find((slot) => (next.slotsUsed[slot] ?? 0) < (derived.spellSlots[slot] ?? 0));
+    if (level === undefined) return null;
+    next = { ...next, slotsUsed: { ...next.slotsUsed, [level]: (next.slotsUsed[level] ?? 0) + 1 } };
+    parts.push(`${level}레벨 슬롯 소비`);
   }
   if (extras.rolled) parts.push(`${extras.rolled.label} ${extras.rolled.total}`);
   // The caller decides what was rolled or chosen (Second Wind roll, Lay on Hands points on self); apply whatever it passed.

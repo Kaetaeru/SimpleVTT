@@ -196,7 +196,7 @@ test("V3f: 전술 통달, 전술적 이동, 신성 변환의 사용, 회복의 �
   // 신성 변환: 언데드 퇴치 rolls 언데드 소각's radiant d8s.
   const cleric = build({ name: "클레릭", classes: "cleric", level: 5, abilities: { wis: 16 } }).derived;
   const turn = featureActivation(cleric.features.find((feature) => feature.name === "언데드 퇴치")!, cleric)!;
-  assert.equal(turn.roll?.(cleric).formula, `${cleric.abilities.wis.modifier}d8`);
+  assert.deepEqual(tableOutcome(cleric, cat, "cleric.channel-divinity#turn-undead")?.strikes?.map((strike) => [strike.formula, strike.save?.ability, strike.save?.success]), [[`${cleric.abilities.wis.modifier}d8`, "wis", "none"]]);
   assert.equal(turn.resourceId, "resource.cleric.channel-divinity");
   // 회복의 손길: 5 points of 안수 take 실명 off the chosen creature.
   const paladin = build({ name: "팔라딘", classes: "paladin", level: 14 }).derived;

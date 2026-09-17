@@ -492,7 +492,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     // its sheet half and stopped. When it needs people, the targeting mode asks for them first.
     const table = derived ? tableOutcome(derived, catalog, featureRuleKey(feature.id)) : null;
     if (table) {
-      const wantsTargets = table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.grants.length;
+      const wantsTargets = table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.healPool || table.party.grants.length || table.strikes?.length;
       let picked: string[] = [];
       if (wantsTargets) {
         picked = await requestTargets(`${feature.name} — 대상을 클릭하세요${table.party.max ? ` (최대 ${table.party.max}명)` : ""}`, { multi: true });
@@ -735,6 +735,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           <Dropdown up label="판정" items={checkItems} />
           <Dropdown up label="아이템" disabled={Boolean(blocked) || !itemItems.length} items={itemItems} />
           {!inTracker ? <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}</button> : null}
+          {!inTracker ? <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus, true)} title="기습당함: 이니셔티브를 불리로 굴리고 첫 라운드 추가 턴도 없습니다">기습당함</button> : null}
           <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트 열기</button>
         </div>
       </div>

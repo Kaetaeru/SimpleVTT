@@ -127,7 +127,7 @@ export type ClientCommand =
   | { type: "chat.table"; name: string; count: number; mode: "public" | "gm" | "self" }
   | { type: "tracker.set"; tracker: Tracker }
   /** Add (or refresh) a token's turn. With `rollBonus` the host rolls 1d20 + bonus and posts the card; else `initiative` (default 0). */
-  | { type: "tracker.add"; turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }; rollBonus?: number }
+  | { type: "tracker.add"; turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }; rollBonus?: number; /** V4a (D263): the creature was surprised — its initiative roll is at disadvantage and it takes no extra first-round turn. */ surprised?: boolean }
   /** "다음 턴" (GM, or the current turn's controller as "턴 마침"): turn-end and turn-start processing, then the highlight moves. */
   | { type: "tracker.next" }
   /** R11 (BG3 linked initiative): swap the current turn with a later party member of the same linked group; the GM or either creature's controller. */

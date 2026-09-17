@@ -66,7 +66,7 @@ export interface ContractRider {
 const SAVE_KO: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
 
 /** The formula a `damage.apply` names, with its dice count resolved against the character. */
-function formulaOf(operation: { dice?: string; diceCount?: unknown; amount?: unknown }, scope: Scope): string | undefined {
+function formulaOf(operation: { dice?: string; diceCount?: unknown; diceSides?: unknown; amount?: unknown }, scope: Scope): string | undefined {
   const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
   const die = operation.dice?.trim();
   if (!die) return Number.isFinite(flat) && flat ? String(flat) : undefined;
@@ -75,7 +75,8 @@ function formulaOf(operation: { dice?: string; diceCount?: unknown; amount?: unk
   if (!sides) return undefined;
   const total = count !== undefined && Number.isFinite(count) ? Math.max(0, Math.floor(count)) : Number(sides[1] || 1);
   if (!total) return undefined;
-  return `${total}d${sides[2]}${Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""}`;
+  const size = operation.diceSides === undefined ? Number(sides[2]) : Number(evaluate(operation.diceSides as never, scope)) || Number(sides[2]);
+  return `${total}d${size}${Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""}`;
 }
 
 /** Every pre-roll or on-hit rider a contract declares, or an empty list when it declares none. */

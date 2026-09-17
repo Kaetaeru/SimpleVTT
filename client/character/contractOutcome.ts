@@ -29,6 +29,11 @@ export function applyContractOutcome(runtime: CharacterRuntime, derived: Derived
   }
   // R78 (D213): slots a use gives back (마법적 책략's Pact Magic slots).
   if (outcome.slotLevels || outcome.pactSlots) next = restoreSlots(next, derived, { levels: outcome.slotLevels, pact: outcome.pactSlots }, label) ?? next;
+  // V4a (D263): uses given back to a pool (영감의 샘), never below none used.
+  for (const restore of outcome.restores ?? []) {
+    const used = next.resourcesUsed[restore.resourceId] ?? 0;
+    if (used > 0) next = noteLog({ ...next, resourcesUsed: { ...next.resourcesUsed, [restore.resourceId]: Math.max(0, used - restore.amount) } }, `${label}: ${restore.amount}회 회복`);
+  }
   for (const note of outcome.notes) next = noteLog(next, `${label}: ${note}`);
   return next;
 }

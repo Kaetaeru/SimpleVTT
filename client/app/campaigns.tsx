@@ -98,7 +98,7 @@ export interface CampaignsState {
   putToken: (pageId: string, token: Token) => void;
   removeToken: (pageId: string, id: string) => void;
   setTracker: (tracker: Tracker) => void;
-  addTurn: (turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => void;
+  addTurn: (turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number, surprised?: boolean) => void;
   nextTurn: () => void;
   /** R11: swap the current turn with a later party member in the same linked group (BG3). */
   swapTurn: (turnId: string) => void;
@@ -508,7 +508,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const putToken = useCallback((pageId: string, token: Token) => send({ type: "token.put", pageId, token }), [send]);
   const removeToken = useCallback((pageId: string, id: string) => send({ type: "token.remove", pageId, id }), [send]);
   const setTracker = useCallback((tracker: Tracker) => send({ type: "tracker.set", tracker }), [send]);
-  const addTurn = useCallback((turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => send({ type: "tracker.add", turn, rollBonus }), [send]);
+  const addTurn = useCallback((turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number, surprised?: boolean) => send({ type: "tracker.add", turn, rollBonus, ...(surprised ? { surprised: true } : {}) }), [send]);
   const nextTurn = useCallback(() => send({ type: "tracker.next" }), [send]);
   const swapTurn = useCallback((turnId: string) => send({ type: "tracker.swap", turnId }), [send]);
   const attack = useCallback((attacker: ActorRef, targets: ActorRef[], ref: AttackRef, riders?: AttackRiders, options?: { overrides?: AttackOverrides; reaction?: string; readied?: boolean }) => send({ type: "act.attack", attacker, targets, attack: ref, riders, overrides: options?.overrides, reaction: options?.reaction, readied: options?.readied }), [send]);

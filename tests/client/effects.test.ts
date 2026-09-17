@@ -122,11 +122,12 @@ test("coverage audit fixes: Rage 10 minutes, subclass and metamagic spend pools,
   assert.equal(featureRuleKey(preserve!.id), "cleric.life-domain.preserve-life");
   const preserveActivation = featureActivation(preserve!, cleric)!;
   assert.equal(preserveActivation.resourceId, "resource.cleric.channel-divinity");
-  assert.equal(preserveActivation.roll!(cleric).formula, "15");
+  // V4a (D263): the fifteen hit points are shared out at the table, not rolled on the sheet.
+  const { tableOutcome } = await import("../../client/rules/contractTable");
+  assert.deepEqual(tableOutcome(cleric, cat, "cleric.life-domain.preserve-life")?.party.healPool, { amount: 15, cap: "half-max" });
   let rt = initialRuntime(cleric);
-  rt = useFeature(rt, cleric, preserve!, preserveActivation, { rolled: { label: "회복 총량", total: 15 } })!;
+  rt = useFeature(rt, cleric, preserve!, preserveActivation)!;
   assert.equal(rt.resourcesUsed["resource.cleric.channel-divinity"], 1);
-  assert.ok(rt.log.at(-1)!.text.includes("15"));
 
   const sorcerer = build({ classes: "sorcerer", level: 3 }).derived;
   const quickened = sorcerer.features.find((feature) => feature.source === "metamagic" && feature.id.endsWith("quickened-spell")) ?? sorcerer.features.find((feature) => feature.source === "metamagic")!;

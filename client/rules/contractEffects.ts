@@ -52,7 +52,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -157,6 +157,10 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       // V3h (D262): a second turn in the first round of combat, at this initiative offset (도둑의 반사신경).
       case "initiative.extra-turn": application.extraTurns = [...(application.extraTurns ?? []), { offset: number(operation, scope) ?? 0, label: operation.note ?? "" }]; break;
       // V3h (D262): more magic items attuned at once (마법 물건 사용).
+      // V4a (D263): healing someone else with a slot spell heals you for this much plus the slot level (축복받은 치유사).
+      case "healing.self-on-slot-heal": application.slotHealSelf = Math.max(application.slotHealSelf ?? 0, number(operation, scope) ?? 0); break;
+      // V4a (D263): casting this spell tells the caster the target's resistances, immunities and vulnerabilities (사냥꾼의 지식).
+      case "marked-spell.reveal-defenses": if (operation.spell) application.revealDefenses = [...(application.revealDefenses ?? []), operation.spell]; break;
       case "attunement.slots": application.attunementBonus = (application.attunementBonus ?? 0) + (number(operation, scope) ?? 0); break;
       // V3c (D257): advantage on death saving throws (생존자, 튼튼함).
       case "death-save.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["death-save"] }]; break;

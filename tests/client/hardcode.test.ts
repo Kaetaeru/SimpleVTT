@@ -145,7 +145,11 @@ test("H5c: a use is its contract — a chosen number of points, dice by level, t
   const use = contractUse(contract, characterScope(build({ name: "x", classes: "fighter", level: 6 }).derived), "치유의 손길")!;
   assert.equal(use.points, true);
   assert.equal(use.resourceId, "resource.module.mending-touch");
-  assert.equal(use.roll?.formula, "3d6");
+  // V4a (D263): damage aimed at an area is rolled against the chosen creatures by the table, with the dice by level.
+  assert.equal(use.roll, undefined);
+  const { formula } = await import("../../client/rules/contractActivation");
+  const area = contract.entryPoints[0].operations.find((operation) => operation.kind === "damage.apply") as { dice?: string; diceCount?: never };
+  assert.equal(formula(area.dice, undefined, characterScope(build({ name: "x", classes: "fighter", level: 6 }).derived), area.diceCount), "3d6");
   assert.ok(use.note?.includes("추가 행동"));
   // And nothing guesses a button from a description any more.
   const { featureActivation } = await import("../../client/rules/activation");

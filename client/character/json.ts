@@ -153,6 +153,7 @@ function validateRuntime(value: unknown, errors: string[], warnings: string[]): 
     exhaustion: Number.isInteger(value.exhaustion) ? (value.exhaustion as number) : 0,
     deathSaves: isObject(value.deathSaves) ? { success: Number(value.deathSaves.success ?? 0), failure: Number(value.deathSaves.failure ?? 0) } : { success: 0, failure: 0 },
     heroicInspiration: value.heroicInspiration === true,
+    ...(isObject(value.resourceLockouts) ? { resourceLockouts: numberMap(value.resourceLockouts) } : {}),
     equipped: compact({ armor: pick("armor"), shield: pick("shield"), mainHand: pick("mainHand"), offHand: pick("offHand") }),
     attuned: isStringArray(value.attuned) ? value.attuned : [],
     gold: typeof value.gold === "number" ? value.gold : 0,

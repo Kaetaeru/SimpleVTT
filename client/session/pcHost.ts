@@ -54,9 +54,9 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     // R58 (D193): the host owns no catalog, so it asks for the name of an id a contract handed somebody.
     contentName: (contentId) => catalog().itemById(contentId)?.name ?? catalog().entry(contentId)?.name,
     pcPayContract: (entry, payments, outcome) => payContract(entry.runtime, derivedOf(entry, catalog()), payments, outcome),
-    pcTriggers: (entry, event) => {
+    pcTriggers: (entry, event, nearby) => {
       const derived = derivedOf(entry, catalog());
-      return restFeatures(derived, entry.runtime, catalog(), event).filter((feature) => !feature.unavailable).map((feature) => ({ featureId: feature.featureId, name: feature.name, ...(feature.note ? { note: feature.note } : {}), ...(feature.heal ? { heal: feature.heal } : {}), ...(feature.slotLevels ? { slotLevels: feature.slotLevels, spent: spentSlots(derived, entry.runtime) } : {}) }));
+      return restFeatures(derived, entry.runtime, catalog(), event, { nearby }).filter((feature) => !feature.unavailable).map((feature) => ({ featureId: feature.featureId, name: feature.name, ...(feature.note ? { note: feature.note } : {}), ...(feature.heal ? { heal: feature.heal } : {}), ...(feature.slotLevels ? { slotLevels: feature.slotLevels, spent: spentSlots(derived, entry.runtime) } : {}) }));
     },
     pcTriggerApply: (entry, event, choice, roll) => {
       const derived = derivedOf(entry, catalog());
@@ -76,6 +76,8 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     },
     pcExtraTurns: (entry) => derivedOf(entry, catalog()).extraTurns ?? [],
     pcHitDefense: (entry) => derivedOf(entry, catalog()).hitDefense,
+    pcSlotHealSelf: (entry) => derivedOf(entry, catalog()).slotHealSelf,
+    pcRevealsDefenses: (entry, spellId) => (derivedOf(entry, catalog()).revealDefenses ?? []).includes(spellId),
     pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalog()); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item, catalog()); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
   };
 }

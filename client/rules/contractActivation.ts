@@ -6,7 +6,7 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { ATTACK_INVOCATIONS, GAIN_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { resourceIdOf, ATTACK_INVOCATIONS, GAIN_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
@@ -124,6 +124,10 @@ export interface ContractUse {
   points?: boolean;
   /** V1a (D253): the part of the turn a use takes, from the contract's `economy` payment (`action`, `bonus-action`, `reaction`). */
   economy?: string;
+  /** V4a (D263): the use costs one spell slot, the lowest one left. */
+  spellSlot?: boolean;
+  /** V4a (D263): the pool that cannot come back for this many long rests, rolled when used (더 강한 신성 개입). */
+  lockout?: { resourceId: string; dice: string };
 }
 
 /** H5c (D246): the amount a player chooses when pressing the button. */
@@ -138,14 +142,23 @@ export const APPLIED_ELSEWHERE = "rule.applied-elsewhere";
 
 /** R59 (D194): the id a contract uses to mean "one of this character's hit dice". */
 export const HIT_DIE_RESOURCE = "resource.hit-die";
+/** V4a (D263): the id a contract uses to mean "one of this character's spell slots" — the lowest one left is spent (영감의 샘). */
+export const SPELL_SLOT_RESOURCE = "resource.spell-slot";
+/** V4a (D263): whether an operation is aimed at somebody other than the user, so the table settles it. */
+export const atOthers = (target: string) => target === "allies" || target === "party" || target === "target" || target === "targets" || target === "area";
+/** V4a (D263): a table line with the number it names, worked out for this character. */
+export const questionText = (operation: { question: string; amount?: Parameters<typeof evaluate>[0] }, scope: Scope) => { const value = operation.amount === undefined ? undefined : evaluate(operation.amount, scope); return typeof value === "number" ? `${operation.question} (= ${value})` : operation.question; };
 
 /** `1d10` + `{ref: actor.class-level:…}` becomes "1d10+5"; a bare number becomes "5"; dice alone stay "1d10". H5c: `diceCount` sets how many. */
-function formula(dice: string | undefined, amount: Parameters<typeof evaluate>[0], scope: Scope, diceCount?: Parameters<typeof evaluate>[0]): string | undefined {
+export function formula(dice: string | undefined, amount: Parameters<typeof evaluate>[0], scope: Scope, diceCount?: Parameters<typeof evaluate>[0], diceSides?: Parameters<typeof evaluate>[0]): string | undefined {
   const value = amount === undefined ? undefined : evaluate(amount, scope);
   const flat = typeof value === "number" ? value : undefined;
   if (!dice) return flat === undefined ? undefined : String(flat);
   const count = diceCount === undefined ? undefined : evaluate(diceCount, scope);
   if (typeof count === "number") dice = dice.replace(/^[0-9]*d/, `${Math.max(1, Math.floor(count))}d`);
+  // V4a (D263): the die size an expression decides (a marked spell's die).
+  const sides = diceSides === undefined ? undefined : evaluate(diceSides, scope);
+  if (typeof sides === "number" && sides > 0) dice = dice.replace(/d[0-9]+$/, `d${Math.floor(sides)}`);
   if (!flat) return dice;
   return `${dice}${flat > 0 ? "+" : "-"}${Math.abs(flat)}`;
 }
@@ -164,21 +177,27 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
       // A negative amount spends the pool; a positive one gives it back, which a use never does to its own cost.
       if (spent > 0) {
         if (operation.resourceId === HIT_DIE_RESOURCE) { use.hitDie = true; found = true; continue; }
+        if (operation.resourceId === SPELL_SLOT_RESOURCE) { use.spellSlot = true; found = true; continue; }
         use.resourceId = operation.resourceId; if (spent > 1) use.cost = spent; found = true;
       }
       continue;
     }
+    if (operation.kind === "property.modify" && operation.property === "resource.lockout" && operation.params?.resource && operation.dice) { use.lockout = { resourceId: resourceIdOf(String(operation.params.resource)), dice: operation.dice }; found = true; continue; }
+    // V4a (D263): healing and temporary hit points aimed at others are the table's, not the user's own sheet.
+    if ((operation.kind === "healing.apply" || operation.kind === "temp-hp.grant") && atOthers(operation.target)) continue;
     if (operation.kind === "healing.apply") { use.heal = formula(operation.dice, operation.amount, scope); found = true; continue; }
     if (operation.kind === "temp-hp.grant") { use.tempHp = formula(operation.dice, operation.amount, scope); found = true; continue; }
     if (operation.kind === "damage.apply") {
-      const rolled = formula(operation.dice, operation.amount, scope, operation.diceCount);
+      // V4a (D263): damage aimed at other creatures is rolled by the table against them, not logged here.
+      if (atOthers(operation.target)) continue;
+      const rolled = formula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides);
       if (rolled) { use.roll = { label: `${label} 피해`, formula: rolled }; found = true; }
       continue;
     }
   }
   // The questions a contract asks the table are the reminder the sheet used to print from `note`; the turn panel
   // reads "추가 행동" out of it to know which features cost a bonus action.
-  const questions = operationsOf(contract).filter((operation): operation is Extract<ContractOperation, { kind: "adjudication.request" }> => operation.kind === "adjudication.request" && live(operation, scope)).map((operation) => operation.question);
+  const questions = operationsOf(contract).filter((operation): operation is Extract<ContractOperation, { kind: "adjudication.request" }> => operation.kind === "adjudication.request" && live(operation, scope)).map((operation) => questionText(operation, scope));
   if (questions.length) { use.note = questions.join(" · "); found = true; }
   return found ? use : undefined;
 }
@@ -202,6 +221,8 @@ export interface ContractOutcome {
   /** R78 (D213): spell slots given back — levels adding up to this much (none above 5th), and Pact Magic slots. */
   slotLevels?: number;
   pactSlots?: number;
+  /** V4a (D263): uses given back to one of the character's own pools (영감의 샘). */
+  restores?: Array<{ resourceId: string; amount: number }>;
 }
 
 export function contractOutcome(contract: CommonPlayContract, scope: Scope): ContractOutcome {
@@ -216,11 +237,11 @@ export function contractOutcome(contract: CommonPlayContract, scope: Scope): Con
       case "life.death-save": out.deathSave = true; break;
       case "movement.stand": out.stand = true; break;
       case "content.grant": out.grants.push(operation.contentId); break;
-      case "resource.change": if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + number(operation.amount); else if (operation.resourceId === PACT_SLOT_RESOURCE) out.pactSlots = (out.pactSlots ?? 0) + number(operation.amount); break;
+      case "resource.change": if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + number(operation.amount); else if (operation.resourceId === PACT_SLOT_RESOURCE) out.pactSlots = (out.pactSlots ?? 0) + number(operation.amount); else if (operation.resourceId !== HIT_DIE_RESOURCE && operation.resourceId !== SPELL_SLOT_RESOURCE && number(operation.amount) > 0) out.restores = [...(out.restores ?? []), { resourceId: operation.resourceId, amount: number(operation.amount) }]; break;
       case "resource.recharge": out.recharges.push({ resourceId: operation.resourceId, die: operation.die, succeedsOn: operation.succeedsOn }); break;
       case "movement.relocate": out.notes.push(operation.note ?? `${operation.mode}${operation.distance ? ` ${number(operation.distance)}피트` : ""}`); break;
       case "movement.grant": out.notes.push(operation.note ?? `이동 ${number(operation.distance)}피트`); break;
-      case "adjudication.request": out.notes.push(operation.question); break;
+      case "adjudication.request": out.notes.push(questionText(operation, scope)); break;
       case "artifact.spawn": out.artifacts.push({ kind: operation.kind, monsterId: operation.template.monsterId, name: operation.template.name, count: operation.template.count ? number(operation.template.count, 1) : 1 }); break;
       case "artifact.damage": case "artifact.repair": case "artifact.relocate": case "artifact.update": case "artifact.remove":
         out.artifacts.push({ kind: operation.kind, artifact: operation.artifact, amount: operation.amount ? number(operation.amount) : undefined }); break;
@@ -232,7 +253,7 @@ export function contractOutcome(contract: CommonPlayContract, scope: Scope): Con
 
 /** Nothing to do: the contract asked for none of these. */
 export const emptyOutcome = (outcome: ContractOutcome) =>
-  !outcome.slotLevels && !outcome.pactSlots && !outcome.conditionsRemoved.length && !outcome.hpMaximumDelta && !outcome.stabilize && !outcome.deathSave && !outcome.stand && !outcome.grants.length && !outcome.notes.length && !outcome.recharges.length && !outcome.artifacts.length;
+  !outcome.slotLevels && !outcome.pactSlots && !outcome.restores?.length && !outcome.conditionsRemoved.length && !outcome.hpMaximumDelta && !outcome.stabilize && !outcome.deathSave && !outcome.stand && !outcome.grants.length && !outcome.notes.length && !outcome.recharges.length && !outcome.artifacts.length;
 
 /** R50 (D185): what a contract does, in one line each, for the sheet — the same job `featNotes` does for a feat. */
 export function contractSummary(contract: CommonPlayContract, scope: Scope): { rules: string[]; execution: "derived" | "descriptive" } {
@@ -304,7 +325,7 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
   for (const operation of operationsOf(contract)) {
     if (!live(operation, scope)) continue;
     switch (operation.kind) {
-      case "adjudication.request": questions.push(operation.question); break;
+      case "adjudication.request": questions.push(questionText(operation, scope)); break;
       case "property.modify": {
         mechanical = true;
         // V3b (D256): a rule the app applies somewhere else (a choice, the progression table, another feature's contract) says so here.

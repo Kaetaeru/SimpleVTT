@@ -71,10 +71,14 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
   const lines: string[] = [];
   if (activation.heal) extras.healRoll = await rollTotal(rollDice, { label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" }, lines);
   if (activation.tempHp) extras.tempRoll = await rollTotal(rollDice, { label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" }, lines);
+  // V4a (D263): the long rests a pool stays spent for, rolled now.
+  const lockRests = activation.lockout ? await rollTotal(rollDice, { label: `${feature.name} — 잠기는 긴 휴식 수`, formula: activation.lockout.dice, kind: "custom" }, lines) : undefined;
   if (activation.roll) { const roll = activation.roll(derived); extras.rolled = { label: roll.label, total: await rollTotal(rollDice, { label: roll.label, formula: roll.formula, kind: "custom" }, lines) }; }
   let refused = false;
   await deps.save((current) => {
-    const next = useFeature(lines.reduce((acc, line) => noteLog(acc, line), current), derived, feature, activation, extras);
+    const used = useFeature(lines.reduce((acc, line) => noteLog(acc, line), current), derived, feature, activation, extras);
+    const lock = activation.lockout;
+    const next = used && lock && lockRests ? noteLog({ ...used, resourcesUsed: { ...used.resourcesUsed, [lock.resourceId]: derived.resources.find((resource) => resource.id === lock.resourceId)?.max ?? 1 }, resourceLockouts: { ...(used.resourceLockouts ?? {}), [lock.resourceId]: lockRests } }, `${feature.name}: 긴 휴식 ${lockRests}번 동안 다시 못 씀`) : used;
     if (!next) { refused = true; return current; }
     // R39 (D179): a contract may end other effects as part of the use (a new Wild Shape replacing the last one).
     const contract = featureContract(deps.catalog, featureRuleKey(feature.id));

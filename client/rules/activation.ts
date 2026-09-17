@@ -72,6 +72,10 @@ export interface FeatureActivation {
   hitDie?: boolean;
   /** V1a (D253): the part of the turn the use takes (the contract's economy payment). */
   economy?: string;
+  /** V4a (D263): the use spends one spell slot, the lowest one left. */
+  spellSlot?: boolean;
+  /** V4a (D263): a pool that stays spent for a rolled number of long rests. */
+  lockout?: { resourceId: string; dice: string };
 }
 
 
@@ -97,7 +101,7 @@ export function featureRuleKey(featureId: string) {
 
 
 /** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
-export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean; /** R78 (D213), R81 (D215): used when a short rest ends or initiative is rolled, not pressed. */ trigger?: string } | undefined;
+export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string; spellSlot?: boolean; lockout?: { resourceId: string; dice: string } }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean; /** R78 (D213), R81 (D215): used when a short rest ends or initiative is rolled, not pressed. */ trigger?: string } | undefined;
 
 /**
  * The activation for a feature: from its contract, else a pool named after the feature (`resource.<rule key>`).
@@ -116,7 +120,7 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
   if (fromContract?.duration || fromContract?.use || fromContract?.acts) {
     const use = fromContract.use;
     return {
-      ...(use?.points ? { points: true } : {}), ...(use?.economy ? { economy: use.economy } : {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
+      ...(use?.points ? { points: true } : {}), ...(use?.economy ? { economy: use.economy } : {}), ...(use?.spellSlot ? { spellSlot: true } : {}), ...(use?.lockout ? { lockout: use.lockout } : {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
       ...(use?.heal ? { heal: () => use.heal! } : {}), ...(use?.tempHp ? { tempHp: () => use.tempHp! } : {}),
       ...(use?.roll ? { roll: () => use.roll! } : {}), ...(use?.note ? { note: use.note } : {}),
       // R59 (D194): a use that spends a hit die rolls it and heals by the result.
