@@ -68,6 +68,8 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities, conditionImmunities: block.conditionImmunities },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),
+    // R80 (D214): a monster concentrating makes the same save a character does when it is hurt.
+    ...((entry.runtime.effects ?? []).some((effect) => effect.concentration) || markers.includes("집중") ? { concentration: (entry.runtime.effects ?? []).find((effect) => effect.concentration)?.name ?? "집중" } : {}),
   };
 }
 

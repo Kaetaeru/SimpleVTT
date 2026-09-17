@@ -25,7 +25,7 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { spellExec } from "../compendium/spells";
+import { spellExec, sustainedExec } from "../compendium/spells";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
@@ -858,11 +858,11 @@ export class TableHost {
         const casterBefore = caster.entry;
         let spent: CharacterRuntime | null = null;
         if (casterBefore.kind === "character") { const next = prepared.spend(casterBefore.runtime); if (!next) return refuse("슬롯이나 횟수가 없습니다"); spent = next; this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
-        else { if (resolution.concentration) this.mark(caster, ["집중"], true); }
+        else if (resolution.concentration && !exec.repeat) { this.mark(caster, ["집중"], true); this.startNpcConcentration(caster.entry.id, prepared.spec.spellId, prepared.spec.name, prepared.spec.level); }
         const restoreNpcUse = casterBefore.kind === "npc" && prepared.npcSpend ? prepared.npcSpend() : undefined;
         // R26 (D136): undoing an old cast used to write the caster's whole pre-cast ledger back, refunding every
         // slot and charge they had spent in between. It now refunds exactly what this cast took.
-        const restoreCaster = () => { restoreNpcUse?.(); if (casterBefore.kind === "character" && spent) this.undoOnCaster(casterBefore.id, casterBefore.runtime, spent); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
+        const restoreCaster = () => { restoreNpcUse?.(); if (casterBefore.kind === "character" && spent) this.undoOnCaster(casterBefore.id, casterBefore.runtime, spent); else if (casterBefore.kind === "npc" && resolution.concentration && !exec.repeat) { this.mark(caster, ["집중"], false); this.dropNpcConcentration({ entry: casterBefore }); } };
         if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
         else if (exec.repeat?.economy === "none") { /* R77 (D212): an area spell's roll when somebody walks in costs the caster nothing */ }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
@@ -1803,18 +1803,21 @@ export class TableHost {
     const block = caster.entry.statBlock;
     const casting = block.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting;
     const entry = casting?.lists.flatMap((list) => list.entries).find((item) => item.spellId === spellId);
-    const exec = spellExec(spellId);
+    // R80 (D214): a monster's concentration spell still going is used again the way a character's is — no use spent.
+    const going = method?.kind === "sustain" ? (caster.entry.runtime.effects ?? []).find((effect) => effect.key === `spell:${spellId}`) : undefined;
+    const base = spellExec(spellId);
+    const exec = method?.kind === "sustain" ? (going && base ? sustainedExec(base) : null) : base;
     if (!casting || !entry || !exec) return null;
-    const level = method?.kind === "slot" ? method.level : entry.slotLevel ?? exec.baseLevel;
+    const level = going?.level ?? (method?.kind === "slot" ? method.level : entry.slotLevel ?? exec.baseLevel);
     const cr = block.cr;
     // R10: per-day lists count their uses on the NPC's runtime (the sheet's 초기화 clears them).
     const list = casting.lists.find((item) => item.entries.some((candidate) => candidate.spellId === spellId));
     const perDay = list?.frequency === "per-day" ? (list.uses ?? 1) : undefined;
     const used = caster.entry.runtime.uses?.[spellId] ?? 0;
-    if (perDay !== undefined && used >= perDay) return null;
+    if (perDay !== undefined && used >= perDay && !going) return null;
     const entryId = caster.entry.id;
     const setUses = (count: number) => { const current = this.journalEntries.get(entryId); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, uses: { ...(current.runtime.uses ?? {}), [spellId]: count }, updatedAt: this.now() }, updatedAt: this.now() }); };
-    return { spec: { spellId, name: entry.name, level, exec }, casterStats: { attackBonus: casting.dc - 8, saveDc: casting.dc, modifier: Math.floor((block.abilities[casting.ability] - 10) / 2), level: cr >= 17 ? 17 : cr >= 11 ? 11 : cr >= 5 ? 5 : 1 }, spend: (runtime) => runtime, npcSpend: perDay !== undefined ? () => { setUses(used + 1); return () => setUses(used); } : undefined };
+    return { spec: { spellId, name: entry.name, level, exec }, casterStats: { attackBonus: casting.dc - 8, saveDc: casting.dc, modifier: Math.floor((block.abilities[casting.ability] - 10) / 2), level: cr >= 17 ? 17 : cr >= 11 ? 11 : cr >= 5 ? 5 : 1 }, spend: (runtime) => runtime, npcSpend: perDay !== undefined && !going ? () => { setUses(used + 1); return () => setUses(used); } : undefined };
   }
 
   /**
@@ -2027,6 +2030,24 @@ export class TableHost {
     return this.postSpell(resolution, rows.map((row) => row.target), () => { if (recharge) setSpent(false); }, waits, options.displayName, options.by, { spec, casterStats: prepared.casterStats });
   }
 
+  /** R80 (D214): a monster concentrating on a spell carries it as an effect, so it can repeat it and lose it. */
+  private startNpcConcentration(entryId: string, spellId: string, name: string, level: number) {
+    const current = this.journalEntries.get(entryId);
+    if (current?.kind !== "npc") return;
+    const effect: ActiveEffect = { key: `spell:${spellId}`, name, source: "spell", duration: "집중", concentration: true, elapsed: 0, startedAt: this.now(), level };
+    this.storeEntry({ ...current, runtime: { ...current.runtime, effects: [...(current.runtime.effects ?? []).filter((item) => !item.concentration), effect], updatedAt: this.now() }, updatedAt: this.now() });
+  }
+
+  /**
+   * R80 (D214): a monster that failed its concentration save lets go — the effect and the 집중 marker come off.
+   * ponytail: undoing the damage does not give the concentration back; the DM re-marks it if that matters.
+   */
+  private dropNpcConcentration(target: { entry: JournalEntry; token?: Token; page?: Page }) {
+    const current = this.journalEntries.get(target.entry.id);
+    if (current?.kind === "npc" && (current.runtime.effects ?? []).some((effect) => effect.concentration)) this.storeEntry({ ...current, runtime: { ...current.runtime, effects: (current.runtime.effects ?? []).filter((effect) => !effect.concentration), updatedAt: this.now() }, updatedAt: this.now() });
+    if (target.page) this.mark({ entry: target.entry, token: this.pages.get(target.page.id)?.tokens.find((item) => item.id === target.token?.id), page: target.page }, ["집중"], false);
+  }
+
   /** Write one target's part of a spell (damage, healing, temp HP, conditions, a lasting effect); returns the undo. */
   private applySpellRow(row: SpellTargetResult, target: { entry: JournalEntry; token?: Token; page?: Page }, resolution: SpellResolution): (() => void) | null {
     const now = this.now();
@@ -2065,6 +2086,7 @@ export class TableHost {
       return () => this.undoOnCharacter(before.id, delta);
     }
     if (target.entry.kind !== "npc") return null;
+    if (concentrationFailed) this.dropNpcConcentration(target);
     const marks = [...row.marks, ...(row.effect ? [row.effect.name] : []), ...(downed ? ["사망"] : [])];
     const clears = row.clears ?? [];
     // R10: an effect the NPC may shake off at the end of its turns is remembered on its runtime.
@@ -2282,6 +2304,7 @@ export class TableHost {
         restores.push(() => this.undoOnNpc(before.id, delta));
       }
     }
+    if (hit && target.entry.kind === "npc" && resolution.concentration && !resolution.concentration.success) this.dropNpcConcentration(target);
     // R28 (D151): the attacker attacked and the target took damage — both count for a rage; a rage whose bearer has
     // just been knocked out or stunned ends there.
     this.ragingDeeds([attacker as { entry: JournalEntry; token?: Token; page?: Page }, hit ? target : undefined]);

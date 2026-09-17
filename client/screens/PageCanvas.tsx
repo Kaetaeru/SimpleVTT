@@ -611,7 +611,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   };
   // R77 (D212): a concentration spell that is still going can be used again without a slot — 영적 무기 as a bonus
   // action, 흡혈의 손길 as an action, 달빛 광선's damage when somebody walks in (no economy at all).
-  const sustainItems = entry.kind === "character" && derived ? (currentRuntime().effects ?? []).filter((effect) => effect.source === "spell").flatMap((effect) => {
+  // R80 (D214): a monster's too, from the effects its runtime carries.
+  const sustainItems = entry.kind === "character" || entry.kind === "npc" ? ((entry.kind === "character" ? currentRuntime().effects : entry.runtime.effects) ?? []).filter((effect) => effect.source === "spell").flatMap((effect) => {
     const spellId = effect.key.replace(/^spell:/, "");
     const exec = spellExec(spellId);
     const sustain = exec ? sustainOf(exec) : null;
