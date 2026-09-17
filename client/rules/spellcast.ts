@@ -16,6 +16,25 @@ import type { DerivedCharacter } from "../character/types";
 import { spellExec, sustainedExec } from "../compendium/spells";
 import { applyDamage, immuneToCondition, noDamage, resolveAttack, rollFormula as rollSigned, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
 import { scrollStats } from "./scrolls";
+import { effectRuleKey } from "./effects";
+import { contractEffect } from "./contractEffects";
+import { characterScope } from "./contract";
+
+const FLAVOUR_KEYS = new Set(["summary", "trigger", "duration"]);
+/**
+ * R101 (D236): whether a spell does anything the rules compute — a tracked part with a number or a state (not only its
+ * sentence), conditions, a summon, a repeat, an on-hit rule, or an effect contract that changes the sheet. What is left
+ * is the narrative half of the spell list (마법사의 손, 경보, 전언 …), and its card says "DM 판정" instead of looking done.
+ */
+export function spellIsJudged(exec: SpellExec, catalog: ContentCatalog, derived: DerivedCharacter): boolean {
+  if (exec.primary.kind !== "tracked-effect") return false;
+  if (exec.effects?.length || exec.summon || exec.sustain || exec.onHit) return false;
+  if ((exec.trackedEffects ?? []).some((part) => Object.keys(part).some((key) => !FLAVOUR_KEYS.has(key)))) return false;
+  const contract = catalog.contractFor(effectRuleKey({ key: `spell:${exec.spellId}`, name: "", source: "spell", duration: "", concentration: false, elapsed: 0, startedAt: "" }, catalog));
+  if (!contract) return true;
+  const { application } = contractEffect(contract, characterScope(derived));
+  return !Object.entries(application).some(([field, value]) => field !== "notes" && value !== undefined);
+}
 
 export interface CasterStats {
   /** Spell attack bonus and save DC of the list the spell comes from. */
@@ -46,6 +65,8 @@ export interface SpellCastSpec {
   /** Level it is cast at (slot level; a cantrip is 0). */
   level: number;
   exec: SpellExec;
+  /** R101 (D236): nothing in the rules computes this spell effect — the card says the table judges it. */
+  judged?: boolean;
 }
 
 export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; /** R90 (D225): rolled with disadvantage, and why. */ disadvantage?: string; /** R90 (D225): spell dice in the bonus ("액운 −2"). */ dice?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
@@ -278,6 +299,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
         row.note = exec.trackedEffects?.map((effect) => effect.summary).join(" · ") ?? primary.summary;
         targets.push(row);
       }
+      if (spec.judged) note = `DM 판정 — ${primary.summary ?? spec.name}`;
       break;
     }
     /**
@@ -409,7 +431,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const chosen: CastMethod = method ?? (view.level === 0 ? { kind: "cantrip" } : { kind: "slot", level: view.level });
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.level ?? view.level : view.level;
   return {
-    spec: { spellId, name: view.name, level, exec },
+    spec: { spellId, name: view.name, level, exec, ...(spellIsJudged(exec, catalog, derived) ? { judged: true } : {}) },
     casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.cantripDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(view.school === "evocation" && list && derived.evocationModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`)) ? { damageBonusOnce: derived.abilities[list.ability].modifier } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };

@@ -62,3 +62,16 @@ test("R100: 진실의 일격 swings with the spellcasting ability and adds its r
   assert.deepEqual(strike.riders?.map((part) => [part.label, part.formula, part.type]), [["진실의 일격", "1d6", "광휘"]]);
   assert.ok(strike.name.includes("진실의 일격"));
 });
+
+test("R101: a spell nothing computes says DM 판정 on its card; one the rules run does not (D236)", async () => {
+  const { spellIsJudged } = await import("../../client/rules/spellcast");
+  const { spellExec } = await import("../../client/compendium/spells");
+  const derived = build({ name: "위저드", classes: "wizard", level: 5 }).derived;
+  const judged = (slug: string) => spellIsJudged(spellExec(`dnd.srd521.spell.${slug}`)!, catalog(), derived);
+  assert.equal(judged("alarm"), true);
+  assert.equal(judged("mage-hand"), true);
+  assert.equal(judged("longstrider"), false, "its effect contract changes speed");
+  assert.equal(judged("bless"), false, "its tracked parts carry dice");
+  assert.equal(judged("hunter-s-mark"), false);
+  assert.equal(judged("fireball"), false, "not a tracked effect at all");
+});
