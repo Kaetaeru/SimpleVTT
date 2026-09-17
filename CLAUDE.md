@@ -53,7 +53,8 @@
 **예외**: JSON으로 만드는 것이 불가능하거나 오히려 손해일 때만. 그 경우 코드에 `hardcode:` 주석으로 이유를 적고
 `docs/design/v3/HARDCODE_AUDIT.md` §4에 기록한다. "빨리 하려고"는 이유가 아니다.
 
-전수 목록과 옮기는 순서: `docs/design/v3/HARDCODE_AUDIT.md`.
+전수 목록과 옮기는 순서: `docs/design/v3/HARDCODE_AUDIT.md`. V0.9 목표와 진행 상태: `docs/V0.9_PLAN.md`.
+게이트의 `tests/client/hardcode.test.ts`가 하드코딩 개수 상한을 강제한다. 줄이면 상한도 같이 내린다. 올리지 않는다.
 
 ## 3. 점검표 (슬라이스 시작 전, 커밋 전)
 
