@@ -977,3 +977,20 @@ test("V5f: 혼란 repeats its save, and the spells the app cannot finish say why
     assert.ok(questions.some((question) => question.startsWith("DM 판정 (")), `${key}: ${JSON.stringify(questions)}`);
   }
 });
+
+test("V5g: 거인 혈통 has its six powers as uses, and the traits the app cannot finish carry their reason (D295)", async () => {
+  const cat = catalog();
+  const goliath = build({ name: "골리앗", species: "goliath", classes: "fighter", level: 5, abilities: { con: 16 } });
+  const powers = goliath.derived.features.filter((feature) => feature.name.startsWith("거인 혈통:"));
+  assert.ok(powers.length >= 6, goliath.derived.features.map((feature) => feature.name).join(", "));
+  const hill = powers.find((feature) => feature.name.includes("언덕"))!;
+  const { featureRuleKey } = await import("../../client/rules/activation");
+  const outcome = tableOutcome(goliath.derived, cat, featureRuleKey(hill.id))!;
+  assert.deepEqual(outcome.conditionSaves?.map((rule) => [rule.condition, rule.ability, rule.dc]), [["넘어짐", "str", 8 + goliath.derived.abilities.con.modifier + goliath.derived.proficiencyBonus]]);
+
+  for (const key of ["species.halfling-nimbleness", "species.naturally-stealthy", "species.trance", "spell:dnd.srd521.spell.polymorph"]) {
+    const contract = cat.contractFor(key.startsWith("spell:") ? key : `feature:${key}`);
+    const questions = (contract?.entryPoints ?? []).flatMap((entry) => entry.operations).flatMap((operation) => (operation.kind === "adjudication.request" ? [operation.question] : []));
+    assert.ok(questions.some((question) => question.startsWith("DM 판정 (")), `${key}: ${JSON.stringify(questions)}`);
+  }
+});
