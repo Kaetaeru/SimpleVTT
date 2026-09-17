@@ -56,7 +56,7 @@ export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: Cl
   const top = maxSpellLevel(cls, row);
   const levels = Array.from({ length: top }, (_, index) => index + 1);
   const lists = [cls.id];
-  if (ledger.flags.has(`magical-secrets:${cls.id}`)) for (const slug of ["cleric", "druid", "wizard"]) { const other = catalog.classBySlug(slug); if (other && !lists.includes(other.id)) lists.push(other.id); }
+  for (const slug of ledger.extraSpellLists.get(cls.id) ?? []) { const other = catalog.classBySlug(slug); if (other && !lists.includes(other.id)) lists.push(other.id); }
 
   for (const name of cls.spells?.alwaysPrepared ?? []) {
     const spell = catalog.spellByName(name);

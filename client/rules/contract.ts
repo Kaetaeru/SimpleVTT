@@ -77,7 +77,7 @@ export type ContractOperation =
    * by how much. `scope` narrows it to some attacks, `abilities` to some saves, and `note` carries the part of the
    * rule that is not a number.
    */
-  | { kind: "property.modify"; property: string; operation: string; value?: Expr; /** H2 (D239): the spell a property is about (`marked-spell.die`), as a content id in the data. */ spell?: string; /** H2 (D239): the spell school a property is about. */ school?: string; dice?: string; scope?: string; abilities?: string[]; /** R51 (D186): the damage types a `damage-taken.reduce` applies to. */ damageTypes?: string[]; note?: string; when?: Expr }
+  | { kind: "property.modify"; property: string; operation: string; value?: Expr; /** H2 (D239): the spell a property is about (`marked-spell.die`), as a content id in the data. */ spell?: string; /** H2 (D239): the spell school a property is about. */ school?: string; /** H3 (D240): the named parameters of a gain-time property (`choice.skills` and its kin). */ params?: Record<string, unknown>; dice?: string; scope?: string; abilities?: string[]; /** R51 (D186): the damage types a `damage-taken.reduce` applies to. */ damageTypes?: string[]; note?: string; when?: Expr }
   /**
    * R39 (D179): the standing effect a use starts. `template` carries what the sheet needs to show and count it;
    * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
@@ -235,6 +235,8 @@ export const REST_INVOCATION = "short-rest";
 export const INITIATIVE_INVOCATION = "initiative";
 /** R99 (D234): this creature brought a hostile creature to 0 hit points (어둠의 존재의 축복). */
 export const KILL_INVOCATION = "kill";
+/** H3 (D240): the moment a feature is gained during character building — its choices and grants (tracks.ts runs it). */
+export const GAIN_INVOCATION = "gain";
 /** R81 (D215): the moments the table asks about instead of a button: the end of a short rest, an initiative roll. */
 export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATION, KILL_INVOCATION]);
 export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION | typeof KILL_INVOCATION;
@@ -325,7 +327,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
       // A bare number, string or boolean is the literal it looks like; only an object is read as an expression.
       const literal = operation.value;
       const value = isExpr(literal) ? literal : literal === undefined ? undefined : { value: literal };
-      out.push({ kind, property, operation: op, value, ...(operation.spell ? { spell: String(operation.spell) } : {}), ...(operation.school ? { school: String(operation.school) } : {}), dice: operation.dice ? String(operation.dice) : undefined, scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, damageTypes: Array.isArray(operation.damageTypes) ? operation.damageTypes.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, property, operation: op, value, ...(operation.spell ? { spell: String(operation.spell) } : {}), ...(operation.school ? { school: String(operation.school) } : {}), ...(operation.params && typeof operation.params === "object" ? { params: operation.params as Record<string, unknown> } : {}), dice: operation.dice ? String(operation.dice) : undefined, scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, damageTypes: Array.isArray(operation.damageTypes) ? operation.damageTypes.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     const mode = String(operation.mode ?? "");
@@ -362,7 +364,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const invocation = String(entry.invocation ?? "manual");
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
     // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
-    if (invocation !== "manual" && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    if (invocation !== "manual" && invocation !== GAIN_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
     const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;

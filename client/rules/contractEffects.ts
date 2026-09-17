@@ -9,7 +9,7 @@
 import type { AbilityKey } from "../catalog/types";
 import type { DerivedAttack } from "../character/types";
 import type { EffectApplication } from "./effects";
-import { ATTACK_INVOCATIONS, evaluate, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, evaluate, GAIN_INVOCATION, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 
 /** Attack filters a `property.modify` may narrow itself to. */
 const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
@@ -50,7 +50,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier",
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -83,7 +83,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
   const unknown: string[] = [];
   const notes: string[] = [];
   // R52 (D187): a pre-roll rider is not a standing property; it belongs to the attack dialog. R63 (D198): nor an on-hit one.
-  const operations = [...contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation)).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
+  // H3 (D240): a gain entry point runs once while the character is built, never as a standing property.
+  const operations = [...contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
   let describes = false;
   for (const operation of operations) {
     // R49 (D184): a question for the table is a line on the sheet too — that is what the hand-written rules' `notes`
@@ -142,6 +143,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "spell.damage.ability-modifier": { const spell = operation.spell ?? text(operation, scope); if (spell) application.spellDamageModifier = [...(application.spellDamageModifier ?? []), spell]; break; }
       case "attack-roll.studied": application.studiedAttacks = true; break;
       case "spell.cantrip-potent": application.potentCantrip = true; break;
+      case "saving-throw.minimum-score": application.minimumScoreRolls = [...(application.minimumScoreRolls ?? []), ...((operation.abilities ?? []) as AbilityKey[])]; break;
       case "spell.school-damage.ability-modifier": if (operation.school) application.schoolDamageModifier = [...(application.schoolDamageModifier ?? []), { school: operation.school, classSlug: text(operation, scope) ?? "" }]; break;
       case "healing.maximize": application.healingMaximized = true; break;
       case "attack-roll.against-me.no-advantage": application.elusive = true; break;

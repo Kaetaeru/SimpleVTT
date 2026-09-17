@@ -259,6 +259,8 @@ export interface DerivedCharacter {
   concentrationDamageImmune?: string[];
   potentCantrip?: boolean;
   studiedAttacks?: boolean;
+  /** H3 (D240): abilities whose saves total at least the ability score (불굴의 힘). */
+  minimumScoreRolls?: AbilityKey[];
   schoolDamageModifier?: Array<{ school: string; classSlug: string }>;
   /** R72 (D207): attacks per Attack action, from whatever contract says so (1 when none does). */
   attackActionAttacks?: number;

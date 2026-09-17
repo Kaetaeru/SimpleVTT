@@ -12,9 +12,9 @@ const CEILINGS = {
   /** A content id literal. */
   contentIds: 20,
   /** A branch on a feature, option or event key. */
-  keyBranches: 54,
+  keyBranches: 38,
   /** A branch on a class slug or a picked option id. */
-  slugBranches: 16,
+  slugBranches: 10,
   /** A regex run over a name or a description. */
   nameRegex: 4,
 };
@@ -57,4 +57,26 @@ test("H2: the combat grammar takes its content as data — a module spell id wor
   assert.deepEqual(application.markedSpellAdvantage, ["module.spell.hunters-brand"]);
   assert.deepEqual(application.spellDamageModifier, ["module.spell.void-bolt"]);
   assert.deepEqual(application.schoolDamageModifier, [{ school: "necromancy", classSlug: "sorcerer" }]);
+});
+
+test("H3: a gain entry point is creation grammar, not a standing property, and the SRD features read it (D240)", async () => {
+  const { parseContract } = await import("../../client/rules/contract");
+  const { contractEffect } = await import("../../client/rules/contractEffects");
+  const { pcStats } = await import("../../client/rules/actions");
+  const { build } = await import("./support");
+  const contract = parseContract({ id: "feature:module.sage", entryPoints: [{ id: "gain", invocation: "gain", operations: [
+    { kind: "property.modify", property: "choice.skills", operation: "set", value: { value: 2 }, params: { id: "sage-skills", mode: "expertise", from: ["arcana", "history"] } },
+    { kind: "property.modify", property: "grant.ability", operation: "set", value: { value: 2 }, params: { abilities: ["int"], cap: 22 } },
+  ] }] } as never, "module.sage");
+  assert.deepEqual(contract.unsupported, []);
+  assert.equal(contract.entryPoints[0].operations[0].kind === "property.modify" && contract.entryPoints[0].operations[0].params?.id, "sage-skills");
+  assert.equal(contractEffect(contract, () => undefined).hasProperties, false, "gained once, not a sheet property");
+  // The SRD features that used to be branches in tracks.ts now come from their gain contracts.
+  const monk = build({ name: "몽크", classes: "monk", level: 14 }).derived;
+  assert.ok(["str", "dex", "con", "int", "wis", "cha"].every((key) => monk.saves[key as "str"].terms.some((term) => term.label.includes("단련된 생존자"))), "단련된 생존자: every save");
+  const barbarian = build({ name: "바바리안", classes: "barbarian", level: 18 }).derived;
+  assert.equal(pcStats(barbarian).minimumScore?.str, barbarian.abilities.str.score, "불굴의 힘: a Strength save totals at least the score");
+  const rogue = build({ name: "로그", classes: "rogue", level: 1 });
+  assert.equal(rogue.source.choices["class.0.expertise"]?.length, 2, "rogue expertise asked from its contract");
+  assert.ok(rogue.derived.proficiencies.languages.includes("도둑 은어"));
 });

@@ -58,6 +58,8 @@ export interface EffectApplication {
   studiedAttacks?: boolean;
   /** H2 (D239): a school of one class's spells adds the spellcasting modifier to one damage roll (강화된 방출). */
   schoolDamageModifier?: Array<{ school: string; classSlug: string }>;
+  /** H3 (D240): abilities whose saves total at least the ability score. */
+  minimumScoreRolls?: AbilityKey[];
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
   attackActionAttacks?: number;
   /** Korean damage type labels. */
@@ -322,6 +324,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.spellDamageModifier?.length) { next = { ...next, spellDamageModifier: [...new Set([...(next.spellDamageModifier ?? []), ...application.spellDamageModifier])] }; notes.push("고른 주문의 피해에 주문 능력 수정치"); }
     if (application.studiedAttacks) { next = { ...next, studiedAttacks: true }; notes.push("빗나간 대상에게 다음 공격 유리"); }
     if (application.potentCantrip) { next = { ...next, potentCantrip: true }; notes.push("피해 소마법: 빗나감·내성 성공에도 절반"); }
+    if (application.minimumScoreRolls?.length) { next = { ...next, minimumScoreRolls: [...new Set([...(next.minimumScoreRolls ?? []), ...application.minimumScoreRolls])] }; notes.push(`${application.minimumScoreRolls.join("·")} 내성은 최소 능력치 점수`); }
     if (application.schoolDamageModifier?.length) { next = { ...next, schoolDamageModifier: [...(next.schoolDamageModifier ?? []), ...application.schoolDamageModifier] }; notes.push("그 학파 주문 피해 한 번에 주문 능력 수정치"); }
     if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }
     if (application.evasion) { next = { ...next, evasion: true }; notes.push("회피술: 민첩 내성 절반 피해 — 성공 0, 실패 절반"); }

@@ -98,6 +98,8 @@ export class Ledger {
   speedBase = 30;
   speedBonus = 0;
   extraSpeeds: { climb?: number; swim?: number; fly?: number } = {};
+  /** H3 (D240): per class id, other classes whose spell lists it may choose from (마법의 비밀). */
+  readonly extraSpellLists = new Map<string, string[]>();
   senses: { darkvision?: number; blindsight?: number; truesight?: number } = {};
   size = "medium";
   hpPerLevelBonus = 0;

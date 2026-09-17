@@ -6,14 +6,14 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { ATTACK_INVOCATIONS, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, GAIN_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
 // readers that answer "what does the 사용 button do" leave it out. `contractSummary` still prints it as a rule.
 // R63 (D198): so is an `on-hit` one, chosen in the window a hit opens.
 // R78 (D213): nor a `short-rest` one, which the rest window runs. R81 (D215): nor an `initiative` one.
-const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && !TRIGGER_INVOCATIONS.has(entry.invocation));
+const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && !TRIGGER_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION);
 const operationsOf = (contract: CommonPlayContract) => [...livePoints(contract).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
 const live = (operation: ContractOperation, scope: Scope) => !("when" in operation && operation.when) || evaluate((operation as { when?: Parameters<typeof evaluate>[0] }).when, scope) === true;
 
@@ -52,6 +52,8 @@ export function selectorMatches(selector: string, key: string) {
 }
 
 /** The duration source `featureActivation` takes: a lookup from feature rule key to the effect its contract starts. */
+const GAIN_KO: Record<string, string> = { "choice.skills": "기술 선택", "choice.languages": "언어 선택", "choice.class-option": "선택지", "choice.fighting-style": "전투 방식 선택", "choice.spell": "주문 선택", "choice.spells": "주문 선택", "grant.language": "언어", "grant.save-proficiency": "내성 숙련", "grant.ability": "능력치 증가", "grant.senses": "감각", "grant.speed": "이동 속도", "grant.spell-lists": "주문 목록 추가" };
+
 export const contractDurations = (catalog: { contractFor(key: string): CommonPlayContract | undefined }, scope: Scope) =>
   (ruleKey: string, label = ruleKey) => {
     const contract = featureContract(catalog, ruleKey);
@@ -234,6 +236,13 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
       } else if (operation.kind === "adjudication.request") questions.push(operation.question);
     }
     if (entry.attack?.oncePerTurn) questions.push("턴당 한 번 (직접 세어 주세요)");
+  }
+  // H3 (D240): what gaining the feature asked or granted, for the sheet line.
+  for (const operation of contract.entryPoints.filter((item) => item.invocation === GAIN_INVOCATION).flatMap((item) => item.operations)) {
+    if (operation.kind !== "property.modify") continue;
+    mechanical = true;
+    const label = String(operation.params?.label ?? "");
+    rules.push(`얻을 때 — ${GAIN_KO[operation.property] ?? operation.property}${label ? `: ${label}` : ""}`);
   }
   // R78 (D213): what a short rest's end does is said where the player looks for it — the rest window runs it.
   for (const entry of contract.entryPoints.filter((item) => TRIGGER_INVOCATIONS.has(item.invocation))) {

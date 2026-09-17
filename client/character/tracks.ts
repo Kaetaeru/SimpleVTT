@@ -9,7 +9,7 @@ import type { IndexClassChoiceJson } from "../catalog/types";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import {
-  CLASS_RESOURCES, CLASS_TRAINING, COLUMN, DEFT_EXPLORER_LANGUAGES, EXPERTISE_SCHEDULE, METAMAGIC_KNOWN, numericColumn, SUBCLASS_LEVEL,
+  CLASS_RESOURCES, CLASS_TRAINING, COLUMN, METAMAGIC_KNOWN, numericColumn, SUBCLASS_LEVEL,
   type ArmorTraining, type WeaponTraining,
 } from "../rules/classes";
 import { MULTICLASS_PREREQUISITES } from "../rules/tables";
@@ -20,6 +20,10 @@ import {
   subclassOptions, toolName, weaponMasteryOptions, type FeatContext,
 } from "./choices";
 import { applyFeat } from "./feats";
+import { featureRuleKey } from "../rules/activation";
+import { featureContract } from "../rules/contractActivation";
+import { evaluate, GAIN_INVOCATION } from "../rules/contract";
+import { ABILITY_KEYS } from "../catalog/types";
 import type { ClassState, Ledger } from "./ledger";
 import { resolveToolId } from "./origin";
 import { applyClassSpellcasting, classSpellEntry } from "./spells";
@@ -195,51 +199,15 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
     }
     ledger.addFeature({ id: `${cls.slug}.${level}.${feature.id}`, name: feature.name, nameEn: feature.nameEn, source: "class", sourceLabel, level, description: feature.description, descriptionSource: feature.descriptionSource });
 
-    if (key === "expertise" || key === "expertise-2") askExpertise(ledger, cls, state, index, sourceLabel, EXPERTISE_SCHEDULE[cls.slug]?.[level] ?? 1);
-    if (key === "deft-explorer") {
-      askExpertise(ledger, cls, state, index, sourceLabel, EXPERTISE_SCHEDULE[cls.slug]?.[level] ?? 1);
-      const picked = ledger.ask({ ...ask, id: `class.${index}.languages`, label: `언어 (${DEFT_EXPLORER_LANGUAGES}개)`, count: DEFT_EXPLORER_LANGUAGES, options: [...languageOptions(catalog, "standard", (item) => ledger.languages.has(item)), ...languageOptions(catalog, "general", (item) => ledger.languages.has(item))] });
-      for (const language of picked) ledger.languages.set(language, [...catalog.languages.standard, ...catalog.languages.general].find((item) => item.id === language)?.name ?? language);
-    }
-    if (key === "fighting-style") askFightingStyle(ledger, cls, index, sourceLabel);
-    if (key === "primal-knowledge") {
-      const picked = ledger.ask({ ...ask, id: `class.${index}.primal-knowledge`, label: "원초적 지식 — 기술 숙련", count: 1, options: skillOptions(catalog, cls.skillChoice.options, (id) => ledger.hasSkill(id)) });
-      for (const skill of picked) ledger.addSkill(skill, `${cls.name} 원초적 지식`);
-    }
-    if (key === "blessed-strikes") askClassOption(ledger, index, sourceLabel, `class.${index}.blessed-strikes`, "축복받은 일격", "cleric.blessed-strikes");
-    if (key === "elemental-fury") askClassOption(ledger, index, sourceLabel, `class.${index}.elemental-fury`, "원소의 격노", "druid.elemental-fury");
-    const arcanum = /^mystic-arcanum-(\d)$/.exec(key);
-    if (arcanum) {
-      const spellLevel = Number(arcanum[1]);
-      const picked = ledger.askOne({ ...ask, id: `class.${index}.arcanum${spellLevel}`, label: `신비한 비전 — ${spellLevel}레벨 주문`, description: "이 주문은 항상 준비되며 긴 휴식마다 1회 슬롯 없이 시전합니다.", options: spellOptions(catalog, [cls.id], [spellLevel]) });
-      if (picked) {
-        const entry = classSpellEntry(ledger, cls);
-        entry.alwaysPrepared.add(picked);
-        ledger.addResource({ id: `resource.warlock.arcanum.${spellLevel}`, label: `신비한 비전 ${spellLevel}레벨 (${catalog.spellById(picked)?.name ?? picked}) 무료 시전`, max: 1, recovery: "긴 휴식", source: cls.name, freeCastSpellId: picked });
-      }
-    }
-    if (key === "magical-secrets") ledger.flags.add(`magical-secrets:${cls.id}`);
-    if (key === "druidic") ledger.languages.set("druidic", "드루이드어");
-    if (key === "thieves-cant") ledger.languages.set("thieves-cant", "도둑 은어");
+    // H3 (D240): what gaining this feature asks or grants is in its contract.
+    applyGainContract(ledger, cls, index, `${cls.slug}.${level}.${feature.id}`, feature.name, sourceLabel);
     if (key === "unarmored-defense") ledger.flags.add(`unarmored-defense:${cls.slug}`);
     if (key === "fast-movement") ledger.flags.add("fast-movement");
     if (key === "unarmored-movement") ledger.flags.add("unarmored-movement");
     if (key === "jack-of-all-trades") ledger.flags.add("jack-of-all-trades");
-    if (key === "disciplined-survivor") ledger.flags.add("all-saves");
     if (key === "pact-magic") ledger.flags.add("pact-magic");
     if (key === "spellcasting") ledger.flags.add(`spellcasting:${cls.id}`);
     if (key === "martial-arts") ledger.flags.add("martial-arts");
-    if (key === "primal-champion") { ledger.addAbilityBonus("str", 4, "원초의 투사", 24); ledger.addAbilityBonus("con", 4, "원초의 투사", 24); }
-    if (key === "feral-senses") ledger.senses.blindsight = Math.max(ledger.senses.blindsight ?? 0, 30);
-    if (key === "indomitable-might") ledger.flags.add("indomitable-might");
-    // R97 (D232): what these features change on the sheet itself, which used to be a note asking the player to do it.
-    if (key === "body-and-mind") { ledger.addAbilityBonus("dex", 4, "몸과 마음", 25); ledger.addAbilityBonus("wis", 4, "몸과 마음", 25); }
-    if (key === "slippery-mind") { ledger.saves.set("wis", "미끄러운 정신"); ledger.saves.set("cha", "미끄러운 정신"); }
-    if (key === "scholar") {
-      const scholarly = ["arcana", "history", "investigation", "medicine", "nature", "religion"];
-      const options = skillOptions(catalog, scholarly).map((option) => (!ledger.hasSkill(option.id) ? { ...option, disabledReason: "숙련 없음" } : ledger.hasExpertise(option.id) ? { ...option, disabledReason: "이미 전문화" } : option));
-      for (const skill of ledger.ask({ ...ask, id: `class.${index}.scholar`, label: "학자 — 전문화 1개", description: "숙련한 학문 기술 하나의 숙련 보너스를 두 배로 받습니다.", count: 1, options })) ledger.addExpertise(skill, "학자");
-    }
   }
 
   applySubclassLevel(ledger, cls, state, index, sourceLabel);
@@ -263,22 +231,73 @@ function askEpicBoon(ledger: Ledger, cls: ClassView, index: number, sourceLabel:
   void cls;
 }
 
-function askExpertise(ledger: Ledger, cls: ClassView, state: ClassState, index: number, sourceLabel: string, count: number) {
+/**
+ * H3 (V0.9, D240): what a feature does the moment it is gained — the choices it asks and what it grants — read from
+ * its contract's `gain` entry point. This code knows only the grammar; which feature asks what, how many and from
+ * which list is data (content/modules/…effect-common-play), so a module feature works the same way.
+ */
+export function applyGainContract(ledger: Ledger, cls: ClassView, index: number, featureId: string, featureName: string, sourceLabel: string) {
   const { catalog } = ledger;
-  const options = skillOptions(catalog, "any").map((option) => {
-    if (!ledger.hasSkill(option.id)) return { ...option, disabledReason: "숙련 없음" };
-    if (ledger.hasExpertise(option.id)) return { ...option, disabledReason: "이미 전문화" };
-    return option;
-  });
-  const picked = ledger.ask({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.expertise`, label: `전문화 (${count}개)`, description: "숙련한 기술 중 고릅니다. 숙련 보너스를 두 배로 받습니다.", count, options });
-  for (const skill of picked) ledger.addExpertise(skill, `${cls.name} ${state.level}레벨 전문화`);
+  const contract = featureContract(catalog, featureRuleKey(featureId));
+  const ask = { scope: "class" as const, sourceLabel, trackIndex: index };
+  const strings = (value: unknown) => (Array.isArray(value) ? value.map(String) : []);
+  for (const operation of (contract?.entryPoints ?? []).filter((entry) => entry.invocation === GAIN_INVOCATION).flatMap((entry) => entry.operations)) {
+    if (operation.kind !== "property.modify") continue;
+    const p = operation.params ?? {};
+    const amount = Number(evaluate(operation.value, () => undefined)) || 1;
+    const id = `class.${index}.${String(p.id ?? operation.property)}`;
+    const label = String(p.label ?? featureName);
+    const description = p.description ? { description: String(p.description) } : {};
+    switch (operation.property) {
+      case "choice.skills": {
+        const expertise = p.mode === "expertise";
+        const from = p.from === "class" ? cls.skillChoice.options : Array.isArray(p.from) ? strings(p.from) : "any";
+        const options = expertise
+          ? skillOptions(catalog, from).map((option) => (!ledger.hasSkill(option.id) ? { ...option, disabledReason: "숙련 없음" } : ledger.hasExpertise(option.id) ? { ...option, disabledReason: "이미 전문화" } : option))
+          : skillOptions(catalog, from, (skill) => ledger.hasSkill(skill));
+        for (const skill of ledger.ask({ ...ask, id, label: `${label} (${amount}개)`, ...description, count: amount, options })) {
+          if (expertise) ledger.addExpertise(skill, label); else ledger.addSkill(skill, label);
+        }
+        break;
+      }
+      case "choice.languages": {
+        const picked = ledger.ask({ ...ask, id, label: `${label} (${amount}개)`, ...description, count: amount, options: [...languageOptions(catalog, "standard", (item) => ledger.languages.has(item)), ...languageOptions(catalog, "general", (item) => ledger.languages.has(item))] });
+        for (const language of picked) ledger.languages.set(language, [...catalog.languages.standard, ...catalog.languages.general].find((item) => item.id === language)?.name ?? language);
+        break;
+      }
+      case "choice.class-option": askClassOption(ledger, index, sourceLabel, id, label, String(p.list ?? "")); break;
+      case "choice.fighting-style": askFightingStyle(ledger, cls, index, sourceLabel, Array.isArray(p.extra) ? (p.extra as FightingStyleExtra[]) : []); break;
+      case "choice.spell": {
+        const picked = ledger.askOne({ ...ask, id, label, ...description, options: spellOptions(catalog, [cls.id], [amount]) });
+        if (!picked) break;
+        classSpellEntry(ledger, cls).alwaysPrepared.add(picked);
+        if (p.resourceId) ledger.addResource({ id: String(p.resourceId), label: `${label} (${catalog.spellById(picked)?.name ?? picked}) 무료 시전`, max: 1, recovery: String(p.recovery ?? "긴 휴식"), source: cls.name, freeCastSpellId: picked });
+        break;
+      }
+      case "choice.spells": {
+        const casters = catalog.classes.filter((item) => item.casterKind !== "none").map((item) => item.id);
+        const level = Number(p.level ?? 0);
+        const picked = ledger.ask({ ...ask, id, label: `${label} (${amount}개)`, ...description, count: amount, options: spellOptions(catalog, casters, [level], p.ritual === true ? (spell) => spell.ritual : undefined) });
+        const entry = classSpellEntry(ledger, cls);
+        for (const spellId of picked) (p.into === "alwaysPrepared" ? entry.alwaysPrepared : entry.extraCantrips).add(spellId);
+        break;
+      }
+      case "grant.language": ledger.languages.set(String(p.id ?? ""), String(p.name ?? p.id ?? "")); break;
+      case "grant.save-proficiency": for (const ability of p.abilities === "all" ? ABILITY_KEYS : (strings(p.abilities) as AbilityKey[])) ledger.saves.set(ability, label); break;
+      case "grant.ability": for (const ability of strings(p.abilities) as AbilityKey[]) ledger.addAbilityBonus(ability, amount, label, typeof p.cap === "number" ? p.cap : undefined); break;
+      case "grant.senses": { const sense = String(p.sense ?? "") as keyof typeof ledger.senses; ledger.senses[sense] = Math.max(ledger.senses[sense] ?? 0, amount); break; }
+      case "grant.speed": { const mode = String(p.mode ?? "") as keyof typeof ledger.extraSpeeds; ledger.extraSpeeds[mode] = p.equalsWalk === true ? -1 : amount; break; }
+      case "grant.spell-lists": ledger.extraSpellLists.set(cls.id, [...new Set([...(ledger.extraSpellLists.get(cls.id) ?? []), ...strings(p.classes)])]); break;
+      default: ledger.warnings.push(`${featureName}: 알 수 없는 획득 연산 ${operation.property}`);
+    }
+  }
 }
 
-function askFightingStyle(ledger: Ledger, cls: ClassView, index: number, sourceLabel: string) {
+interface FightingStyleExtra { id: string; name: string; nameEn: string; summary: string; list: string; count: number }
+
+function askFightingStyle(ledger: Ledger, cls: ClassView, index: number, sourceLabel: string, extraDefs: FightingStyleExtra[]) {
   const { catalog } = ledger;
   const options = featOptions(catalog, ["fighting-style"], featContext(ledger, true));
-  const extraDefs = cls.slug === "paladin" ? [{ id: "paladin.blessed-warrior", name: "축복받은 전사", nameEn: "Blessed Warrior", summary: "전투 방식 재주 대신 클레릭 소마법 두 개를 항상 준비합니다.", list: "cleric" }]
-    : cls.slug === "ranger" ? [{ id: "ranger.druidic-warrior", name: "드루이드 전사", nameEn: "Druidic Warrior", summary: "전투 방식 재주 대신 드루이드 소마법 두 개를 항상 준비합니다.", list: "druid" }] : [];
   const all = [...options, ...extraDefs.map((extra) => ({ id: extra.id, name: extra.name, nameEn: extra.nameEn, summary: extra.summary, group: "직업 대체 옵션" }))];
   const picked = ledger.askOne({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.fighting-style`, label: "전투 방식", options: all });
   if (!picked) return;
@@ -289,7 +308,7 @@ function askFightingStyle(ledger: Ledger, cls: ClassView, index: number, sourceL
   ledger.addFeature({ id: extra.id, name: `전투 방식: ${extra.name}`, nameEn: extra.nameEn, source: "class", sourceLabel, description: extra.summary, descriptionSource: "srd-summary" });
   const listClass = catalog.classBySlug(extra.list);
   if (!listClass) return;
-  const cantrips = ledger.ask({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.fighting-style.cantrips`, label: `${extra.name} — ${listClass.name} 소마법 2개`, count: 2, options: spellOptions(catalog, [listClass.id], [0]) });
+  const cantrips = ledger.ask({ scope: "class", sourceLabel, trackIndex: index, id: `class.${index}.fighting-style.cantrips`, label: `${extra.name} — ${listClass.name} 소마법 ${extra.count}개`, count: extra.count, options: spellOptions(catalog, [listClass.id], [0]) });
   const entry = classSpellEntry(ledger, cls);
   for (const id of cantrips) entry.extraCantrips.add(id);
 }
@@ -316,8 +335,7 @@ function applySubclassLevel(ledger: Ledger, cls: ClassView, state: ClassState, i
   for (const feature of subclass.features) {
     if (feature.level !== level) continue;
     ledger.addFeature({ id: feature.id, name: feature.name, nameEn: feature.nameEn, source: "subclass", sourceLabel: subclassLabel, level, description: feature.description, descriptionSource: feature.descriptionSource })
-    // R97 (D232): 추가 숙련 (전승 학파) — three skills of the player choosing.
-    if (feature.id.endsWith("college-of-lore.bonus-proficiencies")) for (const skill of ledger.ask({ scope: "class", sourceLabel: subclassLabel, trackIndex: index, id: `class.${index}.lore-skills`, label: "추가 숙련 — 기술 3개", count: 3, options: skillOptions(catalog, "any", (id) => ledger.hasSkill(id)) })) ledger.addSkill(skill, "전승 학파");;
+    applyGainContract(ledger, cls, index, feature.id, feature.name, subclassLabel);;
   }
   const spellsAtLevel = subclass.spells[level] ?? [];
   if (spellsAtLevel.length) {
@@ -412,16 +430,8 @@ function applyInvocations(ledger: Ledger, cls: ClassView, first: number, picked:
       const target = ledger.askOne({ ...ask, id: `class.${first}.invocation.${slug}.target`, label: `${option.name} — 대상 소마법`, description: "알고 있는 워락 소마법 중 피해를 주는 것.", options: known.map((spell) => ({ id: spell.id, name: spell.name, nameEn: spell.nameEn, summary: spell.summary })), optional: true });
       if (target) ledger.addFeatureTarget(option.id, target);
     }
-    if (slug === "pact-of-the-tome") {
-      const allClassIds = catalog.classes.filter((item) => item.casterKind !== "none").map((item) => item.id);
-      const cantrips = ledger.ask({ ...ask, id: `class.${first}.tome.cantrips`, label: "그림자의 서 — 소마법 3개 (어느 목록이든)", count: 3, options: spellOptions(catalog, allClassIds, [0]) });
-      for (const id of cantrips) entry.extraCantrips.add(id);
-      const rituals = ledger.ask({ ...ask, id: `class.${first}.tome.rituals`, label: "그림자의 서 — 의식 1레벨 주문 2개", count: 2, options: spellOptions(catalog, allClassIds, [1], (spell) => spell.ritual) });
-      for (const id of rituals) entry.alwaysPrepared.add(id);
-    }
-    if (slug === "gift-of-the-depths") ledger.extraSpeeds.swim = -1;
-    if (slug === "witch-sight") ledger.senses.truesight = Math.max(ledger.senses.truesight ?? 0, 30);
-    if (slug === "devils-sight") ledger.flags.add("devils-sight");
+    // H3 (D240): 그림자의 서, 심연의 선물, 마녀의 눈 — what an invocation grants is in its contract.
+    applyGainContract(ledger, cls, first, option.id, option.name, cls.name);
   }
 }
 

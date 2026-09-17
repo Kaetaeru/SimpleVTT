@@ -78,6 +78,8 @@ export interface ActorStats {
    * kinds of d20 test now, so 배우's disguise, 튼튼함's death saves and 전투 시전자's concentration are numbers.
    */
   advantage?: RollAdvantage[];
+  /** H3 (D240): saves whose total is at least this ability score (불굴의 힘). */
+  minimumScore?: Partial<Record<AbilityKey, number>>;
 }
 
 export interface RollAdvantage {
@@ -106,6 +108,7 @@ export const pcStats = (derived: DerivedCharacter): ActorStats => ({
   skills: Object.fromEntries(derived.skills.map((skill) => [skill.id, skill.bonus])),
   proficiencyBonus: derived.proficiencyBonus,
   ...(derived.rollAdvantage?.length ? { advantage: derived.rollAdvantage } : {}),
+  ...(derived.minimumScoreRolls?.length ? { minimumScore: Object.fromEntries(derived.minimumScoreRolls.map((key) => [key, derived.abilities[key].score])) } : {}),
 });
 
 export const npcStats = (block: MonsterView): ActorStats => ({
