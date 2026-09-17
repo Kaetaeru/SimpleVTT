@@ -168,6 +168,9 @@ function applyFixedOptionChoice(ledger: Ledger, cls: ClassView, choice: IndexCla
   if (picked === "protector") { ledger.weapons.add("martial"); ledger.armor.add("heavy"); }
   if (picked === "warden") { ledger.weapons.add("martial"); ledger.armor.add("medium"); }
   if (picked === "thaumaturge" || picked === "magician") ledger.flags.add(`bonus-cantrip:${cls.id}`);
+  // R97 (D232): 기적술사 adds Wisdom to Arcana and Religion checks, 마법사 to Arcana and Nature (minimum +1).
+  if (picked === "thaumaturge") for (const skill of ["arcana", "religion"]) ledger.flags.add(`wis-skill-bonus:${skill}`);
+  if (picked === "magician") for (const skill of ["arcana", "nature"]) ledger.flags.add(`wis-skill-bonus:${skill}`);
 }
 
 function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: ClassLevelRow, index: number) {
@@ -229,6 +232,14 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
     if (key === "primal-champion") { ledger.addAbilityBonus("str", 4, "원초의 투사", 24); ledger.addAbilityBonus("con", 4, "원초의 투사", 24); }
     if (key === "feral-senses") ledger.senses.blindsight = Math.max(ledger.senses.blindsight ?? 0, 30);
     if (key === "indomitable-might") ledger.flags.add("indomitable-might");
+    // R97 (D232): what these features change on the sheet itself, which used to be a note asking the player to do it.
+    if (key === "body-and-mind") { ledger.addAbilityBonus("dex", 4, "몸과 마음", 25); ledger.addAbilityBonus("wis", 4, "몸과 마음", 25); }
+    if (key === "slippery-mind") { ledger.saves.set("wis", "미끄러운 정신"); ledger.saves.set("cha", "미끄러운 정신"); }
+    if (key === "scholar") {
+      const scholarly = ["arcana", "history", "investigation", "medicine", "nature", "religion"];
+      const options = skillOptions(catalog, scholarly).map((option) => (!ledger.hasSkill(option.id) ? { ...option, disabledReason: "숙련 없음" } : ledger.hasExpertise(option.id) ? { ...option, disabledReason: "이미 전문화" } : option));
+      for (const skill of ledger.ask({ ...ask, id: `class.${index}.scholar`, label: "학자 — 전문화 1개", description: "숙련한 학문 기술 하나의 숙련 보너스를 두 배로 받습니다.", count: 1, options })) ledger.addExpertise(skill, "학자");
+    }
   }
 
   applySubclassLevel(ledger, cls, state, index, sourceLabel);
@@ -304,7 +315,9 @@ function applySubclassLevel(ledger: Ledger, cls: ClassView, state: ClassState, i
   const subclassLabel = `${subclass.name} ${level}레벨`;
   for (const feature of subclass.features) {
     if (feature.level !== level) continue;
-    ledger.addFeature({ id: feature.id, name: feature.name, nameEn: feature.nameEn, source: "subclass", sourceLabel: subclassLabel, level, description: feature.description, descriptionSource: feature.descriptionSource });
+    ledger.addFeature({ id: feature.id, name: feature.name, nameEn: feature.nameEn, source: "subclass", sourceLabel: subclassLabel, level, description: feature.description, descriptionSource: feature.descriptionSource })
+    // R97 (D232): 추가 숙련 (전승 학파) — three skills of the player choosing.
+    if (feature.id.endsWith("college-of-lore.bonus-proficiencies")) for (const skill of ledger.ask({ scope: "class", sourceLabel: subclassLabel, trackIndex: index, id: `class.${index}.lore-skills`, label: "추가 숙련 — 기술 3개", count: 3, options: skillOptions(catalog, "any", (id) => ledger.hasSkill(id)) })) ledger.addSkill(skill, "전승 학파");;
   }
   const spellsAtLevel = subclass.spells[level] ?? [];
   if (spellsAtLevel.length) {

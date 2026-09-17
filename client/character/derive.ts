@@ -217,12 +217,15 @@ function finalize(ledger: Ledger): DerivedCharacter {
     const ability = SKILL_ABILITY[id] ?? "int";
     const proficient = ledger.hasSkill(id);
     const expertise = proficient && ledger.hasExpertise(id);
-    const bonus = mod(ability) + (expertise ? pb * 2 : proficient ? pb : jack);
+    // R97 (D232): 기적술사·마법사 add Wisdom (minimum +1) to these knowledge checks.
+    const wisBonus = ledger.flags.has(`wis-skill-bonus:${id}`) ? Math.max(1, mod("wis")) : 0;
+    const bonus = mod(ability) + (expertise ? pb * 2 : proficient ? pb : jack) + wisBonus;
     const record = ledger.skills.get(id);
     const terms: Term[] = [{ label: `${ABILITY_KO[ability]} 수정치`, value: mod(ability) }];
     if (expertise) terms.push({ label: `전문화 ×2 (${record?.expertise[0] ?? ""})`, value: pb * 2 });
     else if (proficient) terms.push({ label: `숙련 보너스 (${record?.proficient[0] ?? ""})`, value: pb });
     else if (jack) terms.push({ label: "만능재주 (숙련 보너스 절반)", value: jack });
+    if (wisBonus) terms.push({ label: "지혜 수정치 (신성·원초 질서)", value: wisBonus });
     return { id, name, ability, proficient, expertise, bonus, terms };
   }).sort((a, b) => a.name.localeCompare(b.name, "ko"));
   const perception = skills.find((skill) => skill.id === "perception");
