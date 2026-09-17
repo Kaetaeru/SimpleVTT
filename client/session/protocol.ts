@@ -172,7 +172,7 @@ export type ClientCommand =
    * the entry point for the rest — conditions put on a target, a creature spawned or dismissed, movement and the
    * questions the DM has to settle. `ruleKey` names the feature; the host reads the contract from its own catalog.
    */
-  | { type: "act.contract"; actor: ActorRef; ruleKey: string; targets?: ActorRef[] }
+  | { type: "act.contract"; actor: ActorRef; ruleKey: string; targets?: ActorRef[]; /** V4c (D265): the points chosen on the sheet, for a use that heals by them (안수). */ amount?: number }
   /** R16: put a summoned creature on the summoner's scene — its own journal entry, controlled by the summoner's controller. */
   | { type: "act.summon"; summoner: ActorRef; monsterId: string; count?: number; spellId?: string; /** R84 (D219): which of a summon spell's forms, when the spell brings its own creature. */ form?: number }
   /** R16: send this summoner's creatures away (the spell ended, or the DM says so). */

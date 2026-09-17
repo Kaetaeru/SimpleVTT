@@ -341,6 +341,7 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
           "resistance": "피해 저항", "condition-immunity": "상태 면역", "weapon.shillelagh": "곤봉·육척봉이 주문 능력치를 씀",
           "spell.save-dc": "주문 내성 DC", "spell.attack-roll.bonus": "주문 명중",
           "spell.damage.maximize": "이 레벨 이하 주문의 피해 주사위 최대값", "attack-roll.against-me.after-hit-disadvantage": "나를 맞힌 생물은 이번 턴 다른 공격이 불리",
+          "effect.upkeep": "공격·내성 강요·피해가 없으면 자기 턴 끝에 종료", "effect.upkeep-waived": "효과가 턴마다의 조건 없이 유지",
           "initiative.extra-turn": "전투 첫 라운드에 이니셔티브를 바꾼 턴 하나 더", "attunement.slots": "조율 슬롯",
         };
         const where = WHERE[operation.property] ?? (operation.property.startsWith("skill.") ? `${operation.property.split(".")[1]} 기술` : operation.property);

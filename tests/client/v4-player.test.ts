@@ -8,6 +8,7 @@ import { newJournalCharacter, newJournalNpc } from "../../client/campaign/journa
 import { newCampaign } from "../../client/campaign/model";
 import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/page";
 import { activateFeature } from "../../client/character/activate";
+import { deriveCharacter } from "../../client/character/derive";
 import { longRest } from "../../client/character/play";
 import { initialRuntime, type CharacterRuntime } from "../../client/character/runtime";
 import { parseCustomMonster } from "../../client/compendium/customMonster";
@@ -213,3 +214,55 @@ test("V4b: 언데드 퇴치 is a Wisdom save per creature; a once-per-turn rider
   assert.ok(markers(monk, 1).some((name) => name.startsWith("충격의 일격")), JSON.stringify(markers(monk, 1)));
   assert.ok(!markers(monk, 1).includes("충격"), "the save succeeded");
 });
+
+test("V4c: 지속되는 격노 tops rage up at initiative and waives its upkeep; 완벽한 집중 fills to 4; 지치지 않는 자 sheds exhaustion; 안수 heals someone else (D265)", async () => {
+  const { restFeatures, useRestFeature } = await import("../../client/character/rest");
+  const cat = catalog();
+  const barbarian = build({ name: "바바리안", classes: "barbarian", level: 15 }).derived;
+  const rageMax = barbarian.resources.find((resource) => resource.id === "resource.barbarian.rage")!.max;
+  const spent: CharacterRuntime = { ...initialRuntime(barbarian), resourcesUsed: { "resource.barbarian.rage": rageMax } };
+  const persistent = restFeatures(barbarian, spent, cat, "initiative").find((feature) => feature.name === "지속되는 격노")!;
+  assert.ok(persistent && !persistent.unavailable, JSON.stringify(restFeatures(barbarian, spent, cat, "initiative")));
+  const topped = useRestFeature(spent, barbarian, persistent)!;
+  assert.equal(topped.resourcesUsed["resource.barbarian.rage"], 0);
+  assert.equal(topped.resourcesUsed["resource.barbarian.persistent-rage"], 1);
+  assert.ok(barbarian.upkeepWaived?.includes("feature:barbarian.rage"));
+
+  const monk = build({ name: "몽크", classes: "monk", level: 15 }).derived;
+  const focusMax = monk.resources.find((resource) => resource.id === "resource.monk.focus")!.max;
+  const tired: CharacterRuntime = { ...initialRuntime(monk), resourcesUsed: { "resource.monk.focus": focusMax - 1 } };
+  const perfect = restFeatures(monk, tired, cat, "initiative").find((feature) => feature.name === "완전한 기")!;
+  assert.equal(useRestFeature(tired, monk, perfect)!.resourcesUsed["resource.monk.focus"], focusMax - 4, "one left becomes four");
+
+  const ranger = build({ name: "레인저", classes: "ranger", level: 10 }).derived;
+  const worn: CharacterRuntime = { ...initialRuntime(ranger), exhaustion: 2 };
+  const tireless = restFeatures(ranger, worn, cat).find((feature) => feature.name === "지치지 않음")!;
+  assert.equal(useRestFeature(worn, ranger, tireless)!.exhaustion, 1);
+
+  const t = await table([{ classes: "paladin", level: 5 }, { classes: "fighter", level: 5, runtime: (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 3 } }) }], []);
+  assert.equal(tableOutcome(t.made[0].derived, t.cat, "paladin.lay-on-hands")?.party.healPoints, 25);
+  t.dm.send({ type: "act.contract", actor: t.ref(0), ruleKey: "paladin.lay-on-hands", targets: [t.ref(1)], amount: 40 });
+  await tick();
+  assert.equal((t.entry(1) as { runtime: CharacterRuntime }).runtime.hp.current, Math.min(3 + 25, t.made[1].derived.hp.max), "capped at the pool");
+});
+
+test("V4c: 선천 마법 raises the spell save DC, 우월한 방어 resists all but force, 방출술 전문가's spells can be prepared (D265)", () => {
+  const cat = catalog();
+  const effect = (key: string, name: string) => ({ key, name, source: "feature" as const, duration: "1분", concentration: false, rounds: 10, elapsed: 0, startedAt: "" });
+  const sorcerer = build({ name: "소서러", classes: "sorcerer", level: 3 });
+  const before = sorcerer.derived.spellcasting.find((entry) => entry.source === "class")!.saveDc;
+  const innate = deriveCharacterWith(sorcerer.source, cat, [effect("feature:sorcerer.innate-sorcery#while-active", "선천 마법")]);
+  const plain = deriveCharacterWith(sorcerer.source, cat, [effect("feature:sorcerer.innate-sorcery", "선천 마법")]);
+  assert.ok([innate, plain].some((derived) => derived.spellcasting.find((entry) => entry.source === "class")!.saveDc === before + 1), "DC +1 while it runs");
+  const monk = build({ name: "몽크", classes: "monk", level: 18 });
+  const defended = deriveCharacterWith(monk.source, cat, [effect("feature:monk.superior-defense", "우월한 방어")]);
+  assert.ok(defended.defenses.resistances.some((line) => line.startsWith("화염")) && !defended.defenses.resistances.some((line) => line.startsWith("역장")), JSON.stringify(defended.defenses.resistances));
+  const wizard = build({ name: "위저드", classes: "wizard", level: 3 }).derived;
+  const savant = wizard.choices.find((choice) => choice.id.endsWith(".evocation-savant"))!;
+  const prepared = wizard.choices.find((choice) => choice.id === "class.0.spells")!;
+  assert.ok(savant.options.slice(0, savant.count).every((option) => prepared.options.some((item) => item.id === option.id)), "the free evocation spells are preparable");
+});
+
+function deriveCharacterWith(source: ReturnType<typeof build>["source"], cat: ReturnType<typeof catalog>, effects: CharacterRuntime["effects"]) {
+  return deriveCharacter(source, cat, { effects });
+}

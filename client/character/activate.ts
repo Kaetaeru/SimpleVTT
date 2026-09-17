@@ -26,6 +26,8 @@ export interface ActivateDeps {
   askPoints?: (name: string, left: number) => Promise<number | null> | number | null;
   /** Spend those points on oneself? Defaults to a confirm. */
   confirmSelfHeal?: (points: number) => Promise<boolean> | boolean;
+  /** V4c (D265): the points chosen and whether they went to the user — the table heals somebody else with them. */
+  onChosenPoints?: (points: number, self: boolean) => void;
 }
 
 /** A formula with dice goes through the overlay; a plain number (temp HP = level) is applied at once. */
@@ -67,6 +69,7 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
     extras.points = points;
     const self = await (deps.confirmSelfHeal ?? ((count: number) => confirm(`${count}점을 자신에게 써서 HP를 ${count} 회복할까요? (취소: 다른 대상)`)))(points);
     if (self) extras.healRoll = points;
+    deps.onChosenPoints?.(points, self);
   }
   const lines: string[] = [];
   if (activation.heal) extras.healRoll = await rollTotal(rollDice, { label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" }, lines);

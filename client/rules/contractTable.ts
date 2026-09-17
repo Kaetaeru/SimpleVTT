@@ -8,7 +8,7 @@
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedCharacter } from "../character/types";
 import { ATTACK_INVOCATIONS, characterScope, evaluate, type ConditionDuration } from "./contract";
-import { atOthers, contractOutcome, featureContract, formula as useFormula } from "./contractActivation";
+import { atOthers, CHOSEN_POINTS_REF, contractOutcome, featureContract, formula as useFormula } from "./contractActivation";
 
 export interface TableOutcome {
   label: string;
@@ -24,7 +24,7 @@ export interface TableOutcome {
    * 치유사 heals, 요리사 and 독 제조자 put an item in somebody's bag. `max` is how many may be chosen, when the rule
    * says so. Everything here needs a target, which is why it could not live on the sheet.
    */
-  party: { tempHp?: string; heal?: string; grants: string[]; max?: number; /** V4a (D263): an amount shared out among the chosen creatures, none past half its maximum. */ healPool?: { amount: number; cap: "half-max" } };
+  party: { tempHp?: string; heal?: string; grants: string[]; max?: number; /** V4a (D263): an amount shared out among the chosen creatures, none past half its maximum. */ healPool?: { amount: number; cap: "half-max" }; /** V4c (D265): the use heals its target by the points chosen on the sheet, at most this many (안수). */ healPoints?: number };
   /** V4b (D264): conditions the chosen creatures save against (언데드 퇴치, 적 퇴치). */
   conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>;
   /** V4a (D263): damage the use deals to the chosen creatures, rolled once, with the save that resists it. */
@@ -53,6 +53,8 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     if (ATTACK_INVOCATIONS.has(entry.invocation)) continue;
     for (const operation of entry.operations) {
       if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
+      // V4c (D265): points chosen on the sheet may heal somebody else (안수).
+      if (operation.kind === "resource.change" && "ref" in operation.amount && operation.amount.ref === CHOSEN_POINTS_REF) { party.healPoints = derived.resources.find((resource) => resource.id === operation.resourceId)?.max ?? 0; continue; }
       if (operation.kind === "condition.apply" && operation.target !== "self" && operation.save) { conditionSaves.push({ condition: operation.condition, ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10, ...(operation.duration ? { duration: operation.duration } : {}), ...(operation.repeatSave ? { repeatSave: operation.repeatSave } : {}) }); continue; }
       if (operation.kind === "condition.apply" && operation.target !== "self") { applied.push(operation.condition); continue; }
       if (operation.kind === "condition.apply") { selfMarks.push(operation.condition); continue; }
@@ -82,6 +84,6 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     ...(conditionSaves.length ? { conditionSaves } : {}),
   };
   const asks = table.conditionsApplied.length || table.conditionsRemoved.length || table.selfMarks.length || table.deathSave || table.notes.length || table.artifacts.length
-    || party.tempHp || party.heal || party.healPool || party.grants.length || strikes.length || conditionSaves.length;
+    || party.tempHp || party.heal || party.healPool || party.healPoints || party.grants.length || strikes.length || conditionSaves.length;
   return asks ? table : null;
 }

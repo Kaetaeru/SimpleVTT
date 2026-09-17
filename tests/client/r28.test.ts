@@ -23,6 +23,7 @@ import { pcSpell, resolveSpell, type CasterStats } from "../../client/rules/spel
 import { spellExec } from "../../client/compendium/spells";
 import { TableClient } from "../../client/session/client";
 import { TableHost } from "../../client/session/host";
+import { pcHostOptions } from "../../client/session/pcHost";
 import { MemoryHub } from "../../client/session/transport";
 import type { JournalCharacter } from "../../client/campaign/journal";
 import { build, catalog } from "./support";
@@ -128,7 +129,9 @@ test("rage: it ends at the end of a turn that did nothing, and survives one that
     pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalog())), pcConcentrationKey,
     pcAttackSpec: (entry, id, riders) => pcAttackSpec(entry, derivedOf(entry, catalog()), id, riders),
     pcStats: (entry) => pcStats(derivedOf(entry, catalog())),
-    pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalog()), catalog(), spellId, method) });
+    pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalog()), catalog(), spellId, method),
+    // V4c (D265): which effects need a deed each turn comes from their contracts.
+    pcUpkeepEffects: pcHostOptions(() => catalog()).pcUpkeepEffects });
   const dm = new TableClient(hub.connect("dm-seat"), { userId: "dm", displayName: "DM", joinCode: "R28AAA", hostSecret: "s" });
   const alice = new TableClient(hub.connect("p1"), { userId: "alice", displayName: "앨리스", joinCode: "R28AAA", seat: "a" });
   await tick();
@@ -165,6 +168,6 @@ test("rage: it ends at the end of a turn that did nothing, and survives one that
   dm.send({ type: "tracker.next" });
   await tick();
   assert.equal(rageOf(), undefined, "a turn with no attack, no forced save and no damage ends it");
-  assert.ok(host.archive.some((message) => message.content.includes("격노가 끝났습니다")), JSON.stringify(host.archive.map((message) => message.content).slice(-6)));
+  assert.ok(host.archive.some((message) => message.content.includes("격노 끝남")), JSON.stringify(host.archive.map((message) => message.content).slice(-6)));
   void setExhaustion;
 });

@@ -81,7 +81,7 @@ export interface CampaignsState {
   /** R35 (D174): spend a contract to redo the failed save the prompt names. */
   rescueRoll: (messageId: string, feature: string) => void;
   /** R42 (D182): run a feature's contract at the table (conditions on a target, summons, DM questions). */
-  runContract: (actor: ActorRef, ruleKey: string, targets?: ActorRef[]) => void;
+  runContract: (actor: ActorRef, ruleKey: string, targets?: ActorRef[], amount?: number) => void;
   showJournal: (id: string) => void;
   /** Drop a consumed "show" request. */
   dismissShow: (id: string) => void;
@@ -480,7 +480,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const react = useCallback((actor: ActorRef, name: string, options: { note?: string; formula?: string } = {}) => send({ type: "act.react", actor, name, ...options }), [send]);
   const rollDeathSave = useCallback((messageId: string) => send({ type: "act.deathSave", messageId }), [send]);
   const rescueRoll = useCallback((messageId: string, feature: string) => send({ type: "act.rescue", messageId, feature }), [send]);
-  const runContract = useCallback((actor: ActorRef, ruleKey: string, targets?: ActorRef[]) => send({ type: "act.contract", actor, ruleKey, targets }), [send]);
+  const runContract = useCallback((actor: ActorRef, ruleKey: string, targets?: ActorRef[], amount?: number) => send({ type: "act.contract", actor, ruleKey, targets, ...(amount ? { amount } : {}) }), [send]);
   const showJournal = useCallback((id: string) => send({ type: "journal.show", id }), [send]);
   const dismissShow = useCallback((id: string) => setShows((list) => list.filter((item) => item !== id)), []);
 

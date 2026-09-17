@@ -52,7 +52,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "effect.upkeep", "effect.upkeep-waived", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -148,6 +148,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "concentration.damage-immune": if (operation.spell) application.concentrationDamageImmune = [...(application.concentrationDamageImmune ?? []), operation.spell]; break;
       case "spell.damage.ability-modifier": { const spell = operation.spell ?? text(operation, scope); if (spell) application.spellDamageModifier = [...(application.spellDamageModifier ?? []), spell]; break; }
       case "attack-roll.studied": application.studiedAttacks = true; break;
+      // V4c (D265): the host reads this from the effect contract to end the effect for want of a deed; nothing on the sheet.
+      case "effect.upkeep": break;
       case "spell.cantrip-potent": application.potentCantrip = true; break;
       case "spell.damage-type.ability-modifier": application.damageTypeModifier = [...(application.damageTypeModifier ?? []), ...(operation.damageTypes ?? [])]; break;
       // V3f (D260): opportunity attacks against this creature are made at disadvantage (기회 공격 회피).
@@ -161,6 +163,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "healing.self-on-slot-heal": application.slotHealSelf = Math.max(application.slotHealSelf ?? 0, number(operation, scope) ?? 0); break;
       // V4a (D263): casting this spell tells the caster the target's resistances, immunities and vulnerabilities (사냥꾼의 지식).
       case "marked-spell.reveal-defenses": if (operation.spell) application.revealDefenses = [...(application.revealDefenses ?? []), operation.spell]; break;
+      // V4c (D265): the named effect does not end for want of a deed each turn (지속되는 격노).
+      case "effect.upkeep-waived": if (operation.params?.effect) application.upkeepWaived = [...(application.upkeepWaived ?? []), String(operation.params.effect)]; break;
       case "attunement.slots": application.attunementBonus = (application.attunementBonus ?? 0) + (number(operation, scope) ?? 0); break;
       // V3c (D257): advantage on death saving throws (생존자, 튼튼함).
       case "death-save.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["death-save"] }]; break;

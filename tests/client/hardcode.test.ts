@@ -13,6 +13,8 @@ import { join } from "node:path";
 import test from "node:test";
 
 const CEILINGS = {
+  /** V4c (D265): an effect or contract key literal (`"feature:barbarian.rage"`). */
+  contractKeys: 0,
   /** A content id literal. */
   contentIds: 0,
   /** A kebab-case content key compared to a key, slug, option or id (`traitKey === "dwarven-toughness"`). */
@@ -28,6 +30,7 @@ const CEILINGS = {
 };
 
 const PATTERNS: Record<keyof typeof CEILINGS, RegExp> = {
+  contractKeys: /"(feature|spell|feat|species|subclass|class):[a-z]/,
   contentIds: /"dnd\.srd521\./,
   contentKeyBranches: /(key|Key|Id|\.id) === "[a-z0-9]+(-[a-z0-9]+)+"/,
   slugBranches: /(slug|picked) === "/,

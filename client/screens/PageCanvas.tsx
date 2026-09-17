@@ -482,7 +482,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
    */
   const useIt = async (feature: DerivedFeature, bonus = false) => {
     if (entry.kind !== "character" || !derived) return;
-    const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime });
+    let given: { points: number; self: boolean } | undefined;
+    const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime, onChosenPoints: (points, self) => { given = { points, self }; } });
     if (outcome === "refused") alert("남은 횟수가 없습니다.");
     if (outcome !== "done") return;
     c.say(`/em ${token.name}: ${feature.name} 사용`);
@@ -492,13 +493,16 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     // its sheet half and stopped. When it needs people, the targeting mode asks for them first.
     const table = derived ? tableOutcome(derived, catalog, featureRuleKey(feature.id)) : null;
     if (table) {
-      const wantsTargets = table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.healPool || table.party.grants.length || table.strikes?.length || table.conditionSaves?.length;
+      // V4c (D265): points spent on somebody else (안수) need that somebody.
+      const others = table.party.healPoints && given && !given.self ? given.points : undefined;
+      const wantsTargets = others || table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.healPool || table.party.grants.length || table.strikes?.length || table.conditionSaves?.length;
       let picked: string[] = [];
       if (wantsTargets) {
         picked = await requestTargets(`${feature.name} — 대상을 클릭하세요${table.party.max ? ` (최대 ${table.party.max}명)` : ""}`, { multi: true });
         if (!picked.length) return;
       }
-      c.runContract(me, featureRuleKey(feature.id), picked.map((id) => ({ pageId: page.id, tokenId: id })));
+      if (table.party.healPoints && !others && !(table.conditionsApplied.length || table.conditionsRemoved.length || table.strikes?.length || table.conditionSaves?.length)) return;
+      c.runContract(me, featureRuleKey(feature.id), picked.map((id) => ({ pageId: page.id, tokenId: id })), others);
     }
     // R34 (D171): the feature's own contract, when the content ships one. 행동 폭증's `economy.modify` is the first
     // one that reaches the table: the turn gets its 행동 back instead of a sentence telling the player it did.

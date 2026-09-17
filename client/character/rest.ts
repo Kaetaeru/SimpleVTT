@@ -13,6 +13,9 @@ import { applyHealing, grantTempHp, noteLog } from "./play";
 import type { CharacterRuntime } from "./runtime";
 import type { DerivedCharacter } from "./types";
 
+/** V4c (D265): the id a trigger uses to mean "this character's exhaustion level". */
+export const EXHAUSTION_RESOURCE = "resource.exhaustion";
+
 /** R79 (D216): the sheet setting for a trigger feature, by rule key so it survives a level up. */
 export const triggerPolicyKey = (featureId: string) => `trigger:${featureRuleKey(featureId)}`;
 
@@ -30,7 +33,9 @@ export interface RestFeature {
   tempHp?: number;
   note?: string;
   /** Pools the use spends (negative) or gives back (positive), by `derived.resources` id. */
-  pools: Array<{ resourceId: string; amount: number }>;
+  pools: Array<{ resourceId: string; amount: number; upTo?: boolean }>;
+  /** V4c (D265): exhaustion levels the trigger changes. */
+  exhaustion?: number;
   /** Spell slots whose levels may add up to this much. */
   slotLevels?: number;
   /** Pact Magic slots given back. */
@@ -56,13 +61,15 @@ export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntim
       const amount = Number(evaluate(operation.amount, scope)) || 0;
       if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + amount;
       else if (operation.resourceId === PACT_SLOT_RESOURCE) out.pactSlots = (out.pactSlots ?? 0) + amount;
-      else out.pools.push({ resourceId: operation.resourceId, amount });
+      // V4c (D265): the reserved exhaustion resource (지치지 않는 자).
+      else if (operation.resourceId === EXHAUSTION_RESOURCE) out.exhaustion = (out.exhaustion ?? 0) + amount;
+      else out.pools.push({ resourceId: operation.resourceId, amount, ...(operation.upTo ? { upTo: true } : {}) });
     }
     for (const pool of out.pools.filter((item) => item.amount < 0)) {
       const resource = derived.resources.find((item) => item.id === pool.resourceId);
       if (!resource || resource.max - (runtime.resourcesUsed[resource.id] ?? 0) < -pool.amount) out.unavailable = `${resource?.label ?? pool.resourceId}을(를) 이미 썼습니다`;
     }
-    const gives = Boolean(out.tempHp) || out.pools.some((item) => item.amount > 0 && (runtime.resourcesUsed[item.resourceId] ?? 0) > 0) || Boolean(out.slotLevels && spentSlots(derived, runtime).length) || Boolean(out.pactSlots && runtime.pactSlotsUsed > 0) || Boolean(out.heal && runtime.hp.current < derived.hp.max);
+    const gives = Boolean(out.tempHp) || (out.exhaustion !== undefined && out.exhaustion < 0 && runtime.exhaustion > 0) || out.pools.some((item) => item.amount > 0 && (runtime.resourcesUsed[item.resourceId] ?? 0) > 0 && (!item.upTo || (derived.resources.find((resource) => resource.id === item.resourceId)?.max ?? 0) - (runtime.resourcesUsed[item.resourceId] ?? 0) < item.amount)) || Boolean(out.slotLevels && spentSlots(derived, runtime).length) || Boolean(out.pactSlots && runtime.pactSlotsUsed > 0) || Boolean(out.heal && runtime.hp.current < derived.hp.max);
     if (!out.unavailable && !gives) out.unavailable = "되찾을 것이 없습니다";
     return [out];
   });
@@ -114,10 +121,12 @@ export function useRestFeature(runtime: CharacterRuntime, derived: DerivedCharac
     const resource = derived.resources.find((item) => item.id === pool.resourceId);
     const used = resourcesUsed[pool.resourceId] ?? 0;
     if (pool.amount < 0) { resourcesUsed[pool.resourceId] = used - pool.amount; continue; }
-    const back = Math.min(used, pool.amount);
+    // V4c (D265): `upTo` gives back only what brings the pool to that many left.
+    const back = pool.upTo ? Math.max(0, Math.min(used, pool.amount - ((resource?.max ?? 0) - used))) : Math.min(used, pool.amount);
     if (back) { resourcesUsed[pool.resourceId] = used - back; lines.push(`${resource?.label ?? pool.resourceId} ${back} 회복`); }
   }
   let next: CharacterRuntime = { ...runtime, resourcesUsed };
+  if (feature.exhaustion && runtime.exhaustion > 0) { const exhaustion = Math.max(0, Math.min(6, runtime.exhaustion + feature.exhaustion)); if (exhaustion !== runtime.exhaustion) { lines.push(`탈진 ${runtime.exhaustion} → ${exhaustion}`); next = { ...next, exhaustion }; } }
   if (feature.tempHp) { lines.push(`임시 HP ${feature.tempHp}`); next = grantTempHp(next, feature.tempHp); }
   if (feature.heal && healRoll) { lines.push(`HP ${healRoll} 회복 (${feature.heal})`); next = applyHealing(next, derived, healRoll); }
   if (lines.length) next = noteLog(next, `${feature.name}: ${lines.join(", ")}`);

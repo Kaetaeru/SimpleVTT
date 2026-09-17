@@ -58,8 +58,6 @@ const describeMinutes = (minutes: number) => {
 };
 
 /** R16: the 2024 Counterspell — a reaction that makes the other caster roll a Constitution save. */
-/** R28 (D151): the effect key a barbarian's 격노 runs under. */
-const RAGE_KEY = "feature:barbarian.rage";
 
 const EVENT_BUFFER = 5000;
 const SNAPSHOT_CHAT = 300;
@@ -142,6 +140,11 @@ export interface TableHostOptions {
   pcExtraTurns?: (entry: JournalCharacter) => Array<{ offset: number; label: string }>;
   /** V3h (D262): who hits this sheet attacks it at disadvantage for the rest of the turn — the rule's name, or nothing. */
   pcHitDefense?: (entry: JournalCharacter) => string | undefined;
+  /**
+   * V4c (D265): the sheet's effects that end at the bearer's turn end unless it attacked, forced a save or took damage
+   * since its last turn (격노) — their keys, and whether a rule waives that (지속되는 격노).
+   */
+  pcUpkeepEffects?: (entry: JournalCharacter) => Array<{ key: string; name: string; waived: boolean }>;
   /** V4a (D263): what healing someone else with a slot spell gives back to the caster (plus the slot level). */
   pcSlotHealSelf?: (entry: JournalCharacter) => number | undefined;
   /** V4a (D263): whether casting this spell shows this sheet the target's defenses. */
@@ -156,7 +159,7 @@ export interface TableHostOptions {
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" } } } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" }; healPoints?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
@@ -1089,6 +1092,11 @@ export class TableHost {
           }
           if (party.max && targets.length > party.max) lines.push(`${party.max}명까지만 적용했습니다`);
         } else if (party.tempHp || party.heal || party.grants.length) lines.push("대상을 고르지 않았습니다");
+        // V4c (D265): points the sheet spent heal the one creature chosen (안수), never more than the pool holds.
+        if (party.healPoints && command.amount && targets.length) {
+          const amount = Math.max(0, Math.min(party.healPoints, Math.floor(command.amount)));
+          if (amount) { this.healActor(targets[0], amount); lines.push(`${targets[0].token?.name ?? targets[0].entry.name}: 회복 ${amount}`); }
+        }
         // V4a (D263): one amount shared out, the most hurt first, nobody past half their maximum (생명 보존).
         if (party.healPool && targets.length) {
           let left = party.healPool.amount;
@@ -2077,7 +2085,9 @@ export class TableHost {
     for (const actor of actors) {
       if (!actor) continue;
       if (this.rageOf(actor.entry)) this.markRagingDeed(this.refOf(actor));
-      const stopped = cannotAct(this.conditionsOf(actor));
+      // V4c (D265): a waived upkeep (지속되는 격노) only ends when the bearer is unconscious.
+      const conditions = this.conditionsOf(actor);
+      const stopped = this.rageOf(actor.entry)?.waived ? (conditions.includes("무의식") ? "무의식" : undefined) : cannotAct(conditions);
       if (stopped) this.endRage(this.journalEntries.get(actor.entry.id) ?? actor.entry, `${stopped} 상태`);
     }
   }
@@ -2088,17 +2098,18 @@ export class TableHost {
     this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, ragingDeed: true } : item)) });
   }
 
+  /** V4c (D265): the running effect that needs a deed each turn (격노), read from its contract rather than its key. */
   private rageOf(entry: JournalEntry) {
     if (entry.kind !== "character") return undefined;
-    return (entry.runtime.effects ?? []).find((effect) => effect.key === RAGE_KEY);
+    return this.options.pcUpkeepEffects?.(entry)[0];
   }
 
   /** End a rage that the rules say is over, and say so once. */
   private endRage(entry: JournalEntry, reason: string) {
     const rage = this.rageOf(entry);
     if (!rage || entry.kind !== "character") return;
-    this.storeEntry({ ...entry, runtime: { ...endEffect(entry.runtime, RAGE_KEY, reason), updatedAt: this.now() }, updatedAt: this.now() });
-    this.say({ type: "system", who: "", content: `${entry.name}의 격노가 끝났습니다 (${reason})` });
+    this.storeEntry({ ...entry, runtime: { ...endEffect(entry.runtime, rage.key, reason), updatedAt: this.now() }, updatedAt: this.now() });
+    this.say({ type: "system", who: "", content: `${entry.name}: ${rage.name} 끝남 (${reason})` });
   }
 
   /** R34 (D171): the other direction — a contract handed this turn its action back. */
@@ -2887,7 +2898,7 @@ export class TableHost {
     if (endedActor?.token && endedActor.page) { const page = this.pages.get(endedActor.page.id); if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(marker.name === HIT_DEFENSE_MARK && marker.from === endedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); } }
     if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }
     // R28 (D151): the rage is judged at the end of its bearer's turn, on what happened since their last one.
-    if (endedActor && this.rageOf(endedActor.entry) && !result.ended?.ragingDeed) this.endRage(this.journalEntries.get(endedActor.entry.id) ?? endedActor.entry, "그 사이 공격도 피해도 없었음");
+    if (endedActor && this.rageOf(endedActor.entry) && !this.rageOf(endedActor.entry)!.waived && !result.ended?.ragingDeed) this.endRage(this.journalEntries.get(endedActor.entry.id) ?? endedActor.entry, "그 사이 공격도 피해도 없었음");
     const startedActor = this.actorOfTurn(result.started);
     // V4b (D264): marks this creature left on others end as its turn starts.
     if (startedActor?.token) for (const tokenId of [...this.targetMarks.keys()]) this.dropMarks(tokenId, (item) => item.from === startedActor.token!.id);

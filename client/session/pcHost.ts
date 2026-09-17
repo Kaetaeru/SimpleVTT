@@ -76,6 +76,10 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     },
     pcExtraTurns: (entry) => derivedOf(entry, catalog()).extraTurns ?? [],
     pcHitDefense: (entry) => derivedOf(entry, catalog()).hitDefense,
+    pcUpkeepEffects: (entry) => {
+      const waived = derivedOf(entry, catalog()).upkeepWaived ?? [];
+      return (entry.runtime.effects ?? []).filter((effect) => (catalog().contractFor(effect.key)?.entryPoints ?? []).some((point) => point.operations.some((operation) => operation.kind === "property.modify" && operation.property === "effect.upkeep"))).map((effect) => ({ key: effect.key, name: effect.name, waived: waived.includes(effect.key) }));
+    },
     pcSlotHealSelf: (entry) => derivedOf(entry, catalog()).slotHealSelf,
     pcOncePerTurnRiders: (entry) => (derivedOf(entry, catalog()).attackRiders ?? []).filter((rider) => rider.oncePerTurn && rider.moment === "pre-roll").map((rider) => rider.key),
     pcRevealsDefenses: (entry, spellId) => (derivedOf(entry, catalog()).revealDefenses ?? []).includes(spellId),

@@ -18,9 +18,9 @@ import { build, catalog } from "./support";
 
 const FEATURE_CONTRACTS = [
   ["barbarian", 20, "barbarian.rage"], ["barbarian", 20, "barbarian.reckless-attack"],
-  ["sorcerer", 20, "sorcerer.innate-sorcery"], ["sorcerer", 20, "sorcerer.draconic.dragon-wings"],
+  ["sorcerer", 20, "sorcerer.innate-sorcery"], ["sorcerer", 20, "sorcerer.draconic.dragon-wings#while-active"],
   ["monk", 20, "monk.superior-defense"], ["paladin", 20, "paladin.oath-of-devotion.sacred-weapon"], ["paladin", 20, "paladin.oath-of-devotion.holy-nimbus"],
-  ["druid", 20, "druid.circle-of-the-land.natures-sanctuary"], ["ranger", 20, "ranger.favored-enemy"], ["ranger", 20, "ranger.natures-veil"],
+  ["druid", 20, "druid.circle-of-the-land.natures-sanctuary"], ["ranger", 20, "ranger.natures-veil#use"],
 ] as Array<[string, number, string]>;
 
 test("effects: every authored effect.apply starts exactly the duration the hand-written table started (D179)", () => {
@@ -45,9 +45,10 @@ test("effects: only until-duration gets a counter; the rest print their reason (
   const cat = catalog();
   const made = build({ name: "r", classes: "ranger", level: 20 });
   const scope = characterScope(made.derived);
-  // 주적 is concentration up to an hour: a duration the table watches, with no countdown invented for it.
-  const favored = contractDurations(cat, scope)("ranger.favored-enemy")!.duration!;
-  assert.deepEqual(favored, { text: "집중, 최대 1시간", instantaneous: false, concentration: true });
+  // 마귀의 회복력 lasts until the next rest: a duration the table watches, with no countdown invented for it.
+  const resilience = contractDurations(cat, characterScope(build({ name: "w", classes: "warlock", level: 10 }).derived))("warlock.fiend.fiendish-resilience#fire")!.duration!;
+  assert.equal(resilience.text, "다음 휴식까지");
+  assert.equal(resilience.rounds, undefined);
   // 격노 states its rounds, so it counts.
   const rage = contractDurations(cat, characterScope(build({ name: "b", classes: "barbarian", level: 5 }).derived))("barbarian.rage")!.duration!;
   assert.equal(rage.rounds, 100);

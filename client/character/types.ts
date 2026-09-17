@@ -281,6 +281,8 @@ export interface DerivedCharacter {
   attunementBonus?: number;
   /** V4a (D263): a slot spell that heals someone else also heals this character for this much plus the slot level. */
   slotHealSelf?: number;
+  /** V4c (D265): effect keys whose each-turn upkeep a rule waives (지속되는 격노). */
+  upkeepWaived?: string[];
   /** V4a (D263): spells whose casting shows the caster the target's defenses. */
   revealDefenses?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll (원소의 친화력). */

@@ -86,7 +86,8 @@ export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: Cl
       for (const id of chosen) entry.spellbook.add(id);
     }
     if (entry.preparedMax > 0) {
-      const options = picked.map((id) => catalog.spellById(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)).map((spell) => spellOption(spell));
+      // V4c (D265): the whole spellbook, the school picks (방출술 전문가) included — not only the level-by-level picks.
+      const options = [...entry.spellbook].map((id) => catalog.spellById(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell)).map((spell) => spellOption(spell));
       const prepared = ledger.ask({ ...ask, id: `class.${first}.spells`, label: `준비 주문 (주문서에서 ${entry.preparedMax}개)`, count: entry.preparedMax, minimum: 0, options });
       for (const id of prepared) entry.prepared.add(id);
     }
