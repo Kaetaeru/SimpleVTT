@@ -4,7 +4,8 @@
  * The owner of the record decides where it is saved (`save`) and where rolls go (`onRolled`).
  */
 import { useMemo, useState, type ReactNode } from "react";
-import type { ContentCatalog } from "../catalog/catalog";
+import type { ContentCatalog, SpellView } from "../catalog/catalog";
+import type { CastMethod } from "../character/play";
 import { deriveCharacter } from "../character/derive";
 import { describeRoll, parseFormula, type RollResult, type RollSpec } from "../character/dice";
 import { useDice } from "../ui/dice/DiceProvider";
@@ -40,9 +41,11 @@ export interface SheetPlayProps {
   embedded?: boolean;
   /** At the table: an attack row's ⚔ hands the attack to targeting mode. */
   onAttack?: (attack: DerivedAttack) => void;
+  /** R76 (D211): at the table, a spell's 시전 hands the cast to targeting mode and the host, as an attack does. */
+  onCast?: (spell: SpellView, method: CastMethod) => void;
 }
 
-export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, title = "시트", actions: headerActions, embedded = false, onAttack }: SheetPlayProps) {
+export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, title = "시트", actions: headerActions, embedded = false, onAttack, onCast }: SheetPlayProps) {
   const derived = useMemo(() => deriveCharacter(source, catalog, { equipped: runtime.equipped, inventory: runtime.inventory, effects: runtime.effects }), [source, runtime, catalog]);
   const [exporting, setExporting] = useState<string | null>(null);
   const [hpInput, setHpInput] = useState("");
@@ -89,6 +92,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
     useFeature: (feature) => { void activateFeature(feature); },
     endEffect: (key) => commit(endEffect(runtime, key)),
     castSpell: (spell, method) => {
+      if (onCast) { onCast(spell, method); return; }
       const next = castSpell(runtime, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method);
       if (!next) { alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다)."); return; }
       const slotLevel = method.kind === "slot" ? method.level : method.kind === "pact" ? derived.pactMagic?.level ?? spell.level : spell.level;

@@ -35,7 +35,49 @@ const raw = catalogJson as unknown as { definitions: Record<string, SpellExec> |
 const list: SpellExec[] = Array.isArray(raw.definitions) ? raw.definitions : Object.values(raw.definitions);
 const byId = new Map(list.map((entry) => [entry.spellId, entry]));
 
-export const spellExec = (spellId: string) => byId.get(spellId);
+/** R76 (D211): spells the generated catalog does not know — an installed module's, and any spell with no mechanics at all. */
+const installed = new Map<string, SpellExec>();
+export const spellExec = (spellId: string): SpellExec | undefined => byId.get(spellId) ?? installed.get(spellId);
+
+/** What the catalog knows about a spell: its text, and the `spell-mechanic` config its module may carry. */
+export interface CatalogSpell { id: string; level: number; castingTime: string; range: string; duration: string; ritual: boolean; summary?: string; mechanic?: Record<string, unknown> }
+
+const PRIMARY_KINDS = new Set(["attack-damage", "save-damage", "save-compound-damage", "save-effect", "healing", "temporary-hp", "automatic-projectiles", "multi-attack-damage", "tracked-effect", "maximum-hp", "dispel", "full-healing", "power-word-kill", "revive"]);
+const economyOf = (castingTime: string): SpellExec["castingEconomy"] => (/추가 행동|bonus/i.test(castingTime) ? "bonus-action" : /반응|reaction/i.test(castingTime) ? "reaction" : "action");
+const isObject = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * R76 (D211): the execution a catalog spell gets at the table. A module's `spell-mechanic` is used as written (the
+ * same shape as the generated catalog); a spell without one is still cast — targets from the board, the slot paid,
+ * the effect and its concentration recorded — so every spell on a sheet goes through one flow.
+ */
+export function execForCatalogSpell(spell: CatalogSpell): SpellExec {
+  const concentration = /집중|concentration/i.test(spell.duration);
+  const mechanic = spell.mechanic;
+  if (mechanic && isObject(mechanic.primary) && PRIMARY_KINDS.has(String(mechanic.primary.kind)) && isObject(mechanic.targeting)) {
+    const targeting = mechanic.targeting as Partial<SpellExec["targeting"]>;
+    return {
+      ...(mechanic as unknown as SpellExec), spellId: spell.id, baseLevel: typeof mechanic.baseLevel === "number" ? mechanic.baseLevel : spell.level,
+      castingEconomy: (mechanic.castingEconomy as SpellExec["castingEconomy"]) ?? economyOf(spell.castingTime),
+      targeting: { kind: "creature", minTargets: 1, maxTargets: 1, ...targeting },
+      concentration: typeof mechanic.concentration === "boolean" ? mechanic.concentration : concentration,
+    };
+  }
+  const self = /^자신|^self/i.test(spell.range.trim());
+  const feet = Number(/(\d+)\s*(피트|ft|feet)/i.exec(spell.range)?.[1] ?? 0);
+  return {
+    spellId: spell.id, baseLevel: spell.level, castingEconomy: economyOf(spell.castingTime),
+    targeting: self ? { kind: "self", minTargets: 1, maxTargets: 1, allowedRelations: ["self"] } : { kind: "creature", minTargets: 1, maxTargets: 8, ...(feet ? { rangeFeet: feet } : {}), allowedRelations: ["self", "ally", "enemy", "neutral"] },
+    primary: { kind: "tracked-effect", ...(spell.summary ? { summary: spell.summary } : {}), ...(concentration ? { duration: { kind: "concentration" } } : {}) },
+    concentration, ritual: spell.ritual,
+  };
+}
+
+/** R76 (D211): called when the catalog is built, so the table (and the host in the same app) can cast every spell it lists. */
+export function registerCatalogSpells(spells: readonly CatalogSpell[]) {
+  installed.clear();
+  for (const spell of spells) if (!byId.has(spell.id)) installed.set(spell.id, execForCatalogSpell(spell));
+}
 export const spellExecs = () => list;
 
 /** SRD condition ids → the sheet's Korean condition names. */

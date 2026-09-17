@@ -10,6 +10,9 @@ import type { Audience, JournalCharacter, JournalEntry, JournalFolder, Pending, 
 import type { Macro } from "../campaign/model";
 import { canEdit, findByName, journalFolders, journalTree, newHandout, newJournalCharacter, newJournalNpc, parseJournalText, pendingFor, pendingValue } from "../campaign/journal";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
+import type { SpellView } from "../catalog/catalog";
+import { spellExec } from "../compendium/spells";
+import { castSpell, type CastMethod } from "../character/play";
 import { CUSTOM_MONSTER_EXAMPLE, parseCustomMonster } from "../compendium/customMonster";
 import { deriveCharacter } from "../character/derive";
 import type { RollResult } from "../character/dice";
@@ -488,6 +491,21 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     if (viewer.isGm) { answer = await requestAttackOptions({ name: attack.name, gm: true }); if (answer === null) return; }
     c.attack({ entryId: entry.id, pageId: page.id, tokenId: token?.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), { source: "weapon", attackId: attack.id }, answer?.riders, { overrides: answer?.overrides });
   };
+  // R76 (D211): a spell cast from the sheet at the table is the same cast as the turn panel's — targets from the board,
+  // then the host rolls it. Without a token on a page there is nothing to target, and the sheet records it as before.
+  const castFromSheet = async (spell: SpellView, method: CastMethod) => {
+    const page = viewer.snapshot.pages.find((item) => item.tokens.some((token) => token.represents === entry.id));
+    const token = page?.tokens.find((item) => item.represents === entry.id);
+    const exec = spellExec(spell.id);
+    if (!page || !token || !exec) { saveRuntime((current) => castSpell(current, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method) ?? current); return; }
+    const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
+    let targets = selfOnly ? [token.id] : await requestTargets(`${spell.name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`}, Shift로 여러 명)` : ""}`, { multi: exec.targeting.maxTargets > 1 });
+    if (!targets.length) return;
+    targets = targets.slice(0, exec.targeting.maxTargets);
+    let answer: Awaited<ReturnType<typeof requestAttackOptions>> | undefined;
+    if (viewer.isGm && exec.primary.kind === "attack-damage") { answer = await requestAttackOptions({ name: spell.name, gm: true }); if (answer === null) return; }
+    c.cast({ entryId: entry.id, pageId: page.id, tokenId: token.id }, spell.id, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, answer?.overrides);
+  };
   if (wizard) return <CreateScreen existing={entry.source} initialStep="classes" onSave={saveEdited} onClose={() => setWizard(false)} title={`편집 · ${entry.name}`} />;
   return (
     <div className="cl-journal-window">
@@ -518,7 +536,7 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
           {viewer.isGm ? <GmFields draft={draft} edit={edit} set={set} /> : null}
         </div>
       ) : null}
-      {tab === "sheet" ? (editable ? <SheetPlay embedded source={entry.source} runtime={entry.runtime} catalog={catalog} save={saveRuntime} onRolled={onRolled} onAttack={(attack) => void attackFromSheet(attack)} /> : <SheetView derived={derived} catalog={catalog} runtime={entry.runtime} />) : null}
+      {tab === "sheet" ? (editable ? <SheetPlay embedded source={entry.source} runtime={entry.runtime} catalog={catalog} save={saveRuntime} onRolled={onRolled} onAttack={(attack) => void attackFromSheet(attack)} onCast={(spell, method) => void castFromSheet(spell, method)} /> : <SheetView derived={derived} catalog={catalog} runtime={entry.runtime} />) : null}
       {tab === "attributes" ? <AttributesTab derived={derived} runtime={entry.runtime} /> : null}
     </div>
   );
