@@ -279,7 +279,7 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
           "ac.bonus": "AC", "ac.unarmored-base": "방어구 없을 때 기본 AC", "ac.minimum": "AC 최소",
           "attack-roll.bonus": "명중 굴림", "damage.bonus": "피해", "saving-throw.bonus": "내성 굴림", "ability-check.bonus": "능력 판정",
           "speed.walk": "이동 속도", "speed.fly": "비행 속도", "speed.climb": "등반 속도", "speed.fly-as-walk": "비행 속도 = 이동 속도",
-          "hp.maximum": "최대 HP", "senses.darkvision": "암시야", "attack-roll.crit-range": "치명타 범위",
+          "hp.maximum": "최대 HP", "hp.heal-on-start": "시작할 때 회복", "senses.darkvision": "암시야", "attack-roll.crit-range": "치명타 범위",
           "resistance": "피해 저항", "condition-immunity": "상태 면역", "weapon.shillelagh": "곤봉·육척봉이 주문 능력치를 씀",
           "spell.save-dc": "주문 내성 DC", "spell.attack-roll.bonus": "주문 명중",
         };

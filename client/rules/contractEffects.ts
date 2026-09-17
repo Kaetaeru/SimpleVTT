@@ -41,7 +41,7 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
 export const PROPERTIES = [
   "ac.bonus", "ac.unarmored-base", "ac.minimum",
   "attack-roll.bonus", "damage.bonus", "saving-throw.bonus", "ability-check.bonus", "skill.<id>.bonus",
-  "speed.walk", "speed.fly", "speed.climb", "speed.fly-as-walk", "weapon.shillelagh", "hp.maximum", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
+  "speed.walk", "speed.fly", "speed.climb", "speed.fly-as-walk", "weapon.shillelagh", "hp.maximum", "hp.heal-on-start", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
   "senses.darkvision", "senses.blindsight", "resistance", "condition-immunity",
   // R51 (D186): what the PHB feats needed and the vocabulary did not have.
   "damage-taken.reduce", "damage.ignore-resistance",
@@ -122,6 +122,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "speed.fly-as-walk": application.speed = { ...application.speed, flyAsWalk: true }; break;
       case "weapon.shillelagh": application.shillelagh = true; break;
       case "hp.maximum": application.hpMax = (application.hpMax ?? 0) + (number(operation, scope) ?? 0); break;
+      // H5d (D247): hit points healed once, when the effect starts (원조).
+      case "hp.heal-on-start": application.onStart = { heal: (application.onStart?.heal ?? 0) + (number(operation, scope) ?? 0) }; break;
       case "spell.save-dc": application.spellDc = number(operation, scope); break;
       case "spell.attack-roll.bonus": application.spellAttack = number(operation, scope); break;
       case "senses.darkvision": application.darkvision = number(operation, scope); break;

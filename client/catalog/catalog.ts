@@ -155,6 +155,8 @@ export interface ItemView {
   armor?: ArmorDefinition;
   shieldBonus?: number;
   tool?: { ability?: AbilityKey };
+  /** H5d (D247): used up when used, and the healing it rolls (`consumable-definition`). */
+  consumable?: { healing?: string };
   config: Record<string, unknown>;
   scope: "builtin" | "installed";
 }
@@ -567,10 +569,12 @@ export class ContentCatalog {
       const armorRaw = mechanic<{ training: ArmorDefinition["training"]; ac: { base: number; dex?: string; dexMax?: number }; strengthRequirement?: number; stealthDisadvantage?: boolean }>(entry, "armor-definition");
       const shield = mechanic<{ acBonus?: number }>(entry, "shield-definition");
       const tool = mechanic<{ ability?: AbilityKey }>(entry, "tool-definition");
+      const consumable = mechanic<{ healing?: string }>(entry, "consumable-definition");
       const packKind = entry.mechanics.some((item) => item.kind === "pack-definition") ? "pack" : kind;
       views.push({
         id: entry.id, name: entry.name, nameEn: entry.nameEn, kind: packKind,
         weightLb: anyConfig.weightLb as number | undefined, priceGp: anyConfig.priceGp as number | undefined,
+        ...(consumable ? { consumable: consumable.healing ? { healing: consumable.healing } : {} } : {}),
         ...(weaponDef ? { weapon: { ...weaponDef, properties: weaponDef.properties ?? [] } } : {}),
         ...(armorRaw ? { armor: { training: armorRaw.training, base: armorRaw.ac.base, dexMax: armorRaw.ac.dexMax, dexFull: armorRaw.ac.dex === "full", strengthRequirement: armorRaw.strengthRequirement, stealthDisadvantage: armorRaw.stealthDisadvantage ?? false } } : {}),
         ...(shield ? { shieldBonus: shield.acBonus ?? 2 } : {}),

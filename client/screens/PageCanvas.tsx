@@ -549,7 +549,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const items = entry.kind === "character" && derived ? derived.inventory.filter((item) => item.quantity > 0 && !["weapon", "armor", "shield"].includes(item.kind)) : [];
   const useItem = async (item: DerivedItem) => {
     if (entry.kind !== "character" || !derived) return;
-    const use = itemUse(item);
+    const use = itemUse(item, catalog);
     // R10: a potion can be poured into anyone's mouth — pick who drinks (yourself included); the host rolls and applies.
     if (use.heal) {
       const picked = await requestTargets(`${item.name} — 마실 대상을 클릭하세요 (자기 자신도)`, { multi: false });
@@ -570,7 +570,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       const overLevel = view.level > highest;
       return { key: item.instanceId, label: `📜 ${item.name}`, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}두루마리로 시전 (슬롯 없음)${overLevel ? ` · 지능(신비학) DC ${scrollCheckDc(view.level)} — DM 판단` : ""}`, onSelect: () => void castIt(spellId, view.name, { kind: "scroll", instanceId: item.instanceId }) };
     }
-    return { key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item).heal ? `회복 ${itemUse(item).heal}` : itemUse(item).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) };
+    return { key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item, catalog).heal ? `회복 ${itemUse(item, catalog).heal}` : itemUse(item, catalog).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) };
   });
   const bonusItems: PanelItem[] = [
     ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),

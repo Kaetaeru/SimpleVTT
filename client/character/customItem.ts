@@ -28,6 +28,8 @@ export interface CustomItem {
   /** Korean damage type labels, as the sheet's defenses carry them. */
   resistances?: string[];
   notes?: string[];
+  /** H5d (D247): what using it does — the healing it rolls, and whether it is used up. */
+  use?: { healing?: string; consumes?: boolean };
 }
 
 const ABILITIES: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
@@ -88,6 +90,13 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     if (valid.length) item.resistances = valid;
   }
   if (Array.isArray(raw.notes)) item.notes = raw.notes.map(String);
+  if (isObject(raw.use)) {
+    const use: NonNullable<CustomItem["use"]> = {};
+    const healing = text(raw.use.healing)?.replace(/\s+/g, "");
+    if (healing !== undefined) { if (/^[0-9]*d[0-9]+([+-][0-9]+)?$/.test(healing)) use.healing = healing; else warnings.push(`use.healing: "${healing}"는 "2d4+2" 형식이어야 합니다`); }
+    if (typeof raw.use.consumes === "boolean") use.consumes = raw.use.consumes;
+    if (Object.keys(use).length) item.use = use;
+  }
   const base = item.base ? catalog.itemById(item.base) : undefined;
   if ((item.bonus?.attack || item.bonus?.damage || item.bonus?.damageDice) && !base?.weapon) warnings.push("attack/damage 보너스는 base가 무기일 때만 그 무기의 공격에 붙습니다 — 지금은 모든 공격에 붙습니다");
   return { item, warnings };

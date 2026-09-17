@@ -11,22 +11,21 @@ import { readFileSync } from "node:fs";
 import { featureActivation, featureRuleKey } from "../../client/rules/activation";
 import { characterScope, evaluate } from "../../client/rules/contract";
 import { contractDurations, featureContract } from "../../client/rules/contractActivation";
-import { EFFECT_RULES } from "../../client/rules/effects";
+import { effectApplication } from "../../client/rules/effects";
 import { build, catalog } from "./support";
 
 /** The rules the grammar still cannot express, and why. This list is the slice's real output. */
-const HELD_BACK = {
-  "spell:aid": "효과가 시작될 때 한 번만 회복하는 `onStart` 의미를 계약이 아직 말하지 못합니다",
-  "monk.deflect-attacks": "무예 주사위 크기가 레벨에 따라 바뀝니다 (주사위 면 수를 식으로 쓸 수 없습니다)",
-  "species.breath-weapon": "주사위 개수가 레벨에 따라 바뀝니다 (개수를 식으로 쓸 수 없습니다)",
-  "species.adrenaline-rush": "임시 HP가 숙련 보너스라서 레벨에 따라 바뀝니다",
-  "paladin.lay-on-hands": "점수를 나눠 쓰는 풀이라 `points` 대화가 필요합니다",
-};
+// H5c·H5d (D246, D247): the last five were given grammar (`diceCount`, `use.points`, `hp.heal-on-start`) and moved.
+const HELD_BACK: Record<string, string> = {};
 
 test("migration: EFFECT_RULES is down to what the grammar cannot say (D184)", () => {
-  const left = Object.keys(EFFECT_RULES);
-  assert.deepEqual(left, ["spell:aid"], `남은 손으로 쓴 효과 규칙: ${left.join(", ")}`);
-  assert.ok(HELD_BACK["spell:aid"]);
+  const source = readFileSync("client/rules/effects.ts", "utf8");
+  assert.ok(!source.includes("EFFECT_RULES"), "no hand-written effect table is left");
+  assert.deepEqual(HELD_BACK, {});
+  // 원조 is a contract: +5 maximum, and the +5 healed once when it starts.
+  const aid = effectApplication({ key: "spell:dnd.srd521.spell.aid", name: "원조", source: "spell", duration: "8시간", startedRound: 0 } as never, build({ name: "c", classes: "cleric", level: 3 }).derived, catalog());
+  assert.equal(aid?.hpMax, 5);
+  assert.deepEqual(aid?.onStart, { heal: 5 });
 });
 
 test("migration: the activations that moved spend and roll exactly what they did (D184)", () => {

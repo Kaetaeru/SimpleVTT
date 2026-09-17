@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { characterScope } from "../../client/rules/contract";
 import { contractEffect } from "../../client/rules/contractEffects";
-import { EFFECT_RULES, effectApplication, type EffectApplication } from "../../client/rules/effects";
+import { effectApplication, type EffectApplication } from "../../client/rules/effects";
 import { build, catalog } from "./support";
 
 const fighter = () => build({ name: "f", classes: "fighter", level: 5 }).derived;
@@ -22,7 +22,7 @@ function comparable(application: EffectApplication | undefined, attacks: ReturnT
   return { ...application, attack: shape(application.attack), damage: shape(application.damage) };
 }
 
-test("effects: every authored contract produces exactly what the hand-written rule does (D178)", () => {
+test("effects: every authored effect contract names only properties the sheet knows (D178, D247)", () => {
   const cat = catalog();
   const derived = fighter();
   const scope = characterScope(derived);
@@ -33,13 +33,13 @@ test("effects: every authored contract produces exactly what the hand-written ru
   // What this test still guards is the ones that do: where both paths exist, they must agree exactly.
   // R43: some contracts are for rules that never had a hand-written function (향상된 치명타); there is nothing to
   // compare those against, and the point of this test is that where both exist they agree.
+  // H5d (D247): the hand-written table is gone; every effect contract still names only properties the engine knows.
   for (const key of keys) {
-    const rule = EFFECT_RULES[key];
-    if (!rule) continue;
+    // A reaction window runs its own properties (기묘한 회피); the sheet executor only answers for standing ones.
+    if (cat.contractFor(key)!.interceptors.length) continue;
     const { application, unknown } = contractEffect(cat.contractFor(key)!, scope);
     assert.deepEqual(unknown, [], `${key}: 실행기가 모르는 property`);
-    const expected = rule({ derived, classLevel: () => 5, name: key });
-    assert.deepEqual(comparable(application, derived.attacks), comparable(expected, derived.attacks), key);
+    assert.ok(comparable(application, derived.attacks), key);
   }
 });
 

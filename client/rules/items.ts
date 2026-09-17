@@ -1,7 +1,13 @@
 /**
  * Using an item from the turn panel (D98): consumables are spent, healing potions roll their dice, everything
  * else is logged — the DM narrates the rest.
+ *
+ * H5d (D247): what an item does is its data — the catalog item's `consumable-definition` (`healing`) or a pasted
+ * item's `use` — not a guess from its name.
  */
+import type { ContentCatalog } from "../catalog/catalog";
+import type { CustomItem } from "../character/customItem";
+
 export interface ItemUse {
   /** One is removed from the stack. */
   consumes: boolean;
@@ -10,16 +16,10 @@ export interface ItemUse {
   text: string;
 }
 
-const POTIONS: Array<{ test: RegExp; heal: string; label: string }> = [
-  { test: /궁극|supreme/i, heal: "10d4+20", label: "궁극 치유 물약" },
-  { test: /최상급|superior/i, heal: "8d4+8", label: "최상급 치유 물약" },
-  { test: /상급|greater/i, heal: "4d4+4", label: "상급 치유 물약" },
-  { test: /치유|healing/i, heal: "2d4+2", label: "치유 물약" },
-];
-
-export function itemUse(item: { name: string; kind: string; itemId?: string }): ItemUse {
-  const potion = /물약|potion/i.test(`${item.name} ${item.itemId ?? ""}`) ? POTIONS.find((tier) => tier.test.test(item.name) || tier.test.test(item.itemId ?? "")) : undefined;
-  if (potion) return { consumes: true, heal: potion.heal, text: `${item.name} 마심 (${potion.heal} 회복)` };
-  const consumes = item.kind === "consumable" || item.kind === "ammunition" || /물약|potion|두루마리|scroll|횃불|torch|배급|ration/i.test(`${item.name} ${item.itemId ?? ""}`);
+export function itemUse(item: { name: string; kind: string; itemId?: string; magic?: CustomItem }, catalog?: Pick<ContentCatalog, "itemById">): ItemUse {
+  const view = item.itemId ? catalog?.itemById(item.itemId) : undefined;
+  const heal = view?.consumable?.healing ?? item.magic?.use?.healing;
+  const consumes = Boolean(view?.consumable) || item.kind === "consumable" || item.kind === "ammunition" || item.magic?.use?.consumes === true || Boolean(heal);
+  if (heal) return { consumes, heal, text: `${item.name} 마심 (${heal} 회복)` };
   return { consumes, text: `${item.name} 사용` };
 }

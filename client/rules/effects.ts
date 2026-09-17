@@ -13,8 +13,8 @@ import { featureRuleKey, qualifyRuleKey } from "./activation";
 import { characterScope } from "./contract";
 import { contractEffect } from "./contractEffects";
 import { contractSuppressions, featureContract, selectorMatches } from "./contractActivation";
+import { onHitOf, spellExec, type SpellDice } from "../compendium/spells";
 
-interface EffectContext { derived: DerivedCharacter; classLevel: (slug: string) => number; name: string }
 
 export interface EffectApplication {
   /** AC: a flat bonus, a replacement unarmored base (Mage Armor: 13 + Dex), or a floor (Barkskin 17). */
@@ -92,29 +92,37 @@ export interface EffectApplication {
   onStart?: { heal?: number };
 }
 
-export type EffectRule = (context: EffectContext) => EffectApplication;
-
 const WEAPON_TYPES = ["타격", "관통", "참격"];
 const strengthMelee = (attack: DerivedAttack) => attack.ability === "str" && !attack.properties.includes("ammunition");
 const weaponOnly = (attack: DerivedAttack) => Boolean(attack.itemId);
 
-/** Keyed by `feature:<rule key>` or `spell:<English name slug>`. */
-export const EFFECT_RULES: Record<string, EffectRule> = {
-  "spell:aid": () => ({ hpMax: 5, onStart: { heal: 5 }, notes: ["최대 HP와 현재 HP +5"] }),
-};
-
 /** What casting does at once, before any lasting effect: temporary HP (False Life) or damage dice to roll (Divine Smite). */
 export interface CastHook { tempHp?: string; damage?: { formula: string; type: string }; notes?: string[] }
-const CAST_HOOKS: Record<string, (slotLevel: number, derived: DerivedCharacter) => CastHook> = {
-  "false-life": (slotLevel) => ({ tempHp: `2d4+${4 + Math.max(0, slotLevel - 1) * 5}` }),
-  "divine-smite": (slotLevel) => ({ damage: { formula: `${1 + Math.max(1, slotLevel)}d8`, type: "광휘" }, notes: ["악마·언데드에게 +1d8"] }),
-  "searing-smite": (slotLevel) => ({ damage: { formula: `${Math.max(1, slotLevel)}d6`, type: "화염" }, notes: ["매 턴 시작에 건강 내성 아니면 다시 1d6 (1분)"] }),
-  "shining-smite": (slotLevel) => ({ damage: { formula: `${1 + Math.max(1, slotLevel)}d6`, type: "광휘" }, notes: ["대상은 1분 동안 빛나고 투명 불가, 명중 유리"] }),
-  "cure-wounds": (slotLevel, derived) => ({ notes: [`회복 ${2 * Math.max(1, slotLevel)}d8 + ${Math.max(...derived.spellcasting.map((entry) => derived.abilities[entry.ability].modifier), 0)} — 대상 HP는 직접`] }),
-  "healing-word": (slotLevel, derived) => ({ notes: [`회복 ${2 * Math.max(1, slotLevel)}d4 + ${Math.max(...derived.spellcasting.map((entry) => derived.abilities[entry.ability].modifier), 0)}`] }),
-};
-export function castHook(spell: { nameEn: string }, slotLevel: number, derived: DerivedCharacter): CastHook | undefined {
-  return CAST_HOOKS[spellSlug(spell.nameEn)]?.(slotLevel, derived);
+
+/** The dice of a spell at the slot it is cast with (`dicePerSlotAboveBase`, `flatPerSlotAboveBase`). */
+function diceAtSlot(dice: SpellDice, above: number, modifier: number): string {
+  const count = dice.count + (dice.dicePerSlotAboveBase ?? 0) * above;
+  const flat = (dice.flat ?? 0) + (dice.flatPerSlotAboveBase ?? 0) * above + (dice.addSpellcastingModifier ? modifier : 0);
+  return `${count}d${dice.sides}${flat ? `${flat > 0 ? "+" : "-"}${Math.abs(flat)}` : ""}`;
+}
+
+/**
+ * H5d (D247): what the sheet rolls when a spell is cast away from the table, read from the spell's execution data —
+ * its temporary hit points, its healing, the damage it adds on a hit. It used to be a table keyed by English spell name.
+ */
+export function castHook(spell: { id: string }, slotLevel: number, derived: DerivedCharacter): CastHook | undefined {
+  const exec = spellExec(spell.id);
+  if (!exec) return undefined;
+  const above = Math.max(0, slotLevel - exec.baseLevel);
+  const modifier = Math.max(0, ...derived.spellcasting.map((entry) => derived.abilities[entry.ability].modifier));
+  if (exec.primary.kind === "temporary-hp") return { tempHp: diceAtSlot(exec.primary.dice, above, modifier) };
+  if (exec.primary.kind === "healing") return { notes: [`회복 ${diceAtSlot(exec.primary.dice, above, modifier)} — 대상 HP는 직접`] };
+  const hit = onHitOf(exec);
+  if (hit?.damage) {
+    const notes = [...(hit.versus ? [`${hit.versus.creatureTypes.join("·")}에게 +${hit.versus.damage.count}d${hit.versus.damage.sides}`] : []), ...(hit.note ? [hit.note] : [])];
+    return { damage: { formula: `${hit.damage.count + (hit.damage.perSlot ?? 0) * above}d${hit.damage.sides}`, type: hit.damage.type }, ...(notes.length ? { notes } : {}) };
+  }
+  return undefined;
 }
 
 const spellSlug = (nameEn: string) => nameEn.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -157,10 +165,7 @@ export function effectApplication(effect: ActiveEffect, derived: DerivedCharacte
     const { application, unknown, hasProperties } = contractEffect(contract, characterScope(derived, effect.target ? { "effect.target": effect.target } : {}));
     if (hasProperties && !unknown.length) return application;
   }
-  const rule = EFFECT_RULES[key];
-  if (!rule) return undefined;
-  const classLevel = (slug: string) => derived.classes.find((cls) => cls.classId.endsWith(`.${slug}`) || cls.classId === slug)?.level ?? 0;
-  return rule({ derived, classLevel, name: effect.name });
+  return undefined;
 }
 
 const sum = (terms: Term[]) => terms.reduce((total, term) => total + term.value, 0);

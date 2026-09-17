@@ -16,7 +16,7 @@ const CEILINGS = {
   /** A branch on a class slug or a picked option id. */
   slugBranches: 0,
   /** A regex run over a name or a description. */
-  nameRegex: 4,
+  nameRegex: 2,
 };
 
 const PATTERNS: Record<keyof typeof CEILINGS, RegExp> = {
