@@ -158,6 +158,9 @@ export interface TableHostOptions {
   setTimer?: (ms: number, run: () => void) => void;
 }
 
+/** R92 (D227): the on-hit fact the host answers itself from the target hit points. */
+const WOUNDED_FACT = "target-below-max-hp";
+
 export class TableHost {
   private campaign: Campaign;
   private chat: ChatMessage[];
@@ -1419,7 +1422,7 @@ export class TableHost {
         if (!attacker || attacker.entry.kind !== "character" || !target || held.inputs.attack.source !== "weapon") return refuse("공격자나 대상이 더 없습니다");
         if (!isGm && !this.mayAct(userId, held.inputs.attacker, attacker.entry)) return refuse("공격자의 조종자만 답할 수 있습니다");
         // R64 (D199): the window only ever offered the "ask" ones; the "always" ones ride along without a checkbox.
-        const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}));
+        const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}, target));
         const offered = new Map(ask.map((offer) => [offer.key, offer]));
         const smiteSlot = command.choices.includes("smite") && offered.get("smite")?.slots?.some((slot) => slot.level === command.smiteSlot) ? command.smiteSlot : undefined;
         // R82 (D218): a smite spell counts only with a slot its offer listed, and only one on a hit.
@@ -1575,11 +1578,19 @@ export class TableHost {
    * the rogue's own turn, and again on someone else's turn (an opportunity attack), but never twice in one. With no
    * tracker running there is no turn to count, so nothing is held back. ponytail: in memory, a host restart forgets.
    */
-  private hitOffersFor(entry: JournalCharacter, attackId: string, riders: AttackRiders): HitOffer[] {
-    const offers = this.options.pcHitOffers?.(entry, attackId, riders) ?? [];
+  private hitOffersFor(entry: JournalCharacter, attackId: string, riders: AttackRiders, target: { entry: JournalEntry; token?: Token }): HitOffer[] {
     const used = this.turnUses.get(entry.id);
-    return used && used.mark === this.turnMark() ? offers.filter((offer) => !(offer.oncePerTurn && used.keys.includes(offer.key))) : offers;
+    const spent = used && used.mark === this.turnMark() ? used.keys : [];
+    // R92 (D227): a fact the table can see is not asked — 거상 학살자 is offered only against a wounded creature, with no checkbox.
+    const wounded = this.wounded(target);
+    return (this.options.pcHitOffers?.(entry, attackId, riders) ?? [])
+      .filter((offer) => !(offer.oncePerTurn && spent.includes(offer.key)))
+      .filter((offer) => wounded || !offer.facts?.some((fact) => fact.id === WOUNDED_FACT))
+      .map((offer) => { const facts = offer.facts?.filter((fact) => fact.id !== WOUNDED_FACT); return facts?.length === offer.facts?.length ? offer : { ...offer, facts: facts?.length ? facts : undefined }; });
   }
+
+  /** R92 (D227): the creature has lost hit points (거상 학살자). */
+  private wounded(actor: { entry: JournalEntry; token?: Token }) { const hp = this.combatantOf(actor)?.hp; return Boolean(hp && hp.current < hp.max); }
 
   private turnMark() { return this.tracker.turns.length ? `${this.tracker.round}:${this.tracker.current}` : undefined; }
 
@@ -1648,7 +1659,7 @@ export class TableHost {
     const landed = resolution.outcome === "hit" || resolution.outcome === "crit";
     if (allowOnHit && landed && attacker.entry.kind === "character" && inputs.attack.source === "weapon" && this.options.pcHitOffers) {
       // R64 (D199): what the player set to "always" is taken without a window; "never" is not offered at all.
-      const { ask: offers, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, inputs.attack.attackId, inputs.riders ?? {}));
+      const { ask: offers, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, inputs.attack.attackId, inputs.riders ?? {}, target));
       if (!offers.length && auto.length) return this.takeHitChoices(held, { choices: [] }, auto);
       if (offers.length) {
         const promptId = newMessageId();
@@ -1673,6 +1684,7 @@ export class TableHost {
     const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], smiteSlot: answer.smiteSlot, spellSmite: answer.spellSmite };
     if (!all.choices.length) return this.finishAttack(held);
     this.useThisTurn(held.attacker.entry.id, all.choices);
+    if (this.wounded(held.target)) all.facts.push(WOUNDED_FACT);
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
     const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
     const riders = withHitChoices(held.inputs.riders ?? {}, all);
@@ -2058,7 +2070,7 @@ export class TableHost {
     // R63 (D198): the attacker let the on-hit window go ("안 함") — the card lands as it was rolled.
     // R64 (D199): "안 함" answers the checkboxes; what the sheet takes without asking still lands.
     if (held.stage === "on-hit") {
-      const auto = attacker.entry.kind === "character" && held.inputs.attack.source === "weapon" ? splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {})).auto : [];
+      const auto = attacker.entry.kind === "character" && held.inputs.attack.source === "weapon" ? splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}, target)).auto : [];
       this.takeHitChoices({ ...held, attacker, target }, { choices: [] }, auto);
       return;
     }

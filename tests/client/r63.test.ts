@@ -234,3 +234,22 @@ test("R91: 암습 is offered once per turn — taken on this turn, the next hit 
   await swing();
   assert.ok(t.open()[0]?.prompt?.onHit?.offers.some((offer) => offer.key === "sneak"), "someone else's turn: 암습 again (an opportunity attack)");
 });
+
+test("R92: 거상 학살자 is offered only against a wounded creature, with no checkbox, and lands its d8 (D227)", async () => {
+  const t = await table("ranger", 5);
+  const bow = t.derived.attacks.find((attack) => attack.itemId)!;
+  const slayer = (message?: ChatMessage) => message?.prompt?.onHit?.offers.find((offer) => offer.key.endsWith("colossus-slayer"));
+  const swing = async () => { t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: bow.id }, overrides: { outcome: "hit" } }); await tick(); };
+  await swing();
+  const fresh = t.open()[0];
+  assert.equal(slayer(fresh), undefined, "the ogre is unhurt");
+  if (fresh) { t.dm.send({ type: "act.decline", messageId: fresh.id }); await tick(); }
+  await swing();
+  const offer = slayer(t.open()[0]);
+  assert.ok(offer, JSON.stringify(t.open().map((message) => message.prompt?.onHit?.offers.map((item) => item.key))));
+  assert.equal(offer.facts, undefined, "the table can see the wound, so it does not ask");
+  t.dm.send({ type: "act.onhit", messageId: t.open()[0].id, choices: [offer.key] });
+  await tick();
+  const card = t.cards().at(-1)!;
+  assert.ok(card.action.damage.some((part) => part.part.label === offer.label && part.part.formula === "1d8"), JSON.stringify(card.action.damage.map((part) => [part.part.label, part.part.formula])));
+});
