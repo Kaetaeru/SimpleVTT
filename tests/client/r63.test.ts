@@ -14,7 +14,7 @@ import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/
 import { initialRuntime } from "../../client/character/runtime";
 import { monsterById } from "../../client/compendium/monsters";
 import { pcStats } from "../../client/rules/actions";
-import { derivedOf, hasSneakAttack, hitOffers, pcAttackSpec, pcCombatant, pcConcentrationKey, withHitChoices } from "../../client/rules/attackSpec";
+import { derivedOf, hitOffers, pcAttackSpec, pcCombatant, pcConcentrationKey, withHitChoices } from "../../client/rules/attackSpec";
 import { applyDamage, carryDice, type Combatant, type DamageResult } from "../../client/rules/resolve";
 import type { GuardOffer } from "../../client/rules/contractReactions";
 import { TableClient } from "../../client/session/client";
@@ -66,7 +66,7 @@ async function table(cls: string, level: number, options: { guards?: GuardOffer[
 
 test("R63: a rogue's hit opens the window, and 암습 lands on the same dice (D198)", async () => {
   const t = await table("rogue", 5);
-  const blade = t.derived.attacks.find((attack) => hasSneakAttack(t.derived, attack))!;
+  const blade = t.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   assert.ok(blade, t.derived.attacks.map((attack) => attack.name).join("/"));
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
   await tick();
@@ -74,10 +74,10 @@ test("R63: a rogue's hit opens the window, and 암습 lands on the same dice (D1
   const [prompt] = t.open();
   assert.ok(prompt, "an on-hit window");
   // The soldier background brings 야만적 공격자 as well; both are offered, nothing is ticked for the player.
-  assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["sneak", "savage"]);
+  assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["savage", "rogue.sneak-attack"]);
   assert.equal(prompt.prompt!.onHit!.outcome, "hit");
 
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["sneak"] });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"] });
   await tick();
   const [card] = t.cards();
   assert.ok(card, "answered, the card is posted");
@@ -90,12 +90,12 @@ test("R63: a rogue's hit opens the window, and 암습 lands on the same dice (D1
 
 test("R63: on a critical the rider's dice double too (D198)", async () => {
   const t = await table("rogue", 5);
-  const blade = t.derived.attacks.find((attack) => hasSneakAttack(t.derived, attack))!;
+  const blade = t.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "crit" } });
   await tick();
   const [prompt] = t.open();
   assert.equal(prompt.prompt!.onHit!.outcome, "crit", "the window says it was a critical");
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["sneak"] });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"] });
   await tick();
   const [card] = t.cards();
   assert.equal(card.action.outcome, "crit");
@@ -105,7 +105,7 @@ test("R63: on a critical the rider's dice double too (D198)", async () => {
 
 test("R63: 안 함 posts the swing exactly as it was rolled, and a miss never asks (D198)", async () => {
   const t = await table("rogue", 5);
-  const blade = t.derived.attacks.find((attack) => hasSneakAttack(t.derived, attack))!;
+  const blade = t.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
   await tick();
   const [prompt] = t.open();
@@ -153,7 +153,7 @@ test("R63: an offer that was not made is ignored rather than trusted (D198)", as
   // The soldier background's 야만적 공격자 is the fighter's only offer.
   const [prompt] = t.open();
   assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["savage"]);
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["sneak", "smite"], smiteSlot: 1 });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack", "smite"], smiteSlot: 1 });
   await tick();
   const [card] = t.cards();
   assert.equal(card.action.damage.length, 1, "neither 암습 nor a smite the sheet does not have");
@@ -162,7 +162,7 @@ test("R63: an offer that was not made is ignored rather than trusted (D198)", as
 test("R63: the target's reaction is asked first, then the attacker (D198)", async () => {
   const guard: GuardOffer = { feature: "시험 반응", ruleKey: "test", notes: [], facts: [], payments: [], scope: () => undefined };
   const t = await table("rogue", 5, { targetPc: true, guards: [guard] });
-  const blade = t.derived.attacks.find((attack) => hasSneakAttack(t.derived, attack))!;
+  const blade = t.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
   await tick();
   const reaction = t.host.archive.find((message) => message.type === "prompt" && message.prompt?.kind === "guard")!;
@@ -172,17 +172,17 @@ test("R63: the target's reaction is asked first, then the attacker (D198)", asyn
   await tick();
   const [prompt] = t.open();
   assert.ok(prompt, "the swing still landed, so now the attacker is asked");
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["sneak"] });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"] });
   await tick();
   assert.equal(t.cards().length, 1);
 });
 
 test("R63: a palette edit keeps what was chosen and does not ask again (D198)", async () => {
   const t = await table("rogue", 5);
-  const blade = t.derived.attacks.find((attack) => hasSneakAttack(t.derived, attack))!;
+  const blade = t.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
   await tick();
-  t.dm.send({ type: "act.onhit", messageId: t.open()[0].id, choices: ["sneak"] });
+  t.dm.send({ type: "act.onhit", messageId: t.open()[0].id, choices: ["rogue.sneak-attack"] });
   await tick();
   const card = t.cards()[0];
   t.dm.send({ type: "act.adjust", messageId: card.id, overrides: { outcome: "crit" } });
@@ -209,7 +209,7 @@ test("R63: the dice a card showed follow their part, wherever new parts land (D1
 });
 
 test("R63: withHitChoices adds the chosen keys to what was already declared (D198)", () => {
-  assert.deepEqual(withHitChoices({ offHand: true, contracts: ["feature:frenzy"] }, { choices: ["sneak", "feat:charger"], facts: ["charged"] }), { offHand: true, sneak: true, contracts: ["feature:frenzy", "feat:charger"], facts: ["charged"] });
+  assert.deepEqual(withHitChoices({ offHand: true, contracts: ["feature:frenzy"] }, { choices: ["rogue.sneak-attack", "feat:charger"], facts: ["charged"] }), { offHand: true, contracts: ["feature:frenzy", "rogue.sneak-attack", "feat:charger"], facts: ["charged"] });
   assert.deepEqual(withHitChoices({}, { choices: ["smite"] }), {}, "a smite without a slot is nothing");
 });
 
@@ -219,20 +219,20 @@ test("R91: 암습 is offered once per turn — taken on this turn, the next hit 
   t.dm.send({ type: "tracker.add", turn: { name: "오우거", tokenId: t.refs.target.tokenId, pageId: t.refs.target.pageId, entryId: t.refs.target.entryId, initiative: 1 } });
   t.dm.send({ type: "tracker.next" });
   await tick();
-  const blade = t.derived.attacks.find((attack) => hasSneakAttack(t.derived, attack))!;
+  const blade = t.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   const swing = async () => { t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } }); await tick(); };
   await swing();
   const [first] = t.open();
-  t.dm.send({ type: "act.onhit", messageId: first.id, choices: ["sneak"] });
+  t.dm.send({ type: "act.onhit", messageId: first.id, choices: ["rogue.sneak-attack"] });
   await tick();
   await swing();
   const again = t.open()[0];
-  assert.ok(!again?.prompt?.onHit?.offers.some((offer) => offer.key === "sneak"), "암습 is spent for this turn");
+  assert.ok(!again?.prompt?.onHit?.offers.some((offer) => offer.key === "rogue.sneak-attack"), "암습 is spent for this turn");
   if (again) { t.dm.send({ type: "act.decline", messageId: again.id }); await tick(); }
   t.dm.send({ type: "tracker.next" });
   await tick();
   await swing();
-  assert.ok(t.open()[0]?.prompt?.onHit?.offers.some((offer) => offer.key === "sneak"), "someone else's turn: 암습 again (an opportunity attack)");
+  assert.ok(t.open()[0]?.prompt?.onHit?.offers.some((offer) => offer.key === "rogue.sneak-attack"), "someone else's turn: 암습 again (an opportunity attack)");
 });
 
 test("R92: 거상 학살자 is offered only against a wounded creature, with no checkbox, and lands its d8 (D227)", async () => {

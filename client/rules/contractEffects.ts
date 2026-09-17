@@ -23,6 +23,8 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
   heavy: (attack) => attack.properties.includes("heavy"),
   light: (attack) => attack.properties.includes("light"),
   finesse: (attack) => attack.properties.includes("finesse"),
+  /** H5 (D244): 암습 — a Finesse weapon, or one shot or thrown with Dexterity. */
+  "finesse-or-ranged": (attack) => attack.properties.includes("finesse") || attack.properties.includes("ammunition") || (attack.ability === "dex" && Boolean(attack.range)),
   thrown: (attack) => attack.properties.includes("thrown"),
   "two-handed": (attack) => attack.properties.includes("two-handed"),
   /** No weapon in hand at all: 비무장 전투 and 선술집 싸움꾼. */

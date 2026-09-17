@@ -106,6 +106,22 @@ test("H3d: option choices grant through contracts at their own level — 대지 
   assert.ok(warden.proficiencies.armor.some((item) => item.includes("평장")), JSON.stringify(warden.proficiencies.armor));
 });
 
+test("H5a: an on-hit contract narrows itself by weapon and scales with its class level — a module rogue's own strike (D244)", async () => {
+  const { parseContract, characterScope } = await import("../../client/rules/contract");
+  const { contractRiders, riderFitsAttack } = await import("../../client/rules/attackRiders");
+  const { build } = await import("./support");
+  const contract = parseContract({ id: "feature:module.shadow-strike", entryPoints: [{ id: "on-hit", invocation: "on-hit", attack: { oncePerTurn: true, requiresEffects: [], scope: "finesse-or-ranged" }, operations: [
+    { kind: "damage.apply", dice: "1d4", diceCount: { op: "ceil-div", left: { ref: "actor.class-level:dnd.srd521.class.fighter" }, right: { value: 2 } }, damageType: "weapon", target: "attack-target" },
+  ] }] } as never, "module.shadow-strike");
+  const fighter = build({ name: "투사", classes: "fighter", level: 5 }).derived;
+  const [rider] = contractRiders(contract, "module.shadow-strike", "그림자 일격", characterScope(fighter));
+  assert.equal(rider.damage[0].formula, "3d4");
+  assert.equal(rider.moment, "on-hit");
+  assert.ok(riderFitsAttack(rider, { properties: ["finesse", "light"], ability: "dex" } as never), "a rapier-like blade");
+  assert.ok(riderFitsAttack(rider, { properties: ["ammunition"], ability: "dex", range: "80/320" } as never), "a bow");
+  assert.ok(!riderFitsAttack(rider, { properties: ["heavy", "two-handed"], ability: "str" } as never), "not a greataxe");
+});
+
 test("H4: a class module's definition carries its training, resources, option pools and multiclass rules (D243)", async () => {
   const { createCatalog } = await import("../../client/catalog");
   const { autofill } = await import("../../client/character/autofill");

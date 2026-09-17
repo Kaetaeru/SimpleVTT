@@ -134,7 +134,7 @@ export interface ReactionPrompt {
 /** R79 (D216), R81 (D215): a feature a trigger window offers — and, for 비전 회복, the spent slots it may give back. */
 export interface TriggerOffer { featureId: string; name: string; note?: string; heal?: string; slotLevels?: number; spent?: number[] }
 
-/** R63 (D198): one thing the attacker may add after a hit — a built-in rider (`sneak`, `smite`, `savage`) or a contract's rule key. */
+/** R63 (D198): one thing the attacker may add after a hit — a built-in rider (`smite`, `savage`) or a contract's rule key. */
 export interface HitOffer {
   key: string;
   label: string;

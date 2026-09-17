@@ -566,8 +566,10 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D241 방어구·이동·절반 숙련·무술도 획득 계약이다 (V0.9 H3c)**: CLAUDE.md §2. `derive.ts`가 플래그(`unarmored-defense:<slug>`, `fast-movement`, `unarmored-movement`, `jack-of-all-trades`, `martial-arts`, `all-saves`)와 직업 slug(방랑자 레인저 6, 보호의 오라 팔라딘 6, 용의 회복력 소서러)로 계산하던 것을 `gain` 연산으로 옮겼다: `grant.ac-formula {abilities, shield}`, `grant.speed-bonus {value|column, unless: heavy-armor|armor-or-shield, modes}`, `grant.hp-per-level`, `grant.half-proficiency`, `grant.martial-arts {column, ability}`. 파생은 원장에 모인 규칙만 돈다. 함께 고친 버그 둘: 보호의 오라가 코드와 계약에서 두 번 더해져 내성이 매력 수정치만큼 더 높았다. 용의 회복력의 HP는 서브클래스 ID 비교(`endsWith("draconic")`)가 `draconic-sorcery`와 맞지 않아 한 번도 적용되지 않았다. 점수판: 계약 191, 이름만 앎 24. 하드코딩 상한: 키 분기 33, slug 분기 7.
 - **D242 선택지의 효과도 계약이다 (V0.9 H3d)**: CLAUDE.md §2. 신성·원초 질서(`picked === "protector"` 등), 대지 유형(`LAND_RESISTANCE` 표, 10레벨), 원소의 친화력(6레벨) 분기를 선택지 계약으로 옮겼다. 연산 추가: `grant.proficiency {weapons, armor}`, `grant.cantrips`, `grant.skill-ability-bonus {skills, ability, min}`, `grant.resistance {types}`, `grant.condition-immunity {conditions}`, 그리고 레벨마다 다시 도는 선택지를 위한 `params.atLevel`. 새로 계산되는 것: 원소의 친화력의 주문 피해 보너스(`spell.damage-type.ability-modifier`: 고른 유형 주문 피해 한 번에 매력). 점수판: 계약 196, 이름만 앎 19. 하드코딩 상한: slug 분기 2.
 - **D243 직업 표는 직업 정의 JSON이다 (V0.9 H4)**: CLAUDE.md §2. `client/rules/classes.ts`의 `CLASS_TRAINING`·`SPELLCASTING_ABILITY`·`METAMAGIC_KNOWN`·`WIZARD_SPELLBOOK`·`CLASS_RESOURCES`(최대치 함수 포함)와 `tables.ts`의 `MULTICLASS_PREREQUISITES`를 SRD 직업 모듈의 `class-definition` 설정으로 옮기고, 카탈로그가 `ClassView.rules`로 읽는다: `armorTraining`, `weaponTraining`, `toolProficiencies`, `multiclass {armor, weapons, skills, tools, instruments, prerequisites {all|any}}`, `spellcastingAbility`, `spellcastingFeature`, `resources [{id, label, column | max(식: `class.level`, `ability.<키>.modifier`), recovery, recoveryFrom, minLevel, subclassId, spell}]`, `optionPools [{id, list, label, known {레벨: 개수}}]`(메타매직). 주문서 레벨당 추가는 색인 `spells.spellbookPerLevel`. 지운 분기: 소서러·위저드 slug, `pact-magic`·`spellcasting` 플래그(시전 직업 여부는 `casterKind`), 서브클래스 레벨 3 상수(진행표 행이 정함), 능력치 향상 재주 ID(같은 등급의 반복 가능 재주가 먼저 온다), 배경 기본 기원 재주 `feat.skilled`(없으면 없음), 마법 입문 주문 목록 이름 정규식(뒤에 붙은 직업 slug면 주문 목록 프리셋). 쓰지 않던 상수 `EXPERTISE_SCHEDULE`·`FIGHTING_STYLE_LEVEL`·`MYSTIC_ARCANUM`·`DEFT_EXPLORER_LANGUAGES`·`ASI_LEVELS`·`EPIC_BOON_LEVEL`도 지웠다(행렬 테스트는 SRD 일정을 자기 안에 둔다). 진행표 행 단어("Ability Score Improvement", "Epic Boon", "…Subclass")는 표 형식 어휘라 §4 예외다. 계약 마법은 이제 시트에 "주문 시전: 자동 계산" 줄이 붙는다. 설치 모듈이 직업 정의를 바꾸면 자원·훈련·선택 풀·멀티클래스 조건이 따라가는 테스트를 두었다. 하드코딩 상한: 콘텐츠 ID 17, 키 분기 31, slug 분기 0.
+- **D244 암습은 명중 후 계약이다 (V0.9 H5a)**: CLAUDE.md §2. `attackSpec.ts`의 `sneakDice`(직업 ID 끝이 `.rogue`인지 비교)·`hasSneakAttack`·명중 창 내장 항목 `sneak`과 프로토콜 `AttackRiders.sneak`을 지우고, 암습을 `on-hit` 계약으로 적었다: 무기 필터 `finesse-or-ranged`(새 공격 범위 어휘), `damage.apply` 1d6 × `ceil-div(actor.class-level:<로그 ID>, 2)`, 피해 유형 `weapon`, 턴당 한 번, 조건 문구(유리 또는 대상 곁 아군)는 창의 안내로. 명중 창 키는 규칙 키 `rogue.sneak-attack`이라 항상/안 함/묻기 정책도 그 키로 저장된다(예전 `sneak` 정책은 묻기로 돌아간다). 모듈 직업이 같은 문법으로 자기 암습을 쓸 수 있다. 점수판: 계약 197, 이름만 앎 18.
 
 | R49 표 비우기 ✔ | D184: `EFFECT_RULES` 63→1, `FEATURE_ACTIVATIONS` 49→4, 옮긴 값 전부 대조 후 삭제, 문법에 `if` 추가, 파생이 계약을 들고 다님 | 단위 235개 통과(r49.test.ts 3개 새로), E2E 17개 전부 통과 |
+| H5a 암습 계약 ✔ | D244: 암습 내장 라이더·프로토콜 필드 제거, `on-hit` 계약과 `finesse-or-ranged` 범위 | 게이트 통과 |
 | H4 직업 정의 JSON ✔ | D243: 훈련·멀티클래스·시전 능력·자원·선택 풀을 `class-definition`으로, slug·플래그 분기 제거 | 게이트 통과 |
 | H3d 선택지 계약 ✔ | D242: 질서·대지 유형·원소 친화 분기 제거, 원소 친화 주문 피해 보너스 | 게이트 통과 |
 | H3c 파생 획득 계약 ✔ | D241: AC 공식·이동 속도·HP·절반 숙련·무술 연산, 보호의 오라 이중 계산·용의 회복력 미적용 버그 수정 | 게이트 통과 |
@@ -657,7 +659,7 @@ R33~R35에서 방향이 정해졌다: 규칙은 코드가 아니라 **카탈로�
 | **연산** — 실행기가 계산한다 | 27 / 27 | 27 | `parseContract`가 읽고 실행기가 값을 내는 `operation` 정의 수 |
 | **연산** — 표까지 닿는다 | 27 / 27 | 27 | 그 값을 실제로 적용하는 호출 자리가 있는 수 |
 | **슬롯** — **요구되는** 자리가 열렸다 | 3 / 4 | 4 | 계약이 실제로 쓰는 슬롯 중 호스트가 여는 수. 요구되는 집합은 카탈로그에서 **재서** 나온다 (R54) |
-| **계약** — 특성이 카탈로그에서 굴러간다 | 196 / 223 | 223 | 20레벨 12직업의 직업·서브클래스 특성 중 계약이 있거나 "기계화하지 않음"에 이름이 있는 수 |
+| **계약** — 특성이 카탈로그에서 굴러간다 | 197 / 223 | 223 | 20레벨 12직업의 직업·서브클래스 특성 중 계약이 있거나 "기계화하지 않음"에 이름이 있는 수 |
 
 `schemas/common-play-contract.schema.json`의 정의는 26개지만 **종류는 27개**다(`condition.apply`/`condition.remove`가 한 정의). 계약이 실제로 쓰는 건 종류이므로 종류로 센다. **27종 전부 읽고, 27종 전부 표까지 닿는다.**
 
@@ -667,9 +669,9 @@ R33~R35에서 방향이 정해졌다: 규칙은 코드가 아니라 **카탈로�
 
 | | 개수 | 뜻 |
 |---|---|---|
-| 계약이 있다 | 196 | 카탈로그가 굴리거나, 표가 무엇을 판단할지 계약이 적어 둔다 |
+| 계약이 있다 | 197 | 카탈로그가 굴리거나, 표가 무엇을 판단할지 계약이 적어 둔다 |
 | 사용 버튼이 있다 | 8 | `activation.ts`에 손으로 쓴 항목 — 굴러가지만 코드다 |
-| 코드가 이름은 안다 | 19 | 파생·리졸버 어딘가에 하드코딩돼 있다 |
+| 코드가 이름은 안다 | 18 | 파생·리졸버 어딘가에 하드코딩돼 있다 |
 | **코드가 이름조차 모른다** | **0** | 앱이 아무것도 하지 않는다. 시트에 설명만 있다 |
 
 #### 축 1 — 엔진 ✔ (R37~R42에서 끝났다)

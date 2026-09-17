@@ -85,7 +85,7 @@ test("sheet specs: melee vs ranged, riders (암습, 신성한 강타 with a slot
   const dagger = rogueDerived.attacks.find((attack) => attack.name === "단검")!;
   assert.deepEqual(weaponRange(dagger), { mode: "melee" }, "a dagger is swung: an opportunity attack may use it");
   assert.deepEqual(weaponRange(rogueDerived.attacks.find((attack) => attack.name === "단궁")!), { mode: "ranged" });
-  const withSneak = pcAttackSpec(rogue, rogueDerived, dagger.id, { sneak: true })!;
+  const withSneak = pcAttackSpec(rogue, rogueDerived, dagger.id, { contracts: ["rogue.sneak-attack"] })!;
   assert.equal(withSneak.spec.riders?.[0]?.formula, "3d6", "level 5 rogue: 3d6 sneak attack");
   assert.equal(pcAttackSpec(rogue, rogueDerived, dagger.id, {})!.spec.riders?.length, 0);
   const { source: palSource, derived: palDerived } = build({ name: "팔라딘", classes: "paladin", level: 5 });

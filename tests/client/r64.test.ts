@@ -14,7 +14,7 @@ import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/
 import { initialRuntime, type HitPolicy } from "../../client/character/runtime";
 import { monsterById } from "../../client/compendium/monsters";
 import { pcStats } from "../../client/rules/actions";
-import { derivedOf, hasSneakAttack, hitOffers, hitPolicyOf, pcAttackSpec, pcCombatant, pcConcentrationKey, splitHitOffers } from "../../client/rules/attackSpec";
+import { derivedOf, hitOffers, hitPolicyOf, pcAttackSpec, pcCombatant, pcConcentrationKey, splitHitOffers } from "../../client/rules/attackSpec";
 import { TableClient } from "../../client/session/client";
 import { TableHost } from "../../client/session/host";
 import { MemoryHub } from "../../client/session/transport";
@@ -51,7 +51,7 @@ async function table(cls: string, hitPolicy: Record<string, HitPolicy>) {
   const derived = derivedOf(pc, catalog());
   const prompts = () => host.archive.filter((message) => message.type === "prompt" && message.prompt?.kind === "on-hit" && !message.supersedes);
   const cards = () => host.archive.filter((message): message is ChatMessage & { action: NonNullable<ChatMessage["action"]> } => message.type === "action" && Boolean(message.action));
-  const swing = async (weapon = derived.attacks.find((attack) => hasSneakAttack(derived, attack)) ?? derived.attacks.find((attack) => attack.itemId)!) => {
+  const swing = async (weapon = derived.attacks.find((attack) => attack.properties.includes("finesse")) ?? derived.attacks.find((attack) => attack.itemId)!) => {
     dm.send({ type: "act.attack", attacker: refs.pc, targets: [refs.ogre], attack: { source: "weapon", attackId: weapon.id }, overrides: { outcome: "hit" } });
     await tick();
   };
@@ -59,7 +59,7 @@ async function table(cls: string, hitPolicy: Record<string, HitPolicy>) {
 }
 
 test("R64: \"always\" takes an offer without a window (D199)", async () => {
-  const t = await table("rogue", { sneak: "always", savage: "never" });
+  const t = await table("rogue", { "rogue.sneak-attack": "always", savage: "never" });
   await t.swing();
   assert.equal(t.prompts().length, 0, "nothing to ask");
   const [card] = t.cards();
@@ -67,7 +67,7 @@ test("R64: \"always\" takes an offer without a window (D199)", async () => {
 });
 
 test("R64: \"never\" drops an offer, and with nothing left there is no window (D199)", async () => {
-  const t = await table("rogue", { sneak: "never", savage: "never" });
+  const t = await table("rogue", { "rogue.sneak-attack": "never", savage: "never" });
   await t.swing();
   assert.equal(t.prompts().length, 0);
   const [card] = t.cards();
@@ -78,7 +78,7 @@ test("R64: the window asks only what is still \"ask\", says what rides along, an
   const t = await table("rogue", { savage: "always" });
   await t.swing();
   const [prompt] = t.prompts();
-  assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["sneak"]);
+  assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key), ["rogue.sneak-attack"]);
   assert.deepEqual(prompt.prompt!.onHit!.auto, ["야만적 공격자"]);
   t.dm.send({ type: "act.decline", messageId: prompt.id });
   await tick();

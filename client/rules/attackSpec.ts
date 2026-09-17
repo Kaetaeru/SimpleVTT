@@ -128,11 +128,9 @@ export function weaponRange(attack: DerivedAttack): { mode: "melee" | "ranged" }
   return { mode: ranged ? "ranged" : "melee" };
 }
 
-const sneakDice = (derived: DerivedCharacter) => { const rogue = derived.classes.find((cls) => cls.classId.endsWith(".rogue")); return rogue ? Math.ceil(rogue.level / 2) : 0; };
 /** H2 (D239): the spells this sheet can cast through a weapon attack, with the list that knows each. */
 export const weaponSpells = (derived: DerivedCharacter) => derived.spellcasting.flatMap((list) => [...new Set([...list.cantrips, ...list.prepared, ...list.alwaysPrepared])].flatMap((spellId) => { const rule = weaponSpellOf(spellId); return rule ? [{ spellId, list, rule }] : []; }));
 
-export const hasSneakAttack = (derived: DerivedCharacter, attack: DerivedAttack) => sneakDice(derived) > 0 && (attack.properties.includes("finesse") || weaponRange(attack).mode === "ranged");
 export const SMITE_LABEL = "신성한 강타";
 /** 2024 Divine Smite deals +1d8 against a Fiend or an Undead; the host adds it per target, since one attack may hit several. */
 export function smiteFiendBonus(spec: AttackSpec, creatureType?: string): DamagePart | null {
@@ -180,7 +178,6 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   const strikeDice = strike?.rule.extraDice?.filter((step) => derived.level >= step.level).at(-1);
   if (strike && strikeDice) extra.push({ formula: strikeDice.dice, type: damageTypeKo(strike.rule.damageType ?? attack.damageType), label: strikeName });
-  if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });
   if (riders.smiteSlot && hasSmite(derived) && (derived.spellSlots[riders.smiteSlot] ?? 0) > 0) {
     const level = riders.smiteSlot;
     // 2024 Divine Smite: 2d8 from a 1st-level slot, +1d8 per slot level above that, with no cap.
@@ -259,7 +256,6 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return [];
   const offers: HitOffer[] = [];
-  if (!already.sneak && hasSneakAttack(derived, attack)) offers.push({ key: "sneak", label: "암습", oncePerTurn: true, hint: `+${sneakDice(derived)}d6 · 유리하거나 아군이 대상 곁에 있을 때 · 턴당 한 번` });
   const slots = !already.smiteSlot && hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
   if (slots.length) offers.push({ key: "smite", label: SMITE_LABEL, hint: "슬롯 소비 · 2d8 + 슬롯 레벨당 1d8 광휘", slots });
   // R82 (D218): the smite spells (분노의 강타, 작열하는 강타 …) — cast on this hit with a slot, as a bonus action.
@@ -284,7 +280,6 @@ export function withHitChoices(riders: AttackRiders, answer: { choices: string[]
   const facts = [...(riders.facts ?? []), ...(answer.facts ?? [])];
   return {
     ...riders,
-    ...(picked.has("sneak") ? { sneak: true } : {}),
     ...(picked.has("savage") ? { savage: true } : {}),
     ...(picked.has("smite") && answer.smiteSlot ? { smiteSlot: answer.smiteSlot } : {}),
     ...(answer.spellSmite && picked.has(`spell:${answer.spellSmite.spellId}`) ? { spellSmite: answer.spellSmite } : {}),
@@ -292,7 +287,7 @@ export function withHitChoices(riders: AttackRiders, answer: { choices: string[]
     ...(facts.length ? { facts: [...new Set(facts)] } : {}),
   };
 }
-const HIT_BUILT_INS = new Set(["sneak", "smite", "savage"]);
+const HIT_BUILT_INS = new Set(["smite", "savage"]);
 
 /**
  * R64 (D199): the player's standing answer for one offer. 신성한 강타 is never "always" — it spends a slot the player
