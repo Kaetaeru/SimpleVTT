@@ -31,6 +31,9 @@ export interface CasterStats {
   ignoresCover?: boolean;
   /** R93 (D228): this spell adds the spellcasting modifier to its damage (고통스러운 폭발). */
   damageModifier?: boolean;
+  /** R96 (D231): healing from a slot adds 2 + the slot level (생명의 제자); healing dice count as their maximum (최상급 치유). */
+  healingSlotBonus?: boolean;
+  healingMaximized?: boolean;
 }
 
 export interface SpellCastSpec {
@@ -212,10 +215,11 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "heal";
-        const amount = rollFormula(formula, dice);
+        const extra = casterStats.healingSlotBonus && spec.level > 0 ? 2 + spec.level : 0;
+        const amount = rollFormula(formula, casterStats.healingMaximized ? { d: (sides) => sides } : dice) + extra;
         row.healed = Math.min(amount, Math.max(0, combatant.hp.max - combatant.hp.current));
         row.hpAfter = combatant.hp.current + row.healed;
-        row.note = `${formula} = ${amount}`;
+        row.note = `${formula}${casterStats.healingMaximized ? " (최대값)" : ""}${extra ? ` +${extra} (생명의 제자)` : ""} = ${amount}`;
         targets.push(row);
       }
       break;
@@ -390,7 +394,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec },
-    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.cantripDamageModifier?.includes(spellId) ? { damageModifier: true } : {}) },
+    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.cantripDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };
 }

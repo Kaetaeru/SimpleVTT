@@ -45,6 +45,8 @@ export const PROPERTIES = [
   "damage-taken.reduce", "damage.ignore-resistance",
   // R95 (D230): 회피술 on a sheet, and 기묘한 회피 inside a reaction window.
   "saving-throw.evasion", "damage-taken.halve",
+  // R96 (D231): 강력한 주문 시전, 생명의 제자, 최상급 치유, 포착 불가.
+  "spell.cantrip-damage.ability-modifier", "healing.spell-slot-bonus", "healing.maximize", "attack-roll.against-me.no-advantage", "initiative.advantage",
   // R55 (D190): the three that decide a roll rather than a number.
   "attack-roll.advantage", "attack-roll.against-me.advantage", "attack-roll.ignore-cover",
   // R56 (D191): training a feat hands out. The sheet shows it; nothing else in this engine gates on it yet.
@@ -125,6 +127,11 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.against-me.advantage": application.grantsAdvantage = [...(application.grantsAdvantage ?? []), operation.note ?? ""]; break;
       case "attack-roll.ignore-cover": application.ignoresCover = true; break;
       case "saving-throw.evasion": application.evasion = true; break;
+      case "spell.cantrip-damage.ability-modifier": application.cantripModifierClasses = [...(application.cantripModifierClasses ?? []), text(operation, scope) ?? ""]; break;
+      case "healing.spell-slot-bonus": application.healingSlotBonus = true; break;
+      case "initiative.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], skills: ["initiative"] }]; break;
+      case "healing.maximize": application.healingMaximized = true; break;
+      case "attack-roll.against-me.no-advantage": application.elusive = true; break;
       // R61 (D196): advantage on a check or a save, narrowed to the abilities the contract named.
       case "ability-check.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], ...(operation.abilities?.length ? { abilities: operation.abilities as AbilityKey[] } : {}) }]; break;
       case "saving-throw.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["saving-throw"], ...(operation.abilities?.length ? { abilities: operation.abilities as AbilityKey[] } : {}) }]; break;

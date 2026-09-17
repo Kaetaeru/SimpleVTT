@@ -42,5 +42,6 @@ test("R65: only what pressing does something for becomes a button (D200)", () =>
   const barbarian = usable("barbarian", 5);
   assert.equal(named(barbarian, "격노").economy, "bonus");
   assert.equal(named(barbarian, "격노").pressable, true, "an effect with rounds");
-  assert.equal(named(barbarian, "위험 감지").pressable, false);
+  // R96 (D231): 위험 감지 is a passive now, so it has no button at all.
+  assert.ok(!named(barbarian, "위험 감지")?.pressable);
 });

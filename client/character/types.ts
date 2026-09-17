@@ -244,6 +244,11 @@ export interface DerivedCharacter {
   critRange?: number;
   /** R95 (D230): 회피술. */
   evasion?: boolean;
+  /** R96 (D231): see EffectApplication. */
+  cantripModifierClasses?: string[];
+  healingSlotBonus?: boolean;
+  healingMaximized?: boolean;
+  elusive?: boolean;
   /** R72 (D207): attacks per Attack action, from whatever contract says so (1 when none does). */
   attackActionAttacks?: number;
   /**

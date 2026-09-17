@@ -48,6 +48,8 @@ export interface Combatant {
   exhaustion?: number;
   /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
   evasion?: boolean;
+  /** R96 (D231): 포착 불가 — attacks against it cannot have advantage while it is not incapacitated. */
+  elusive?: boolean;
   /** R31 (D161): 마법 저항 — advantage on saving throws against spells and other magical effects. */
   magicResistance?: boolean;
   /** R31 (D162): 재생 — hit points regained at the start of its turn, and the sentence that qualifies it. */
@@ -246,6 +248,8 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   // R90 (D225): spells on either side — 흐림 on the target, 액운·잔혹한 조롱·예지 on the attacker.
   for (const reason of target.grantsDisadvantage ?? []) minus.push(reason);
   for (const state of (attacker.rollStates ?? []).filter((item) => item.on === "attack")) (state.state === "advantage" ? plus : minus).push(`공격자 ${state.label}`);
+  // R96 (D231): 포착 불가 takes every reason for advantage away, unless the creature is incapacitated.
+  if (target.elusive && plus.length && !["행동불능", "충격", "마비", "석화", "무의식"].some((name) => has(target, name))) plus.length = 0;
   if (plus.length && minus.length) return { advantage: "normal", reasons: [...plus, ...minus, "유리·불리가 상쇄"] };
   if (plus.length) return { advantage: "advantage", reasons: plus };
   if (minus.length) return { advantage: "disadvantage", reasons: minus };

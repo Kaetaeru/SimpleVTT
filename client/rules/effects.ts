@@ -38,6 +38,14 @@ export interface EffectApplication {
   critRange?: number;
   /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
   evasion?: boolean;
+  /** R96 (D231): class slugs whose cantrips add the spellcasting modifier to damage (강력한 주문 시전). */
+  cantripModifierClasses?: string[];
+  /** R96 (D231): a healing spell cast with a slot heals 2 + the slot level more (생명의 제자). */
+  healingSlotBonus?: boolean;
+  /** R96 (D231): healing spell dice count as their maximum (최상급 치유). */
+  healingMaximized?: boolean;
+  /** R96 (D231): attacks against this character cannot have advantage unless it is incapacitated (포착 불가). */
+  elusive?: boolean;
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
   attackActionAttacks?: number;
   /** Korean damage type labels. */
@@ -292,6 +300,10 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     notes.push(...(application.notes ?? []));
     // R28 (D153): an application that carries nothing but prose is the table's to run, and says so.
     // R43 (D183): 향상된 치명타 lowers the die that counts as a critical hit; the lowest wins if two effects say so.
+    if (application.cantripModifierClasses?.length) { next = { ...next, cantripModifierClasses: [...new Set([...(next.cantripModifierClasses ?? []), ...application.cantripModifierClasses])] }; notes.push("소마법 피해에 주문 능력 수정치"); }
+    if (application.healingSlotBonus) { next = { ...next, healingSlotBonus: true }; notes.push("슬롯 치유 주문 +2+슬롯 레벨"); }
+    if (application.healingMaximized) { next = { ...next, healingMaximized: true }; notes.push("치유 주사위 최대값"); }
+    if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }
     if (application.evasion) { next = { ...next, evasion: true }; notes.push("회피술: 민첩 내성 절반 피해 — 성공 0, 실패 절반"); }
     if (application.critRange !== undefined) { next = { ...next, critRange: Math.min(next.critRange ?? 20, application.critRange) }; notes.push(`치명타 범위 ${application.critRange}–20`); }
     if (application.attackActionAttacks !== undefined) { next = { ...next, attackActionAttacks: Math.max(next.attackActionAttacks ?? 1, application.attackActionAttacks) }; notes.push(`공격 행동에 ${application.attackActionAttacks}번 공격`); }

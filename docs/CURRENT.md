@@ -31,7 +31,7 @@ npm run dev:legacy   # 옛 src/ 앱 (기록용)
 ```
 
 증거 스크린샷은 `docs/evidence/new-client-m1/`(78장), 시나리오는 `docs/design/v3/SESSION_SCENARIOS.md`(SC-1~SC-62),
-결정 기록은 `docs/design/v3/ROLL20_TABLE_SPEC.md`(D1~D230, 로드맵 R1~R95)에 있다.
+결정 기록은 `docs/design/v3/ROLL20_TABLE_SPEC.md`(D1~D231, 로드맵 R1~R96)에 있다.
 
 ## 남은 것
 

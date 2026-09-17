@@ -147,7 +147,9 @@ test("host: a cleric's sacred flame and cure wounds through the table — the go
   await tick();
   const heal = lastSpell(alice);
   const healed = heal.spell!.targets[0].healed!;
-  assert.equal(healed, 10 + cleric.derived.abilities.wis.modifier);
+  // R96 (D231): the level-3 cleric took the Life Domain, so 생명의 제자 adds 2 + the slot level.
+  const disciple = cleric.derived.healingSlotBonus ? 3 : 0;
+  assert.equal(healed, 10 + cleric.derived.abilities.wis.modifier + disciple);
   const fighterNow = host.journal.find((entry) => entry.id === pc2.id);
   assert.ok(fighterNow?.kind === "character" && fighterNow.runtime.hp.current === 5 + healed, "the fighter's sheet healed");
   const clericNow = host.journal.find((entry) => entry.id === pc.id);

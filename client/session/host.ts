@@ -22,7 +22,7 @@ import { carryDice, describeResolution, diceFrom, resolveAttack } from "../rules
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
-import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
+import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { bearerRolls, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
@@ -733,7 +733,12 @@ export class TableHost {
         let initiative = trusted.initiative ?? 0;
         if (!Number.isFinite(initiative)) return refuse("이니셔티브가 숫자가 아닙니다");
         if (command.rollBonus !== undefined) {
-          const die = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
+          // R96 (D231): 야성 본능 and its kin — advantage on the initiative roll, from the sheet.
+          const initiativeActor = trusted.entryId ? this.journalEntries.get(trusted.entryId) : undefined;
+          const initiativeStats = initiativeActor ? this.statsOf({ entry: initiativeActor }) : null;
+          const advantaged = initiativeStats ? advantageFor(initiativeStats, "ability-check", { skill: "initiative" }) : undefined;
+          const first = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
+          const die = advantaged ? Math.max(first, 1 + Math.floor((this.options.random ?? Math.random)() * 20)) : first;
           initiative = die + command.rollBonus;
           this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turnName} · 이니셔티브`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turnName} · 이니셔티브` } });
         }

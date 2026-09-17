@@ -47,9 +47,8 @@ test("done: the line says what the engine does, and 표에서 판단 means it do
   assert.ok(rage.rules!.some((line) => line.includes("피해 +4")), JSON.stringify(rage.rules));
   assert.ok(rage.rules!.some((line) => line.includes("1회 소비")), JSON.stringify(rage.rules));
   assert.ok(rage.rules!.some((line) => line.includes("주문 시전·집중 불가")), "the prose is on the same line list");
-  // 야성의 본능 is advantage on initiative — the app does not roll initiative, so it says so and claims nothing.
+  // R96 (D231): 야성의 본능 is advantage on initiative, which the host now rolls — the sheet computes it.
   const feral = barbarian.features.find((feature) => featureRuleKey(feature.id) === "barbarian.feral-instinct")!;
-  assert.equal(feral.execution, "descriptive");
-  assert.deepEqual(feral.rules, ["이니셔티브 굴림에 유리 — 굴릴 때 선언"]);
+  assert.equal(feral.execution, "derived");
   void cat;
 });
