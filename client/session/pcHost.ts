@@ -48,7 +48,7 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     pcStats: (entry) => pcStats(derivedOf(entry, catalog())),
     pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalog()), catalog(), spellId, method),
     // R35 (D174): the contract rescues a sheet could pay for, and what paying one costs it.
-    pcRescues: (entry, family, outcome) => pcRescues(entry, derivedOf(entry, catalog()), catalog(), family, outcome),
+    pcRescues: (entry, family, outcome, d20) => pcRescues(entry, derivedOf(entry, catalog()), catalog(), family, outcome, d20),
     // R42 (D182): the table-level half of a feature's contract.
     pcContractOutcome: (entry, ruleKey) => tableOutcome(derivedOf(entry, catalog()), catalog(), ruleKey),
     // R58 (D193): the host owns no catalog, so it asks for the name of an id a contract handed somebody.
@@ -76,6 +76,13 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     },
     pcExtraTurns: (entry) => derivedOf(entry, catalog()).extraTurns ?? [],
     pcHitDefense: (entry) => derivedOf(entry, catalog()).hitDefense,
+    pcZeroHolds: (entry) => {
+      const derived = derivedOf(entry, catalog());
+      const running = new Set((entry.runtime.effects ?? []).map((effect) => effect.name));
+      const left = (id: string) => (derived.resources.find((resource) => resource.id === id)?.max ?? 0) - (entry.runtime.resourcesUsed[id] ?? 0);
+      return (derived.zeroHolds ?? []).filter((hold) => (!hold.requiresEffect || running.has(hold.requiresEffect)) && (!hold.resourceId || left(hold.resourceId) > 0))
+        .map((hold) => ({ ...hold, ...(hold.save ? { save: { ...hold.save, dc: hold.save.dc + hold.save.step * (hold.save.stepResourceId ? entry.runtime.resourcesUsed[hold.save.stepResourceId] ?? 0 : 0) } } : {}) }));
+    },
     pcUpkeepEffects: (entry) => {
       const waived = derivedOf(entry, catalog()).upkeepWaived ?? [];
       return (entry.runtime.effects ?? []).filter((effect) => (catalog().contractFor(effect.key)?.entryPoints ?? []).some((point) => point.operations.some((operation) => operation.kind === "property.modify" && operation.property === "effect.upkeep"))).map((effect) => ({ key: effect.key, name: effect.name, waived: waived.includes(effect.key) }));

@@ -28,6 +28,7 @@ import { bearerRolls, monsterAuras, splitHitOffers, versusParts, withHitChoices 
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellDuration, type SpellExec } from "../compendium/spells";
 import type { ConditionDuration, TargetMark } from "../rules/contract";
+import type { ZeroHold } from "../character/types";
 import { summonMonster } from "../compendium/summonTemplate";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
@@ -140,6 +141,8 @@ export interface TableHostOptions {
   pcExtraTurns?: (entry: JournalCharacter) => Array<{ offset: number; label: string }>;
   /** V3h (D262): who hits this sheet attacks it at disadvantage for the rest of the turn — the rule's name, or nothing. */
   pcHitDefense?: (entry: JournalCharacter) => string | undefined;
+  /** V4d (D266): what may keep this sheet up when it drops to 0 hit points, with the DC already grown by earlier uses. */
+  pcZeroHolds?: (entry: JournalCharacter) => ZeroHold[];
   /**
    * V4c (D265): the sheet's effects that end at the bearer's turn end unless it attacked, forced a save or took damage
    * since its last turn (격노) — their keys, and whether a rule waives that (지속되는 격노).
@@ -153,13 +156,13 @@ export interface TableHostOptions {
    * R35 (D174): the contract rescues this sheet could pay for a d20 of this family that came out this way, and what
    * paying one costs it. The host owns no catalog, so both arrive as functions like every other sheet question.
    */
-  pcRescues?: (entry: JournalCharacter, family: RollFamily, outcome: "success" | "failure") => RescueOffer[];
+  pcRescues?: (entry: JournalCharacter, family: RollFamily, outcome: "success" | "failure", d20?: number) => RescueOffer[];
   pcPayContract?: (entry: JournalCharacter, payments: ContractPayment[], outcome: "success" | "failure") => CharacterRuntime | null;
   /**
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" }; healPoints?: number } } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4d (D266): effects the chosen creatures carry. */ effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" }; healPoints?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
@@ -871,7 +874,7 @@ export class TableHost {
           const missed = this.actions.get(firstCardId);
           // A natural 1 misses whatever is added to the roll (2024), so there is nothing to rescue there.
           if (missed && missed.resolution.outcome === "miss") {
-            this.offerRescue(firstCardId, attackerEntry, "attack-roll", `${missed.resolution.attackTotal} vs AC ${missed.resolution.targetAc}`, `${prepared!.spec.name} 명중 굴림`);
+            this.offerRescue(firstCardId, attackerEntry, "attack-roll", `${missed.resolution.attackTotal} vs AC ${missed.resolution.targetAc}`, `${prepared!.spec.name} 명중 굴림`, missed.resolution.advantage === "advantage" ? Math.max(...missed.resolution.d20s) : missed.resolution.advantage === "disadvantage" ? Math.min(...missed.resolution.d20s) : missed.resolution.d20s[0]);
           }
         }
         return;
@@ -1064,6 +1067,15 @@ export class TableHost {
           this.mark(target, outcome.conditionsRemoved, false);
         }
         const lines: string[] = [];
+        // V4d (D266): the effect lands on each chosen character, with the die it carries.
+        for (const effect of outcome.effects ?? []) for (const target of targets) {
+          const live = this.journalEntries.get(target.entry.id);
+          if (live?.kind !== "character") continue;
+          const key = `effect:${outcome.label}:${actor.entry.id}`;
+          const started: ActiveEffect = { key, name: effect.name, source: "feature", duration: effect.duration, concentration: false, ...(effect.rounds !== undefined ? { rounds: effect.rounds } : {}), elapsed: 0, startedAt: this.now(), from: actor.entry.id, ...(effect.rescueDice ? { rescue: { dice: effect.rescueDice } } : {}) };
+          this.storeEntry({ ...live, runtime: { ...live.runtime, effects: [...(live.runtime.effects ?? []).filter((item) => item.key !== key), started], updatedAt: this.now() }, updatedAt: this.now() });
+          lines.push(`${target.token?.name ?? target.entry.name}: ${effect.name}${effect.rescueDice ? ` (${effect.rescueDice})` : ""}`);
+        }
         // V3d (D258): the turn marks a use puts on its user.
         if (outcome.selfMarks?.length) { this.mark(actor, outcome.selfMarks, true); lines.push(`${who}: ${outcome.selfMarks.join("·")}`); }
         if (outcome.conditionsApplied.length && targets.length) lines.push(`${targets.map((target) => target.token?.name ?? target.entry.name).join(", ")}: ${outcome.conditionsApplied.join("·")}`);
@@ -1290,7 +1302,7 @@ export class TableHost {
         // official action rolls the actor's own ability check.
         const rolledBy = command.kind === "grapple" || command.kind === "shove" ? target : actor;
         const family: RollFamily = command.kind === "grapple" || command.kind === "shove" ? "saving-throw" : "ability-check";
-        if (result.check && result.check.success === false && rolledBy) this.offerRescue(actId, rolledBy, family, `${result.check.label} ${result.check.d20}${result.check.bonus >= 0 ? "+" : "-"}${Math.abs(result.check.bonus)} = ${result.check.total}${result.check.dc === undefined ? "" : ` vs DC ${result.check.dc}`}`, result.name);
+        if (result.check && result.check.success === false && rolledBy) this.offerRescue(actId, rolledBy, family, `${result.check.label} ${result.check.d20}${result.check.bonus >= 0 ? "+" : "-"}${Math.abs(result.check.bonus)} = ${result.check.total}${result.check.dc === undefined ? "" : ` vs DC ${result.check.dc}`}`, result.name, result.check.d20);
         return;
       }
       case "act.provoke": {
@@ -1389,14 +1401,15 @@ export class TableHost {
           if (!this.resolveActor(attackRecord.inputs.attacker) || !this.resolveActor(attackRecord.inputs.targets[attackRecord.inputs.targetIndex])) return refuse("공격자나 대상이 더 없습니다 (카드는 그대로 둡니다)");
           const dice = diceFrom(this.options.random ?? Math.random);
           const plan = planRollModify(pick.interceptor.operations, pick.scope, dice);
-          if (plan.d20 === undefined && !plan.delta) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
+          if (plan.d20 === undefined && !plan.delta && !plan.forceSuccess) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
+          if (pick.interceptor.oncePerTurn) this.useThisTurn(reactor.entry.id, [`rescue:${pick.ruleKey}`]);
           attackRecord.restore();
           this.actions.delete(cardId);
           const shooter = this.resolveActor(attackRecord.inputs.attacker);
           const victim = this.resolveActor(attackRecord.inputs.targets[attackRecord.inputs.targetIndex]);
           const ready = shooter ? this.prepareAttack(shooter, attackRecord.inputs.attack, attackRecord.inputs.riders ?? {}) : null;
           if (!shooter || !victim || !ready) return refuse("공격자나 대상이 더 없습니다");
-          const overrides: AttackOverrides = { ...(attackRecord.resolution.overrides ?? {}), rollDelta: (attackRecord.resolution.overrides?.rollDelta ?? 0) + plan.delta, note: command.feature };
+          const overrides: AttackOverrides = { ...(attackRecord.resolution.overrides ?? {}), rollDelta: (attackRecord.resolution.overrides?.rollDelta ?? 0) + plan.delta, note: command.feature, ...(plan.forceSuccess ? { outcome: "hit" as const } : {}) };
           // Like the palette's own edit, the re-resolved card is a new message that supersedes the old one.
           const newCardId = this.runAttack(attackRecord.inputs, shooter, victim, ready, overrides, { d20s: plan.d20 === undefined ? attackRecord.resolution.d20s : [plan.d20], bonusDice: attackRecord.resolution.bonusDice?.map((item) => item.total), ...(attackRecord.resolution.damage.length ? { damage: attackRecord.resolution.damage.map((item) => item.dice) } : {}) }, cardId);
           const landed = newCardId ? this.actions.get(newCardId)?.resolution.outcome : undefined;
@@ -2104,6 +2117,36 @@ export class TableHost {
     return this.options.pcUpkeepEffects?.(entry)[0];
   }
 
+  /**
+   * V4d (D266): a sheet that just dropped to 0 hit points tries what may keep it up, in order — the save it asks for
+   * (its DC grows with each use), the pool it pays — and stands at the hit points it gives on the first that works.
+   * ponytail: undoing the card that dropped it restores the damage on top of the held hit points; the DM fixes that by hand.
+   */
+  private holdAtZero(entryId: string) {
+    const live = this.journalEntries.get(entryId);
+    if (live?.kind !== "character" || live.runtime.hp.current !== 0) return;
+    for (const hold of this.options.pcZeroHolds?.(live) ?? []) {
+      const sheet = this.journalEntries.get(entryId);
+      if (sheet?.kind !== "character") return;
+      let resourcesUsed = { ...sheet.runtime.resourcesUsed };
+      if (hold.save?.stepResourceId) resourcesUsed[hold.save.stepResourceId] = (resourcesUsed[hold.save.stepResourceId] ?? 0) + 1;
+      let held = true;
+      let line = `${sheet.name}: ${hold.label}`;
+      if (hold.save) {
+        const stats = this.statsOf({ entry: sheet });
+        const bonus = stats?.saves[hold.save.ability as keyof ActorStats["saves"]] ?? 0;
+        const d20 = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
+        held = d20 + bonus >= hold.save.dc;
+        line += ` — ${ABILITY_KO[hold.save.ability as keyof typeof ABILITY_KO] ?? hold.save.ability} 내성 ${d20}${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)} = ${d20 + bonus} vs DC ${hold.save.dc} ${held ? "성공" : "실패"}`;
+      }
+      if (held && hold.resourceId) resourcesUsed[hold.resourceId] = (resourcesUsed[hold.resourceId] ?? 0) + 1;
+      const runtime: CharacterRuntime = held ? { ...sheet.runtime, resourcesUsed, hp: { ...sheet.runtime.hp, current: hold.hp }, conditions: sheet.runtime.conditions.filter((name) => name !== "무의식"), deathSaves: { success: 0, failure: 0 } } : { ...sheet.runtime, resourcesUsed };
+      this.storeEntry({ ...sheet, runtime: { ...noteLog(runtime, line), updatedAt: this.now() }, updatedAt: this.now() });
+      this.say({ type: "system", who: "", content: held ? `${line} → HP ${hold.hp}` : line });
+      if (held) return;
+    }
+  }
+
   /** End a rage that the rules say is over, and say so once. */
   private endRage(entry: JournalEntry, reason: string) {
     const rage = this.rageOf(entry);
@@ -2342,9 +2385,16 @@ export class TableHost {
     return gone;
   }
 
-  private offerRescue(cardId: string, actor: { entry: JournalEntry; token?: Token; page?: Page }, family: RollFamily, roll: string, what: string) {
+  /** V4d (D266): a once-per-turn rescue already used this turn is not offered again. */
+  private freshRescues(entryId: string, offers: RescueOffer[]) {
+    const used = this.turnUses.get(entryId);
+    const spent = used && used.mark === this.turnMark() ? used.keys : [];
+    return offers.filter((offer) => !(offer.interceptor.oncePerTurn && spent.includes(`rescue:${offer.ruleKey}`)));
+  }
+
+  private offerRescue(cardId: string, actor: { entry: JournalEntry; token?: Token; page?: Page }, family: RollFamily, roll: string, what: string, d20?: number) {
     if (!this.options.pcRescues || actor.entry.kind !== "character") return;
-    const offers = this.options.pcRescues(actor.entry, family, "failure");
+    const offers = this.freshRescues(actor.entry.id, this.options.pcRescues(actor.entry, family, "failure", d20));
     if (!offers.length) return;
     const name = actor.token?.name ?? actor.entry.name;
     this.say({ type: "prompt", who: "", content: `${name}: ${what} 실패 (${roll}) — ${offers.map((offer) => offer.feature).join(" / ")}로 다시 굴릴까요?`, prompt: {
@@ -2362,7 +2412,7 @@ export class TableHost {
       if (!save || save.success || save.rescue) return;
       const actor = targets[index];
       if (!actor || actor.entry.kind !== "character") return;
-      const offers = this.options.pcRescues!(actor.entry, "saving-throw", "failure");
+      const offers = this.freshRescues(actor.entry.id, this.options.pcRescues!(actor.entry, "saving-throw", "failure", save.d20));
       if (!offers.length) return;
       const name = actor.token?.name ?? actor.entry.name;
       const roll = `${save.d20}${save.bonus >= 0 ? "+" : "-"}${Math.abs(save.bonus)} = ${save.total} vs DC ${save.dc}`;
@@ -2492,6 +2542,7 @@ export class TableHost {
       if (row.effect && (runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = { ...runtime, effects: runtime.effects.map((effect) => (effect.key === row.effect!.key ? { ...effect, bearer: true } : effect)) };
       else if (row.effect) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", bearer: true, duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
+      if (downed === "unconscious") this.holdAtZero(before.id);
       if (downed) this.releaseGrapples(target.page, target.token?.id);
       // R26 (D136): reverse this row, not the sheet as it was — healing, damage, marks and the effect it started.
       const delta = {
@@ -2718,6 +2769,7 @@ export class TableHost {
       if (resolution.downed === "instant-death") runtime = noteLog(runtime, "대량 피해: 즉사");
       runtime = this.takeDeathFailures(runtime, resolution.deathFailures, resolution.target.name, resolution.attack.name);
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+      if (resolution.downed === "unconscious") this.holdAtZero(before.id);
       // R26 (D136): the undo is this card's own change, not a photograph of the sheet before it.
       const delta = { hp: before.runtime.hp.current - resolution.hpAfter, temp: before.runtime.hp.temp - resolution.tempAfter, conditions: runtime.conditions.filter((name) => !before.runtime.conditions.includes(name)), deathFailures: resolution.deathFailures, restore: dropped ? [dropped] : [], note: `되돌림: ${resolution.attacker.name}의 ${resolution.attack.name}` };
       restores.push(() => this.undoOnCharacter(before.id, delta));

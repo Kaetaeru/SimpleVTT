@@ -65,6 +65,9 @@ test("contracts: a contract's payment and the hand-written activation spend the 
     "bard.college-of-lore.peerless-skill": build({ name: "b", classes: "bard", level: 14 }, { "class.2.subclass": ["dnd.srd521.subclass.bard.college-of-lore"] }),
     "warlock.fiend.dark-ones-own-luck": build({ name: "w", classes: "warlock", level: 6 }, { "class.2.subclass": ["dnd.srd521.subclass.warlock.fiend-patron"] }),
     // R51 (D186): a feat's pool is granted by the feat's own config, and its contract spends that same id.
+    // V4d (D266): 행운의 일격 and 단련된 생존자 became rescues with their own pools.
+    "feature:rogue.stroke-of-luck": build({ name: "r", classes: "rogue", level: 20 }),
+    "feature:monk.disciplined-survivor": build({ name: "m", classes: "monk", level: 14 }),
     "feat:epic.fate": build({ name: "f", classes: "fighter", level: 19 }, { "class.18.epic-boon": ["dnd.srd521.feat.epic.fate"] }),
   };
   const gaps: string[] = [];

@@ -36,10 +36,12 @@ test("table: every operation kind the grammar defines now reaches the table (D18
 test("table: a contract's table half is what the sheet cannot answer alone (D182)", () => {
   const cat = catalog();
   const derived = build({ name: "b", classes: "barbarian", level: 11 }).derived;
-  // 불굴의 격노 stabilises (a sheet answer) and asks the DM for the save DC (a table answer).
-  const relentless = tableOutcome(derived, cat, "barbarian.relentless-rage")!;
-  assert.ok(relentless.notes.some((note) => note.includes("건강 내성 DC 10")), JSON.stringify(relentless));
-  assert.equal(relentless.deathSave, false);
+  // V4d (D266): 불굴의 격노 is the host hold at 0 HP now, so it asks the table for nothing.
+  assert.equal(tableOutcome(derived, cat, "barbarian.relentless-rage"), null);
+  const thief = build({ name: "r", classes: "rogue", level: 13 }, { "class.2.subclass": ["dnd.srd521.subclass.rogue.thief"] }).derived;
+  const device = tableOutcome(thief, cat, "rogue.thief.use-magic-device")!;
+  assert.ok(device.notes.some((note) => note.includes("DM 판정")), JSON.stringify(device));
+  assert.equal(device.deathSave, false);
   // 자기 회복 is entirely a sheet answer, so the table is asked for nothing.
   assert.equal(tableOutcome(build({ name: "m", classes: "monk", level: 14 }).derived, cat, "monk.self-restoration"), null);
   assert.equal(tableOutcome(derived, cat, "없는.특성"), null);

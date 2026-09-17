@@ -73,10 +73,12 @@ test("operations: 자기 회복 takes the conditions off the sheet, from its con
 test("operations: what the table has to decide is written on the log, not dropped (D181)", async () => {
   const cat = catalog();
   const made = build({ name: "b", classes: "barbarian", level: 11 });
-  const feature = made.derived.features.find((item) => featureRuleKey(item.id) === "barbarian.relentless-rage")!;
+  // V4d (D266): 불굴의 격노 is a hold at 0 HP now; the line 마법 물건 사용 leaves for the table is the example.
+  const thief = build({ name: "r", classes: "rogue", level: 13 }, { "class.2.subclass": ["dnd.srd521.subclass.rogue.thief"] });
+  const feature = thief.derived.features.find((item) => featureRuleKey(item.id) === "rogue.thief.use-magic-device")!;
   assert.ok(feature, made.derived.features.map((item) => featureRuleKey(item.id)).join(","));
-  let runtime = initialRuntime(made.derived);
-  await activateFeature(feature, { source: made.source, catalog: cat, derived: made.derived, runtime, rollDice: async (spec) => ({ id: "r", at: "", label: spec.label, formula: spec.formula, total: 0, dice: [], modifier: 0 }), save: (update) => { runtime = update(runtime); } });
-  assert.ok((runtime.log ?? []).some((line) => line.text.includes("건강 내성 DC 10")), JSON.stringify(runtime.log?.slice(-4)));
-  assert.ok((runtime.log ?? []).some((line) => line.text.includes("안정")), JSON.stringify(runtime.log?.slice(-4)));
+  let runtime = initialRuntime(thief.derived);
+  await activateFeature(feature, { source: thief.source, catalog: cat, derived: thief.derived, runtime, rollDice: async (spec) => ({ id: "r", at: "", label: spec.label, formula: spec.formula, total: 0, dice: [], modifier: 0 }), save: (update) => { runtime = update(runtime); } });
+  void made;
+  assert.ok((runtime.log ?? []).some((line) => line.text.includes("충전")), JSON.stringify(runtime.log?.slice(-4)));
 });

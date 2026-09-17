@@ -25,7 +25,7 @@ import { build, catalog } from "./support";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /** A table with the given characters and monsters on one scene; the DM seat does everything. */
-async function table(pcs: Array<{ classes: string; level: number; choices?: Record<string, string[]>; runtime?: (runtime: CharacterRuntime) => CharacterRuntime; abilities?: Record<string, number> }>, npcs: Array<Record<string, unknown>>, random: () => number = () => 0.5) {
+async function table(pcs: Array<{ classes: string; level: number; choices?: Record<string, string[]>; runtime?: (runtime: CharacterRuntime) => CharacterRuntime; abilities?: Record<string, number>; species?: string }>, npcs: Array<Record<string, unknown>>, random: () => number = () => 0.5) {
   const cat = catalog();
   const hub = new MemoryHub();
   const campaign = { ...newCampaign("V4", { userId: "dm", displayName: "DM" }), joinCode: "V4AAAA" };
@@ -34,7 +34,7 @@ async function table(pcs: Array<{ classes: string; level: number; choices?: Reco
   await tick();
   const scene = newScene(campaign.id, "전장", 0);
   dm.send({ type: "page.put", page: scene });
-  const made = pcs.map((pc, index) => build({ name: `PC${index}`, classes: pc.classes, level: pc.level, abilities: { con: 14, ...(pc.abilities ?? {}) } }, pc.choices ?? {}));
+  const made = pcs.map((pc, index) => build({ name: `PC${index}`, classes: pc.classes, level: pc.level, abilities: { con: 14, ...(pc.abilities ?? {}) }, ...(pc.species ? { species: pc.species } : {}) }, pc.choices ?? {}));
   const sheets = made.map((one, index) => newJournalCharacter(campaign.id, "dm", one.source, (pcs[index].runtime ?? ((runtime) => runtime))(initialRuntime(one.derived))));
   const monsters = npcs.map((json) => newJournalNpc(campaign.id, "dm", (parseCustomMonster(JSON.stringify(json)) as { monster: Parameters<typeof newJournalNpc>[2] }).monster));
   for (const entry of [...sheets, ...monsters]) dm.send({ type: "journal.put", entry });
@@ -266,3 +266,57 @@ test("V4c: 선천 마법 raises the spell save DC, 우월한 방어 resists all 
 function deriveCharacterWith(source: ReturnType<typeof build>["source"], cat: ReturnType<typeof catalog>, effects: CharacterRuntime["effects"]) {
   return deriveCharacter(source, cat, { effects });
 }
+
+test("V4d: 행운의 일격 and 행운 are rescues; 바드의 영감 is a die the ally spends on a failed test (D266)", async () => {
+  const { pcRescues } = await import("../../client/rules/contractUse");
+  const { planRollModify } = await import("../../client/rules/contract");
+  const cat = catalog();
+  const rogue = build({ name: "로그", classes: "rogue", level: 20 });
+  const rogueEntry = newJournalCharacter("c", "p", rogue.source, initialRuntime(rogue.derived));
+  const luck = pcRescues(rogueEntry, rogue.derived, cat, "ability-check", "failure").find((offer) => offer.feature === "행운의 일격")!;
+  assert.ok(luck, JSON.stringify(pcRescues(rogueEntry, rogue.derived, cat, "ability-check", "failure").map((offer) => offer.feature)));
+  assert.equal(planRollModify(luck.interceptor.operations, luck.scope, { d: () => 3 }).d20, 20);
+  const halfling = build({ name: "하플링", classes: "fighter", level: 1, species: "halfling" });
+  const halflingEntry = newJournalCharacter("c", "p", halfling.source, initialRuntime(halfling.derived));
+  const named = (d20: number) => pcRescues(halflingEntry, halfling.derived, cat, "saving-throw", "failure", d20).map((offer) => offer.feature);
+  assert.ok(named(1).includes("행운"), JSON.stringify(named(1)));
+  assert.ok(!named(5).includes("행운"));
+
+  const t = await table([{ classes: "bard", level: 5 }, { classes: "fighter", level: 5 }], []);
+  t.dm.send({ type: "act.contract", actor: t.ref(0), ruleKey: "bard.bardic-inspiration", targets: [t.ref(1)] });
+  await tick();
+  const fighter = t.entry(1) as ReturnType<typeof newJournalCharacter>;
+  const gift = fighter.runtime.effects.find((effect) => effect.rescue);
+  assert.deepEqual(gift?.rescue, { dice: "1d8" }, JSON.stringify(fighter.runtime.effects));
+  const offer = pcRescues(fighter, t.made[1].derived, cat, "saving-throw", "failure").find((item) => item.feature === "바드의 영감")!;
+  assert.ok(offer);
+  const { payContract } = await import("../../client/rules/contractUse");
+  assert.ok(!payContract(fighter.runtime, t.made[1].derived, offer.payments, "success")!.effects.some((effect) => effect.rescue), "spent once used");
+});
+
+test("V4d: 불굴의 격노 holds a raging barbarian at twice their level; 끈질긴 인내 holds an orc at 1 (D266)", async () => {
+  const hit = (name: string, formula: string) => dummy(name, 50, { actions: [{ name: "강타", attack: { mode: "melee", bonus: 30, rangeFeet: 5, damage: [{ formula, type: "bludgeoning" }] } }] });
+  const raging = (runtime: CharacterRuntime) => ({ ...runtime, hp: { ...runtime.hp, current: 30 }, effects: [{ key: "feature:barbarian.rage", name: "격노", source: "feature" as const, duration: "10분", concentration: false, rounds: 100, elapsed: 0, startedAt: "" }] });
+  // High dice: the Constitution save against DC 10 succeeds.
+  const t = await table([{ classes: "barbarian", level: 11, runtime: raging }, { classes: "fighter", level: 5, runtime: (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 10 } }) }], [hit("거인", "80")], () => 0.95);
+  t.dm.send({ type: "act.attack", attacker: t.ref(2), targets: [t.ref(0)], attack: { source: "npc", actionName: "강타" } });
+  await tick();
+  const barbarian = t.entry(0) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(barbarian.runtime.hp.current, 22, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+  assert.equal(barbarian.runtime.resourcesUsed["resource.barbarian.relentless-rage"], 1, "the next DC is 15");
+  assert.ok(!barbarian.runtime.conditions.includes("무의식"));
+
+  const orc = await table([{ classes: "fighter", level: 5, choices: {}, runtime: (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 10 } }) }], [hit("거인", "20")], () => 0.5);
+  orc.made[0] = build({ name: "오크", classes: "fighter", level: 5, species: "orc" });
+  const orcSheet = newJournalCharacter(orc.scene.campaignId, "dm", orc.made[0].source, { ...initialRuntime(orc.made[0].derived), hp: { ...initialRuntime(orc.made[0].derived).hp, current: 10 } });
+  orc.dm.send({ type: "journal.put", entry: orcSheet });
+  await tick();
+  const orcToken = tokenForCharacter(orcSheet);
+  orc.dm.send({ type: "token.put", pageId: orc.scene.id, token: orcToken });
+  await tick();
+  orc.dm.send({ type: "act.attack", attacker: orc.ref(1), targets: [{ entryId: orcSheet.id, pageId: orc.scene.id, tokenId: orcToken.id }], attack: { source: "npc", actionName: "강타" } });
+  await tick();
+  const held = orc.host.journal.find((entry) => entry.id === orcSheet.id) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(held.runtime.hp.current, 1, JSON.stringify(orc.host.archive.slice(-3).map((message) => message.content)));
+  assert.equal(held.runtime.resourcesUsed["resource.species.relentless-endurance"], 1);
+});

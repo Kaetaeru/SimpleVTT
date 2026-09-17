@@ -14,14 +14,14 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D264 표의 `condition.apply`가 `save`를 무시한다(`act.contract`). — [host-hook] 대상마다 내성.
 - ✔ D264 대상 표식 효과(다음 내성 불리, 다른 이의 다음 명중 +5, 기회 공격 불가, 속도 감소, 다음 명중 유리)가 없다. — [new-grammar]
 - 계약 치유에 최상급 치유(최대값)가 적용되지 않는다. — [host-hook]
-- 전투 중 0 HP가 되는 순간의 가로채기(무모한 격노, 보호자의 선물)가 없다. — [new-grammar + host-hook]
+- (D266: `hp.zero.hold` ✔ 불굴의 격노·끈질긴 인내, 보호자의 선물·죽음 방비 남음) 전투 중 0 HP가 되는 순간의 가로채기(무모한 격노, 보호자의 선물)가 없다. — [new-grammar + host-hook]
 - 야생 변신 형태(능력치 덮어쓰기)가 없다. — [new-grammar + picker]
 - 슬롯↔점수 변환(마법의 원천)이 없다. — [new-grammar + picker]
 - 메타매직이 시전 창에 없다. — [picker]
 - ✔ D263 계약의 `adjudication.request` 문구에 계산된 수치를 붙이는 수단이 없었다. — `amount`.
 
 ## 바바리안
-- relentless-rage (11) — 0 HP 순간 가로채기 없음, 건강 내성 없음, HP를 레벨×2로 두지 않음, DC 누적이 풀로 잘못 모델링. — [new-grammar + host-hook]
+- ✔ D266 relentless-rage (11) — 0 HP 순간 가로채기 없음, 건강 내성 없음, HP를 레벨×2로 두지 않음, DC 누적이 풀로 잘못 모델링. — [new-grammar + host-hook]
 - (D265: 근력 유리·유지 조건은 계약으로, 시전 금지는 남음) rage (1) — 근력 판정·내성 유리가 문구뿐(속성 있음). 주문 시전·집중 금지, 조기 종료 조건, 연장이 문구. — [data-fix + host-hook]
 - ✔ D265 persistent-rage (15) — 수동 +1 버튼. 규칙은 이니셔티브 때 전부 회복, 긴 휴식당 1회. — [data-fix]
 - ✔ D264 berserker.intimidating-presence (14) — 추가 행동·지혜 내성·공포·반복 내성·긴 휴식 1회·격노로 회복 없음. — [new-grammar]
@@ -46,7 +46,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D264 stunning-strike (5) — 무기 범위 없음(활에도), 성공 시 속도 절반·다음 공격 유리가 문구. — [data-fix + new-grammar]
 - deflect-attacks (3) — 되돌리기(기 1, 민첩 내성, 무예 주사위×2+민첩)가 문구. — [new-grammar]
 - ✔ D265 superior-defense (18) — 기 3 소비·역장 외 저항 없음. — [data-fix]
-- disciplined-survivor (14) — 실패한 내성 기 1로 재굴림 없음. — [data-fix]
+- ✔ D266 disciplined-survivor (14) — 실패한 내성 기 1로 재굴림 없음. — [data-fix]
 - ✔ D265 perfect-focus (15) — 수동 +4. 이니셔티브 때 4까지 채우기. — [new-grammar] "N까지 회복".
 - self-restoration (10) — 세 상태를 한 번에 버튼. 턴 끝마다 하나. — [host-hook + picker]
 - open-hand.fleet-step (11) — 무료라는 문구가 틀림, 결제 중복. — [data-fix]
@@ -54,7 +54,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D263 slow-fall (4) — DM 팔레트 손 작업 안내. — [button] 마지막 낙하 피해 감소 반응.
 
 ## 로그
-- stroke-of-luck (20) — 풀만 소비, 굴림은 그대로. — [data-fix] 실패 시 20으로.
+- ✔ D266 stroke-of-luck (20) — 풀만 소비, 굴림은 그대로. — [data-fix] 실패 시 20으로.
 - ✔ D264 cunning-strike#poison/#trip (5) — 1분·반복 내성이 1라운드로. — [new-grammar]
 - ✔ D264 devious-strikes#daze (14) — 내성·효과 없음. — [new-grammar]
 - ✔ D264 devious-strikes#knock-out/#obscure (14) — 지속시간 잘못. — [new-grammar]
@@ -66,7 +66,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - (D265: 행동 메뉴에 마법 행동이 없어 안내) thief.fast-hands (9) — 마법 행동을 추가 행동으로 누락. — [data-fix]
 
 ## 바드
-- bardic-inspiration (1) — 아군이 주사위를 받지 않음. 실패한 d20에 구조로 제시해야. — [new-grammar + host-hook]
+- ✔ D266 bardic-inspiration (1) — 아군이 주사위를 받지 않음. 실패한 d20에 구조로 제시해야. — [new-grammar + host-hook]
 - college-of-lore.cutting-words (3) — 사실 질의가 KNOWN_FACTS에 없어 계약이 미지원 처리, 풀 주사위 전달 안 됨, 피해 굴림에 없음. — [host-hook]
 - college-of-lore.peerless-skill (14) — 고정 1d12, 영감 주사위여야. — [data-fix]
 - ✔ D265 superior-inspiration (18) — 수동 +2. 이니셔티브 때 2까지. — [data-fix + new-grammar]
@@ -143,7 +143,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 재주·종족·주문
 ### 재주
-- epic.combat-prowess — 빗나감이 치명타로 바뀜(SRD는 명중), 턴당 1회 없음. — [data-fix + new-grammar] 명중으로 바꾸기 모드, 턴 시작 초기화.
+- ✔ D266 epic.combat-prowess — 빗나감이 치명타로 바뀜(SRD는 명중), 턴당 1회 없음. — [data-fix + new-grammar] 명중으로 바꾸기 모드, 턴 시작 초기화.
 - epic.fate — 자신의 실패에만 2d4, 60피트 안 다른 이의 판정·감점 불가, 이니셔티브 회복 없음. — [picker + host-hook]
 - epic.irresistible-offense — 치명타 추가 피해가 항상 근력 점수. — [data-fix] 올린 능력치.
 - epic.night-spirit — 전부 문구, 저항 범위 틀림. — [button + data-fix]
@@ -157,8 +157,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - dragonborn 용의 비행 — 비행 30이 항상 켜짐. — [data-fix] 추가 행동 10분 효과.
 - dragonborn 브레스 웨폰 — 민첩 내성 없음, DC·혈통 피해 유형·절반·공격 하나 대신 없음. — [data-fix] D263 `save`.
 - goliath 거인 혈통 6종 — 풀만 있음. — [data-fix + host-hook]
-- orc 불굴의 인내 — 0 HP 대신 1 없음. — [host-hook]
-- halfling 행운 — 1 재굴림 없음. — [data-fix + new-grammar]
+- ✔ D266 orc 불굴의 인내 — 0 HP 대신 1 없음. — [host-hook]
+- ✔ D266 halfling 행운 — 1 재굴림 없음. — [data-fix + new-grammar]
 - elf 요정 혈통, halfling 용감함, dwarf 드워프 강인함 — 매혹·공포·중독 내성 유리 없음. — [new-grammar] 상태 한정 내성 유리.
 - gnome 노움의 교활함 — 지·지·매 내성 유리 없음(문법 있음). — [data-fix]
 - human 수완 — 긴 휴식에 영웅적 영감 없음. — [data-fix + host-hook]

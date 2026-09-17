@@ -23,7 +23,8 @@ const live = (operation: ContractOperation, scope: Scope) => !("when" in operati
  */
 export function contractDuration(contract: CommonPlayContract, scope: Scope): ParsedDuration | undefined {
   for (const operation of operationsOf(contract)) {
-    if (operation.kind !== "effect.apply" || !live(operation, scope)) continue;
+    // V4d (D266): an effect aimed at other creatures starts on them at the table, not on the user.
+    if (operation.kind !== "effect.apply" || !live(operation, scope) || atOthers(operation.target)) continue;
     const text = operation.template.duration ?? LIFETIME_KO[operation.lifetime] ?? operation.lifetime;
     const counted = operation.lifetime === COUNTED_LIFETIME;
     // The counter is whatever the contract states and nothing else: a duration with no `rounds` is one the table

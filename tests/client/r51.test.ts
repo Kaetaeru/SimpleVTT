@@ -83,7 +83,7 @@ test("R51: 저항할 수 없는 공격의 은총 reaches the sheet as a rule, no
   assert.ok(boon!.rules?.some((line) => line.includes("저항 무시") || line.includes("damage.ignore-resistance")), JSON.stringify(boon!.rules));
 });
 
-test("R51: 전투 기량의 은총 offers itself on a miss, and its 20 is a natural 20 (D186)", () => {
+test("R51: 전투 기량의 은총 offers itself on a miss, and turns it into a hit (D186, V4d D266)", () => {
   const made = build({ name: "용사", classes: "fighter", level: 19 }, { "class.18.epic-boon": [ids.feat("epic.combat-prowess")] });
   const entry = { id: "pc", runtime: initialRuntime(made.derived) } as unknown as JournalCharacter;
   const offers = pcRescues(entry, made.derived, catalog(), "attack-roll", "failure");
@@ -92,7 +92,9 @@ test("R51: 전투 기량의 은총 offers itself on a miss, and its 20 is a natu
   const checks = pcRescues(entry, made.derived, catalog(), "ability-check", "failure").map((offer) => offer.feature);
   assert.ok(!checks.includes("전투 기량의 은총"), checks.join(", "));
   const plan = planRollModify(offers[0].interceptor.operations, characterScope(made.derived), { d: () => 1 });
-  assert.equal(plan.d20, 20, "the d20 is replaced, so the resolver reads it as a natural 20 and crits");
+  // V4d (D266): SRD 5.2.1 says the attack hits instead — a hit, not a natural 20 that crits.
+  assert.equal(plan.forceSuccess, true);
+  assert.equal(plan.d20, undefined);
   assert.equal(plan.delta, 0);
 });
 

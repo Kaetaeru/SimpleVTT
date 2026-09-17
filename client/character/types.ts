@@ -91,6 +91,9 @@ export interface DerivedFeature {
 export interface Term { label: string; value: number; /** Dice added instead of a number ("1d4" from Bless); value stays 0. */ dice?: string }
 
 /** A feature or spell in effect (Rage, Bless): ended by its "종료" button, by the round counter, or by a rest. */
+/** V4d (D266): hold at `hp` instead of dropping to 0 — after a save whose DC grows with each use, paying a pool, while an effect runs. */
+export interface ZeroHold { label: string; hp: number; save?: { ability: string; dc: number; step: number; stepResourceId?: string }; resourceId?: string; requiresEffect?: string }
+
 export interface ActiveEffect {
   /** `feature:<featureRuleKey>` or `spell:<spellId>`. */
   key: string;
@@ -118,6 +121,8 @@ export interface ActiveEffect {
   consumeOn?: "attack" | "cast";
   /** R85 (D220): conditions the effect put on the bearer, which come off with it. */
   conditions?: string[];
+  /** V4d (D266): a die the bearer may add to one failed d20 test, spending the effect (바드의 영감). */
+  rescue?: { dice: string };
   /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */
   bearer?: boolean;
   /** H2 (D239): the choice the feature behind a passive effect was made for (the cantrip 고통스러운 폭발 names). */
@@ -283,6 +288,8 @@ export interface DerivedCharacter {
   slotHealSelf?: number;
   /** V4c (D265): effect keys whose each-turn upkeep a rule waives (지속되는 격노). */
   upkeepWaived?: string[];
+  /** V4d (D266): what keeps this character on its feet when it would drop to 0 hit points. */
+  zeroHolds?: ZeroHold[];
   /** V4a (D263): spells whose casting shows the caster the target's defenses. */
   revealDefenses?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll (원소의 친화력). */

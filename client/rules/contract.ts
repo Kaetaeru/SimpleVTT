@@ -55,7 +55,9 @@ export function evaluate(expr: Expr | undefined, scope: Scope): ExprValue {
 
 /** A pool or an action-economy bucket a use costs. `onlyOn` is a payment that is kept only when the roll went that way. */
 export interface ContractPayment {
-  kind: "resource" | "economy";
+  /** V4d (D266): `effect` — the effect that granted a rescue ends when it is used (바드의 영감); never written in a contract. */
+  kind: "resource" | "economy" | "effect";
+  effectKey?: string;
   /** `resource:fighter.second-wind` becomes the client's `resource.fighter.second-wind`. */
   resourceId?: string;
   bucket?: string;
@@ -83,7 +85,7 @@ export type ContractOperation =
    * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
    * table or another rule decides, and the sheet prints the reason instead of a number.
    */
-  | { kind: "effect.apply"; template: { key?: string; name?: string; duration?: string; rounds?: number; concentration?: boolean; /** V3e (D259): the effect ends when its bearer makes this roll (안정된 조준: its next attack). */ consumeOn?: "attack" | "cast" }; lifetime: string; target: string; when?: Expr }
+  | { kind: "effect.apply"; template: { key?: string; name?: string; duration?: string; rounds?: number; concentration?: boolean; /** V3e (D259): the effect ends when its bearer makes this roll (안정된 조준: its next attack). */ consumeOn?: "attack" | "cast"; /** V4d (D266): the bearer may add this die to one failed d20 test, which ends the effect (바드의 영감). */ rescueDie?: Expr }; lifetime: string; target: string; when?: Expr }
   /** R39 (D179): end an effect by key — a new Wild Shape replacing the last one. */
   | { kind: "effect.remove"; selector: string; target: string; when?: Expr }
   /** R39 (D179): pause an effect without ending it (an antimagic field); the sheet shows it, greyed, with the reason. */
@@ -164,6 +166,10 @@ export interface ContractInterceptor {
   /** Facts about the table this executor cannot answer (distance, line of sight); named, never guessed. */
   factQueries: Array<{ id: string; fact: string; unknownPolicy: string }>;
   when?: Expr;
+  /** V4d (D266): offered at most once each turn (전투 기량). */
+  oncePerTurn?: boolean;
+  /** V4d (D266): offered only when the d20 showed this number (행운: a 1). */
+  naturalOnly?: number;
   operations: ContractOperation[];
 }
 
@@ -276,7 +282,7 @@ export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION
  */
 export const SLOT_LEVELS_RESOURCE = "resource.spell-slot-levels";
 export const PACT_SLOT_RESOURCE = "resource.pact-slot";
-const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "set-die", "subtract-die"]);
+const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "set-die", "subtract-die", "force-success"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
   const list = Array.isArray(raw) ? raw : [];
@@ -341,6 +347,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
         rounds: typeof template.rounds === "number" ? template.rounds : undefined,
         concentration: template.concentration === true,
         ...(template.consumeOn === "attack" || template.consumeOn === "cast" ? { consumeOn: template.consumeOn as "attack" | "cast" } : {}),
+        ...(isExpr(template.rescueDie) ? { rescueDie: template.rescueDie } : {}),
       } });
       return;
     }
@@ -444,6 +451,8 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
       families: (Array.isArray(raw.families) ? raw.families : []).map(String),
       outcomes: (Array.isArray(raw.outcomes) ? raw.outcomes : []).map(String),
       asks: Boolean(raw.interaction), factQueries,
+      ...(raw.oncePerTurn === true ? { oncePerTurn: true } : {}),
+      ...(typeof raw.naturalOnly === "number" ? { naturalOnly: raw.naturalOnly } : {}),
       when: isExpr(raw.when) ? raw.when : undefined,
       operations: parseOperations(raw.operations, `interceptors[${index}].operations`, unsupported),
     });
@@ -559,6 +568,8 @@ export interface RollModifyPlan {
   delta: number;
   /** One phrase per operation, for the card ("1d20 재굴림 → 14", "+1d10 = 7"). */
   parts: string[];
+  /** V4d (D266): the roll succeeds whatever it came to (전투 기량: a miss becomes a hit, not a critical). */
+  forceSuccess?: boolean;
 }
 
 /**
@@ -612,6 +623,7 @@ export function planRollModify(operations: ContractOperation[], scope: Scope, di
         plan.parts.push(`d20 → ${value}`);
         break;
       }
+      case "force-success": { plan.forceSuccess = true; plan.parts.push("성공으로"); break; }
       case "add-flat": {
         const value = Number(evaluate(operation.value, scope));
         if (!Number.isFinite(value)) break;

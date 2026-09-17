@@ -495,7 +495,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (table) {
       // V4c (D265): points spent on somebody else (안수) need that somebody.
       const others = table.party.healPoints && given && !given.self ? given.points : undefined;
-      const wantsTargets = others || table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.healPool || table.party.grants.length || table.strikes?.length || table.conditionSaves?.length;
+      const wantsTargets = others || table.conditionsApplied.length || table.conditionsRemoved.length || table.party.tempHp || table.party.heal || table.party.healPool || table.party.grants.length || table.strikes?.length || table.conditionSaves?.length || table.effects?.length;
       let picked: string[] = [];
       if (wantsTargets) {
         picked = await requestTargets(`${feature.name} — 대상을 클릭하세요${table.party.max ? ` (최대 ${table.party.max}명)` : ""}`, { multi: true });
