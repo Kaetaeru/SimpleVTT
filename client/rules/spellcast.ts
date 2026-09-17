@@ -26,6 +26,9 @@ const FLAVOUR_KEYS = new Set(["summary", "trigger", "duration"]);
  * sentence), conditions, a summon, a repeat, an on-hit rule, or an effect contract that changes the sheet. What is left
  * is the narrative half of the spell list (마법사의 손, 경보, 전언 …), and its card says "DM 판정" instead of looking done.
  */
+/** H3d (D242): the damage types a spell deals, from its primary effect. */
+const spellDamageTypes = (exec: SpellExec): string[] => (exec.primary.kind === "save-compound-damage" ? exec.primary.components.map((part) => part.damageType) : "damageType" in exec.primary && typeof exec.primary.damageType === "string" ? [exec.primary.damageType] : []);
+
 export function spellIsJudged(exec: SpellExec, catalog: ContentCatalog, derived: DerivedCharacter): boolean {
   if (exec.primary.kind !== "tracked-effect") return false;
   if (exec.effects?.length || exec.summon || exec.sustain || exec.onHit) return false;
@@ -445,7 +448,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec, ...(spellIsJudged(exec, catalog, derived) ? { judged: true } : {}) },
-    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.spellDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(list && derived.schoolDamageModifier?.some((rule) => rule.school === view.school && list.classId?.endsWith(`.${rule.classSlug}`)) ? { damageBonusOnce: derived.abilities[list.ability].modifier } : {}) },
+    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.spellDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(list && (derived.schoolDamageModifier?.some((rule) => rule.school === view.school && list.classId?.endsWith(`.${rule.classSlug}`)) || spellDamageTypes(exec).some((type) => (derived.damageTypeModifier ?? []).includes(type))) ? { damageBonusOnce: derived.abilities[list.ability].modifier } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };
 }

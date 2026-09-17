@@ -32,5 +32,5 @@ test("R97: 전승 학파 asks for three skills, and 기적술사 adds Wisdom to 
   assert.equal(bard.source.choices["class.2.lore-skills"]?.length, 3, JSON.stringify(bard.derived.choices.map((item) => item.id)));
   const cleric = build({ name: "클레릭", classes: "cleric", level: 1, abilities: { wis: 16 } }, { "class.0.divine-order": ["thaumaturge"] });
   const religion = cleric.derived.skills.find((skill) => skill.id === "religion")!;
-  assert.ok(religion.terms.some((term) => term.label.includes("질서") && term.value === 3), JSON.stringify(religion.terms));
+  assert.ok(religion.terms.some((term) => term.label.includes("기적술사") && term.value === 3), JSON.stringify(religion.terms));
 });

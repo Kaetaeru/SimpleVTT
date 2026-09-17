@@ -111,6 +111,10 @@ export class Ledger {
   readonly hpPerClassLevel: Array<{ classId: string; amount: number; label: string }> = [];
   /** H3c (D241): half the proficiency bonus on unproficient checks, and the feature that grants it (만능재주). */
   halfProficiency?: string;
+  /** H3d (D242): extra cantrips known per class id (기적술사, 마법사). */
+  readonly bonusCantrips = new Map<string, number>();
+  /** H3d (D242): an ability modifier added to a skill's checks, with a floor (질서의 지혜 보너스). */
+  readonly skillAbilityBonuses: Array<{ skill: string; ability: AbilityKey; min: number; label: string }> = [];
   /** H3c (D241): weapons and unarmed strikes use this class column's die and the better of Strength or this ability (무술). */
   martialArts?: { classId: string; column: string; ability: AbilityKey };
   hpPerLevelSource: string | undefined;

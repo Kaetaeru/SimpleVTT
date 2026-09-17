@@ -30,7 +30,6 @@ import { applyClassSpellcasting, classSpellEntry } from "./spells";
 
 const ASI_FEAT_ID = "dnd.srd521.feat.ability-score-improvement";
 const RECOVERY_KO: Record<string, string> = { "short-rest": "짧은 휴식", "long-rest": "긴 휴식", "short-rest:1": "긴 휴식 (짧은 휴식마다 1회 회복)", "short-rest:half": "긴 휴식 (짧은 휴식에 절반 회복)" };
-const LAND_RESISTANCE: Record<string, string> = { arid: "fire", polar: "cold", temperate: "lightning", tropical: "poison" };
 
 const featContext = (ledger: Ledger, hasFightingStyle = false): FeatContext => ({
   level: ledger.level,
@@ -169,12 +168,8 @@ function applyFixedOptionChoice(ledger: Ledger, cls: ClassView, choice: IndexCla
   if (!picked) return;
   const option = choice.options?.find((item) => item.id === picked);
   if (option) ledger.addFeature({ id: `${cls.id}.${choice.id}.${picked}`, name: `${choice.label}: ${option.name}`, nameEn: option.nameEn, source: "class", sourceLabel, level: 1, description: option.summary, descriptionSource: "srd-summary" });
-  if (picked === "protector") { ledger.weapons.add("martial"); ledger.armor.add("heavy"); }
-  if (picked === "warden") { ledger.weapons.add("martial"); ledger.armor.add("medium"); }
-  if (picked === "thaumaturge" || picked === "magician") ledger.flags.add(`bonus-cantrip:${cls.id}`);
-  // R97 (D232): 기적술사 adds Wisdom to Arcana and Religion checks, 마법사 to Arcana and Nature (minimum +1).
-  if (picked === "thaumaturge") for (const skill of ["arcana", "religion"]) ledger.flags.add(`wis-skill-bonus:${skill}`);
-  if (picked === "magician") for (const skill of ["arcana", "nature"]) ledger.flags.add(`wis-skill-bonus:${skill}`);
+  // H3d (D242): what the option grants is in its contract.
+  applyGainContract(ledger, cls, index, `${cls.id}.${choice.id}.${picked}`, option ? `${choice.label}: ${option.name}` : choice.label, sourceLabel);
 }
 
 function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: ClassLevelRow, index: number) {
@@ -231,7 +226,7 @@ function askEpicBoon(ledger: Ledger, cls: ClassView, index: number, sourceLabel:
  * its contract's `gain` entry point. This code knows only the grammar; which feature asks what, how many and from
  * which list is data (content/modules/…effect-common-play), so a module feature works the same way.
  */
-export function applyGainContract(ledger: Ledger, cls: ClassView, index: number, featureId: string, featureName: string, sourceLabel: string) {
+export function applyGainContract(ledger: Ledger, cls: ClassView, index: number, featureId: string, featureName: string, sourceLabel: string, at?: { level: number; defaultLevel: number }) {
   const { catalog } = ledger;
   const contract = featureContract(catalog, featureRuleKey(featureId));
   const ask = { scope: "class" as const, sourceLabel, trackIndex: index };
@@ -239,6 +234,8 @@ export function applyGainContract(ledger: Ledger, cls: ClassView, index: number,
   for (const operation of (contract?.entryPoints ?? []).filter((entry) => entry.invocation === GAIN_INVOCATION).flatMap((entry) => entry.operations)) {
     if (operation.kind !== "property.modify") continue;
     const p = operation.params ?? {};
+    // H3d (D242): a choice kept across levels runs its operations at their own level (땅 유형's resistance at 10).
+    if (at && Number(p.atLevel ?? at.defaultLevel) !== at.level) continue;
     const amount = Number(evaluate(operation.value, () => undefined)) || 1;
     const id = `class.${index}.${String(p.id ?? operation.property)}`;
     const label = String(p.label ?? featureName);
@@ -287,6 +284,11 @@ export function applyGainContract(ledger: Ledger, cls: ClassView, index: number,
       case "grant.hp-per-level": ledger.hpPerClassLevel.push({ classId: cls.id, amount, label }); break;
       case "grant.half-proficiency": ledger.halfProficiency = label; break;
       case "grant.martial-arts": ledger.martialArts = { classId: cls.id, column: String(p.column ?? ""), ability: String(p.ability ?? "dex") as AbilityKey }; break;
+      case "grant.proficiency": for (const weapon of strings(p.weapons)) ledger.weapons.add(weapon as WeaponTraining); for (const armor of strings(p.armor)) ledger.armor.add(armor as ArmorTraining); break;
+      case "grant.cantrips": ledger.bonusCantrips.set(cls.id, (ledger.bonusCantrips.get(cls.id) ?? 0) + amount); break;
+      case "grant.skill-ability-bonus": for (const skill of strings(p.skills)) ledger.skillAbilityBonuses.push({ skill, ability: String(p.ability ?? "wis") as AbilityKey, min: Number(p.min ?? 0), label }); break;
+      case "grant.resistance": for (const type of strings(p.types)) ledger.resistances.add(type); break;
+      case "grant.condition-immunity": for (const condition of strings(p.conditions)) ledger.conditionImmunities.add(condition); break;
       case "grant.spell-lists":
       default: ledger.warnings.push(`${featureName}: 알 수 없는 획득 연산 ${operation.property}`);
     }
@@ -360,8 +362,7 @@ function applySubclassLevel(ledger: Ledger, cls: ClassView, state: ClassState, i
       const entry = classSpellEntry(ledger, cls);
       for (const name of names) { const spell = catalog.spellByName(name); if (spell) entry.alwaysPrepared.add(spell.id); else ledger.warnings.push(`${subclass.name} 주문 "${name}"을(를) 찾을 수 없습니다.`); }
     }
-    if (choice.id === "subclass.land-type" && level === 10) { ledger.resistances.add(LAND_RESISTANCE[chosen] ?? chosen); ledger.conditionImmunities.add("poisoned"); }
-    if (choice.id === "subclass.elemental-affinity" && level === 6) ledger.resistances.add(chosen);
+    applyGainContract(ledger, cls, index, `${subclass.id}.${choice.id}.${chosen}`, choice.label, subclassLabel, { level, defaultLevel: choice.level });
   }
 }
 

@@ -50,7 +50,7 @@ export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: Cl
   const entry = classSpellEntry(ledger, cls);
   const first = state.firstTrack;
   const ask = { scope: "class" as const, sourceLabel: `${cls.name} 주문`, trackIndex: first };
-  const bonusCantrip = ledger.flags.has(`bonus-cantrip:${cls.id}`) ? 1 : 0;
+  const bonusCantrip = ledger.bonusCantrips.get(cls.id) ?? 0;
   entry.cantripsMax = numericColumn(row.columns[COLUMN.cantrips]) + bonusCantrip;
   entry.preparedMax = numericColumn(row.columns[COLUMN.prepared]);
   const top = maxSpellLevel(cls, row);

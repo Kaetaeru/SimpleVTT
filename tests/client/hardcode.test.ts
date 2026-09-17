@@ -14,7 +14,7 @@ const CEILINGS = {
   /** A branch on a feature, option or event key. */
   keyBranches: 33,
   /** A branch on a class slug or a picked option id. */
-  slugBranches: 7,
+  slugBranches: 2,
   /** A regex run over a name or a description. */
   nameRegex: 4,
 };
@@ -92,4 +92,16 @@ test("H3c: armour, speed and saves come from gain contracts — and 보호의 �
   assert.equal(ranger.speed.climb, ranger.speed.walk, "방랑자 gives climb and swim at walking speed");
   const sorcerer = build({ name: "소서러", classes: "sorcerer", level: 5 }).derived;
   assert.ok(sorcerer.hp.terms.some((term) => term.label.includes("용의 회복력") && term.value === 5), JSON.stringify(sorcerer.hp.terms));
+});
+
+test("H3d: option choices grant through contracts at their own level — 대지 유형 at 10, 원소의 친화력 at 6 (D242)", async () => {
+  const { build } = await import("./support");
+  const land9 = build({ name: "드루이드", classes: "druid", level: 9 }, { "class.0.subclass": ["dnd.srd521.subclass.druid.circle-of-the-land"], "class.2.subclass.land-type": ["polar"] }).derived;
+  const land10 = build({ name: "드루이드", classes: "druid", level: 10 }, { "class.0.subclass": ["dnd.srd521.subclass.druid.circle-of-the-land"], "class.2.subclass.land-type": ["polar"] }).derived;
+  assert.ok(!JSON.stringify(land9.defenses.resistances).includes("냉기") && !land9.defenses.resistances.includes("cold"), JSON.stringify(land9.defenses));
+  assert.ok(JSON.stringify(land10.defenses.resistances).includes("냉기") || land10.defenses.resistances.includes("cold"), JSON.stringify(land10.defenses));
+  const sorcerer = build({ name: "소서러", classes: "sorcerer", level: 6 }, { "class.5.subclass.elemental-affinity": ["fire"] }).derived;
+  assert.ok(sorcerer.damageTypeModifier?.includes("fire"), JSON.stringify(sorcerer.damageTypeModifier));
+  const warden = build({ name: "드루이드", classes: "druid", level: 1 }, { "class.0.primal-order": ["warden"] }).derived;
+  assert.ok(warden.proficiencies.armor.some((item) => item.includes("평장")), JSON.stringify(warden.proficiencies.armor));
 });

@@ -50,7 +50,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score",
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "spell.damage-type.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -143,6 +143,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "spell.damage.ability-modifier": { const spell = operation.spell ?? text(operation, scope); if (spell) application.spellDamageModifier = [...(application.spellDamageModifier ?? []), spell]; break; }
       case "attack-roll.studied": application.studiedAttacks = true; break;
       case "spell.cantrip-potent": application.potentCantrip = true; break;
+      case "spell.damage-type.ability-modifier": application.damageTypeModifier = [...(application.damageTypeModifier ?? []), ...(operation.damageTypes ?? [])]; break;
       case "saving-throw.minimum-score": application.minimumScoreRolls = [...(application.minimumScoreRolls ?? []), ...((operation.abilities ?? []) as AbilityKey[])]; break;
       case "spell.school-damage.ability-modifier": if (operation.school) application.schoolDamageModifier = [...(application.schoolDamageModifier ?? []), { school: operation.school, classSlug: text(operation, scope) ?? "" }]; break;
       case "healing.maximize": application.healingMaximized = true; break;
