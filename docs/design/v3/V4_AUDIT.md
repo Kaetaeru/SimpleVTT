@@ -31,7 +31,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D264 berserker.intimidating-presence (14) — 추가 행동·지혜 내성·공포·반복 내성·긴 휴식 1회·격노로 회복 없음. — [new-grammar]
 - ✔ D277 berserker.mindless-rage (6) — 언제든 누르는 해제 버튼. 격노 중 면역이어야. — [new-grammar] 효과 중 조건부 속성.
 - ✔ D277 berserker.frenzy (3) — 판정 전이지만 "처음 맞힌 대상"이라 명중 창이어야. 턴당 1회 안 셈. — [data-fix + host-hook]
-- brutal-strike 계열 (9/13/17) — 턴당 1회·효과 수 제한 안 셈, 절뚝·휘청·무너뜨림 효과가 문구. — [new-grammar + host-hook]
+- ✔ D287 (효과 수 상한은 계약으로, 15피트 밀기·속도 −15는 좌표가 없어 사유 있는 라벨) brutal-strike 계열 (9/13/17) — 턴당 1회·효과 수 제한 안 셈, 절뚝·휘청·무너뜨림 효과가 문구. — [new-grammar + host-hook]
 - ✔ D267 berserker.retaliation (10) — 피해 받음 반응 창 없음. — [host-hook + button]
 - ✔ D265 primal-champion (20) — cap 24, SRD는 25. — [data-fix]
 - ✔ D277 indomitable-might (18) — 근력 판정 최소값이 문구. — [new-grammar] `ability-check.minimum-score`.

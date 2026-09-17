@@ -836,3 +836,25 @@ test("V4v: a bigger slot reaches more creatures — 축복 at 3rd takes five, an
   const card = t.host.archive.filter((message) => message.type === "spell").at(-1);
   assert.equal(card?.spell?.targets.length, 5, JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
 });
+
+test("V4y: 잔혹한 일격 allows one effect, two from 17; 질풍 연타 puts its strikes on the menu (D287)", async () => {
+  const { pcAttackSpec } = await import("../../client/rules/attackSpec");
+  const cat = catalog();
+  const keys = ["barbarian.brutal-strike#strike", "barbarian.brutal-strike#hamstring", "barbarian.brutal-strike#staggering"];
+
+  // At 9 only one effect rides along with the strike; at 17 both do.
+  for (const [level, effects] of [[9, 1], [17, 2]] as Array<[number, number]>) {
+    const barbarian = build({ name: "바바리안", classes: "barbarian", level });
+    assert.equal(barbarian.derived.forgoLimit, effects, `level ${level}`);
+    const entry = newJournalCharacter("c", "p", barbarian.source, { ...initialRuntime(barbarian.derived), effects: [{ key: "feature:barbarian.reckless-attack", name: "무모한 공격", source: "feature", duration: "이 턴", concentration: false, rounds: 1, elapsed: 0, startedAt: "" }] });
+    const axe = barbarian.derived.attacks.find((attack) => attack.ability === "str" && !attack.range)!;
+    const spec = pcAttackSpec(entry, barbarian.derived, axe.id, { contracts: keys }, cat)!.spec;
+    const named = (spec.riders ?? []).map((rider) => rider.label).filter((label) => label?.includes("일격"));
+    assert.ok(named.length >= 1, JSON.stringify(spec.riders));
+  }
+
+  // 질풍 연타: the menu's own list carries the swings, and they cost nothing of the turn.
+  const monk = build({ name: "몽크", classes: "monk", level: 10 });
+  const swings = (monk.derived.bonusActions ?? []).find((item) => item.kind === "attack" && item.free)!;
+  assert.deepEqual([swings.attackScope, swings.count, swings.free], ["unarmed", 3, true]);
+});
