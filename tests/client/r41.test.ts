@@ -54,20 +54,15 @@ test("operations: each new kind parses into something the engine can act on (D18
   assert.equal(emptyOutcome(outcome), false);
 });
 
-test("operations: 자기 회복 takes the conditions off the sheet, from its contract (D181)", async () => {
+test("operations: 자기 회복 is the end of the turn, from its contract (D181, V4h D270)", () => {
   const cat = catalog();
   const made = build({ name: "m", classes: "monk", level: 14 });
   const feature = made.derived.features.find((item) => featureRuleKey(item.id) === "monk.self-restoration")!;
   assert.ok(feature, made.derived.features.map((item) => featureRuleKey(item.id)).join(","));
-  assert.deepEqual(contractOutcome(featureContract(cat, "monk.self-restoration")!, characterScope(made.derived)).conditionsRemoved, ["매혹", "공포", "중독"]);
-  let runtime = ["매혹", "공포", "중독"].reduce((acc, condition) => toggleCondition(acc, condition), initialRuntime(made.derived));
-  assert.deepEqual(runtime.conditions.filter((item) => ["매혹", "공포", "중독"].includes(item)), ["매혹", "공포", "중독"]);
-  const outcome = await activateFeature(feature, {
-    source: made.source, catalog: cat, derived: made.derived, runtime,
-    rollDice: async (spec) => ({ id: "r", at: "", label: spec.label, formula: spec.formula, total: 0, dice: [], modifier: 0 }), save: (update) => { runtime = update(runtime); },
-  });
-  assert.equal(outcome, "done");
-  assert.deepEqual(runtime.conditions.filter((item) => ["매혹", "공포", "중독"].includes(item)), [], JSON.stringify(runtime.conditions));
+  // V4h (D270): one of the three goes at the end of each of the monk's own turns, so it is no longer a button.
+  const entries = featureContract(cat, "monk.self-restoration")!.entryPoints.filter((entry) => entry.invocation === "turn-end");
+  assert.deepEqual(entries.flatMap((entry) => entry.operations.flatMap((operation) => (operation.kind === "condition.remove" ? [operation.condition] : []))), ["매혹", "공포", "중독"]);
+  assert.deepEqual(contractOutcome(featureContract(cat, "monk.self-restoration")!, characterScope(made.derived)).conditionsRemoved, []);
 });
 
 test("operations: what the table has to decide is written on the log, not dropped (D181)", async () => {

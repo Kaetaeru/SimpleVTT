@@ -294,6 +294,10 @@ export interface DerivedCharacter {
   zeroHolds?: ZeroHold[];
   /** V4e (D267): the auras this character carries, and what a creature marked inside one gets. */
   auras?: Array<{ name: string; saveBonus: number; conditionImmunities: string[] }>;
+  /** V4h (D270): a death save of at least this counts as a 20. */
+  deathSaveCritRange?: number;
+  /** V4h (D270): how many riders may give up another rider's dice on one attack (교활한 일격). */
+  forgoLimit?: number;
   /** V4a (D263): spells whose casting shows the caster the target's defenses. */
   revealDefenses?: string[];
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll (원소의 친화력). */

@@ -78,7 +78,7 @@ test("R63: a rogue's hit opens the window, and 암습 lands on the same dice (D1
   assert.deepEqual(prompt.prompt!.onHit!.offers.map((offer) => offer.key).filter((key) => !key.includes("#")), ["savage", "rogue.sneak-attack"]);
   assert.equal(prompt.prompt!.onHit!.outcome, "hit");
 
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"] });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"], facts: ["sneak-advantage"] });
   await tick();
   const [card] = t.cards();
   assert.ok(card, "answered, the card is posted");
@@ -96,7 +96,7 @@ test("R63: on a critical the rider's dice double too (D198)", async () => {
   await tick();
   const [prompt] = t.open();
   assert.equal(prompt.prompt!.onHit!.outcome, "crit", "the window says it was a critical");
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"] });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"], facts: ["sneak-advantage"] });
   await tick();
   const [card] = t.cards();
   assert.equal(card.action.outcome, "crit");
@@ -191,7 +191,7 @@ test("R63: the target's reaction is asked first, then the attacker (D198)", asyn
   await tick();
   const [prompt] = t.open();
   assert.ok(prompt, "the swing still landed, so now the attacker is asked");
-  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"] });
+  t.dm.send({ type: "act.onhit", messageId: prompt.id, choices: ["rogue.sneak-attack"], facts: ["sneak-advantage"] });
   await tick();
   assert.equal(t.cards().length, 1);
 });
@@ -201,7 +201,7 @@ test("R63: a palette edit keeps what was chosen and does not ask again (D198)", 
   const blade = t.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
   await tick();
-  t.dm.send({ type: "act.onhit", messageId: t.open()[0].id, choices: ["rogue.sneak-attack"] });
+  t.dm.send({ type: "act.onhit", messageId: t.open()[0].id, choices: ["rogue.sneak-attack"], facts: ["sneak-advantage"] });
   await tick();
   const card = t.cards()[0];
   t.dm.send({ type: "act.adjust", messageId: card.id, overrides: { outcome: "crit" } });
@@ -242,7 +242,7 @@ test("R91: 암습 is offered once per turn — taken on this turn, the next hit 
   const swing = async () => { t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } }); await tick(); };
   await swing();
   const [first] = t.open();
-  t.dm.send({ type: "act.onhit", messageId: first.id, choices: ["rogue.sneak-attack"] });
+  t.dm.send({ type: "act.onhit", messageId: first.id, choices: ["rogue.sneak-attack"], facts: ["sneak-advantage"] });
   await tick();
   await swing();
   const again = t.open()[0];

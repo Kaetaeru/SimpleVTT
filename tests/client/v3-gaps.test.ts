@@ -109,8 +109,9 @@ test("V3c: 생존자 heals at the start of the champion's turn while bloodied, a
   down.dm.send({ type: "tracker.add", turn: { name: "투사", tokenId: down.token.id, pageId: down.scene.id, entryId: down.pc.id, initiative: 10 } });
   down.dm.send({ type: "tracker.next" });
   await tick();
-  assert.equal(down.sheet().runtime.hp.current, 0, "no healing at 0 HP");
-  assert.equal(down.sheet().runtime.deathSaves.success, 1, `19 kept: ${JSON.stringify(down.host.archive.slice(-2).map((message) => message.content))}`);
+  // V4h (D270): 생존자 also counts an 18 or 19 as a 20, so the kept 19 stands the champion up at 1 HP.
+  assert.equal(down.sheet().runtime.hp.current, 1, JSON.stringify(down.host.archive.slice(-2).map((message) => message.content)));
+  assert.deepEqual(down.sheet().runtime.deathSaves, { success: 0, failure: 0 });
 });
 
 test("V3c: 믿음직한 재능 turns a proficient check's low d20 into 10 at the table (D257)", async () => {
@@ -153,7 +154,7 @@ test("V3e: 교활한 일격 takes its dice from 암습 taken with it; 안정된 
   const entry = newJournalCharacter("c", "p", rogue.source, initialRuntime(rogue.derived));
   const blade = rogue.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
   const trip = "rogue.cunning-strike#trip";
-  const both = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: ["rogue.sneak-attack", trip] }, catalog())!.spec;
+  const both = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: ["rogue.sneak-attack", trip], facts: ["sneak-advantage"] }, catalog())!.spec;
   assert.equal(both.riders?.find((part) => part.label === "암습")?.formula, "2d6", "3d6 less the die 넘어뜨리기 took");
   assert.ok(both.hitSaves?.some((save) => save.condition === "prone" && save.ability === "dex"), JSON.stringify(both.hitSaves));
   const alone = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: [trip] }, catalog())!.spec;

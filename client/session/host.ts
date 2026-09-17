@@ -143,6 +143,8 @@ export interface TableHostOptions {
   pcHitDefense?: (entry: JournalCharacter) => string | undefined;
   /** V4e (D267): the auras this sheet carries. */
   pcAuras?: (entry: JournalCharacter) => Array<{ name: string; saveBonus: number; conditionImmunities: string[] }>;
+  /** V4h (D270): conditions this sheet sheds at the end of its turn — one of each list (자기 회복). */
+  pcTurnEnd?: (entry: JournalCharacter) => Array<{ label: string; conditions: string[] }>;
   /** V4d (D266): what may keep this sheet up when it drops to 0 hit points, with the DC already grown by earlier uses. */
   pcZeroHolds?: (entry: JournalCharacter) => ZeroHold[];
   /**
@@ -1513,6 +1515,8 @@ export class TableHost {
         const rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
         this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}) });
+        // V4h (D270): the deflected attack sent back at whoever made it.
+        if (offer.redirect) { const mover = this.resolveActor(promptMessage.prompt.mover); if (mover) this.contractStrike(reactor, [mover], command.feature, { formula: offer.redirect.formula, damageType: offer.redirect.damageType, save: { ...offer.redirect.save, success: "half" } }, player.displayName, userId); }
         if (offer.strikeBack && (!offer.facts.length || offer.facts.every((item) => confirmed.has(item.id)))) this.say({ type: "prompt", who: "", content: `${promptMessage.prompt.reactor.name}: ${command.feature} — ${promptMessage.prompt.mover.name}에게 공격`, prompt: { kind: "opportunity", mover: promptMessage.prompt.mover, reactor: promptMessage.prompt.reactor } });
         return;
       }
@@ -1530,7 +1534,7 @@ export class TableHost {
         if (!attacker || attacker.entry.kind !== "character" || !target || held.inputs.attack.source !== "weapon") return refuse("공격자나 대상이 더 없습니다");
         if (!isGm && !this.mayAct(userId, held.inputs.attacker, attacker.entry)) return refuse("공격자의 조종자만 답할 수 있습니다");
         // R64 (D199): the window only ever offered the "ask" ones; the "always" ones ride along without a checkbox.
-        const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}, target));
+        const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}, target, held.resolution));
         const offered = new Map(ask.map((offer) => [offer.key, offer]));
         // R82 (D218): a smite spell counts only with a slot its offer listed, and only one on a hit.
         const spellSmite = command.spellSmite && offered.get(`spell:${command.spellSmite.spellId}`)?.slots?.some((slot) => slot.level === command.spellSmite!.slot) ? { spellId: String(command.spellSmite.spellId), slot: command.spellSmite.slot } : undefined;
@@ -1730,19 +1734,22 @@ export class TableHost {
    * the rogue's own turn, and again on someone else's turn (an opportunity attack), but never twice in one. With no
    * tracker running there is no turn to count, so nothing is held back. ponytail: in memory, a host restart forgets.
    */
-  private hitOffersFor(entry: JournalCharacter, attackId: string, riders: AttackRiders, target: { entry: JournalEntry; token?: Token }): HitOffer[] {
+  private hitOffersFor(entry: JournalCharacter, attackId: string, riders: AttackRiders, target: { entry: JournalEntry; token?: Token }, /** V4h (D270): the swing that just landed, for facts the table reads off it (암습 advantage). */ resolution?: AttackResolution): HitOffer[] {
     const used = this.turnUses.get(entry.id);
     const spent = used && used.mark === this.turnMark() ? used.keys : [];
     // H2 (D239): a fact the table computes (`auto`) is never asked — the offer drops when it is false, and shows
     // without the checkbox when it is true (거상 학살자 only against a wounded creature).
     return (this.options.pcHitOffers?.(entry, attackId, riders) ?? [])
       .filter((offer) => !(offer.oncePerTurn && spent.includes(offer.key)))
-      .filter((offer) => (offer.facts ?? []).every((fact) => !fact.auto || this.targetFact(fact.auto, target)))
-      .map((offer) => { const facts = offer.facts?.filter((fact) => !fact.auto); return facts?.length === offer.facts?.length ? offer : { ...offer, facts: facts?.length ? facts : undefined }; });
+      // V4h (D270): a computed fact that came out false drops the offer, unless it says to ask instead.
+      .filter((offer) => (offer.facts ?? []).every((fact) => !fact.auto || fact.orAsk || this.targetFact(fact.auto, target, resolution)))
+      .map((offer) => { const facts = offer.facts?.filter((fact) => !fact.auto || (fact.orAsk && !this.targetFact(fact.auto, target, resolution))); return facts?.length === offer.facts?.length ? offer : { ...offer, facts: facts?.length ? facts : undefined }; });
   }
 
   /** H2 (D239): the facts about a target the table computes, by their scope name. An unknown name is never true. */
-  private targetFact(ref: string, actor: { entry: JournalEntry; token?: Token }): boolean {
+  private targetFact(ref: string, actor: { entry: JournalEntry; token?: Token }, resolution?: AttackResolution): boolean {
+    // V4h (D270): what the swing itself says (암습 needs advantage, or an ally beside the target).
+    if (ref === "attack.advantage") return resolution?.advantage === "advantage";
     const combatant = this.combatantOf(actor);
     if (!combatant) return false;
     if (ref === "target.hp.below-max") return combatant.hp.current < combatant.hp.max;
@@ -1819,7 +1826,7 @@ export class TableHost {
     const landed = resolution.outcome === "hit" || resolution.outcome === "crit";
     if (allowOnHit && landed && attacker.entry.kind === "character" && inputs.attack.source === "weapon" && this.options.pcHitOffers) {
       // R64 (D199): what the player set to "always" is taken without a window; "never" is not offered at all.
-      const { ask: offers, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, inputs.attack.attackId, inputs.riders ?? {}, target));
+      const { ask: offers, auto } = splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, inputs.attack.attackId, inputs.riders ?? {}, target, resolution));
       if (!offers.length && auto.length) return this.takeHitChoices(held, { choices: [] }, auto);
       if (offers.length) {
         const promptId = newMessageId();
@@ -1848,7 +1855,7 @@ export class TableHost {
     if (held.attacker.entry.kind === "character" && held.inputs.attack.source === "weapon") {
       for (const offer of this.options.pcHitOffers?.(held.attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []) {
         if (!all.choices.includes(offer.key)) continue;
-        for (const fact of offer.facts ?? []) if (fact.auto && this.targetFact(fact.auto, held.target)) all.facts.push(fact.id);
+        for (const fact of offer.facts ?? []) if (fact.auto && this.targetFact(fact.auto, held.target, held.resolution)) all.facts.push(fact.id);
       }
     }
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
@@ -2012,7 +2019,9 @@ export class TableHost {
     let note: string;
     // R28 (D149): "깨어남" now takes 무의식 off too — it used to stay on, handing every attacker advantage and
     // turning every melee hit into a critical against a character who had just stood up.
-    if (die === 20) { next = wakeUp({ ...runtime, hp: { ...runtime.hp, current: 1 } }); note = "20! HP 1로 깨어남"; }
+    // V4h (D270): 생존자 — an 18 or 19 counts as a 20 too.
+    const crit = (this.options.pcStats?.(entry)?.deathSaveCritRange ?? 20);
+    if (die >= crit) { next = wakeUp({ ...runtime, hp: { ...runtime.hp, current: 1 } }); note = `${die}! HP 1로 깨어남`; }
     else if (die === 1) { next = recordDeathSave(recordDeathSave(runtime, false), false); note = "1! 실패 2회"; }
     else { next = recordDeathSave(runtime, die >= 10); note = die >= 10 ? "성공" : "실패"; }
     this.say({ type: "rollresult", who, content: `${entry.name} · 죽음 내성 (${note})`, roll: { formula: "1d20", total: die, dice: [{ sides: 20, value: die }], modifier: 0, label: `${entry.name} · 죽음 내성 — ${note} (${next.deathSaves.success}/${next.deathSaves.failure})` } });
@@ -2339,7 +2348,7 @@ export class TableHost {
     // R63 (D198): the attacker let the on-hit window go ("안 함") — the card lands as it was rolled.
     // R64 (D199): "안 함" answers the checkboxes; what the sheet takes without asking still lands.
     if (held.stage === "on-hit") {
-      const auto = attacker.entry.kind === "character" && held.inputs.attack.source === "weapon" ? splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}, target)).auto : [];
+      const auto = attacker.entry.kind === "character" && held.inputs.attack.source === "weapon" ? splitHitOffers(attacker.entry.runtime, this.hitOffersFor(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}, target, held.resolution)).auto : [];
       this.takeHitChoices({ ...held, attacker, target }, { choices: [] }, auto);
       return;
     }
@@ -2995,6 +3004,15 @@ export class TableHost {
     }
     if (result.started?.entryId) this.tickAnchored(result.started.entryId, "start");
     const endedActor = this.actorOfTurn(result.ended);
+    // V4h (D270): what the end of this creature own turn sheds (자기 회복: one of Charmed, Frightened, Poisoned).
+    if (endedActor?.entry.kind === "character") for (const shed of this.options.pcTurnEnd?.(endedActor.entry) ?? []) {
+      const live = this.journalEntries.get(endedActor.entry.id);
+      if (live?.kind !== "character") break;
+      const gone = shed.conditions.find((condition) => live.runtime.conditions.includes(condition));
+      if (!gone) continue;
+      this.storeEntry({ ...live, runtime: { ...live.runtime, conditions: live.runtime.conditions.filter((condition) => condition !== gone), updatedAt: this.now() }, updatedAt: this.now() });
+      this.say({ type: "system", who: "", content: `${live.name}: ${shed.label} — ${gone} 해제` });
+    }
     // V3h (D262): the disadvantage 다중 공격 방어 gave lasts until the end of the hitter's turn.
     if (endedActor?.token && endedActor.page) { const page = this.pages.get(endedActor.page.id); if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(marker.name === HIT_DEFENSE_MARK && marker.from === endedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); } }
     if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }

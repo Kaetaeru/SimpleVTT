@@ -124,7 +124,7 @@ test("V0.9: four adventurers, an ogre and two goblins — initiative to a short 
   const [onHit] = t.open("on-hit");
   assert.ok(onHit?.prompt?.onHit?.offers.some((offer) => offer.key === "rogue.sneak-attack"), JSON.stringify(onHit?.prompt?.onHit?.offers));
   const beforeSneak = t.hp("ogre");
-  dm.send({ type: "act.onhit", messageId: onHit.id, choices: ["rogue.sneak-attack"] });
+  dm.send({ type: "act.onhit", messageId: onHit.id, choices: ["rogue.sneak-attack"], facts: ["sneak-advantage"] });
   await tick();
   const sneakCard = t.cards().at(-1)!;
   assert.equal(sneakCard.action.damage.find((part) => part.part.label === "암습")?.dice.length, 3, "level 5: 3d6");

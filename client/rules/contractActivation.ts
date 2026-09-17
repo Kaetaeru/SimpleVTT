@@ -6,14 +6,14 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { resourceIdOf, ATTACK_INVOCATIONS, GAIN_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { resourceIdOf, ATTACK_INVOCATIONS, GAIN_INVOCATION, TURN_END_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
 // readers that answer "what does the 사용 button do" leave it out. `contractSummary` still prints it as a rule.
 // R63 (D198): so is an `on-hit` one, chosen in the window a hit opens.
 // R78 (D213): nor a `short-rest` one, which the rest window runs. R81 (D215): nor an `initiative` one.
-const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && !TRIGGER_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION && entry.invocation !== TURN_START_INVOCATION);
+const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && !TRIGGER_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION && entry.invocation !== TURN_START_INVOCATION && entry.invocation !== TURN_END_INVOCATION);
 const operationsOf = (contract: CommonPlayContract) => [...livePoints(contract).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
 const live = (operation: ContractOperation, scope: Scope) => !("when" in operation && operation.when) || evaluate((operation as { when?: Parameters<typeof evaluate>[0] }).when, scope) === true;
 
@@ -303,6 +303,12 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
     rules.push(`얻을 때 — ${GAIN_KO[operation.property] ?? operation.property}${label ? `: ${label}` : ""}`);
   }
   // V3c (D257): what the start of the owner's turn does by itself.
+  // V4h (D270): what the end of the owner turn does by itself.
+  for (const operation of contract.entryPoints.filter((item) => item.invocation === TURN_END_INVOCATION).flatMap((item) => item.operations)) {
+    if (operation.kind !== "condition.remove") continue;
+    mechanical = true;
+    rules.push(`턴이 끝날 때 자동 — ${operation.condition} 중 하나 해제`);
+  }
   for (const operation of contract.entryPoints.filter((item) => item.invocation === TURN_START_INVOCATION).flatMap((item) => item.operations)) {
     if (operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain") { mechanical = true; rules.push("전투 중 턴 시작에 자동 — 영웅적 영감이 없으면 얻음"); continue; }
     if (operation.kind !== "healing.apply") continue;

@@ -222,7 +222,10 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   // this sheet actually offers. A key the sheet does not carry is dropped, so the wire cannot invent damage.
   // V3e (D259): a rider that gives up another rider's dice counts only when that rider was taken with it.
   const declaredKeys = riders.contracts ?? [];
-  const chosen = declaredKeys.filter((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return !rider?.forgo || declaredKeys.includes(rider.forgo.key); });
+  // V4h (D270): only as many riders as the sheet may pay dice for give up another rider's dice (교활한 일격 하나, 향상된 뒤 둘).
+  const forgoLimit = derived.forgoLimit ?? 1;
+  let forgoTaken = 0;
+  const chosen = declaredKeys.filter((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); if (!rider?.forgo) return true; if (!declaredKeys.includes(rider.forgo.key)) return false; forgoTaken += 1; return forgoTaken <= forgoLimit; });
   const forgone = (key: string) => chosen.reduce((sum, other) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === other); return rider?.forgo?.key === key ? sum + rider.forgo.dice : sum; }, 0);
   for (const key of chosen) {
     const rider = (derived.attackRiders ?? []).find((item) => item.key === key);

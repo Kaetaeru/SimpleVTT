@@ -17,7 +17,7 @@ import { tableOutcome } from "../rules/contractTable";
 import { payContract, pcRescues } from "../rules/contractUse";
 import { itemUse } from "../rules/items";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
-import { characterScope, evaluate, TURN_START_INVOCATION } from "../rules/contract";
+import { characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
 import type { TableHostOptions } from "./host";
@@ -77,6 +77,11 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     pcExtraTurns: (entry) => derivedOf(entry, catalog()).extraTurns ?? [],
     pcHitDefense: (entry) => derivedOf(entry, catalog()).hitDefense,
     pcAuras: (entry) => derivedOf(entry, catalog()).auras ?? [],
+    // V4h (D270): the conditions a turn-end contract sheds, one of them per turn (자기 회복).
+    pcTurnEnd: (entry) => {
+      const derived = derivedOf(entry, catalog());
+      return derived.features.flatMap((feature) => { const contract = featureContract(catalog(), featureRuleKey(feature.id)); const conditions = (contract?.entryPoints ?? []).filter((point) => point.invocation === TURN_END_INVOCATION).flatMap((point) => point.operations).flatMap((operation) => (operation.kind === "condition.remove" ? [operation.condition] : [])); return conditions.length ? [{ label: feature.name, conditions }] : []; });
+    },
     pcZeroHolds: (entry) => {
       const derived = derivedOf(entry, catalog());
       const running = new Set((entry.runtime.effects ?? []).map((effect) => effect.name));

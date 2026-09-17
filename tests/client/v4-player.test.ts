@@ -405,3 +405,37 @@ test("V4g: save spells that rolled nothing now deal their damage, a spell that e
   const cleric = t.entry(1) as ReturnType<typeof newJournalCharacter>;
   assert.deepEqual(cleric.runtime.conditions, ["실명"], JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
 });
+
+test("V4h: a turn ends one condition, the sneak attack reads its own advantage, and the deflected attack goes back (D270)", async () => {
+  const { pcAttackSpec } = await import("../../client/rules/attackSpec");
+  // 자기 회복: one of the three goes when the monk's turn ends.
+  const t = await table([{ classes: "monk", level: 14, runtime: (runtime) => ({ ...runtime, conditions: ["공포", "중독"] }) }], [dummy("허수아버", 80, { actions: [{ name: "주먹", attack: { mode: "melee", bonus: 20, rangeFeet: 5, damage: [{ formula: "8", type: "bludgeoning" }] } }] })]);
+  t.dm.send({ type: "tracker.add", turn: { name: "몭크", tokenId: t.ref(0).tokenId, pageId: t.scene.id, entryId: t.ref(0).entryId, initiative: 20 } });
+  t.dm.send({ type: "tracker.next" });
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  const monk = t.entry(0) as ReturnType<typeof newJournalCharacter>;
+  assert.deepEqual(monk.runtime.conditions, ["중독"], JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+
+  // 공격 흘리기: the reaction sends the attack back at the ogre.
+  const hp = () => t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((token) => token.id === t.ref(1).tokenId)!.bars[0].value ?? 0;
+  const before = hp();
+  t.dm.send({ type: "act.attack", attacker: t.ref(1), targets: [t.ref(0)], attack: { source: "npc", actionName: "주먹" } });
+  await tick();
+  const guard = t.host.archive.filter((message) => message.type === "prompt" && message.prompt?.kind === "guard" && !message.supersedes).at(-1)!;
+  assert.ok(guard.prompt!.guard!.features.length, JSON.stringify(guard.prompt!.guard!.features.map((feature) => feature.name)));
+  t.dm.send({ type: "act.guard", messageId: guard.id, feature: guard.prompt!.guard!.features[0].name });
+  await tick();
+  assert.ok(hp() < before, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+
+  // 암습: the dice ride along without a checkbox when the swing had advantage, and only one 교활한 일격 effect is paid for.
+  const rogue = build({ name: "로그", classes: "rogue", level: 5 });
+  const entry = newJournalCharacter("c", "p", rogue.source, initialRuntime(rogue.derived));
+  const blade = rogue.derived.attacks.find((attack) => attack.properties.includes("finesse"))!;
+  const two = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: ["rogue.sneak-attack", "rogue.cunning-strike#trip", "rogue.cunning-strike#poison"], facts: ["sneak-advantage"] }, catalog())!.spec;
+  assert.equal(two.riders?.find((part) => part.label === "암습")?.formula, "2d6", "one effect only at level 5");
+  assert.equal(two.hitSaves?.length, 1, JSON.stringify(two.hitSaves));
+  const eleven = build({ name: "로그", classes: "rogue", level: 11 });
+  const better = pcAttackSpec(newJournalCharacter("c", "p", eleven.source, initialRuntime(eleven.derived)), eleven.derived, eleven.derived.attacks.find((attack) => attack.properties.includes("finesse"))!.id, { contracts: ["rogue.sneak-attack", "rogue.cunning-strike#trip", "rogue.cunning-strike#poison"], facts: ["sneak-advantage"] }, catalog())!.spec;
+  assert.equal(better.hitSaves?.length, 2, "two from 11");
+});

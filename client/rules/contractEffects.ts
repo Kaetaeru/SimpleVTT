@@ -52,7 +52,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "effect.upkeep", "effect.upkeep-waived", "hp.zero.hold", "aura.grant", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "effect.upkeep", "effect.upkeep-waived", "hp.zero.hold", "aura.grant", "death-save.crit-range", "rider.forgo-limit", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -86,7 +86,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
   const notes: string[] = [];
   // R52 (D187): a pre-roll rider is not a standing property; it belongs to the attack dialog. R63 (D198): nor an on-hit one.
   // H3 (D240): a gain entry point runs once while the character is built, never as a standing property.
-  const operations = [...contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION && entry.invocation !== "turn-start").flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
+  const operations = [...contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && entry.invocation !== GAIN_INVOCATION && entry.invocation !== "turn-start" && entry.invocation !== "turn-end").flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
   let describes = false;
   for (const operation of operations) {
     // R49 (D184): a question for the table is a line on the sheet too — that is what the hand-written rules' `notes`
@@ -150,6 +150,10 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.studied": application.studiedAttacks = true; break;
       // V4c (D265): the host reads this from the effect contract to end the effect for want of a deed; nothing on the sheet.
       case "effect.upkeep": break;
+      // V4h (D270): a death save this high counts as a 20 (생존자의 죽음 저항).
+      case "death-save.crit-range": application.deathSaveCritRange = Math.min(application.deathSaveCritRange ?? 20, number(operation, scope) ?? 20); break;
+      // V4h (D270): how many hit-window effects one rider may pay dice for (향상된 교활한 일격).
+      case "rider.forgo-limit": application.forgoLimit = Math.max(application.forgoLimit ?? 0, number(operation, scope) ?? 1); break;
       // V4e (D267): what creatures marked "in" this character's aura get — a bonus to every save, condition immunities (보호의 오라).
       case "aura.grant": { const p = operation.params ?? {}; application.auras = [...(application.auras ?? []), { name: String(p.name ?? operation.note ?? ""), saveBonus: number(operation, scope) ?? 0, conditionImmunities: Array.isArray(p.conditionImmunities) ? p.conditionImmunities.map(String) : [] }]; break; }
       // V4d (D266): dropping to 0 hit points leaves this many instead — after a save, from a pool, while an effect runs (불굴의 격노, 끈질긴 인내).

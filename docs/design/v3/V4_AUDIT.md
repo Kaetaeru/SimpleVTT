@@ -37,20 +37,20 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 파이터
 - action-surge / -2 (2/17) — 턴당 1회 안 셈, 없는 자원 `fighter.action-surge.turn`을 결제로 씀, 마법 행동 제외 없음. — [host-hook]
-- champion.survivor (18) — 죽음 내성 18~20이 20으로 취급되지 않음. — [new-grammar] `death-save.crit-range`.
+- ✔ D270 champion.survivor (18) — 죽음 내성 18~20이 20으로 취급되지 않음. — [new-grammar] `death-save.crit-range`.
 - ✔ D265 champion.remarkable-athlete (3) — 운동 판정 유리가 문구(속성 있음). — [data-fix]
 
 ## 몽크
 - ✔ D263 open-hand.wholeness-of-body (6) — 고른 생물에게 피해 1d12. 자신 회복(무예 주사위+지혜)·지혜 수정치 횟수 풀 없음. — [data-fix]
-- open-hand.quivering-palm (17) — 해방이 내성 없이 10d12 전부. 공격 행동의 공격 하나 대신. 대상 표식·하나만 제한 없음. — [data-fix + new-grammar]
-- martial-arts (1) — 추가 행동 맨손 타격 없음. — [data-fix]
+- ✔ D270 open-hand.quivering-palm (17) — 해방이 내성 없이 10d12 전부. 공격 행동의 공격 하나 대신. 대상 표식·하나만 제한 없음. — [data-fix + new-grammar]
+- ✔ D270 martial-arts (1) — 추가 행동 맨손 타격 없음. — [data-fix]
 - focus#flurry (2/10) — 2·3회 타격이 문구, 공격 경제 부여 없음. — [data-fix]
 - ✔ D264 stunning-strike (5) — 무기 범위 없음(활에도), 성공 시 속도 절반·다음 공격 유리가 문구. — [data-fix + new-grammar]
-- deflect-attacks (3) — 되돌리기(기 1, 민첩 내성, 무예 주사위×2+민첩)가 문구. — [new-grammar]
+- ✔ D270 deflect-attacks (3) — 되돌리기(기 1, 민첩 내성, 무예 주사위×2+민첩)가 문구. — [new-grammar]
 - ✔ D265 superior-defense (18) — 기 3 소비·역장 외 저항 없음. — [data-fix]
 - ✔ D266 disciplined-survivor (14) — 실패한 내성 기 1로 재굴림 없음. — [data-fix]
 - ✔ D265 perfect-focus (15) — 수동 +4. 이니셔티브 때 4까지 채우기. — [new-grammar] "N까지 회복".
-- self-restoration (10) — 세 상태를 한 번에 버튼. 턴 끝마다 하나. — [host-hook + picker]
+- ✔ D270 self-restoration (10) — 세 상태를 한 번에 버튼. 턴 끝마다 하나. — [host-hook + picker]
 - open-hand.fleet-step (11) — 무료라는 문구가 틀림, 결제 중복. — [data-fix]
 - ✔ D264 open-hand.open-hand-technique (3) — 밀어내기 내성 굴림 없음, 교란의 기회 공격 불가가 문구, 넘어짐 1라운드. — [new-grammar]
 - ✔ D263 slow-fall (4) — DM 팔레트 손 작업 안내. — [button] 마지막 낙하 피해 감소 반응.
@@ -60,8 +60,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D264 cunning-strike#poison/#trip (5) — 1분·반복 내성이 1라운드로. — [new-grammar]
 - ✔ D264 devious-strikes#daze (14) — 내성·효과 없음. — [new-grammar]
 - ✔ D264 devious-strikes#knock-out/#obscure (14) — 지속시간 잘못. — [new-grammar]
-- sneak-attack (1) — 유리 여부를 앱이 아는데 확인 안 함, 인접 아군이 문구. — [host-hook + button]
-- improved-cunning-strike (11) — 효과 둘 제한 안 셈. — [picker]
+- ✔ D270 sneak-attack (1) — 유리 여부를 앱이 아는데 확인 안 함, 인접 아군이 문구. — [host-hook + button]
+- ✔ D270 improved-cunning-strike (11) — 효과 둘 제한 안 셈. — [picker]
 - ✔ D263 thief.thiefs-reflexes (17) — 기습 제외는 2014 문구, 2024엔 없음. — [data-fix] 문구 제거 (D263의 기습 버튼은 2024 기습 규칙: 이니셔티브 불리).
 - ✔ D263 thief.use-magic-device (13) — 충전 d6·두루마리 지능 판정이 손 작업. — [host-hook]
 - ✔ D265 thief.supreme-sneak (9) — 조건 문구가 틀림(엄폐 뒤에서 턴 끝). — [data-fix + button]

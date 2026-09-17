@@ -82,6 +82,8 @@ export interface ActorStats {
   minimumScore?: Partial<Record<AbilityKey, number>>;
   /** V3c (D257): on a check in one of these skills, a d20 below `value` counts as `value` (믿음직한 재능). */
   checkMinimum?: { value: number; skills: string[] };
+  /** V4h (D270): a death save of at least this counts as a 20 (생존자). */
+  deathSaveCritRange?: number;
 }
 
 export interface RollAdvantage {
@@ -112,6 +114,7 @@ export const pcStats = (derived: DerivedCharacter): ActorStats => ({
   ...(derived.rollAdvantage?.length ? { advantage: derived.rollAdvantage } : {}),
   ...(derived.checkMinimumD20 ? { checkMinimum: { value: derived.checkMinimumD20, skills: derived.skills.filter((skill) => skill.proficient).map((skill) => skill.id) } } : {}),
   ...(derived.minimumScoreRolls?.length ? { minimumScore: Object.fromEntries(derived.minimumScoreRolls.map((key) => [key, derived.abilities[key].score])) } : {}),
+  ...(derived.deathSaveCritRange ? { deathSaveCritRange: derived.deathSaveCritRange } : {}),
 });
 
 export const npcStats = (block: MonsterView): ActorStats => ({

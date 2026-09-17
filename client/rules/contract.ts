@@ -114,7 +114,7 @@ export type ContractOperation =
    * if the player ticked it. That is how a rule gated on where people are standing runs in a scene with no
    * positions (D109) — the app does every number, the person answers the one fact it cannot see.
    */
-  | { kind: "adjudication.request"; question: string; /** V4a (D263): a number the line shows, worked out for this character (느린 낙하's 몽크 레벨×5). */ amount?: Expr; /** H2 (D239): `auto` names a fact the table computes itself (`target.hp.below-max`), so it is never asked. */ fact?: { id: string; at: string; auto?: string }; when?: Expr }
+  | { kind: "adjudication.request"; question: string; /** V4a (D263): a number the line shows, worked out for this character (느린 낙하's 몽크 레벨×5). */ amount?: Expr; /** H2 (D239): `auto` names a fact the table computes itself (`target.hp.below-max`), so it is never asked. */ fact?: { id: string; at: string; auto?: string; /** V4h (D270): when the computed fact is false, ask instead of dropping the offer (암습). */ orAsk?: boolean }; when?: Expr }
   | { kind: "artifact.spawn"; template: { monsterId?: string; name?: string; count?: Expr }; when?: Expr }
   | { kind: "artifact.remove" | "artifact.repair" | "artifact.damage" | "artifact.relocate" | "artifact.update"; artifact: string; amount?: Expr; damageType?: string; placementRef?: string; metadataPatch?: Record<string, unknown>; when?: Expr };
 
@@ -275,6 +275,8 @@ export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATI
  * operations run when their `when` holds against the sheet and its hit points (`actor.hp.current`, `actor.hp.max`).
  */
 export const TURN_START_INVOCATION = "turn-start";
+/** V4h (D270): what the end of the owner's turn does by itself (자기 회복: one of three conditions goes). */
+export const TURN_END_INVOCATION = "turn-end";
 export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION | typeof KILL_INVOCATION;
 /**
  * R78 (D213): reserved resource ids a `resource.change` restores that are not pools — spell slots whose levels add up to
@@ -311,9 +313,9 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "movement.grant") { out.push({ kind, target: String(operation.target ?? "self"), distance: expr(operation.distance), note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "content.grant") { out.push({ kind, contentId: String(operation.contentId ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "adjudication.request") {
-      const fact = operation.fact as { id?: string; at?: string; auto?: string } | undefined;
+      const fact = operation.fact as { id?: string; at?: string; auto?: string; orAsk?: boolean } | undefined;
       if (fact && !FACT_MOMENTS.has(String(fact.at ?? ""))) { unsupported.push(`${at}: fact.at ${String(fact.at)}`); return; }
-      out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), ...(isExpr(operation.amount) ? { amount: operation.amount } : {}), ...(fact?.id ? { fact: { id: String(fact.id), at: String(fact.at), ...(fact.auto ? { auto: String(fact.auto) } : {}) } } : {}), when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), ...(isExpr(operation.amount) ? { amount: operation.amount } : {}), ...(fact?.id ? { fact: { id: String(fact.id), at: String(fact.at), ...(fact.auto ? { auto: String(fact.auto) } : {}), ...(fact.orAsk === true ? { orAsk: true } : {}) } } : {}), when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     if (kind === "artifact.spawn") {
@@ -408,7 +410,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const invocation = String(entry.invocation ?? "manual");
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
     // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
-    if (invocation !== "manual" && invocation !== GAIN_INVOCATION && invocation !== TURN_START_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    if (invocation !== "manual" && invocation !== GAIN_INVOCATION && invocation !== TURN_START_INVOCATION && invocation !== TURN_END_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
     const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;
