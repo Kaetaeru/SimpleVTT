@@ -41,7 +41,7 @@ const PRIMARY_KINDS=new Set([
 const REVIVE_HP=new Set(["one","full"]);
 const DEFINITION_FIELDS=new Set([
   "spellId","baseLevel","runtimeSupport","castingEconomy","targeting","primary","concentration","effects","trackedEffects",
-  "removesConditions","summons","unsupportedInteractions","executionScope","components","castingDurationSeconds","ritual","castingInterruption",
+  "removesConditions","summons","unsupportedInteractions","executionScope","components","castingDurationSeconds","ritual","castingInterruption","casterHealing",
 ]);
 
 function isObject(value:unknown):value is Obj {
@@ -368,6 +368,8 @@ export interface ParseSpellMechanicOptions {
 export function parseSpellMechanicDefinition(value:unknown,label:string,options:ParseSpellMechanicOptions={}):SpellMechanicDefinition {
   const raw=object(value,label);
   onlyKeys(raw,label,DEFINITION_FIELDS);
+  // V4u (D283): the caster heals by part of what the spell dealt (흡혈의 손길).
+  const casterHealing=raw.casterHealing===undefined?undefined:{mode:oneOf(object(raw.casterHealing,`${label}.casterHealing`).mode,`${label}.casterHealing.mode`,new Set(["half-damage"]))};
   const spellId=raw.spellId===undefined?options.spellId:nonEmptyString(raw.spellId,`${label}.spellId`);
   if(!spellId)throw new DomainEvaluationError(`${label}.spellId is required`);
   if(options.spellId&&spellId!==options.spellId)throw new DomainEvaluationError(`${label}.spellId must match the content id ${options.spellId}`);
@@ -409,6 +411,7 @@ export function parseSpellMechanicDefinition(value:unknown,label:string,options:
     ...(effects&&effects.length?{effects}:{}),
     ...(trackedEffects&&trackedEffects.length?{trackedEffects}:{}),
     ...(removesConditions&&removesConditions.length?{removesConditions}:{}),
+    ...(casterHealing?{casterHealing}:{}),
     ...(summons?{summons}:{}),
     ...(raw.unsupportedInteractions!==undefined?{unsupportedInteractions:stringList(raw.unsupportedInteractions,`${label}.unsupportedInteractions`)}:{}),
     ...(raw.executionScope!==undefined?{executionScope:nonEmptyString(raw.executionScope,`${label}.executionScope`)}:{}),

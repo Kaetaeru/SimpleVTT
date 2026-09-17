@@ -175,7 +175,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D281 shillelagh — 17레벨 1d20(SRD 2d6), 곤봉 ID 코드 비교(§2 위반 `effects.ts`), 역장 선택 없음. — [data-fix + picker]
 - produce-flame, flame-blade — 추가 행동 시전·이후 마법 행동 공격이어야. — [data-fix]
 - ✔ D269 spellIsJudged 버그 — 색인 데이터(sustain, creatures, weapon-spell)를 안 봐서 true-strike·spike-growth·find-familiar·find-steed·animate-dead가 판정으로 표시. — [engine bug]
-- spare-the-dying — 안정화 계산 가능. — [host-hook]
+- ✔ D283 spare-the-dying — 안정화 계산 가능. — [host-hook]
 - 상위 슬롯 대상 증가 문법 없음(축복·액운·매혹·명령·웃음·영웅심·도약·괴물/인간 포박·투명·실명/귀머거리·능력 강화·비행·추방 등), 호스트가 추가 대상 거절. — [new-grammar] `targetsPerSlotAboveBase`.
 - ✔ D268 chromatic-orb — 항상 화염, 튕김 없음. — [picker + new-grammar]
 - ice-knife — 피해 없음. 명중 1d10 뒤 범위 2d6 내성. — [new-grammar]
@@ -185,7 +185,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D282 heroism — 턴 시작 임시 HP 없음. — [new-grammar]
 - ✔ D282 ensnaring-strike, searing-smite — 턴 시작 피해·종료 내성이 문구. — [new-grammar]
 - shining-smite — 대상 공격 유리가 문구(문법 있음). — [data-fix]
-- hellish-rebuke — 반응으로 제시 안 됨. — [host-hook]
+- ✔ D283 hellish-rebuke — 반응으로 제시 안 됨. — [host-hook]
 - expeditious-retreat — 판정 표시, 추가 행동 질주 문법 있음. — [data-fix]
 - grease — 들어감·턴 끝 내성 없음. — [button]
 - acid-arrow — 다음 턴 2d4·빗나감 절반 없음. — [new-grammar]
@@ -206,7 +206,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D268 bestow-curse — 두 효과 동시. — [picker]
 - ✔ D269 slow — 효과 없는 내성. — [data-fix]
 - stinking-cloud — 중독 지속 틀림. — [data-fix + button]
-- vampiric-touch — 시전자 회복 없음. — [new-grammar]
+- ✔ D283 vampiric-touch — 시전자 회복 없음. — [new-grammar]
 - blink — 턴 끝 d6 계산 가능. — [host-hook]
 - (D268: 에너지 보호·화염 방패·저주 선택 ✔) 알려진 것: protection-from-energy·fire-shield 유형 고정, hex 능력치, enlarge-reduce 선택, resistance 2024 피해 감소, mirror-image·sanctuary 미계산, protection-from-evil-and-good 모든 공격자, 메타매직. — [picker/new-grammar]
 

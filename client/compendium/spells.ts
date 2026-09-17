@@ -37,6 +37,8 @@ export interface SpellExec {
   targeting: { kind: string; rangeFeet?: number; minTargets: number; maxTargets: number; allowedRelations?: string[]; directTarget?: boolean; requiresSight?: boolean };
   primary: SpellPrimary;
   concentration?: boolean;
+  /** V4u (D283): the caster heals by this share of the damage the spell dealt (흡혈의 손길: half). */
+  casterHealing?: { mode: "half-damage" };
   effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ termination?: { targetTakesDamage?: boolean; bearerAttacksOrCasts?: boolean } }>;
   trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration } & SpellBearerPart>;
   ritual?: boolean;

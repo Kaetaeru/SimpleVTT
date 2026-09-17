@@ -178,7 +178,7 @@ test("H6b: which spells answer a hit or a cast is data — a module reaction spe
   const { reactionSpellIds } = await import("../../client/compendium/spells");
   createCatalog([{ moduleId: "module.ward", moduleVersion: "1", content: [{ id: "module.spell.bone-ward", category: "spell", presentation: { originalName: "Bone Ward", defaultLocale: "ko-KR", locales: { "ko-KR": { name: "뼈 방벽" } } },
     mechanics: [{ kind: "spell-definition", config: { level: 1, castingTimeText: "반응", rangeText: "자신", durationText: "1라운드", classes: ["wizard"] } }, { kind: "spell-mechanic", config: { reaction: { trigger: "attack.hit-self" } } }] }] } as never]);
-  assert.deepEqual(reactionSpellIds("attack.hit-self"), ["dnd.srd521.spell.shield", "module.spell.bone-ward"]);
+  assert.deepEqual(reactionSpellIds("attack.hit-self"), ["dnd.srd521.spell.shield", "dnd.srd521.spell.hellish-rebuke", "module.spell.bone-ward"]);
   assert.deepEqual(reactionSpellIds("spell.cast-seen"), ["dnd.srd521.spell.counterspell"]);
   createCatalog();
 });

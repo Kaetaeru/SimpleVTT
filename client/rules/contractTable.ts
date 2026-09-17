@@ -24,6 +24,8 @@ export interface TableOutcome {
    * 치유사 heals, 요리사 and 독 제조자 put an item in somebody's bag. `max` is how many may be chosen, when the rule
    * says so. Everything here needs a target, which is why it could not live on the sheet.
    */
+  /** V4u (D283): the creatures it is aimed at stop dying (죽음 방비). */
+  stabilizes?: boolean;
   party: { tempHp?: string; heal?: string; /** V4p (D278): the healing rolls its dice at maximum (최상급 치유). */ healMaximized?: boolean; grants: string[]; max?: number; /** V4a (D263): an amount shared out among the chosen creatures, none past half its maximum. */ healPool?: { amount: number; cap: "half-max" }; /** V4c (D265): the use heals its target by the points chosen on the sheet, at most this many (안수). */ healPoints?: number };
   /** V4d (D266): effects the chosen creatures carry, with the rescue die they may spend (바드의 영감). */
   effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>;
@@ -52,6 +54,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     const parts = [operation.dice, Number.isFinite(flat) && flat ? `${operation.dice ? (flat > 0 ? "+" : "-") : ""}${Math.abs(flat as number)}` : ""].filter(Boolean);
     return parts.join("") || undefined;
   };
+  let stabilizes = false;
   for (const entry of contract.entryPoints) {
     if (ATTACK_INVOCATIONS.has(entry.invocation)) continue;
     for (const operation of entry.operations) {
@@ -65,6 +68,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
       if (operation.kind === "condition.apply") { selfMarks.push(operation.condition); continue; }
       // V3f (D260): a condition the use takes off the people it is aimed at.
       if (operation.kind === "condition.remove" && operation.target !== "self") { removed.push(operation.condition); continue; }
+      if (operation.kind === "life.stabilize" && operation.target !== "self") { stabilizes = true; continue; }
       // R58 (D193): the half aimed at other people. The sheet cannot answer any of it — it does not know who.
       if (!("target" in operation) || !atOthers(operation.target)) continue;
       if (operation.kind === "damage.apply") { const rolled = useFormula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides); if (rolled) strikes.push({ formula: rolled, damageType: operation.damageType, ...(operation.save ? { save: { ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10, success: operation.save.success } } : {}) }); continue; }
@@ -75,8 +79,10 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     }
   }
   const targets = contract.entryPoints.find((entry) => entry.targeting)?.targeting;
+  void stabilizes;
   if (targets?.max) party.max = targets.max;
   const table: TableOutcome = {
+    ...(stabilizes ? { stabilizes: true } : {}),
     label: derived.features.find((feature) => feature.id.endsWith(ruleKey))?.name ?? ruleKey,
     conditionsApplied: applied,
     conditionsRemoved: removed,

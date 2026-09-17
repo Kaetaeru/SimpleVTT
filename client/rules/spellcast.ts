@@ -113,6 +113,8 @@ export interface SpellResolution {
   source?: "spell" | "action";
   targets: SpellTargetResult[];
   note?: string;
+  /** V4u (D283): hit points the caster gains from the damage this spell dealt (흡혈의 손길). */
+  casterHealing?: number;
   applied: boolean;
 }
 
@@ -410,7 +412,10 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) targets.push(base(combatant));
     }
   }
-  return { spellId: spec.spellId, name: spec.name, level: spec.level, caster: { id: caster.id, name: caster.name, kind: caster.kind }, concentration: Boolean(exec.concentration), economy: exec.castingEconomy, targets, note, applied: input.apply ?? true };
+  // V4u (D283): the caster drinks part of what the spell dealt (흡혈의 손길: half the necrotic damage).
+  const dealt = targets.reduce((sum, row) => sum + Math.max(0, row.attack?.damageTotal ?? row.damage?.damageTotal ?? 0), 0);
+  const casterHealing = exec.casterHealing?.mode === "half-damage" && dealt > 0 ? Math.floor(dealt / 2) : undefined;
+  return { spellId: spec.spellId, name: spec.name, level: spec.level, caster: { id: caster.id, name: caster.name, kind: caster.kind }, concentration: Boolean(exec.concentration), economy: exec.castingEconomy, targets, ...(casterHealing ? { casterHealing } : {}), note, applied: input.apply ?? true };
 }
 
 /** One line for the chat archive. */

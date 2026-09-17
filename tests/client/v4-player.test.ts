@@ -791,3 +791,30 @@ test("V4t: a spell's own turn-start rule runs at the table — 영웅심's temp 
   const after = (t.entry(1) as ReturnType<typeof newJournalCharacter>).runtime.hp.current;
   assert.ok(after < before, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
 });
+
+test("V4u: 죽음 방비 stops a dying character, 흡혈의 손길 gives its caster half back, 지옥의 응징 is offered as a reaction (D283)", async () => {
+  const { reactionSpellIds } = await import("../../client/compendium/spells");
+  const cat = catalog();
+
+  // 지옥의 응징: the table offers it in the window an attack that hit the caster opens.
+  assert.ok(reactionSpellIds("attack.hit-self").includes("dnd.srd521.spell.hellish-rebuke"));
+
+  // 죽음 방비: the cleric's cantrip stops the fighter's death saves.
+  const t = await table([
+    { classes: "cleric", level: 3, abilities: { wis: 16 } },
+    { classes: "fighter", level: 3, runtime: (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 0 }, deathSaves: { success: 0, failure: 2 } }) },
+  ], [], () => 0.5);
+  const outcome = tableOutcome(t.made[0].derived, cat, "spell.dnd.srd521.spell.spare-the-dying") ?? tableOutcome(t.made[0].derived, cat, "dnd.srd521.spell.spare-the-dying");
+  void outcome;
+  t.dm.send({ type: "act.contract", actor: t.ref(0), ruleKey: "spell:dnd.srd521.spell.spare-the-dying", targets: [t.ref(1)] });
+  await tick();
+  const fighter = t.entry(1) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(fighter.runtime.deathSaves.success, 3, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+
+  // 흡혈의 손길: the caster regains half of what it dealt.
+  const dark = await table([{ classes: "wizard", level: 5, abilities: { int: 18 }, runtime: (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 5 } }) }], [dummy("좀비", 80)], () => 0.99);
+  dark.dm.send({ type: "act.cast", caster: dark.ref(0), spellId: "dnd.srd521.spell.vampiric-touch", targets: [dark.ref(1)], method: { kind: "slot", level: 3 }, overrides: { outcome: "hit" } });
+  await tick();
+  const wizard = dark.entry(0) as ReturnType<typeof newJournalCharacter>;
+  assert.ok(wizard.runtime.hp.current > 5, JSON.stringify(dark.host.archive.slice(-3).map((message) => message.content)));
+});

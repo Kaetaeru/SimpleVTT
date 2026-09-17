@@ -168,7 +168,7 @@ export interface TableHostOptions {
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4d (D266): effects the chosen creatures carry. */ effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; /** V4p (D278): the healing rolls at its maximum (최상급 치유). */ healMaximized?: boolean; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" }; healPoints?: number } } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; /** V4u (D283): the creatures it reaches stop dying (죽음 방비). */ stabilizes?: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4d (D266): effects the chosen creatures carry. */ effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; /** V4p (D278): the healing rolls at its maximum (최상급 치유). */ healMaximized?: boolean; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" }; healPoints?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
@@ -1079,6 +1079,14 @@ export class TableHost {
         for (const target of targets) {
           this.mark(target, outcome.conditionsApplied, true, actor.token?.id);
           this.mark(target, outcome.conditionsRemoved, false);
+          // V4u (D283): the use stops them dying (죽음 방비) — the death saves reset and the dying stops.
+          if (outcome.stabilizes && target.entry.kind === "character" && target.entry.runtime.hp.current <= 0) {
+            const live = this.journalEntries.get(target.entry.id);
+            if (live?.kind === "character") {
+              this.storeEntry({ ...live, runtime: { ...live.runtime, deathSaves: { success: 3, failure: 0 }, updatedAt: this.now() }, updatedAt: this.now() });
+              this.say({ type: "system", who: "", content: `${target.token?.name ?? live.name}: ${outcome.label} — 안정 (죽음 내성 중단)` });
+            }
+          }
         }
         const lines: string[] = [];
         // V4d (D266): the effect lands on each chosen character, with the die it carries.
@@ -2407,6 +2415,8 @@ export class TableHost {
       const applied = { ...resolution, applied: true };
       this.spells.set(messageId, { resolution: applied, rows, restoreCaster, context: context ? { ...context, who: displayName, playerId: userId } : undefined, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
       this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: describeSpell(applied), spell: applied });
+      // V4u (D283): the caster drinks part of what the spell drew (흡혈의 손길).
+      if (applied.casterHealing) { const back = this.resolveActor({ entryId: applied.caster.id }); if (back) { this.healActor(back, applied.casterHealing); this.say({ type: "system", who: "", content: `${applied.caster.name}: ${applied.name} — ${applied.casterHealing} 회복` }); } }
       this.offerRescues(messageId, applied, targets);
       if (this.spells.size > 100) this.spells.delete(this.spells.keys().next().value as string);
     });

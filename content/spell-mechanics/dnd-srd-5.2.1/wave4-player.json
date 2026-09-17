@@ -372,6 +372,37 @@
     ]
    },
    "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.vampiric-touch",
+   "baseLevel": 3,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 5,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "requiresSight": true
+   },
+   "primary": {
+    "kind": "attack-damage",
+    "damageType": "necrotic",
+    "dice": {
+     "count": 3,
+     "sides": 6,
+     "dicePerSlotAboveBase": 1
+    }
+   },
+   "concentration": true,
+   "casterHealing": {
+    "mode": "half-damage"
+   },
+   "components": {
+    "verbal": true,
+    "somatic": true
+   },
+   "executionScope": "V4u (D283): a melee spell attack for 3d6 necrotic (+1d6 per slot above 3rd); the caster regains half the damage dealt. Reaching a target again each turn as the Magic action is the sustain index's."
   }
  ]
 }
