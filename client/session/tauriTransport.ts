@@ -35,6 +35,13 @@ export class TauriTcpTransport implements Transport {
   private readonly peerHandlers = new Set<(peerId: string, state: PeerState) => void>();
   private readonly unlisten: Array<() => void> = [];
   private closed = false;
+  /**
+   * R71 (D206): the socket is open. `connect()` used to announce "connected" in a microtask queued before it returned,
+   * and that microtask ran before the caller's `await` resumed and built the TableClient — so nobody was listening,
+   * hello was never sent, and a player sat on "호스트에 연결하는 중…" forever. The state is kept instead, and whoever
+   * subscribes afterwards is told.
+   */
+  private connected = false;
 
   private constructor(private readonly role: "host" | "peer", private readonly invoke: Invoke) {
     this.peerId = role === "host" ? "host" : `tcp_${Math.random().toString(36).slice(2, 10)}`;
@@ -55,7 +62,7 @@ export class TauriTcpTransport implements Transport {
     const transport = new TauriTcpTransport("peer", invoke);
     await transport.subscribe(listen);
     await invoke<TauriStatus>("connect_session_client", { address });
-    queueMicrotask(() => { for (const handler of [...transport.peerHandlers]) handler("host", "connected"); });
+    transport.connected = true;
     return transport;
   }
 
@@ -72,7 +79,7 @@ export class TauriTcpTransport implements Transport {
       for (const handler of [...this.peerHandlers]) handler(peer, payload.state === "connected" ? "connected" : "disconnected");
     }));
     this.unlisten.push(await listen<TauriStatus>("session-transport-state", ({ payload }) => {
-      if (this.role === "peer" && (payload.state === "disconnected" || payload.role === null) && !this.closed) for (const handler of [...this.peerHandlers]) handler("host", "disconnected");
+      if (this.role === "peer" && (payload.state === "disconnected" || payload.role === null) && !this.closed) { this.connected = false; for (const handler of [...this.peerHandlers]) handler("host", "disconnected"); }
     }));
   }
 
@@ -82,7 +89,12 @@ export class TauriTcpTransport implements Transport {
     else void this.invoke("send_session_message_to", { peer: to, message: text }).catch(() => undefined);
   }
   onMessage(handler: (from: string, message: unknown) => void) { this.messageHandlers.add(handler); return () => { this.messageHandlers.delete(handler); }; }
-  onPeer(handler: (peerId: string, state: PeerState) => void) { this.peerHandlers.add(handler); return () => { this.peerHandlers.delete(handler); }; }
+  onPeer(handler: (peerId: string, state: PeerState) => void) {
+    this.peerHandlers.add(handler);
+    // R71 (D206): a player's socket that is already open says so to a listener that arrives after the connect.
+    if (this.role === "peer" && this.connected) queueMicrotask(() => { if (this.connected && this.peerHandlers.has(handler)) handler("host", "connected"); });
+    return () => { this.peerHandlers.delete(handler); };
+  }
   close() {
     this.closed = true;
     for (const off of this.unlisten) off();

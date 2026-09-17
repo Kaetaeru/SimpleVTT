@@ -168,7 +168,12 @@ function webStorage(kind: "local" | "session"): Storage | null {
  * new person; the host seat is still the DM, because the host secret says so (D117).
  */
 export const seatOf = (search = typeof window === "undefined" ? "" : window.location.search) => {
-  try { return new URLSearchParams(search).get("seat")?.trim().slice(0, 24) || null; } catch { return null; }
+  try {
+    const named = new URLSearchParams(search).get("seat")?.trim().slice(0, 24);
+    if (named) return named;
+  } catch { /* fall through */ }
+  // R71 (D206): a second exe window on the same PC is a second seat (claimed at start-up in main.tsx).
+  return (typeof window === "undefined" ? null : (window as Window & { __SIMPLEVTT_INSTANCE_SEAT__?: string | null }).__SIMPLEVTT_INSTANCE_SEAT__) ?? null;
 };
 export const userIdKey = (seat: string | null) => (seat ? `simplevtt-user-id:${seat}` : "simplevtt-user-id");
 /**
