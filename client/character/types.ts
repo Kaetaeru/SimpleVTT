@@ -249,6 +249,12 @@ export interface DerivedCharacter {
   healingSlotBonus?: boolean;
   healingMaximized?: boolean;
   elusive?: boolean;
+  /** R98 (D233): see EffectApplication. */
+  markDie?: number;
+  markAdvantage?: boolean;
+  markKeepsConcentration?: boolean;
+  potentCantrip?: boolean;
+  evocationModifierClasses?: string[];
   /** R72 (D207): attacks per Attack action, from whatever contract says so (1 when none does). */
   attackActionAttacks?: number;
   /**

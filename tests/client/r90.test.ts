@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { newJournalCharacter, newJournalNpc, type JournalNpc } from "../../client/campaign/journal";
+import { newJournalCharacter, newJournalNpc, type JournalCharacter, type JournalNpc } from "../../client/campaign/journal";
 import { newCampaign } from "../../client/campaign/model";
 import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/page";
 import { initialRuntime } from "../../client/character/runtime";
@@ -23,7 +23,7 @@ const BANE = "dnd.srd521.spell.bane";
 const BOLT = "dnd.srd521.spell.guiding-bolt";
 const MARK = "dnd.srd521.spell.hunter-s-mark";
 
-async function table(classes: string, spells: string[]) {
+async function table(classes: string, spells: string[], level = 5, prefer: Record<string, string[]> = {}) {
   const hub = new MemoryHub();
   const dice = { value: 0.01 };
   const campaign = { ...newCampaign("R90 시험", { userId: "dm", displayName: "DM" }), joinCode: "R90AAA" };
@@ -37,7 +37,7 @@ async function table(classes: string, spells: string[]) {
   await tick();
   const scene = newScene(campaign.id, "숲", 0);
   dm.send({ type: "page.put", page: scene });
-  const made = build({ name: "영웅", classes, level: 5 }, { "class.0.spells": spells });
+  const made = build({ name: "영웅", classes, level }, { "class.0.spells": spells, ...prefer });
   const pc = newJournalCharacter(campaign.id, "dm", made.source, initialRuntime(made.derived));
   const ogre = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.ogre")!);
   const other = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.ogre")!, { name: "둘째 오우거" });
@@ -95,4 +95,18 @@ test("R90: 사냥꾼의 표식 adds its d6 only to the marking ranger's hits on 
   t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.other], attack: { source: "weapon", attackId: t.weapon.id }, overrides: { outcome: "hit" } });
   await tick();
   assert.deepEqual(labels(), [t.weapon.name], "not on another creature, and not on every swing");
+});
+
+test("R98: a level-20 hunter marks with a d10, attacks the mark with advantage, and does not lose it to damage (D233)", async () => {
+  const t = await table("ranger", [MARK], 20, { "class.0.subclass": ["dnd.srd521.subclass.ranger.hunter"] });
+  t.dm.send({ type: "act.cast", caster: t.refs.pc, spellId: MARK, targets: [t.refs.ogre], method: { kind: "slot", level: 1 } });
+  await tick();
+  t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.ogre], attack: { source: "weapon", attackId: t.weapon.id }, overrides: { outcome: "hit" } });
+  await tick();
+  const card = t.lastCard();
+  const name = t.foe().runtime.effects?.find((effect) => effect.key === `spell:${MARK}`)?.name;
+  assert.ok(card.damage.some((part) => part.part.label === name && part.part.formula === "1d10"), JSON.stringify(card.damage.map((part) => [part.part.label, part.part.formula])));
+  assert.ok(card.reasons.includes("정밀한 사냥꾼"), JSON.stringify(card.reasons));
+  const ranger = t.dm.snapshot!.journal.find((entry) => entry.id === t.refs.pc.entryId) as JournalCharacter;
+  assert.equal(pcCombatant(ranger, derivedOf(ranger, catalog())).concentration, undefined, "끈질긴 사냥꾼: no concentration save for the mark");
 });

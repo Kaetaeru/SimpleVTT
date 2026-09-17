@@ -46,6 +46,14 @@ export interface EffectApplication {
   healingMaximized?: boolean;
   /** R96 (D231): attacks against this character cannot have advantage unless it is incapacitated (포착 불가). */
   elusive?: boolean;
+  /** R98 (D233): 사냥꾼의 표식 rolls this die (적 학살자), gives advantage (정밀한 사냥꾼), and survives damage (끈질긴 사냥꾼). */
+  markDie?: number;
+  markAdvantage?: boolean;
+  markKeepsConcentration?: boolean;
+  /** R98 (D233): a damage cantrip deals half on a miss or a successful save (강력한 소마법). */
+  potentCantrip?: boolean;
+  /** R98 (D233): class slugs whose evocation spells add the spellcasting modifier to one damage roll (강화된 방출). */
+  evocationModifierClasses?: string[];
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
   attackActionAttacks?: number;
   /** Korean damage type labels. */
@@ -303,6 +311,11 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.cantripModifierClasses?.length) { next = { ...next, cantripModifierClasses: [...new Set([...(next.cantripModifierClasses ?? []), ...application.cantripModifierClasses])] }; notes.push("소마법 피해에 주문 능력 수정치"); }
     if (application.healingSlotBonus) { next = { ...next, healingSlotBonus: true }; notes.push("슬롯 치유 주문 +2+슬롯 레벨"); }
     if (application.healingMaximized) { next = { ...next, healingMaximized: true }; notes.push("치유 주사위 최대값"); }
+    if (application.markDie) { next = { ...next, markDie: Math.max(next.markDie ?? 6, application.markDie) }; notes.push(`사냥꾼의 표식 d${application.markDie}`); }
+    if (application.markAdvantage) { next = { ...next, markAdvantage: true }; notes.push("표식한 대상 공격에 유리"); }
+    if (application.markKeepsConcentration) { next = { ...next, markKeepsConcentration: true }; notes.push("피해로 사냥꾼의 표식 집중이 깨지지 않음"); }
+    if (application.potentCantrip) { next = { ...next, potentCantrip: true }; notes.push("피해 소마법: 빗나감·내성 성공에도 절반"); }
+    if (application.evocationModifierClasses?.length) { next = { ...next, evocationModifierClasses: [...new Set([...(next.evocationModifierClasses ?? []), ...application.evocationModifierClasses])] }; notes.push("방출술 피해 한 번에 주문 능력 수정치"); }
     if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }
     if (application.evasion) { next = { ...next, evasion: true }; notes.push("회피술: 민첩 내성 절반 피해 — 성공 0, 실패 절반"); }
     if (application.critRange !== undefined) { next = { ...next, critRange: Math.min(next.critRange ?? 20, application.critRange) }; notes.push(`치명타 범위 ${application.critRange}–20`); }

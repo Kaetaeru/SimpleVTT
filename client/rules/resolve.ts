@@ -80,7 +80,10 @@ export interface Combatant {
   /** R90 (D225): effects that end once used — by attacking (잔혹한 조롱) or by being attacked (유도 화살). */
   consumable?: Array<{ key: string; on: "attack" | "attacked" }>;
   /** R90 (D225): damage the caster who marked this creature adds when they hit it (사냥꾼의 표식, 주술). */
-  markedBy?: Array<{ from: string; formula: string; type: string; label: string }>;
+  markedBy?: Array<{ from: string; formula: string; type: string; label: string; spellId: string }>;
+  /** R98 (D233): this attacker hunter mark rolls this die (적 학살자) and gives advantage (정밀한 사냥꾼). */
+  markDie?: number;
+  markAdvantage?: boolean;
 }
 
 export interface DamagePart {

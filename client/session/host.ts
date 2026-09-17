@@ -23,7 +23,7 @@ import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
-import { bearerRolls, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
+import { bearerRolls, HUNTERS_MARK, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -1572,10 +1572,13 @@ export class TableHost {
    * Damage that depends on who was hit, added per target: R15 Divine Smite's +1d8 against a Fiend or an Undead, and
    * R90 (D225) 사냥꾼의 표식 and 주술, whose dice land only when their caster hits the creature they marked.
    */
-  private perTargetRiders(spec: AttackSpec, attacker: { entry: JournalEntry }, target: { entry: JournalEntry }, targetCombatant: Combatant): AttackSpec {
+  private perTargetRiders(spec: AttackSpec, attacker: { entry: JournalEntry }, target: { entry: JournalEntry }, targetCombatant: Combatant, attackerCombatant?: Combatant): AttackSpec {
     const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(spec, target.entry.statBlock.creatureType) : null;
-    const marks = (targetCombatant.markedBy ?? []).filter((mark) => mark.from === attacker.entry.id).map((mark): DamagePart => ({ formula: mark.formula, type: mark.type, label: mark.label }));
-    return fiendBonus || marks.length ? { ...spec, riders: [...(spec.riders ?? []), ...(fiendBonus ? [fiendBonus] : []), ...marks] } : spec;
+    const mine = (targetCombatant.markedBy ?? []).filter((mark) => mark.from === attacker.entry.id);
+    // R98 (D233): 적 학살자 rolls a d10 for the mark, and 정밀한 사냥꾼 gives advantage against the marked creature.
+    const marks = mine.map((mark): DamagePart => ({ formula: mark.spellId === HUNTERS_MARK && attackerCombatant?.markDie ? mark.formula.replace(/d[0-9]+/, `d${attackerCombatant.markDie}`) : mark.formula, type: mark.type, label: mark.label }));
+    const precise = attackerCombatant?.markAdvantage && mine.some((mark) => mark.spellId === HUNTERS_MARK) ? ["정밀한 사냥꾼"] : [];
+    return fiendBonus || marks.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...(fiendBonus ? [fiendBonus] : []), ...marks], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
   }
 
   /**
@@ -1620,7 +1623,7 @@ export class TableHost {
     const targetCombatant = this.combatantOf(target);
     if (!attackerCombatant || !targetCombatant) return undefined;
     // R15: Divine Smite's +1d8 against a Fiend or an Undead depends on who was hit, so it is added here, per target.
-    prepared = { ...prepared, spec: this.perTargetRiders(prepared.spec, attacker, target, targetCombatant) };
+    prepared = { ...prepared, spec: this.perTargetRiders(prepared.spec, attacker, target, targetCombatant, attackerCombatant) };
     // D95: a scene (Theatre of the Mind) tracks no positions, so range never decides; the DM adjusts by hand.
     const waits = Boolean(this.campaign.settings.dmConfirmsResults) && this.roleOf(inputs.by) !== "gm";
     const resolution: AttackResolution = { ...resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits }), attackRef: inputs.attack, attackerRef: inputs.attacker };
@@ -1698,7 +1701,7 @@ export class TableHost {
     const attackerCombatant = this.combatantOf(attacker);
     const targetCombatant = this.combatantOf(target);
     if (!prepared || !attackerCombatant || !targetCombatant) return this.finishAttack({ ...held, attacker, target });
-    prepared = { ...prepared, spec: this.perTargetRiders(prepared.spec, attacker, target, targetCombatant) };
+    prepared = { ...prepared, spec: this.perTargetRiders(prepared.spec, attacker, target, targetCombatant, attackerCombatant) };
     // A reaction that raised the AC (방패, 공격 흘리기) already had its say; keep the AC the card was decided against.
     const decidedAc = held.resolution.targetAc - held.resolution.cover;
     if (targetCombatant.ac < decidedAc) targetCombatant.ac = decidedAc;

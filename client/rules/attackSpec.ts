@@ -26,6 +26,9 @@ import type { CasterStats, SpellCastSpec } from "./spellcast";
 
 const diceOf = (terms: Array<{ dice?: string }>) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
 
+/** R98 (D233): the SRD spell the hunter features name. */
+export const HUNTERS_MARK = "dnd.srd521.spell.hunter-s-mark";
+
 type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "consumable" | "markedBy">;
 /**
  * R90 (D225): the spell effects a creature is under, as what they do at the table — 축복·액운's d4 on its attack rolls
@@ -52,7 +55,7 @@ export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): Bearer
         if (on === "attack" && modifier.consumeOnUse) out.consumable.push({ key: effect.key, on: "attack" });
       }
       const damage = part.attackDamage;
-      if (damage?.againstTargetOnly && effect.from && (damage.dice || damage.flat)) out.markedBy.push({ from: effect.from, formula: damage.dice ? `${damage.dice.count}d${damage.dice.sides}` : String(damage.flat), type: damageTypeKo(damage.damageType), label: effect.name });
+      if (damage?.againstTargetOnly && effect.from && (damage.dice || damage.flat)) out.markedBy.push({ from: effect.from, formula: damage.dice ? `${damage.dice.count}d${damage.dice.sides}` : String(damage.flat), type: damageTypeKo(damage.damageType), label: effect.name, spellId: effect.key.slice("spell:".length) });
     }
   }
   return Object.fromEntries(Object.entries(out).filter(([, list]) => list.length)) as BearerRolls;
@@ -61,7 +64,8 @@ export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): Bearer
 export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter): Combatant {
   const runtime = entry.runtime;
   const bearer = bearerRolls(runtime.effects, false);
-  const concentration = (runtime.effects ?? []).find((effect) => effect.concentration);
+  // R98 (D233): 끈질긴 사냥꾼 — damage does not break the concentration on 사냥꾼의 표식, so the table asks no save for it.
+  const concentration = (runtime.effects ?? []).find((effect) => effect.concentration && !(derived.markKeepsConcentration && effect.key === `spell:${HUNTERS_MARK}`));
   return {
     // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
     id: entry.id, name: entry.name, kind: "pc", ac: derived.ac.value, hp: { current: runtime.hp.current, max: derived.hp.max, temp: runtime.hp.temp },
@@ -70,6 +74,8 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     exhaustion: runtime.exhaustion,
     ...(derived.evasion ? { evasion: true } : {}),
     ...(derived.elusive ? { elusive: true } : {}),
+    ...(derived.markDie ? { markDie: derived.markDie } : {}),
+    ...(derived.markAdvantage ? { markAdvantage: true } : {}),
     // R51 (D186): 중갑 달인 — flat reduction per damage type, from whatever effect or feat contract granted it.
     ...(derived.damageReduction?.length ? { reduction: derived.damageReduction } : {}),
     // R55 (D190): what this character gives away by attacking recklessly — anyone swinging at them gets advantage.

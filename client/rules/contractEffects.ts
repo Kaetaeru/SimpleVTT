@@ -47,6 +47,8 @@ export const PROPERTIES = [
   "saving-throw.evasion", "damage-taken.halve",
   // R96 (D231): 강력한 주문 시전, 생명의 제자, 최상급 치유, 포착 불가.
   "spell.cantrip-damage.ability-modifier", "healing.spell-slot-bonus", "healing.maximize", "attack-roll.against-me.no-advantage", "initiative.advantage",
+  // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
+  "hunters-mark.die", "hunters-mark.advantage", "hunters-mark.keeps-concentration", "spell.cantrip-potent", "spell.evocation-damage.ability-modifier",
   // R55 (D190): the three that decide a roll rather than a number.
   "attack-roll.advantage", "attack-roll.against-me.advantage", "attack-roll.ignore-cover",
   // R56 (D191): training a feat hands out. The sheet shows it; nothing else in this engine gates on it yet.
@@ -130,6 +132,11 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "spell.cantrip-damage.ability-modifier": application.cantripModifierClasses = [...(application.cantripModifierClasses ?? []), text(operation, scope) ?? ""]; break;
       case "healing.spell-slot-bonus": application.healingSlotBonus = true; break;
       case "initiative.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], skills: ["initiative"] }]; break;
+      case "hunters-mark.die": application.markDie = number(operation, scope); break;
+      case "hunters-mark.advantage": application.markAdvantage = true; break;
+      case "hunters-mark.keeps-concentration": application.markKeepsConcentration = true; break;
+      case "spell.cantrip-potent": application.potentCantrip = true; break;
+      case "spell.evocation-damage.ability-modifier": application.evocationModifierClasses = [...(application.evocationModifierClasses ?? []), text(operation, scope) ?? ""]; break;
       case "healing.maximize": application.healingMaximized = true; break;
       case "attack-roll.against-me.no-advantage": application.elusive = true; break;
       // R61 (D196): advantage on a check or a save, narrowed to the abilities the contract named.

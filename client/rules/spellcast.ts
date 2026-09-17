@@ -34,6 +34,10 @@ export interface CasterStats {
   /** R96 (D231): healing from a slot adds 2 + the slot level (생명의 제자); healing dice count as their maximum (최상급 치유). */
   healingSlotBonus?: boolean;
   healingMaximized?: boolean;
+  /** R98 (D233): a damage cantrip deals half on a miss or a successful save (강력한 소마법). */
+  potentCantrip?: boolean;
+  /** R98 (D233): added once to the spell damage (강화된 방출). */
+  damageBonusOnce?: number;
 }
 
 export interface SpellCastSpec {
@@ -122,6 +126,9 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(duration?.anchorActorId ? { anchor: { who: duration.anchorActorId === "$target" ? "bearer" as const : "source" as const, boundary: duration.boundary === "start" ? "start" as const : "end" as const } } : {}), ...(endSave ? { endSave } : {}) });
   // R51 (D186): 원소 숙련자 — "your spells ignore resistance to the chosen damage type". Applied where the parts are
   // built, so every shape of spell damage (attack, save, projectiles, components) goes through the same door.
+  // R98 (D233): 강화된 방출 — one flat part, added to the first damage roll only.
+  const once = (parts: DamagePart[]): DamagePart[] => (casterStats.damageBonusOnce && parts.length ? [...parts, { formula: String(casterStats.damageBonusOnce), type: parts[0].type, label: "강화된 방출", critDoubles: false }] : parts);
+  const potent = Boolean(casterStats.potentCantrip) && spec.level === 0;
   const unresisted = (part: DamagePart): DamagePart => ((casterStats.ignoresResistance ?? []).includes(part.type) ? { ...part, ignoresResistance: true } : part);
   const base = (target: Combatant): SpellTargetResult => ({ target: { id: target.id, name: target.name, kind: target.kind, tokenId: target.tokenId }, mode: "note", hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp, marks: [] });
   // R10: 회피 (Dodge) gives advantage on Dexterity saves.
@@ -158,8 +165,14 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "attack";
-        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: [unresisted({ formula, type: primary.damageType, label: spec.name })], ...(casterStats.ignoresCover ? { ignoresCover: true } : {}), inflicts: conditionMarks("hit", combatant) }, { dice, overrides: input.overrides, apply: input.apply });
+        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: once([unresisted({ formula, type: primary.damageType, label: spec.name })]), ...(casterStats.ignoresCover ? { ignoresCover: true } : {}), inflicts: conditionMarks("hit", combatant) }, { dice, overrides: input.overrides, apply: input.apply });
         row.attack = attack; row.hpAfter = attack.hpAfter; row.tempAfter = attack.tempAfter; row.marks = attack.inflicted;
+        // R98 (D233): 강력한 소마법 — a missed cantrip still deals half its damage (no other effect).
+        if (potent && (attack.outcome === "miss" || attack.outcome === "fumble")) {
+          const graze = applyDamage(combatant, once([unresisted({ formula, type: primary.damageType, label: `${spec.name} (강력한 소마법)` })]), dice, { half: true });
+          row.attack = { ...attack, damage: graze.damage, damageTotal: graze.damageTotal, absorbed: graze.absorbed, hpLost: graze.hpLost, hpAfter: graze.hpAfter, tempAfter: graze.tempAfter, concentration: graze.concentration, downed: graze.downed };
+          row.hpAfter = graze.hpAfter; row.tempAfter = graze.tempAfter;
+        }
         if ((attack.outcome === "hit" || attack.outcome === "crit") && exec.trackedEffects?.some((effect) => effect.trigger === "hit")) row.effect = effectStart(exec.trackedEffects.find((effect) => effect.trigger === "hit")!.duration);
         targets.push(row);
       }
@@ -184,16 +197,19 @@ export function resolveSpell(input: CastInput): SpellResolution {
     }
     case "save-damage": case "save-compound-damage": {
       const parts: DamagePart[] = (primary.kind === "save-damage" ? [{ formula: formulaOf(primary.dice, spec.level, exec, casterStats), type: primary.damageType, label: spec.name }] : primary.components.map((component) => ({ formula: formulaOf(component.dice, spec.level, exec, casterStats), type: component.damageType, label: spec.name }))).map(unresisted);
+      const areaParts = once(parts);
       // One damage roll for the whole area: the same dice hit everyone (5e), halved for those who save.
-      const rolled = input.fixedDamage ?? parts.map((part) => { const match = /^(\d+)d(\d+)/.exec(part.formula)!; return Array.from({ length: Number(match[1]) }, () => dice.d(Number(match[2]))); });
+      const rolled = input.fixedDamage ?? areaParts.map((part) => { const match = /^(\d+)d(\d+)/.exec(part.formula); if (!match) return []; return Array.from({ length: Number(match[1]) }, () => dice.d(Number(match[2]))); });
       for (const { combatant, stats } of all) {
         const row = base(combatant);
         row.mode = "save";
         row.save = save(combatant, stats, primary.saveAbility);
         // R95 (D230): 회피술 — on a Dexterity save that halves, nothing on a success and half on a failure, unless incapacitated.
         const evades = Boolean(combatant.evasion) && row.save.ability === "dex" && primary.successDamage === "half" && !["행동불능", "충격", "마비", "석화", "무의식"].some((name) => combatant.conditions.includes(name));
-        if (row.save.success && (primary.successDamage === "none" || evades)) afterDamage(row, noDamage(combatant));
-        else afterDamage(row, applyDamage(combatant, parts, dice, { fixed: rolled, half: row.save.success || evades }));
+        // R98 (D233): 강력한 소마법 turns a cantrip success-for-nothing into half.
+        const noneOnSuccess = primary.successDamage === "none" && !potent;
+        if (row.save.success && (noneOnSuccess || evades)) afterDamage(row, noDamage(combatant));
+        else afterDamage(row, applyDamage(combatant, areaParts, dice, { fixed: rolled, half: row.save.success || evades }));
         if (!row.save.success) { row.marks = conditionMarks("failed-save", combatant); if (exec.effects?.length || exec.trackedEffects?.some((effect) => effect.trigger === "failed-save")) row.effect = effectStart(exec.effects?.[0]?.duration ?? exec.trackedEffects?.find((effect) => effect.trigger === "failed-save")?.duration); }
         targets.push(row);
       }
@@ -394,7 +410,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec },
-    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.cantripDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}) },
+    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.cantripDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(view.school === "evocation" && list && derived.evocationModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`)) ? { damageBonusOnce: derived.abilities[list.ability].modifier } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };
 }
