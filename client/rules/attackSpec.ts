@@ -127,6 +127,10 @@ export function weaponRange(attack: DerivedAttack): { mode: "melee" | "ranged" }
 }
 
 const sneakDice = (derived: DerivedCharacter) => { const rogue = derived.classes.find((cls) => cls.classId.endsWith(".rogue")); return rogue ? Math.ceil(rogue.level / 2) : 0; };
+/** R100 (D235): 진실의 일격, and the spellcasting list that knows it. */
+export const TRUE_STRIKE = "dnd.srd521.spell.true-strike";
+export const trueStrikeList = (derived: DerivedCharacter) => derived.spellcasting.find((list) => list.cantrips.includes(TRUE_STRIKE));
+
 export const hasSneakAttack = (derived: DerivedCharacter, attack: DerivedAttack) => sneakDice(derived) > 0 && (attack.properties.includes("finesse") || weaponRange(attack).mode === "ranged");
 export const SMITE_LABEL = "신성한 강타";
 /** 2024 Divine Smite deals +1d8 against a Fiend or an Undead; the host adds it per target, since one attack may hit several. */
@@ -161,13 +165,18 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const offHand = Boolean(riders.offHand && canOffHand(attack));
   const offHandKeeps = offHand && Boolean(offHandFeat(derived)) && attack.damageBonus >= 0;
   const dropsAbilityMod = cleave || (offHand && !offHandKeeps);
-  const bonusText = attack.damageBonus && !dropsAbilityMod ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : "";
+  // R100 (D235): 진실의 일격 swaps Strength or Dexterity for the spellcasting ability on both rolls.
+  const strikeList = riders.trueStrike ? trueStrikeList(derived) : undefined;
+  const swap = strikeList ? derived.abilities[strikeList.ability].modifier - derived.abilities[attack.ability].modifier : 0;
+  const damageBonus = attack.damageBonus + (dropsAbilityMod ? 0 : swap);
+  const bonusText = damageBonus && !dropsAbilityMod ? `${damageBonus > 0 ? "+" : "-"}${Math.abs(damageBonus)}` : "";
   // R32 (D165): 대형 무기 전투 travels with the weapon's own damage part.
   // R51 (D186): 독 제조자 and its kin — a damage type this sheet's own damage is never resisted for.
   const ignores = (type: string) => (derived.ignoresResistance ?? []).includes(type);
   const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : offHand ? `${attack.name} (보조 손)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}), ...(ignores(attack.damageType) ? { ignoresResistance: true } : {}) }];
   const extra: DamagePart[] = [];
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
+  if (strikeList && derived.level >= 5) extra.push({ formula: `${derived.level >= 17 ? 3 : derived.level >= 11 ? 2 : 1}d6`, type: "광휘", label: "진실의 일격" });
   if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });
   if (riders.smiteSlot && hasSmite(derived) && (derived.spellSlots[riders.smiteSlot] ?? 0) > 0) {
     const level = riders.smiteSlot;
@@ -216,7 +225,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   ];
   const hitSaves = (riders.contracts ?? []).flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  if (strikeList) declared.unshift("진실의 일격");
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus + swap, mode: range.mode, damage, riders: extra, ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 /**

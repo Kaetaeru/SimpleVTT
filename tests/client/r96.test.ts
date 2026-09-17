@@ -48,3 +48,17 @@ test("R96: 포착 불가 — nothing gives advantage against the rogue unless it
   assert.equal(suggestAdvantage(npcCombatant(ogre), rogue, { ...swing, mode: "melee" }).advantage, "normal");
   assert.equal(suggestAdvantage(npcCombatant(ogre), { ...rogue, conditions: ["넘어짐", "충격"] }, { ...swing, mode: "melee" }).advantage, "advantage");
 });
+
+test("R100: 진실의 일격 swings with the spellcasting ability and adds its radiant die from level 5 (D235)", async () => {
+  const { pcAttackSpec } = await import("../../client/rules/attackSpec");
+  const made = build({ name: "위저드", classes: "wizard", level: 5, abilities: { int: 18, str: 8, dex: 12 } }, { "class.0.cantrips": ["dnd.srd521.spell.true-strike", "dnd.srd521.spell.light", "dnd.srd521.spell.mage-hand"] });
+  const entry = { id: "w", name: "위저드", runtime: initialRuntime(made.derived), source: made.source } as never;
+  const weapon = made.derived.attacks.find((attack) => attack.itemId)!;
+  assert.ok(weapon, made.derived.attacks.map((attack) => attack.name).join(", "));
+  const plain = pcAttackSpec(entry, made.derived, weapon.id, {}, catalog())!.spec;
+  const strike = pcAttackSpec(entry, made.derived, weapon.id, { trueStrike: true }, catalog())!.spec;
+  const swap = made.derived.abilities.int.modifier - made.derived.abilities[weapon.ability].modifier;
+  assert.equal(strike.attackBonus, plain.attackBonus + swap);
+  assert.deepEqual(strike.riders?.map((part) => [part.label, part.formula, part.type]), [["진실의 일격", "1d6", "광휘"]]);
+  assert.ok(strike.name.includes("진실의 일격"));
+});
