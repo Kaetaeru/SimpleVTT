@@ -568,8 +568,10 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D243 직업 표는 직업 정의 JSON이다 (V0.9 H4)**: CLAUDE.md §2. `client/rules/classes.ts`의 `CLASS_TRAINING`·`SPELLCASTING_ABILITY`·`METAMAGIC_KNOWN`·`WIZARD_SPELLBOOK`·`CLASS_RESOURCES`(최대치 함수 포함)와 `tables.ts`의 `MULTICLASS_PREREQUISITES`를 SRD 직업 모듈의 `class-definition` 설정으로 옮기고, 카탈로그가 `ClassView.rules`로 읽는다: `armorTraining`, `weaponTraining`, `toolProficiencies`, `multiclass {armor, weapons, skills, tools, instruments, prerequisites {all|any}}`, `spellcastingAbility`, `spellcastingFeature`, `resources [{id, label, column | max(식: `class.level`, `ability.<키>.modifier`), recovery, recoveryFrom, minLevel, subclassId, spell}]`, `optionPools [{id, list, label, known {레벨: 개수}}]`(메타매직). 주문서 레벨당 추가는 색인 `spells.spellbookPerLevel`. 지운 분기: 소서러·위저드 slug, `pact-magic`·`spellcasting` 플래그(시전 직업 여부는 `casterKind`), 서브클래스 레벨 3 상수(진행표 행이 정함), 능력치 향상 재주 ID(같은 등급의 반복 가능 재주가 먼저 온다), 배경 기본 기원 재주 `feat.skilled`(없으면 없음), 마법 입문 주문 목록 이름 정규식(뒤에 붙은 직업 slug면 주문 목록 프리셋). 쓰지 않던 상수 `EXPERTISE_SCHEDULE`·`FIGHTING_STYLE_LEVEL`·`MYSTIC_ARCANUM`·`DEFT_EXPLORER_LANGUAGES`·`ASI_LEVELS`·`EPIC_BOON_LEVEL`도 지웠다(행렬 테스트는 SRD 일정을 자기 안에 둔다). 진행표 행 단어("Ability Score Improvement", "Epic Boon", "…Subclass")는 표 형식 어휘라 §4 예외다. 계약 마법은 이제 시트에 "주문 시전: 자동 계산" 줄이 붙는다. 설치 모듈이 직업 정의를 바꾸면 자원·훈련·선택 풀·멀티클래스 조건이 따라가는 테스트를 두었다. 하드코딩 상한: 콘텐츠 ID 17, 키 분기 31, slug 분기 0.
 - **D244 암습은 명중 후 계약이다 (V0.9 H5a)**: CLAUDE.md §2. `attackSpec.ts`의 `sneakDice`(직업 ID 끝이 `.rogue`인지 비교)·`hasSneakAttack`·명중 창 내장 항목 `sneak`과 프로토콜 `AttackRiders.sneak`을 지우고, 암습을 `on-hit` 계약으로 적었다: 무기 필터 `finesse-or-ranged`(새 공격 범위 어휘), `damage.apply` 1d6 × `ceil-div(actor.class-level:<로그 ID>, 2)`, 피해 유형 `weapon`, 턴당 한 번, 조건 문구(유리 또는 대상 곁 아군)는 창의 안내로. 명중 창 키는 규칙 키 `rogue.sneak-attack`이라 항상/안 함/묻기 정책도 그 키로 저장된다(예전 `sneak` 정책은 묻기로 돌아간다). 모듈 직업이 같은 문법으로 자기 암습을 쓸 수 있다. 점수판: 계약 197, 이름만 앎 18.
 - **D245 신성한 강타는 명중 창의 주문이다 (V0.9 H5b)**: CLAUDE.md §2. 2024 신성한 강타는 주문인데, 앱은 특성 ID(`paladin`을 포함하고 `.smite`로 끝나는지)로 찾은 내장 라이더 `smite`와 프로토콜 `smiteSlot`으로 따로 굴렸고, 악마·언데드 +1d8은 라벨 접두어와 코드 속 유형 목록(`smiteFiendBonus`)으로 붙였다. 이제 신성한 강타는 R82의 명중 후 주문 색인(`spell-on-hit.json`)에 있다: 근접, 2d8 + 슬롯 레벨당 1d8 광휘, 새 필드 `versus {creatureTypes, damage}`. 명중 창에는 다른 강타 주문과 같은 `spell:<id>` 항목으로 나오고(슬롯 선택, 한 번에 하나), 시전으로 슬롯을 쓴다. `versus` 피해는 공격 명세의 `versusRiders`로 실려 호스트가 대상마다 유형이 맞을 때만 더한다. 모듈 주문도 `onHit.versus`로 같은 일을 한다. 예전 `smite` 정책은 묻기로 돌아간다.
+- **D246 사용 버튼은 계약이 정한다 (V0.9 H5c)**: CLAUDE.md §2(설명문 정규식 금지). `activation.ts`의 손으로 쓴 사용표(`FEATURE_ACTIVATIONS`: 공격 흘리기·브레스 무기·아드레날린 분출·안수), `breathDice`, `METAMAGIC_COST`와 쌍둥이 주문 분기, `NOT_ACTIVATABLE`(특성 키 목록), 그리고 설명문이 "추가 행동으로 …"처럼 쓰였으면 기록 버튼을 만들던 `ACTIVE_WORDING` 정규식을 지웠다. 사용 규칙은 계약으로 적었다: 브레스 무기(`damage.apply` 1d10 × `diceCount` 레벨 사다리), 아드레날린 분출(`temp-hp.grant` 숙련 보너스), 안수(`resource.change` 양 `{ref:"use.points"}` = 플레이어가 고르는 점수, 새 `use.points`), 메타매직 10종(마법 점수 비용), 설명문으로만 버튼이 생기던 7개(교활한 행동, 안정된 조준, 빠른 손, 낙하 완화, 대응의 노래, 보복, 우월한 사냥꾼의 방어 — 추가 행동·반응 문구가 턴 패널의 추가 행동 칩을 켠다), 교활한 일격(효과 안내). `contractUse`는 `diceCount`를 읽는다. 공격 흘리기와 기묘한 회피는 반응 창이 처리하므로 시트 버튼이 없어졌다. 남은 자동 규칙은 `resource.<규칙 키>` 풀을 가진 특성의 소비 버튼(ID 체계). 점수판: 계약 206, 사용 버튼(코드) 0, 이름만 앎 17.
 
 | R49 표 비우기 ✔ | D184: `EFFECT_RULES` 63→1, `FEATURE_ACTIVATIONS` 49→4, 옮긴 값 전부 대조 후 삭제, 문법에 `if` 추가, 파생이 계약을 들고 다님 | 단위 235개 통과(r49.test.ts 3개 새로), E2E 17개 전부 통과 |
+| H5c 사용 규칙 계약 ✔ | D246: 사용표·메타매직 비용·설명문 정규식 제거, `use.points`·`diceCount`, 계약 19개 추가 | 게이트 통과 |
 | H5b 신성한 강타 주문 ✔ | D245: 내장 `smite`·`smiteSlot`·`smiteFiendBonus` 제거, 명중 후 주문 색인과 `versus` 대상 유형 피해 | 게이트 통과 |
 | H5a 암습 계약 ✔ | D244: 암습 내장 라이더·프로토콜 필드 제거, `on-hit` 계약과 `finesse-or-ranged` 범위 | 게이트 통과 |
 | H4 직업 정의 JSON ✔ | D243: 훈련·멀티클래스·시전 능력·자원·선택 풀을 `class-definition`으로, slug·플래그 분기 제거 | 게이트 통과 |
@@ -661,7 +663,7 @@ R33~R35에서 방향이 정해졌다: 규칙은 코드가 아니라 **카탈로�
 | **연산** — 실행기가 계산한다 | 27 / 27 | 27 | `parseContract`가 읽고 실행기가 값을 내는 `operation` 정의 수 |
 | **연산** — 표까지 닿는다 | 27 / 27 | 27 | 그 값을 실제로 적용하는 호출 자리가 있는 수 |
 | **슬롯** — **요구되는** 자리가 열렸다 | 3 / 4 | 4 | 계약이 실제로 쓰는 슬롯 중 호스트가 여는 수. 요구되는 집합은 카탈로그에서 **재서** 나온다 (R54) |
-| **계약** — 특성이 카탈로그에서 굴러간다 | 197 / 223 | 223 | 20레벨 12직업의 직업·서브클래스 특성 중 계약이 있거나 "기계화하지 않음"에 이름이 있는 수 |
+| **계약** — 특성이 카탈로그에서 굴러간다 | 206 / 223 | 223 | 20레벨 12직업의 직업·서브클래스 특성 중 계약이 있거나 "기계화하지 않음"에 이름이 있는 수 |
 
 `schemas/common-play-contract.schema.json`의 정의는 26개지만 **종류는 27개**다(`condition.apply`/`condition.remove`가 한 정의). 계약이 실제로 쓰는 건 종류이므로 종류로 센다. **27종 전부 읽고, 27종 전부 표까지 닿는다.**
 
@@ -671,9 +673,9 @@ R33~R35에서 방향이 정해졌다: 규칙은 코드가 아니라 **카탈로�
 
 | | 개수 | 뜻 |
 |---|---|---|
-| 계약이 있다 | 197 | 카탈로그가 굴리거나, 표가 무엇을 판단할지 계약이 적어 둔다 |
-| 사용 버튼이 있다 | 8 | `activation.ts`에 손으로 쓴 항목 — 굴러가지만 코드다 |
-| 코드가 이름은 안다 | 18 | 파생·리졸버 어딘가에 하드코딩돼 있다 |
+| 계약이 있다 | 206 | 카탈로그가 굴리거나, 표가 무엇을 판단할지 계약이 적어 둔다 |
+| 사용 버튼이 있다 | 0 | `activation.ts`에 손으로 쓴 항목 — 굴러가지만 코드다 |
+| 코드가 이름은 안다 | 17 | 파생·리졸버 어딘가에 하드코딩돼 있다 |
 | **코드가 이름조차 모른다** | **0** | 앱이 아무것도 하지 않는다. 시트에 설명만 있다 |
 
 #### 축 1 — 엔진 ✔ (R37~R42에서 끝났다)

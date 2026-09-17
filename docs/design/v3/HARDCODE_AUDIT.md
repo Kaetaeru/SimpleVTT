@@ -45,7 +45,7 @@
 | P8 ✔ H4 | `rules/tables.ts` `MULTICLASS_PREREQUISITES` | 직업별 멀티클래스 조건 | 직업 JSON `multiclass.prerequisites` | 직업 JSON 필드 |
 | P9 ✔ H3d | `tracks.ts` `LAND_RESISTANCE`, `subclass.land-type`·`elemental-affinity` 분기 | 서브클래스 선택지 효과 분기 | 선택지 계약 `resistance`, `condition-immunity` | 기존 문법 |
 | P10 (암습 ✔ H5a, 신성한 강타 ✔ H5b; 야만적 공격자는 재주 설정 키라 남음) | `attackSpec.ts` 암습(`sneakDice`, `hasSneakAttack`), 신성한 강타(`hasSmite`, `SMITE_LABEL`, 악마·언데드 +1d8), `HIT_BUILT_INS`, 야만적 공격자 `featEffects` | 명중 창 내장 라이더 | `on-hit` 계약: 암습 `diceCount: ceil-div(rogue level, 2)` + 조건 사실(유리 또는 인접 아군 — 버튼), 강타 `damage.apply` + 슬롯 비용 + `when: target.type in [fiend, undead]` | 슬롯 비용 연산, 대상 유형 참조 |
-| P11 | `activation.ts` `FEATURE_ACTIVATIONS` 4개(공격 흘리기, 브레스 무기, 아드레날린 분출, 안수), `breathDice`, `METAMAGIC_COST`, `NOT_ACTIVATABLE` | 손으로 쓴 사용 규칙 | 각 특성 계약(`damage.apply` 레벨 표현식, `temp-hp.grant`, 점수 풀 사용), 메타매직 선택지 계약 `resource.change` | 점수형 풀 사용 연산 |
+| P11 ✔ H5c | `activation.ts` `FEATURE_ACTIVATIONS` 4개(공격 흘리기, 브레스 무기, 아드레날린 분출, 안수), `breathDice`, `METAMAGIC_COST`, `NOT_ACTIVATABLE` | 손으로 쓴 사용 규칙 | 각 특성 계약(`damage.apply` 레벨 표현식, `temp-hp.grant`, 점수 풀 사용), 메타매직 선택지 계약 `resource.change` | 점수형 풀 사용 연산 |
 | P12 | `effects.ts` `EFFECT_RULES["spell:aid"]` | 남은 손 규칙 1개 | 효과 계약 `hp.maximum` + 시작 시 `healing.apply` | 기존 문법 |
 | P13 | `items.ts` `POTIONS` 정규식(치유 물약 등급), 소모품 판정 정규식 | 아이템 이름 정규식 | 아이템 메커닉 JSON `use: { heal: "2d4+2" }`, `consumable: true` | 아이템 사용 메커닉 |
 | P14 | `summons.ts` `SUMMON_RULES`(5), `CONJURES_NOTHING`(6), `STEEDS` | 주문 ID별 소환 규칙 | 주문 메커닉 `summon`(R84에 이미 있음)으로 합치고, 소환 없음은 `summon: false` + 사유 | 기존(R84) |

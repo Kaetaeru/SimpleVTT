@@ -120,16 +120,23 @@ export interface ContractUse {
    * the sheet spends its largest unspent die and rolls it.
    */
   hitDie?: boolean;
+  /** H5c (D246): the pool is spent by a number the player chooses (안수) — `resource.change` with amount `{ref: "use.points"}`. */
+  points?: boolean;
 }
+
+/** H5c (D246): the amount a player chooses when pressing the button. */
+export const CHOSEN_POINTS_REF = "use.points";
 
 /** R59 (D194): the id a contract uses to mean "one of this character's hit dice". */
 export const HIT_DIE_RESOURCE = "resource.hit-die";
 
-/** `1d10` + `{ref: actor.class-level:…}` becomes "1d10+5"; a bare number becomes "5"; dice alone stay "1d10". */
-function formula(dice: string | undefined, amount: Parameters<typeof evaluate>[0], scope: Scope): string | undefined {
+/** `1d10` + `{ref: actor.class-level:…}` becomes "1d10+5"; a bare number becomes "5"; dice alone stay "1d10". H5c: `diceCount` sets how many. */
+function formula(dice: string | undefined, amount: Parameters<typeof evaluate>[0], scope: Scope, diceCount?: Parameters<typeof evaluate>[0]): string | undefined {
   const value = amount === undefined ? undefined : evaluate(amount, scope);
   const flat = typeof value === "number" ? value : undefined;
   if (!dice) return flat === undefined ? undefined : String(flat);
+  const count = diceCount === undefined ? undefined : evaluate(diceCount, scope);
+  if (typeof count === "number") dice = dice.replace(/^[0-9]*d/, `${Math.max(1, Math.floor(count))}d`);
   if (!flat) return dice;
   return `${dice}${flat > 0 ? "+" : "-"}${Math.abs(flat)}`;
 }
@@ -140,6 +147,7 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
   for (const operation of operationsOf(contract)) {
     if (!live(operation, scope)) continue;
     if (operation.kind === "resource.change") {
+      if ("ref" in operation.amount && operation.amount.ref === CHOSEN_POINTS_REF) { use.resourceId = operation.resourceId; use.points = true; found = true; continue; }
       const amount = evaluate(operation.amount, scope);
       const spent = typeof amount === "number" ? -amount : 0;
       // A negative amount spends the pool; a positive one gives it back, which a use never does to its own cost.
@@ -152,7 +160,7 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
     if (operation.kind === "healing.apply") { use.heal = formula(operation.dice, operation.amount, scope); found = true; continue; }
     if (operation.kind === "temp-hp.grant") { use.tempHp = formula(operation.dice, operation.amount, scope); found = true; continue; }
     if (operation.kind === "damage.apply") {
-      const rolled = formula(operation.dice, operation.amount, scope);
+      const rolled = formula(operation.dice, operation.amount, scope, operation.diceCount);
       if (rolled) { use.roll = { label: `${label} 피해`, formula: rolled }; found = true; }
       continue;
     }

@@ -134,7 +134,7 @@ test("coverage audit fixes: Rage 10 minutes, subclass and metamagic spend pools,
   assert.equal(metaActivation.resourceId, "resource.sorcerer.sorcery-points");
   let sr = initialRuntime(sorcerer);
   sr = useFeature(sr, sorcerer, quickened, metaActivation)!;
-  assert.equal(sr.resourcesUsed["resource.sorcerer.sorcery-points"], metaActivation.cost);
+  assert.equal(sr.resourcesUsed["resource.sorcerer.sorcery-points"], metaActivation.cost ?? 1);
 
   const paladin = build({ classes: "paladin", level: 2 }).derived;
   const smitePool = paladin.resources.find((resource) => resource.id === "resource.paladin.smite")!;

@@ -122,6 +122,27 @@ test("H5a: an on-hit contract narrows itself by weapon and scales with its class
   assert.ok(!riderFitsAttack(rider, { properties: ["heavy", "two-handed"], ability: "str" } as never), "not a greataxe");
 });
 
+test("H5c: a use is its contract — a chosen number of points, dice by level, the note — for a module feature too (D246)", async () => {
+  const { parseContract, characterScope } = await import("../../client/rules/contract");
+  const { contractUse } = await import("../../client/rules/contractActivation");
+  const { build } = await import("./support");
+  const contract = parseContract({ id: "feature:module.mending-touch", entryPoints: [{ id: "use", invocation: "manual", operations: [
+    { kind: "resource.change", resource: "resource:module.mending-touch", amount: { ref: "use.points" }, target: "self" },
+    { kind: "damage.apply", dice: "1d6", diceCount: { op: "if", args: [{ op: "gte", left: { ref: "actor.level" }, right: { value: 5 } }, { value: 3 }, { value: 1 }] }, damageType: "radiant", target: "area" },
+    { kind: "adjudication.request", question: "추가 행동 · 고른 점수만큼 회복" },
+  ] }] } as never, "module.mending-touch");
+  assert.deepEqual(contract.unsupported, []);
+  const use = contractUse(contract, characterScope(build({ name: "x", classes: "fighter", level: 6 }).derived), "치유의 손길")!;
+  assert.equal(use.points, true);
+  assert.equal(use.resourceId, "resource.module.mending-touch");
+  assert.equal(use.roll?.formula, "3d6");
+  assert.ok(use.note?.includes("추가 행동"));
+  // And nothing guesses a button from a description any more.
+  const { featureActivation } = await import("../../client/rules/activation");
+  const derived = build({ name: "x", classes: "fighter", level: 1 }).derived;
+  assert.equal(featureActivation({ id: "module.nothing", name: "무언가", source: "class", sourceLabel: "", description: "추가 행동으로 무언가를 합니다." } as never, derived), undefined);
+});
+
 test("H4: a class module's definition carries its training, resources, option pools and multiclass rules (D243)", async () => {
   const { createCatalog } = await import("../../client/catalog");
   const { autofill } = await import("../../client/character/autofill");
