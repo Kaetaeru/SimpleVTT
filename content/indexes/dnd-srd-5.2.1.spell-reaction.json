@@ -1,0 +1,7 @@
+{
+ "description": "H6b (D249): reaction spells the table offers in a window. trigger attack.hit-self = an attack just hit the caster (the hit is held and resolved again with the AC the cast leaves, so the spell's own effect contract decides the bonus); trigger spell.cast-seen = a creature is casting a spell the caster can see (the cast is held; a failed save of the spell's own counter roll stops it). A module spell may put the same object under its spell-mechanic config as \"reaction\".",
+ "spells": {
+  "dnd.srd521.spell.shield": { "trigger": "attack.hit-self" },
+  "dnd.srd521.spell.counterspell": { "trigger": "spell.cast-seen" }
+ }
+}

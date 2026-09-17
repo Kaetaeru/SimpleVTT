@@ -111,6 +111,11 @@ export interface ReactionPrompt {
   /** R16: the held spell (counterspell prompts): what is being cast and at what level. */
   spell?: { name: string; level: number };
   /**
+   * H6b (D249): the reaction spell this window offers (shield and counterspell prompts) — the kinds keep their R11/R16
+   * names because saved chat archives carry them (HARDCODE_AUDIT §4), but which spell answers is data.
+   */
+  spellId?: string;
+  /**
    * R35 (D174): the failed roll a contract may redo — the card it belongs to, the feature that would pay for it, and
    * what the roll was, so the player can decide without scrolling back.
    */

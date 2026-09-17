@@ -46,6 +46,7 @@ import { guardHint, rollGuard, type GuardOffer, type ReactionTrigger } from "../
 import type { RescueOffer, RollFamily } from "../rules/contractUse";
 import type { Transport } from "./transport";
 import { summonRule } from "../rules/summons";
+import { reactionSpellIds } from "../compendium/spells";
 import { monsterById } from "../compendium/monsters";
 
 /** R18: "10분" / "1시간 30분" / "8시간" for the chat line. */
@@ -56,7 +57,6 @@ const describeMinutes = (minutes: number) => {
 };
 
 /** R16: the 2024 Counterspell — a reaction that makes the other caster roll a Constitution save. */
-const COUNTERSPELL = "dnd.srd521.spell.counterspell";
 /** R28 (D151): the effect key a barbarian's 격노 runs under. */
 const RAGE_KEY = "feature:barbarian.rage";
 
@@ -860,7 +860,7 @@ export class TableHost {
           if (answered?.prompt?.kind === "counterspell") {
             if (this.promptAnswered(command.reaction) || !this.heldCasts.has(command.reaction)) return refuse("그 주문 차단은 더 이상 열려 있지 않습니다");
             if (!sameActor(answered.prompt.reactor, command.caster)) return refuse("그 프롬프트의 반응자만 주문 차단을 할 수 있습니다");
-            if (prepared.spec.spellId !== COUNTERSPELL) return refuse("주문 차단으로만 답합니다");
+            if (!reactionSpellIds("spell.cast-seen").includes(prepared.spec.spellId)) return refuse("주문을 차단하는 반응 주문으로만 답합니다");
             if (this.reactionUsed(command.caster)) return refuse("이번 라운드의 반응을 이미 썼습니다");
             counterPrompt = answered;
           } else {
@@ -893,7 +893,7 @@ export class TableHost {
             const promptId = newMessageId();
             const casterName = caster.token?.name ?? caster.entry.name;
             this.heldCasts.set(promptId, { command, userId, peerId, asked: [...alreadyAsked, counterer.key], name: prepared.spec.name, economy });
-            this.sayWithId(promptId, { type: "prompt", who: player.displayName, playerId: userId, content: `${casterName}이(가) ${prepared.spec.name}을(를) 시전합니다 — ${counterer.name}의 주문 차단?`, prompt: { kind: "counterspell", mover: { name: casterName, ...command.caster }, reactor: { name: counterer.name, ...counterer.ref }, spell: { name: prepared.spec.name, level: prepared.spec.level } } });
+            this.sayWithId(promptId, { type: "prompt", who: player.displayName, playerId: userId, content: `${casterName}이(가) ${prepared.spec.name}을(를) 시전합니다 — ${counterer.name}의 ${counterer.spellName}?`, prompt: { kind: "counterspell", mover: { name: casterName, ...command.caster }, reactor: { name: counterer.name, ...counterer.ref }, spell: { name: prepared.spec.name, level: prepared.spec.level }, spellId: counterer.spellId } });
             return;
           }
         }
@@ -912,7 +912,7 @@ export class TableHost {
         else if (exec.repeat?.economy === "none") { /* R77 (D212): an area spell's roll when somebody walks in costs the caster nothing */ }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
-        if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → 방패 시전` }); this.releaseHeld(heldPrompt.id, true); }
+        if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → ${prepared.spec.name} 시전` }); this.releaseHeld(heldPrompt.id, true, { reduce: 0, label: `${prepared.spec.name} 반응` }); }
         if (counterPrompt) {
           // 2024: the caster of the held spell makes a Constitution save against the counterspeller's save DC.
           const saved = resolution.targets[0]?.save?.success ?? true;
@@ -1645,7 +1645,10 @@ export class TableHost {
     const targetRef = inputs.targets[inputs.targetIndex];
     // R54 (D189): the same window now carries whatever the target's own contracts declared for "an attack hit me",
     // so 공격 비껴내기 and the Shield spell are one question rather than one question and a house rule.
-    const canShield = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef) && Boolean(this.options.pcReactionSpell?.(target.entry, "dnd.srd521.spell.shield"));
+    // H6b (D249): the first reaction spell for "an attack hit me" the target can cast, from the spell data.
+    const targetCharacter = target.entry.kind === "character" ? target.entry : undefined;
+    const shieldSpell = targetCharacter && !waits && resolution.outcome === "hit" && !fixed && !this.reactionUsed(targetRef) ? reactionSpellIds("attack.hit-self").find((spellId) => Boolean(this.options.pcReactionSpell?.(targetCharacter, spellId))) : undefined;
+    const canShield = Boolean(shieldSpell);
     const guards = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef)
       ? this.options.pcGuards?.(target.entry, "attack.hit-self") ?? [] : [];
     // R57 (D192): if the creature that was hit has nothing to answer with, a bystander whose contract declares
@@ -1660,8 +1663,8 @@ export class TableHost {
       const offers = bystander ? bystander.offers : guards;
       const reactorRef = bystander ? this.refOf(bystander.actor) : targetRef;
       const reactorName = bystander ? bystander.actor.token?.name ?? bystander.actor.entry.name : targetName;
-      const offered = [...(canShield ? ["방패"] : []), ...offers.map((guard) => guard.feature)];
-      this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — ${bystander ? `${reactorName}의 ` : ""}${offered.join(" / ")} 반응?`, prompt: { kind: canShield ? "shield" : "guard", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: reactorName, ...reactorRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, ...(offers.length ? { guard: { features: offers.map((guard) => ({ name: guard.feature, hint: guardHint(guard), ...(guard.facts.length ? { facts: guard.facts } : {}) })), shield: canShield, trigger: bystander ? "attack.hit-ally" : "attack.hit-self" } } : {}) } });
+      const offered = [...(shieldSpell ? [this.prepareSpell(target, shieldSpell)?.spec.name ?? shieldSpell] : []), ...offers.map((guard) => guard.feature)];
+      this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — ${bystander ? `${reactorName}의 ` : ""}${offered.join(" / ")} 반응?`, prompt: { kind: canShield ? "shield" : "guard", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: reactorName, ...reactorRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, ...(shieldSpell ? { spellId: shieldSpell } : {}), ...(offers.length ? { guard: { features: offers.map((guard) => ({ name: guard.feature, hint: guardHint(guard), ...(guard.facts.length ? { facts: guard.facts } : {}) })), shield: canShield, trigger: bystander ? "attack.hit-ally" : "attack.hit-self" } } : {}) } });
       return promptId;
     }
     // R63 (D198): a palette edit or a rescue re-resolves a card the attacker already answered, so it never asks again.
@@ -2062,9 +2065,10 @@ export class TableHost {
       if (entry.kind === caster.entry.kind) continue;
       const ref: ActorRef = { entryId: entry.id, pageId: page.id, tokenId: token.id };
       if (this.reactionUsed(ref) || cannotAct(this.conditionsOf({ entry, token }))) continue;
-      const able = entry.kind === "character" ? Boolean(this.options.pcReactionSpell?.(entry, COUNTERSPELL)) : Boolean(this.prepareSpell({ entry, token }, COUNTERSPELL));
-      if (!able) continue;
-      return { ref, key: token.id, name: token.name || entry.name };
+      // H6b (D249): the first counter spell this creature can cast, from the spell data.
+      const spellId = reactionSpellIds("spell.cast-seen").find((id) => (entry.kind === "character" ? Boolean(this.options.pcReactionSpell?.(entry, id)) : Boolean(this.prepareSpell({ entry, token }, id))));
+      if (!spellId) continue;
+      return { ref, key: token.id, name: token.name || entry.name, spellId, spellName: this.prepareSpell({ entry, token }, spellId)?.spec.name ?? spellId };
     }
     return null;
   }
@@ -2125,9 +2129,11 @@ export class TableHost {
     // R54 (D189): Shield's +5 and a contract reaction's own bonus take the same road — re-resolve with the same dice
     // and a higher AC, so a hit that is now a miss really misses. `damageDelta` is how a reaction that soaks damage
     // instead of raising AC reaches the card.
-    const acBonus = shielded ? 5 : guard?.acBonus ?? 0;
-    const note = shielded ? "방패 반응: AC +5" : guard ? `${guard.label}${guard.acBonus ? `: AC +${guard.acBonus}` : ""}${guard.reduce ? `: 피해 −${guard.reduce}` : ""}${guard.halve ? ": 피해 절반" : ""}` : "";
-    if (acBonus || guard?.reduce || guard?.halve) {
+    // H6b (D249): a reaction spell raised the AC through its own effect contract (방패: +5), which the target's
+    // combatant already carries; the re-resolution below reads it rather than a number written here.
+    const acBonus = guard?.acBonus ?? 0;
+    const note = guard ? `${guard.label}${guard.acBonus ? `: AC +${guard.acBonus}` : ""}${guard.reduce ? `: 피해 −${guard.reduce}` : ""}${guard.halve ? ": 피해 절반" : ""}` : "";
+    if (shielded || acBonus || guard?.reduce || guard?.halve) {
       const attackerCombatant = this.combatantOf(attacker);
       const targetCombatant = this.combatantOf(target);
       if (attackerCombatant && targetCombatant) {

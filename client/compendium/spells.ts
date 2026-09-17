@@ -9,6 +9,7 @@ import onHitJson from "../../content/indexes/dnd-srd-5.2.1.spell-on-hit.json";
 import bearerJson from "../../content/indexes/dnd-srd-5.2.1.spell-bearer.json";
 import weaponSpellJson from "../../content/indexes/dnd-srd-5.2.1.spell-weapon.json";
 import creaturesJson from "../../content/indexes/dnd-srd-5.2.1.spell-creatures.json";
+import reactionJson from "../../content/indexes/dnd-srd-5.2.1.spell-reaction.json";
 import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
@@ -47,6 +48,8 @@ export interface SpellExec {
   summon?: SpellSummon;
   /** H6a (D248): the compendium creatures a spell places, or that it places none (see `creaturesOf`). */
   creatures?: SpellCreatures;
+  /** H6b (D249): the window this reaction spell answers (see `reactionSpellIds`). */
+  reaction?: SpellReaction;
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
   repeat?: { economy: SpellSustain["economy"] };
 }
@@ -76,6 +79,15 @@ export interface SpellCreatures {
   none?: string;
 }
 const BUILTIN_CREATURES = (creaturesJson as unknown as { spells: Record<string, SpellCreatures> }).spells;
+/** H6b (D249): a reaction spell and the moment it answers — an attack hitting its caster, or a spell being cast in sight. */
+export interface SpellReaction { trigger: "attack.hit-self" | "spell.cast-seen" }
+const BUILTIN_REACTION = (reactionJson as unknown as { spells: Record<string, SpellReaction> }).spells;
+/** H6b (D249): every spell, SRD or installed, that answers this trigger — the table offers the first one the reactor can cast. */
+export const reactionSpellIds = (trigger: SpellReaction["trigger"]): string[] => [
+  ...Object.entries(BUILTIN_REACTION).filter(([, rule]) => rule.trigger === trigger).map(([id]) => id),
+  ...[...installed.values()].filter((exec) => exec.reaction?.trigger === trigger).map((exec) => exec.spellId),
+];
+
 /** H6a (D248): the spell's creature rule, from its mechanics or the SRD index. */
 export const creaturesOf = (spellId: string): SpellCreatures | undefined => spellExec(spellId)?.creatures ?? BUILTIN_CREATURES[spellId];
 /** R82 (D218): the spell's on-hit rule, from its mechanics or the SRD index. */
@@ -174,6 +186,7 @@ export function execForCatalogSpell(spell: CatalogSpell): SpellExec {
     ...(mechanic && mechanic.sustain !== undefined ? { sustain: mechanic.sustain as SpellExec["sustain"] } : {}),
     ...(mechanic && isObject(mechanic.summon) && Array.isArray(mechanic.summon.forms) ? { summon: mechanic.summon as unknown as SpellSummon } : {}),
     ...(mechanic && isObject(mechanic.creatures) ? { creatures: mechanic.creatures as unknown as SpellCreatures } : {}),
+    ...(mechanic && isObject(mechanic.reaction) ? { reaction: mechanic.reaction as unknown as SpellReaction } : {}),
   };
 }
 

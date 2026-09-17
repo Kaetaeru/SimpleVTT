@@ -13,6 +13,8 @@ import { controlsToken } from "../campaign/page";
 import { deriveCharacter } from "../character/derive";
 import { weaponRange } from "../rules/attackSpec";
 import { cheapestCast } from "../rules/spellcast";
+import { spellExec } from "../compendium/spells";
+import { ABILITY_KO } from "../catalog/types";
 import type { ActorRef, AttackRef } from "../session/protocol";
 import { HitPolicySelect, Pill } from "../ui/components";
 
@@ -86,7 +88,6 @@ export function promptIsMine(message: ChatMessage, snapshot: { players: Array<{ 
 }
 
 /** Buttons for the side a prompt is addressed to: the reactor's melee attacks as the reaction, or 안 함. Null when it is not yours or already answered. */
-const COUNTERSPELL_ID = "dnd.srd521.spell.counterspell";
 /** What a prompt is asking for, in one word. */
 export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "guard" ? "반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : kind === "rescue" ? "판정 다시 굴리기" : kind === "on-hit" ? "명중 후 선택" : kind === "trigger" ? "특성 사용" : "기회 공격");
 
@@ -225,11 +226,12 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
   // R11: a shield prompt offers the reaction spell with its cheapest slot. R16: a counterspell prompt does the same at level 3.
   const reaction = useMemo(() => {
     if (reactorEntry?.kind !== "character") return null;
-    const level = prompt.kind === "shield" ? 1 : prompt.kind === "counterspell" ? 3 : 0;
+    // H6b (D249): the slot level is the offered spell's own.
+    const level = prompt.spellId ? catalog.spellById(prompt.spellId)?.level ?? 0 : 0;
     if (!level) return null;
     const derived = deriveCharacter(reactorEntry.source, catalog, { equipped: reactorEntry.runtime.equipped, inventory: reactorEntry.runtime.inventory, effects: reactorEntry.runtime.effects });
     return cheapestCast(derived, reactorEntry.runtime, level);
-  }, [prompt.kind, reactorEntry, catalog]);
+  }, [prompt.spellId, reactorEntry, catalog]);
   const shield = prompt.kind === "shield" ? reaction : null;
   if (prompt.outcome || !controls) return null;
   // R29 (D154): the one roll that decides whether the character lives is the player's to make. The host still
@@ -252,10 +254,12 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
     );
   }
   if (prompt.kind === "counterspell") {
-    const slot = reactorEntry?.kind === "npc" ? { kind: "slot" as const, level: 3 } : reaction;
+    const offered = prompt.spellId ? catalog.spellById(prompt.spellId) : undefined;
+    const counterSave = prompt.spellId ? (spellExec(prompt.spellId)?.primary as { saveAbility?: string } | undefined)?.saveAbility : undefined;
+    const slot = reactorEntry?.kind === "npc" && offered ? { kind: "slot" as const, level: offered.level } : reaction;
     return (
       <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
-        {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : slot ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), COUNTERSPELL_ID, [ref(prompt.mover)], slot, undefined, undefined, message.id)}>🚫 주문 차단 시전{slot.kind === "slot" ? ` (${slot.level}레벨 슬롯)` : " (계약 슬롯)"} — {prompt.mover.name}이(가) 건강 내성</button> : <span className="cl-quiet cl-small">슬롯이 없습니다</span>}
+        {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : slot ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), prompt.spellId!, [ref(prompt.mover)], slot, undefined, undefined, message.id)}>🚫 {offered?.name ?? "반응 주문"} 시전{slot.kind === "slot" ? ` (${slot.level}레벨 슬롯)` : " (계약 슬롯)"}{counterSave ? ` — ${prompt.mover.name}이(가) ${ABILITY_KO[counterSave as keyof typeof ABILITY_KO] ?? counterSave} 내성` : ""}</button> : <span className="cl-quiet cl-small">슬롯이 없습니다</span>}
         <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
       </div>
     );
@@ -267,7 +271,7 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
     return (
       <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
         {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : <>
-          {shield ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), "dnd.srd521.spell.shield", [ref(prompt.reactor)], shield, undefined, undefined, message.id)}>🛡 방패 시전 ({shield.kind === "slot" ? `${shield.level}레벨 슬롯` : "계약 슬롯"}) — AC +5{prompt.attack && prompt.attack.total < prompt.attack.ac + 5 ? " → 빗나감" : " (그래도 적중)"}</button> : null}
+          {shield ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), prompt.spellId!, [ref(prompt.reactor)], shield, undefined, undefined, message.id)}>🛡 {(prompt.spellId && catalog.spellById(prompt.spellId)?.name) ?? "반응 주문"} 시전 ({shield.kind === "slot" ? `${shield.level}레벨 슬롯` : "계약 슬롯"}){prompt.attack ? ` — 명중 ${prompt.attack.total} vs AC ${prompt.attack.ac}` : ""}</button> : null}
           {(prompt.guard?.features ?? []).map((feature) => <button type="button" key={feature.name} className="cl-btn small primary" onClick={() => c.guard(message.id, feature.name, feature.facts?.map((fact) => fact.id))}>🛡 {feature.name}{feature.hint ? ` — ${feature.hint}` : ""}</button>)}
           {!shield && !(prompt.guard?.features ?? []).length ? <span className="cl-quiet cl-small">슬롯이 없습니다</span> : null}
         </>}
