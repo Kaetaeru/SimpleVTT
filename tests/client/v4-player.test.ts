@@ -871,3 +871,27 @@ test("V4z: a rule may wait on the option this sheet took — 향상된 축복받
   assert.deepEqual(surge.payments.map((payment) => payment.resourceId), ["resource.fighter.action-surge"]);
   assert.ok(fighter.derived.resources.some((resource) => resource.id === "resource.fighter.action-surge"));
 });
+
+test("V5a: the spells that ask what they do now have their choices — 명령, 눈초리, 평온, 용의 숨결 (D289)", async () => {
+  const { variantsOf, withVariant, spellExec } = await import("../../client/compendium/spells");
+  assert.deepEqual(variantsOf("dnd.srd521.spell.command").map((variant) => variant.id), ["grovel", "flee", "halt", "approach", "drop"]);
+  assert.deepEqual(variantsOf("dnd.srd521.spell.eyebite").map((variant) => variant.id), ["asleep", "panicked", "sickened"]);
+  assert.deepEqual(variantsOf("dnd.srd521.spell.calm-emotions").map((variant) => variant.id), ["suppress-charm-fear", "suppress-hostility"]);
+
+  // 엎드려: the chosen word is what the failed save leaves behind.
+  const grovel = withVariant(spellExec("dnd.srd521.spell.command")!, "grovel");
+  assert.equal(grovel.label, "엎드려");
+  assert.deepEqual(grovel.exec.effects?.map((effect) => effect.conditionId), ["prone"]);
+
+  // 용의 숨결: the damage type is the caster's to choose, and the save halves it.
+  const fire = withVariant(spellExec("dnd.srd521.spell.dragon-s-breath")!, "fire");
+  assert.equal(fire.exec.primary.kind, "save-damage");
+  assert.equal("damageType" in fire.exec.primary ? fire.exec.primary.damageType : undefined, "fire");
+
+  // At the table: the cast carries the variant into the card.
+  const t = await table([{ classes: "wizard", level: 5, abilities: { int: 16 } }], [dummy("좀비", 40)], () => 0.5);
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.command", targets: [t.ref(1)], method: { kind: "slot", level: 1 }, variant: "grovel" });
+  await tick();
+  const card = t.host.archive.filter((message) => message.type === "spell").at(-1)!;
+  assert.ok(card.content.includes("엎드려"), card.content);
+});

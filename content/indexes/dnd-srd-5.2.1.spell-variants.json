@@ -1095,6 +1095,381 @@
      }
     }
    ]
+  },
+  "dnd.srd521.spell.command": {
+   "variants": [
+    {
+     "id": "grovel",
+     "label": "엎드려",
+     "patch": {
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "엎드려: 대상은 넘어짐 상태가 되고 그 턴을 끝낸다.",
+       "duration": {
+        "kind": "rounds",
+        "amount": 1
+       }
+      },
+      "effects": [
+       {
+        "conditionId": "prone",
+        "trigger": "failed-save"
+       }
+      ]
+     }
+    },
+    {
+     "id": "flee",
+     "label": "도망쳐",
+     "patch": {
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "도망쳐: 대상은 자기 턴에 당신에게서 최대한 멀어진다 — 이동은 표에서.",
+       "duration": {
+        "kind": "rounds",
+        "amount": 1
+       }
+      }
+     }
+    },
+    {
+     "id": "halt",
+     "label": "멈춰",
+     "patch": {
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "멈춰: 대상은 움직이지 않고 아무 행동도 하지 않는다 — 표에서.",
+       "duration": {
+        "kind": "rounds",
+        "amount": 1
+       }
+      }
+     }
+    },
+    {
+     "id": "approach",
+     "label": "이리 와",
+     "patch": {
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "이리 와: 대상은 가장 짧은 길로 당신에게 다가온다 — 이동은 표에서.",
+       "duration": {
+        "kind": "rounds",
+        "amount": 1
+       }
+      }
+     }
+    },
+    {
+     "id": "drop",
+     "label": "버려",
+     "patch": {
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "버려: 대상은 들고 있는 것을 떨어뜨리고 그 턴을 끝낸다 — 가방은 표에서.",
+       "duration": {
+        "kind": "rounds",
+        "amount": 1
+       }
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.eyebite": {
+   "variants": [
+    {
+     "id": "asleep",
+     "label": "잠듦",
+     "patch": {
+      "effects": [
+       {
+        "conditionId": "unconscious",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ],
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "잠듦: 대상은 무의식 상태가 된다 (피해를 입거나 누가 깨우면 끝).",
+       "duration": {
+        "kind": "concentration"
+       }
+      }
+     }
+    },
+    {
+     "id": "panicked",
+     "label": "공포",
+     "patch": {
+      "effects": [
+       {
+        "conditionId": "frightened",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ],
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "공포: 대상은 당신에게 공포 상태가 되고 자기 턴마다 당신에게서 멀어진다 — 이동은 표에서.",
+       "duration": {
+        "kind": "concentration"
+       }
+      }
+     }
+    },
+    {
+     "id": "sickened",
+     "label": "병듦",
+     "patch": {
+      "effects": [
+       {
+        "conditionId": "poisoned",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ],
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "wis",
+       "summary": "병듦: 대상은 중독 상태가 된다 (자기 턴이 끝날 때 지혜 내성으로 끝냄).",
+       "duration": {
+        "kind": "concentration"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.calm-emotions": {
+   "variants": [
+    {
+     "id": "suppress-charm-fear",
+     "label": "매혹·공포 해제",
+     "patch": {
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "cha",
+       "summary": "실패한 각 대상의 매혹과 공포가 끝난다.",
+       "duration": {
+        "kind": "concentration"
+       }
+      },
+      "removesConditions": [
+       "charmed",
+       "frightened"
+      ]
+     }
+    },
+    {
+     "id": "suppress-hostility",
+     "label": "적대감 억제",
+     "patch": {
+      "primary": {
+       "kind": "save-effect",
+       "saveAbility": "cha",
+       "summary": "실패한 각 대상은 당신이 고른 생물들에게 무관심해진다 — 누구에게인지는 표에서.",
+       "duration": {
+        "kind": "concentration"
+       }
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.dragon-s-breath": {
+   "variants": [
+    {
+     "id": "acid",
+     "label": "산성",
+     "patch": {
+      "primary": {
+       "kind": "save-damage",
+       "saveAbility": "dex",
+       "damageType": "acid",
+       "dice": {
+        "count": 3,
+        "sides": 6,
+        "dicePerSlotAboveBase": 1
+       },
+       "successDamage": "half"
+      }
+     }
+    },
+    {
+     "id": "cold",
+     "label": "냉기",
+     "patch": {
+      "primary": {
+       "kind": "save-damage",
+       "saveAbility": "dex",
+       "damageType": "cold",
+       "dice": {
+        "count": 3,
+        "sides": 6,
+        "dicePerSlotAboveBase": 1
+       },
+       "successDamage": "half"
+      }
+     }
+    },
+    {
+     "id": "fire",
+     "label": "화염",
+     "patch": {
+      "primary": {
+       "kind": "save-damage",
+       "saveAbility": "dex",
+       "damageType": "fire",
+       "dice": {
+        "count": 3,
+        "sides": 6,
+        "dicePerSlotAboveBase": 1
+       },
+       "successDamage": "half"
+      }
+     }
+    },
+    {
+     "id": "lightning",
+     "label": "번개",
+     "patch": {
+      "primary": {
+       "kind": "save-damage",
+       "saveAbility": "dex",
+       "damageType": "lightning",
+       "dice": {
+        "count": 3,
+        "sides": 6,
+        "dicePerSlotAboveBase": 1
+       },
+       "successDamage": "half"
+      }
+     }
+    },
+    {
+     "id": "poison",
+     "label": "독",
+     "patch": {
+      "primary": {
+       "kind": "save-damage",
+       "saveAbility": "dex",
+       "damageType": "poison",
+       "dice": {
+        "count": 3,
+        "sides": 6,
+        "dicePerSlotAboveBase": 1
+       },
+       "successDamage": "half"
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.conjure-minor-elementals": {
+   "variants": [
+    {
+     "id": "acid",
+     "label": "산성",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "15피트 안 명중마다 산성 2d8",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "acid",
+         "dice": {
+          "count": 2,
+          "sides": 8
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "cold",
+     "label": "냉기",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "15피트 안 명중마다 냉기 2d8",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "cold",
+         "dice": {
+          "count": 2,
+          "sides": 8
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "fire",
+     "label": "화염",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "15피트 안 명중마다 화염 2d8",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "fire",
+         "dice": {
+          "count": 2,
+          "sides": 8
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "lightning",
+     "label": "번개",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "15피트 안 명중마다 번개 2d8",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "lightning",
+         "dice": {
+          "count": 2,
+          "sides": 8
+         }
+        }
+       }
+      ]
+     }
+    }
+   ]
   }
  }
 }
