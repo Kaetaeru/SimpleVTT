@@ -16,7 +16,7 @@ import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../c
 import { advanceRound, ageEffects, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
-import { npcAttackSpec, npcCombatant, npcSaveExec } from "../rules/attackSpec";
+import { npcAttackSpec, npcCombatant, npcSaveExec , bearerDefenses } from "../rules/attackSpec";
 import { diceParts, traitRule, type TraitRule } from "../compendium/monsterTraits";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant, DamagePart } from "../rules/resolve";
 import { carryDice, damageTypeKey, describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
@@ -26,7 +26,7 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { bearerRolls, monsterAuras, splitHitOffers, versusParts, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellDuration, type SpellExec } from "../compendium/spells";
+import { onHitOf, spellExec, sustainedExec, sustainOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
 import type { ConditionDuration, TargetMark } from "../rules/contract";
 import type { ZeroHold } from "../character/types";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -887,8 +887,11 @@ export class TableHost {
         if (!isGm && !this.mayAct(userId, command.caster, caster.entry)) return refuse("자기 캐릭터로만 시전할 수 있습니다");
         const blocked = cannotAct(this.conditionsOf(caster));
         if (blocked) return refuse(`${blocked} 상태라 시전할 수 없습니다`);
-        const prepared = this.prepareSpell(caster, command.spellId, command.method);
-        if (!prepared) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
+        const preparedBase = this.prepareSpell(caster, command.spellId, command.method);
+        if (!preparedBase) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
+        // V4f (D268): the variant chosen when casting patches the execution; the card names it.
+        const chosenVariant = withVariant(preparedBase.spec.exec, typeof command.variant === "string" ? command.variant.slice(0, LIMITS.name) : undefined);
+        const prepared = chosenVariant.label ? { ...preparedBase, spec: { ...preparedBase.spec, exec: chosenVariant.exec, name: `${preparedBase.spec.name} (${chosenVariant.label})`, variant: command.variant } } : preparedBase;
         const exec = prepared.spec.exec;
         if (!isGm && !command.readied && exec.castingEconomy !== "reaction" && exec.repeat?.economy !== "none" && this.tracker.turns.length && this.turnOf(command.caster)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 시전할 수 있습니다 (남의 턴에는 반응 주문·준비한 행동만)");
         // R11: answering a shield prompt — the reaction spell against the held attack.
@@ -2132,6 +2135,15 @@ export class TableHost {
   private holdAtZero(entryId: string) {
     const live = this.journalEntries.get(entryId);
     if (live?.kind !== "character" || live.runtime.hp.current !== 0) return;
+    // V4f (D268): a spell that keeps its bearer at 1 HP ends doing so (죽음 방비).
+    const ward = bearerDefenses(live.runtime.effects).preventsDeath[0];
+    if (ward) {
+      const effect = live.runtime.effects.find((item) => item.key === ward)!;
+      const runtime: CharacterRuntime = { ...endEffect(live.runtime, ward, "0 HP 대신 1 HP"), hp: { ...live.runtime.hp, current: 1 }, conditions: live.runtime.conditions.filter((name) => name !== "무의식"), deathSaves: { success: 0, failure: 0 } };
+      this.storeEntry({ ...live, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+      this.say({ type: "system", who: "", content: `${live.name}: ${effect.name} — HP 1로 버팀` });
+      return;
+    }
     for (const hold of this.options.pcZeroHolds?.(live) ?? []) {
       const sheet = this.journalEntries.get(entryId);
       if (sheet?.kind !== "character") return;
@@ -2571,8 +2583,8 @@ export class TableHost {
       runtime = this.takeDeathFailures(runtime, row.attack?.deathFailures ?? row.damage?.deathFailures, row.target.name, resolution.name);
       // A lasting effect on a target: on the caster's own sheet castSpell already started it (with concentration); others get it without.
       // R90 (D225): the creature is now under the spell — a caster who targeted themselves too, whose effect castSpell started.
-      if (row.effect && (runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = { ...runtime, effects: runtime.effects.map((effect) => (effect.key === row.effect!.key ? { ...effect, bearer: true } : effect)) };
-      else if (row.effect) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", bearer: true, duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
+      if (row.effect && (runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = { ...runtime, effects: runtime.effects.map((effect) => (effect.key === row.effect!.key ? { ...effect, bearer: true, ...(row.effect!.variant ? { variant: row.effect!.variant } : {}) } : effect)) };
+      else if (row.effect) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", bearer: true, ...(row.effect.variant ? { variant: row.effect.variant } : {}), duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed === "unconscious") this.holdAtZero(before.id);
       if (downed) this.releaseGrapples(target.page, target.token?.id);
@@ -2600,7 +2612,7 @@ export class TableHost {
     if (row.effect) {
       const key = row.effect.key;
       const already = (npcBefore.runtime.effects ?? []).some((effect) => effect.key === key);
-      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", bearer: true, duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(resolution.caster.id !== npcBefore.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
+      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", bearer: true, ...(row.effect.variant ? { variant: row.effect.variant } : {}), duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(resolution.caster.id !== npcBefore.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
       const endSaves = row.effect.endSave
         ? [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== key), { key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }]
         : npcBefore.runtime.endSaves;
@@ -2780,6 +2792,11 @@ export class TableHost {
       if (args[0].downed && args[1].entry.kind === "npc" && !args[6]) { if (killer?.kind === "character") this.offerTriggers(killer, "kill"); this.offerNearbyKill(args[2].entry.id, args[1].page?.id); }
       // R90 (D225): after the card has written its own changes, so they do not put the spent effect back.
       this.consumeOnUse(args[2].entry.id, "attack");
+      // V4f (D268): a spell on the target that burns whoever hits it in melee (화염 방패).
+      if ((args[0].outcome === "hit" || args[0].outcome === "crit") && !args[6] && args[1].entry.kind !== "handout") {
+        const shield = bearerDefenses(args[1].entry.runtime.effects);
+        for (const back of shield.retaliation) if (!back.meleeOnly || args[0].attack.mode === "melee") this.contractStrike(args[1], [args[2]], back.label, { formula: back.formula, damageType: back.damageType }, "", this.options.hostUserId);
+      }
       // V4b (D264): the attack spends a mark on the target that was waiting for it.
       if (args[1].token) { const attackerToken = args[2].token?.id; this.dropMarks(args[1].token.id, (item) => Boolean(item.mark.nextAttack) && !(item.mark.nextAttack!.by === "others" && item.from === attackerToken)); }
       this.consumeOnUse(args[1].entry.id, "attacked");

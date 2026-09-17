@@ -133,7 +133,7 @@ export interface CampaignsState {
   /** D97: one of the official actions on the actor's turn. */
   act: (actor: ActorRef, kind: ActionKind, options?: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }) => void;
   /** D102: cast a spell at targets; the host pays and resolves. */
-  cast: (caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => void;
+  cast: (caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string, variant?: string) => void;
   /** R89 (D224): enter, leave or move inside a caster area. */
   zone: (casterEntryId: string, spellId: string, target: ActorRef, action: "enter" | "leave" | "move", feet?: number) => void;
   declineReaction: (messageId: string) => void;
@@ -527,7 +527,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const dismissSummons = useCallback((summoner: ActorRef, spellId?: string) => send({ type: "act.dismiss", summoner, ...(spellId ? { spellId } : {}) }), [send]);
   const resist = useCallback((messageId: string, targetId: string, tokenId?: string) => send({ type: "act.resist", messageId, targetId, ...(tokenId ? { tokenId } : {}) }), [send]);
   const provoke = useCallback((mover: ActorRef, from: ActorRef) => send({ type: "act.provoke", mover, from }), [send]);
-  const cast = useCallback((caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => send({ type: "act.cast", caster, spellId, targets, method, overrides, readied, reaction }), [send]);
+  const cast = useCallback((caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string, variant?: string) => send({ type: "act.cast", caster, spellId, targets, method, overrides, readied, reaction, ...(variant ? { variant } : {}) }), [send]);
   const zone = useCallback((casterEntryId: string, spellId: string, target: ActorRef, action: "enter" | "leave" | "move", feet?: number) => send({ type: "act.zone", casterEntryId, spellId, target, action, ...(feet ? { feet } : {}) }), [send]);
   const act = useCallback((actor: ActorRef, kind: ActionKind, options: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean } = {}) => send({ type: "act.action", actor, kind, ...options }), [send]);
   const declineReaction = useCallback((messageId: string) => send({ type: "act.decline", messageId }), [send]);

@@ -1,0 +1,964 @@
+{
+ "description": "V4f (D268): what a caster chooses when casting. Each variant is a patch over the spell's execution: objects merge, arrays and values replace. A module spell may put the same list under its spell-mechanic config as \"variants\".",
+ "spells": {
+  "dnd.srd521.spell.protection-from-energy": {
+   "variants": [
+    {
+     "id": "acid",
+     "label": "산성 저항",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "산성 저항",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "acid"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "cold",
+     "label": "냉기 저항",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "냉기 저항",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "cold"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "fire",
+     "label": "화염 저항",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "화염 저항",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "fire"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "lightning",
+     "label": "번개 저항",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "번개 저항",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "lightning"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "thunder",
+     "label": "천둥 저항",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "천둥 저항",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "thunder"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.fire-shield": {
+   "variants": [
+    {
+     "id": "warm",
+     "label": "온기 방패 (냉기 저항, 화염 반격)",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "온기 방패: 냉기 저항 · 근접 명중 시 화염 2d8 반격",
+        "trigger": "always",
+        "duration": {
+         "kind": "minutes",
+         "amount": 10
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "cold"
+         }
+        ],
+        "retaliation": {
+         "damageType": "fire",
+         "dice": {
+          "count": 2,
+          "sides": 8
+         },
+         "meleeOnly": true
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "chill",
+     "label": "한기 방패 (화염 저항, 냉기 반격)",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "한기 방패: 화염 저항 · 근접 명중 시 냉기 2d8 반격",
+        "trigger": "always",
+        "duration": {
+         "kind": "minutes",
+         "amount": 10
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "fire"
+         }
+        ],
+        "retaliation": {
+         "damageType": "cold",
+         "dice": {
+          "count": 2,
+          "sides": 8
+         },
+         "meleeOnly": true
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.chromatic-orb": {
+   "variants": [
+    {
+     "id": "acid",
+     "label": "산성",
+     "patch": {
+      "primary": {
+       "damageType": "acid"
+      }
+     }
+    },
+    {
+     "id": "cold",
+     "label": "냉기",
+     "patch": {
+      "primary": {
+       "damageType": "cold"
+      }
+     }
+    },
+    {
+     "id": "fire",
+     "label": "화염",
+     "patch": {
+      "primary": {
+       "damageType": "fire"
+      }
+     }
+    },
+    {
+     "id": "lightning",
+     "label": "번개",
+     "patch": {
+      "primary": {
+       "damageType": "lightning"
+      }
+     }
+    },
+    {
+     "id": "thunder",
+     "label": "천둥",
+     "patch": {
+      "primary": {
+       "damageType": "thunder"
+      }
+     }
+    },
+    {
+     "id": "poison",
+     "label": "독",
+     "patch": {
+      "primary": {
+       "damageType": "poison"
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.sorcerous-burst": {
+   "variants": [
+    {
+     "id": "acid",
+     "label": "산성",
+     "patch": {
+      "primary": {
+       "damageType": "acid"
+      }
+     }
+    },
+    {
+     "id": "cold",
+     "label": "냉기",
+     "patch": {
+      "primary": {
+       "damageType": "cold"
+      }
+     }
+    },
+    {
+     "id": "fire",
+     "label": "화염",
+     "patch": {
+      "primary": {
+       "damageType": "fire"
+      }
+     }
+    },
+    {
+     "id": "lightning",
+     "label": "번개",
+     "patch": {
+      "primary": {
+       "damageType": "lightning"
+      }
+     }
+    },
+    {
+     "id": "thunder",
+     "label": "천둥",
+     "patch": {
+      "primary": {
+       "damageType": "thunder"
+      }
+     }
+    },
+    {
+     "id": "necrotic",
+     "label": "사령",
+     "patch": {
+      "primary": {
+       "damageType": "necrotic"
+      }
+     }
+    },
+    {
+     "id": "poison",
+     "label": "독",
+     "patch": {
+      "primary": {
+       "damageType": "poison"
+      }
+     }
+    },
+    {
+     "id": "psychic",
+     "label": "정신",
+     "patch": {
+      "primary": {
+       "damageType": "psychic"
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.blindness-deafness": {
+   "variants": [
+    {
+     "id": "blinded",
+     "label": "실명",
+     "patch": {
+      "effects": [
+       {
+        "conditionId": "blinded",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "minutes",
+         "amount": 1
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "deafened",
+     "label": "청각상실",
+     "patch": {
+      "effects": [
+       {
+        "conditionId": "deafened",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "minutes",
+         "amount": 1
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.enhance-ability": {
+   "variants": [
+    {
+     "id": "str",
+     "label": "근력 판정 유리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "근력 판정에 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "str"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "dex",
+     "label": "민첩 판정 유리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "민첩 판정에 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "dex"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "con",
+     "label": "건강 판정 유리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "건강 판정에 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "con"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "int",
+     "label": "지능 판정 유리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "지능 판정에 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "int"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "wis",
+     "label": "지혜 판정 유리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "지혜 판정에 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "wis"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "cha",
+     "label": "매력 판정 유리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "매력 판정에 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "cha"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.hex": {
+   "variants": [
+    {
+     "id": "str",
+     "label": "근력 판정 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "저주: 시전자의 명중 시 사령 1d6 추가",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "necrotic",
+         "dice": {
+          "count": 1,
+          "sides": 6
+         },
+         "againstTargetOnly": true
+        }
+       },
+       {
+        "summary": "근력 판정에 불리점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "str"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "dex",
+     "label": "민첩 판정 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "저주: 시전자의 명중 시 사령 1d6 추가",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "necrotic",
+         "dice": {
+          "count": 1,
+          "sides": 6
+         },
+         "againstTargetOnly": true
+        }
+       },
+       {
+        "summary": "민첩 판정에 불리점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "dex"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "con",
+     "label": "건강 판정 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "저주: 시전자의 명중 시 사령 1d6 추가",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "necrotic",
+         "dice": {
+          "count": 1,
+          "sides": 6
+         },
+         "againstTargetOnly": true
+        }
+       },
+       {
+        "summary": "건강 판정에 불리점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "con"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "int",
+     "label": "지능 판정 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "저주: 시전자의 명중 시 사령 1d6 추가",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "necrotic",
+         "dice": {
+          "count": 1,
+          "sides": 6
+         },
+         "againstTargetOnly": true
+        }
+       },
+       {
+        "summary": "지능 판정에 불리점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "int"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "wis",
+     "label": "지혜 판정 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "저주: 시전자의 명중 시 사령 1d6 추가",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "necrotic",
+         "dice": {
+          "count": 1,
+          "sides": 6
+         },
+         "againstTargetOnly": true
+        }
+       },
+       {
+        "summary": "지혜 판정에 불리점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "wis"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "cha",
+     "label": "매력 판정 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "저주: 시전자의 명중 시 사령 1d6 추가",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "necrotic",
+         "dice": {
+          "count": 1,
+          "sides": 6
+         },
+         "againstTargetOnly": true
+        }
+       },
+       {
+        "summary": "매력 판정에 불리점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "cha"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "dnd.srd521.spell.bestow-curse": {
+   "variants": [
+    {
+     "id": "ability-str",
+     "label": "근력 판정·내성 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "근력 판정 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "str"
+        }
+       },
+       {
+        "summary": "근력 내성 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "str"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "ability-dex",
+     "label": "민첩 판정·내성 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "민첩 판정 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "dex"
+        }
+       },
+       {
+        "summary": "민첩 내성 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "dex"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "ability-con",
+     "label": "건강 판정·내성 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "건강 판정 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "con"
+        }
+       },
+       {
+        "summary": "건강 내성 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "con"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "ability-int",
+     "label": "지능 판정·내성 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "지능 판정 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "int"
+        }
+       },
+       {
+        "summary": "지능 내성 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "int"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "ability-wis",
+     "label": "지혜 판정·내성 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "지혜 판정 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "wis"
+        }
+       },
+       {
+        "summary": "지혜 내성 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "wis"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "ability-cha",
+     "label": "매력 판정·내성 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "매력 판정 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "ability-check",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "cha"
+        }
+       },
+       {
+        "summary": "매력 내성 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "cha"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "attacks",
+     "label": "나를 향한 명중 불리",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "시전자를 향한 명중 굴림 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "attack-roll",
+         "rollState": "disadvantage",
+         "scope": "actor"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "necrotic",
+     "label": "내 공격에 사령 1d8",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "시전자의 명중 시 사령 1d8 추가",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "attackDamage": {
+         "damageType": "necrotic",
+         "dice": {
+          "count": 1,
+          "sides": 8
+         },
+         "againstTargetOnly": true
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "wasted",
+     "label": "턴 낭비 (턴 시작마다 지혜 내성)",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "자기 턴 시작마다 지혜 내성, 실패하면 그 턴 아무것도 못 함 — DM 판정",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

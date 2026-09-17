@@ -344,3 +344,39 @@ test("V4e: 보복 opens an attack back; 보호의 오라 marked on an ally adds 
   assert.equal(saveCard.save!.bonus, base + 3, JSON.stringify(saveCard.save));
   assert.ok(!markers(party, 1).includes("공포"), JSON.stringify(markers(party, 1)));
 });
+
+test("V4f: a spell cast with a chosen variant keeps it — 에너지 보호's cold resistance halves cold, 화염 방패 burns a melee attacker, 죽음 방비 holds at 1 (D268)", async () => {
+  const { variantsOf } = await import("../../client/compendium/spells");
+  assert.deepEqual(variantsOf("dnd.srd521.spell.protection-from-energy").map((variant) => variant.id), ["acid", "cold", "fire", "lightning", "thunder"]);
+  const frost = dummy("서리 거인", 300, { actions: [{ name: "얼음 도끼", attack: { mode: "melee", bonus: 30, rangeFeet: 5, damage: [{ formula: "20", type: "cold" }] } }] });
+  const t = await table([{ classes: "wizard", level: 9 }, { classes: "fighter", level: 9 }], [frost]);
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.protection-from-energy", targets: [t.ref(1)], method: { kind: "slot", level: 3 }, variant: "cold" });
+  await tick();
+  const warded = t.entry(1) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(warded.runtime.effects.find((effect) => effect.key === "spell:dnd.srd521.spell.protection-from-energy")?.variant, "cold", JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
+  const before = warded.runtime.hp.current;
+  t.dm.send({ type: "act.attack", attacker: t.ref(2), targets: [t.ref(1)], attack: { source: "npc", actionName: "얼음 도끼" } });
+  await tick();
+  assert.equal((t.entry(1) as ReturnType<typeof newJournalCharacter>).runtime.hp.current, before - 10, "cold halved");
+
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.fire-shield", targets: [t.ref(0)], method: { kind: "slot", level: 4 }, variant: "chill" });
+  await tick();
+  const giantHp = () => t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((token) => token.id === t.ref(2).tokenId)!.bars[0].value ?? 0;
+  const giantBefore = giantHp();
+  t.dm.send({ type: "act.attack", attacker: t.ref(2), targets: [t.ref(0)], attack: { source: "npc", actionName: "얼음 도끼" } });
+  await tick();
+  for (const prompt of t.host.archive.filter((message) => message.type === "prompt" && (message.prompt?.kind === "shield" || message.prompt?.kind === "guard") && !message.supersedes)) t.dm.send({ type: "act.decline", messageId: prompt.id });
+  await tick();
+  assert.ok(giantHp() < giantBefore, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.death-ward", targets: [t.ref(1)], method: { kind: "slot", level: 4 } });
+  await tick();
+  const fighter = t.entry(1) as ReturnType<typeof newJournalCharacter>;
+  t.dm.send({ type: "journal.put", entry: { ...fighter, runtime: { ...fighter.runtime, hp: { ...fighter.runtime.hp, current: 5 } } } });
+  await tick();
+  t.dm.send({ type: "act.attack", attacker: t.ref(2), targets: [t.ref(1)], attack: { source: "npc", actionName: "얼음 도끼" } });
+  await tick();
+  const held = t.entry(1) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(held.runtime.hp.current, 1, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+  assert.ok(!held.runtime.effects.some((effect) => effect.key === "spell:dnd.srd521.spell.death-ward"), "the ward is spent");
+});

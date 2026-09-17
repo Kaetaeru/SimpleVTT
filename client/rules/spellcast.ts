@@ -70,12 +70,14 @@ export interface SpellCastSpec {
   /** Level it is cast at (slot level; a cantrip is 0). */
   level: number;
   exec: SpellExec;
+  /** V4f (D268): the variant chosen when casting; the effect it starts remembers it. */
+  variant?: string;
   /** R101 (D236): nothing in the rules computes this spell effect — the card says the table judges it. */
   judged?: boolean;
 }
 
 export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; /** R90 (D225): rolled with disadvantage, and why. */ disadvantage?: string; /** R90 (D225): spell dice in the bonus ("액운 −2"). */ dice?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
-export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R85 (D220): whose turn boundary counts the rounds. */ anchor?: { who: "source" | "bearer"; boundary: "start" | "end" }; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
+export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R85 (D220): whose turn boundary counts the rounds. */ anchor?: { who: "source" | "bearer"; boundary: "start" | "end" }; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number }; /** V4f (D268): the variant it was cast with. */ variant?: string }
 
 /** R10: a target repeats the save at the end of each of its turns. H6c (D250): read from the spell's data, not its summary text. */
 export const repeatsSaveAtTurnEnd = (exec: SpellExec) => repeatSaveOf(exec) === "turn-end";
@@ -150,7 +152,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const exec = spec.exec;
   const primary = exec.primary;
   const endSave = repeatsSaveAtTurnEnd(exec) && "saveAbility" in primary ? { ability: ((primary as { saveAbility: string }).saveAbility in ABILITY_KO ? (primary as { saveAbility: string }).saveAbility : "wis") as AbilityKey, dc: casterStats.saveDc } : undefined;
-  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(duration?.anchorActorId ? { anchor: { who: duration.anchorActorId === "$target" ? "bearer" as const : "source" as const, boundary: duration.boundary === "start" ? "start" as const : "end" as const } } : {}), ...(endSave ? { endSave } : {}) });
+  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(duration?.anchorActorId ? { anchor: { who: duration.anchorActorId === "$target" ? "bearer" as const : "source" as const, boundary: duration.boundary === "start" ? "start" as const : "end" as const } } : {}), ...(endSave ? { endSave } : {}), ...(spec.variant ? { variant: spec.variant } : {}) });
   // R51 (D186): 원소 숙련자 — "your spells ignore resistance to the chosen damage type". Applied where the parts are
   // built, so every shape of spell damage (attack, save, projectiles, components) goes through the same door.
   // R98 (D233): 강화된 방출 — one flat part, added to the first damage roll only.

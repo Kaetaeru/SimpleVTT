@@ -123,6 +123,8 @@ export interface ActiveEffect {
   conditions?: string[];
   /** V4d (D266): a die the bearer may add to one failed d20 test, spending the effect (바드의 영감). */
   rescue?: { dice: string };
+  /** V4f (D268): the variant of the spell this effect was cast with (에너지 보호's damage type). */
+  variant?: string;
   /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */
   bearer?: boolean;
   /** H2 (D239): the choice the feature behind a passive effect was made for (the cantrip 고통스러운 폭발 names). */

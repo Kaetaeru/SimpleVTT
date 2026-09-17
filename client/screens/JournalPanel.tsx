@@ -24,7 +24,7 @@ import { ArtDropZone, ArtImage, ArtPicker } from "./ArtPanel";
 import { CreateScreen } from "./CreateScreen";
 import { NpcWindow } from "./NpcSheet";
 import { TrackerWindow } from "./TrackerWindow";
-import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestAttackOptions, requestTargets, TokenWindow } from "./PageCanvas";
+import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestAttackOptions, requestSpellVariant, requestTargets, TokenWindow } from "./PageCanvas";
 import { weaponRange } from "../rules/attackSpec";
 import { SheetPlay } from "./SheetPlay";
 import { SheetView } from "./SheetView";
@@ -505,7 +505,9 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     targets = targets.slice(0, exec.targeting.maxTargets);
     let answer: Awaited<ReturnType<typeof requestAttackOptions>> | undefined;
     if (viewer.isGm && exec.primary.kind === "attack-damage") { answer = await requestAttackOptions({ name: spell.name, gm: true }); if (answer === null) return; }
-    c.cast({ entryId: entry.id, pageId: page.id, tokenId: token.id }, spell.id, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, answer?.overrides);
+    const variant = method.kind === "sustain" ? undefined : await requestSpellVariant(spell.id, spell.name);
+    if (variant === null) return;
+    c.cast({ entryId: entry.id, pageId: page.id, tokenId: token.id }, spell.id, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, answer?.overrides, undefined, undefined, variant);
   };
   if (wizard) return <CreateScreen existing={entry.source} initialStep="classes" onSave={saveEdited} onClose={() => setWizard(false)} title={`편집 · ${entry.name}`} />;
   return (

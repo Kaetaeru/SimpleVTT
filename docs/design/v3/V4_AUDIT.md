@@ -4,6 +4,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 공통 엔진
 
+- ✔ D268 주문 효과의 방어 데이터(`damageDefenses`, `armorClass`, `retaliation`, `preventsDeath`)를 엔진이 어디서도 읽지 않았다 — `bearerDefenses`가 전투원 방어·NPC AC에, 호스트가 화염 방패 반격과 죽음 방비에 쓴다.
+
 - ✔ D265 효과의 턴마다 유지 조건(격노)이 코드의 콘텐츠 키 `"feature:barbarian.rage"`로 박혀 있었다(§2 위반, 검사가 놓침). — 효과 계약 `effect.upkeep`, 면제 `effect.upkeep-waived`, 검사 패턴 `contractKeys` 상한 0.
 
 - (D264: 판정 전 탑승물은 셈. 특성 사용·행동 폭증은 남음) once-per-turn은 명중 창 탑승물만 센다(`host.ts` useThisTurn). 판정 전 탑승물·특성 사용·행동 폭증은 세지 않고 시트가 "직접 세어 주세요"라고 쓴다. — [host-hook] 턴 사용 기록을 판정 전 창·사용 버튼에도.
@@ -167,13 +169,13 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ### 주문 (소마법·1~3레벨)
 - guidance — 한 번 +1d4 후 종료. 2024는 고른 기술 판정마다. — [picker + data-fix]
-- sorcerous-burst — 항상 화염, 8 폭발 주사위 없음. — [picker + new-grammar]
+- ✔ D268 sorcerous-burst — 항상 화염, 8 폭발 주사위 없음. — [picker + new-grammar]
 - shillelagh — 17레벨 1d20(SRD 2d6), 곤봉 ID 코드 비교(§2 위반 `effects.ts`), 역장 선택 없음. — [data-fix + picker]
 - produce-flame, flame-blade — 추가 행동 시전·이후 마법 행동 공격이어야. — [data-fix]
 - spellIsJudged 버그 — 색인 데이터(sustain, creatures, weapon-spell)를 안 봐서 true-strike·spike-growth·find-familiar·find-steed·animate-dead가 판정으로 표시. — [engine bug]
 - spare-the-dying — 안정화 계산 가능. — [host-hook]
 - 상위 슬롯 대상 증가 문법 없음(축복·액운·매혹·명령·웃음·영웅심·도약·괴물/인간 포박·투명·실명/귀머거리·능력 강화·비행·추방 등), 호스트가 추가 대상 거절. — [new-grammar] `targetsPerSlotAboveBase`.
-- chromatic-orb — 항상 화염, 튕김 없음. — [picker + new-grammar]
+- ✔ D268 chromatic-orb — 항상 화염, 튕김 없음. — [picker + new-grammar]
 - ice-knife — 피해 없음. 명중 1d10 뒤 범위 2d6 내성. — [new-grammar]
 - command — 효과 없음. — [picker]
 - hideous-laughter — 반복 내성·피해 시 재내성 없음. — [data-fix + host-hook]
@@ -187,8 +189,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - acid-arrow — 다음 턴 2d4·빗나감 절반 없음. — [new-grammar]
 - spiritual-weapon — 슬롯당 +1d8 없음. — [data-fix]
 - aid — 최대 HP +5 고정. — [data-fix]
-- blindness-deafness — 둘 다 부여. — [picker]
-- enhance-ability — 모든 판정 유리. — [picker]
+- ✔ D268 blindness-deafness — 둘 다 부여. — [picker]
+- ✔ D268 enhance-ability — 모든 판정 유리. — [picker]
 - dragon-s-breath — 효과 없는 내성, 아군 브레스 없음. — [picker + data-fix]
 - flaming-sphere — 피해 없는 내성. — [data-fix + button]
 - protection-from-poison — 모든 내성 유리, 중독 해제 없음. — [data-fix + new-grammar]
@@ -199,12 +201,12 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - magic-weapon — 슬롯에 따른 +2/+3 없음. — [data-fix]
 - warding-bond — 저항·피해 공유가 문구. — [host-hook]
 - beacon-of-hope — 아군 내성, 모든 내성 유리, 치유 최대값 없음. — [data-fix]
-- bestow-curse — 두 효과 동시. — [picker]
+- ✔ D268 bestow-curse — 두 효과 동시. — [picker]
 - slow — 효과 없는 내성. — [data-fix]
 - stinking-cloud — 중독 지속 틀림. — [data-fix + button]
 - vampiric-touch — 시전자 회복 없음. — [new-grammar]
 - blink — 턴 끝 d6 계산 가능. — [host-hook]
-- 알려진 것: protection-from-energy·fire-shield 유형 고정, hex 능력치, enlarge-reduce 선택, resistance 2024 피해 감소, mirror-image·sanctuary 미계산, protection-from-evil-and-good 모든 공격자, 메타매직. — [picker/new-grammar]
+- (D268: 에너지 보호·화염 방패·저주 선택 ✔) 알려진 것: protection-from-energy·fire-shield 유형 고정, hex 능력치, enlarge-reduce 선택, resistance 2024 피해 감소, mirror-image·sanctuary 미계산, protection-from-evil-and-good 모든 공격자, 메타매직. — [picker/new-grammar]
 
 ### 주문 (4~9레벨 전투)
 - vitriolic-sphere, conjure-woodland-beings, delayed-blast-fireball, befuddlement — 피해 없음. — [data-fix]
@@ -218,7 +220,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - phantasmal-killer — 판정 불리·반복 피해 문구. — [data-fix]
 - mass-heal — 대상 1명. — [data-fix + picker]
 - conjure-minor-elementals — 항상 화염. — [picker]
-- death-ward — 0 대신 1이 문구. — [host-hook]
+- ✔ D268 death-ward — 0 대신 1이 문구. — [host-hook]
 - aura-of-life — 턴 시작 1 HP가 문구. — [host-hook]
 
 ### 판정 주문 중 계산 가능한 것

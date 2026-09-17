@@ -11,6 +11,7 @@ import weaponSpellJson from "../../content/indexes/dnd-srd-5.2.1.spell-weapon.js
 import creaturesJson from "../../content/indexes/dnd-srd-5.2.1.spell-creatures.json";
 import reactionJson from "../../content/indexes/dnd-srd-5.2.1.spell-reaction.json";
 import repeatSaveJson from "../../content/indexes/dnd-srd-5.2.1.spell-repeat-save.json";
+import variantsJson from "../../content/indexes/dnd-srd-5.2.1.spell-variants.json";
 import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
@@ -53,6 +54,8 @@ export interface SpellExec {
   reaction?: SpellReaction;
   /** H6c (D250): the target repeats the save at the end of each of its turns (see `repeatSaveOf`). */
   repeatSave?: "turn-end";
+  /** V4f (D268): what the caster chooses when casting (a module spell's own list). */
+  variants?: SpellVariant[];
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
   repeat?: { economy: SpellSustain["economy"] };
 }
@@ -82,6 +85,23 @@ export interface SpellCreatures {
   none?: string;
 }
 const BUILTIN_CREATURES = (creaturesJson as unknown as { spells: Record<string, SpellCreatures> }).spells;
+/** V4f (D268): a choice made when casting — its patch over the execution (objects merge, arrays and values replace). */
+export interface SpellVariant { id: string; label: string; patch: Record<string, unknown> }
+const BUILTIN_VARIANTS = (variantsJson as unknown as { spells: Record<string, { variants: SpellVariant[] }> }).spells;
+/** V4f (D268): the choices this spell asks for when cast, SRD index or installed module alike. */
+export const variantsOf = (spellId: string): SpellVariant[] => spellExec(spellId)?.variants ?? BUILTIN_VARIANTS[spellId]?.variants ?? [];
+const mergePatch = (base: unknown, patch: unknown): unknown => {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch) || !base || typeof base !== "object" || Array.isArray(base)) return patch;
+  const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [key, value] of Object.entries(patch as Record<string, unknown>)) out[key] = mergePatch(out[key], value);
+  return out;
+};
+/** V4f (D268): the execution with a chosen variant applied, and the variant's label; an unknown id leaves it as it is. */
+export function withVariant(exec: SpellExec, variantId: string | undefined): { exec: SpellExec; label?: string } {
+  const variant = variantId ? variantsOf(exec.spellId).find((item) => item.id === variantId) : undefined;
+  return variant ? { exec: mergePatch(exec, variant.patch) as SpellExec, label: variant.label } : { exec };
+}
+
 /** H6b (D249): a reaction spell and the moment it answers — an attack hitting its caster, or a spell being cast in sight. */
 export interface SpellReaction { trigger: "attack.hit-self" | "spell.cast-seen" }
 const BUILTIN_REACTION = (reactionJson as unknown as { spells: Record<string, SpellReaction> }).spells;
@@ -110,7 +130,7 @@ export interface SpellBearerPart {
 }
 const BUILTIN_BEARER = (bearerJson as unknown as { spells: Record<string, SpellBearerPart[]> }).spells;
 /** R90 (D225): the lasting-effect parts of a spell — the catalog's, plus what the SRD index adds (유도 화살's advantage). */
-export const bearerPartsOf = (spellId: string): SpellBearerPart[] => [...(spellExec(spellId)?.trackedEffects ?? []), ...(BUILTIN_BEARER[spellId] ?? [])];
+export const bearerPartsOf = (spellId: string, /** V4f (D268): the variant the effect was cast with. */ variant?: string): SpellBearerPart[] => { const exec = spellExec(spellId); return [...((exec ? withVariant(exec, variant).exec : undefined)?.trackedEffects ?? []), ...(BUILTIN_BEARER[spellId] ?? [])]; };
 
 /**
  * H2 (D239): a spell cast through a weapon attack — the attack and damage use the spellcasting ability of the list

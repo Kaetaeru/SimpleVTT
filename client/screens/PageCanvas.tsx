@@ -30,7 +30,7 @@ import { resolveRuntime } from "../character/save";
 import type { DerivedFeature, DerivedItem } from "../character/types";
 import { itemUse } from "../rules/items";
 import { castableSpells } from "../rules/spellcast";
-import { describeSpellExec, spellExec, sustainedExec, sustainOf } from "../compendium/spells";
+import { describeSpellExec, spellExec, sustainedExec, sustainOf , variantsOf } from "../compendium/spells";
 import type { CastMethod } from "../character/play";
 import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
@@ -396,15 +396,22 @@ function Dropdown({ label, items, disabled, tone, up = false }: { label: string;
   );
 }
 
-interface CastAsk { name: string; options: Array<{ label: string; method: CastMethod }>; resolve: (method: CastMethod | null) => void }
+interface CastAsk { name: string; title?: string; options: Array<{ label: string; method: CastMethod | string }>; resolve: (method: CastMethod | string | null) => void }
 const castAskListeners = new Set<(ask: CastAsk) => void>();
-const requestCastMethod = (ask: Omit<CastAsk, "resolve">) => new Promise<CastMethod | null>((resolve) => { if (!castAskListeners.size) { resolve(ask.options[0]?.method ?? null); return; } for (const listener of [...castAskListeners]) listener({ ...ask, resolve }); });
+const requestCastMethod = (ask: Omit<CastAsk, "resolve">) => new Promise<CastMethod | string | null>((resolve) => { if (!castAskListeners.size) { resolve(ask.options[0]?.method ?? null); return; } for (const listener of [...castAskListeners]) listener({ ...ask, resolve }); });
+/** V4f (D268): ask which variant of a spell to cast; the first one when nobody is there to ask (tests). Undefined when the spell has none, null when cancelled. */
+export const requestSpellVariant = async (spellId: string, name: string): Promise<string | undefined | null> => {
+  const variants = variantsOf(spellId);
+  if (!variants.length) return undefined;
+  const answer = await requestCastMethod({ name, title: `${name} — 무엇을 고를까요`, options: variants.map((variant) => ({ label: variant.label, method: variant.id })) });
+  return typeof answer === "string" ? answer : null;
+};
 function CastAskBridge() {
   const [ask, setAsk] = useState<CastAsk | null>(null);
   useEffect(() => { castAskListeners.add(setAsk); return () => { castAskListeners.delete(setAsk); }; }, []);
   if (!ask) return null;
   return (
-    <RiderModal title={`${ask.name} — 어떻게 시전할까요`} onClose={() => { ask.resolve(null); setAsk(null); }}>
+    <RiderModal title={ask.title ?? `${ask.name} — 어떻게 시전할까요`} onClose={() => { ask.resolve(null); setAsk(null); }}>
       <div className="cl-list" style={{ gap: 6 }}>{ask.options.map((option) => <button type="button" key={option.label} className="cl-btn primary" onClick={() => { ask.resolve(option.method); setAsk(null); }}>{option.label}</button>)}</div>
     </RiderModal>
   );
@@ -611,12 +618,14 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       const options = view ? castOptions(view, derived, currentRuntime()) : [];
       if (!options.length) { alert("슬롯이나 횟수가 없습니다."); return; }
       const chosen = options.length === 1 ? options[0].method : await requestCastMethod({ name, options });
-      if (!chosen) return;
+      if (!chosen || typeof chosen === "string") return;
       method = chosen;
     }
     let overrides: AttackOverrides | undefined;
     if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, gm: true }); if (answer === null) return; overrides = answer.overrides; }
-    c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined);
+    const variant = forced?.kind === "sustain" ? undefined : await requestSpellVariant(spellId, name);
+    if (variant === null) return;
+    c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined, undefined, variant);
   };
   // R77 (D212): a concentration spell that is still going can be used again without a slot — 영적 무기 as a bonus
   // action, 흡혈의 손길 as an action, 달빛 광선's damage when somebody walks in (no economy at all).
