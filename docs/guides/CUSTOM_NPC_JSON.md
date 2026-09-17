@@ -148,3 +148,25 @@
 - 주문 시전(`spellcasting`)은 아직 JSON으로 받지 않는다. 주문은 `text` 행동으로 적는다.
 - 다중공격의 "A 또는 B" 대안(`alternatives`)은 받지 않는다.
 - 한 번 추가한 NPC의 스탯 블록은 저널에서 고칠 수 없다. JSON을 고쳐 다시 추가한다.
+
+## 9. 소환 주문의 스탯 블록 템플릿 (D219)
+
+야수 소환·요정 소환처럼 슬롯 레벨과 시전자에 따라 수치가 바뀌는 소환물은, 모듈의 `spell-mechanic`에 `summon`으로 이 형식의 스탯 블록을 **템플릿**으로 적는다. 값 자리에 `{…}` 식을 쓰면 시전할 때 채워진다.
+
+- 쓸 수 있는 이름: `level`(시전 슬롯 레벨), `attack`(시전자의 주문 명중 보너스), `dc`(주문 내성 DC), `mod`(주문 시전 능력 수정치)
+- 연산: `+ - * /`, 괄호, `floor(…)`
+- 문자열 전체가 `{…}`이면 숫자가 되고(`"ac": "{11+level}"`), 글 안에 섞이면 그 자리에 숫자가 들어간다(`"formula": "1d8+{4+level}"`)
+
+```json
+{ "summon": { "note": "야수 정령 — 시전자의 명령을 따름", "forms": [
+  { "name": "땅", "template": {
+    "name": "야수 정령 (땅)", "size": "small", "ac": "{11+level}", "hp": "{30+5*(level-2)}", "speed": 30,
+    "abilities": { "str": 18, "dex": 11, "con": 16, "int": 4, "wis": 14, "cha": 5 },
+    "actions": [
+      { "name": "다중공격", "multiattack": { "routine": [{ "name": "할퀴기", "count": "{floor(level/2)}" }] } },
+      { "name": "할퀴기", "attack": { "mode": "melee", "bonus": "{attack}", "damage": [{ "formula": "1d8+{4+level}", "type": "piercing" }] } }
+    ] } }
+] } }
+```
+
+주문 카드의 **소환** 버튼이 형태를 고르게 하고, 호스트가 시전자의 수치로 채운 크리처를 시전자 곁에 놓는다. 예시 8종은 `content/supplements/phb-2024.spell-mechanics-patch/module.json`에 있다.

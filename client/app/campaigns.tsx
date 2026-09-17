@@ -132,7 +132,7 @@ export interface CampaignsState {
   /** R19: use an NPC trait; a per-day count the DM set is spent. */
   useTrait: (actor: ActorRef, name: string) => void;
   /** R16: put a summoned creature on the board (its own journal entry, controlled by the summoner's controller). */
-  summon: (summoner: ActorRef, monsterId: string, options?: { count?: number; spellId?: string }) => void;
+  summon: (summoner: ActorRef, monsterId: string, options?: { count?: number; spellId?: string; form?: number }) => void;
   /** R16: send this summoner's creatures away. */
   dismissSummons: (summoner: ActorRef, spellId?: string) => void;
   /** R12 (DM): Legendary Resistance on a failed save in a spell card. */
@@ -560,7 +560,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const rollTable = useCallback((name: string, count = 1, mode: "public" | "gm" | "self" = "public") => send({ type: "chat.table", name, count, mode }), [send]);
   const spendEconomy = useCallback((actor: ActorRef, which: "action" | "bonus", options: { grant?: boolean; source?: string } = {}) => send({ type: "act.spend", actor, which, ...options }), [send]);
   const useTrait = useCallback((actor: ActorRef, name: string) => send({ type: "act.trait", actor, name }), [send]);
-  const summon = useCallback((summoner: ActorRef, monsterId: string, options: { count?: number; spellId?: string } = {}) => send({ type: "act.summon", summoner, monsterId, ...(options.count ? { count: options.count } : {}), ...(options.spellId ? { spellId: options.spellId } : {}) }), [send]);
+  const summon = useCallback((summoner: ActorRef, monsterId: string, options: { count?: number; spellId?: string; form?: number } = {}) => send({ type: "act.summon", summoner, monsterId, ...(options.count ? { count: options.count } : {}), ...(options.spellId ? { spellId: options.spellId } : {}), ...(options.form !== undefined ? { form: options.form } : {}) }), [send]);
   const dismissSummons = useCallback((summoner: ActorRef, spellId?: string) => send({ type: "act.dismiss", summoner, ...(spellId ? { spellId } : {}) }), [send]);
   const resist = useCallback((messageId: string, targetId: string, tokenId?: string) => send({ type: "act.resist", messageId, targetId, ...(tokenId ? { tokenId } : {}) }), [send]);
   const provoke = useCallback((mover: ActorRef, from: ActorRef) => send({ type: "act.provoke", mover, from }), [send]);

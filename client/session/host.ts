@@ -26,6 +26,7 @@ import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, t
 import { smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, type SpellExec } from "../compendium/spells";
+import { summonMonster } from "../compendium/summonTemplate";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
@@ -1026,10 +1027,23 @@ export class TableHost {
         if (!isGm && !this.mayAct(userId, command.summoner, summoner.entry)) return refuse("자기 캐릭터로만 소환할 수 있습니다");
         const page = summoner.page ?? (command.summoner.pageId ? this.pages.get(command.summoner.pageId) : undefined);
         if (!page) return refuse("소환할 장면이 없습니다");
-        const monster = monsterById(command.monsterId);
+        // R84 (D219): a summon spell with its own creature fills in its template at the level the spell was cast.
+        const template = command.spellId ? spellExec(command.spellId)?.summon : undefined;
+        let monster = template ? undefined : monsterById(command.monsterId);
+        if (template) {
+          const form = template.forms[Math.max(0, Math.min(template.forms.length - 1, Math.floor(Number(command.form) || 0)))];
+          if (summoner.entry.kind !== "character" || !form) return refuse("이 소환은 캐릭터의 주문으로만 합니다");
+          const going = (summoner.entry.runtime.effects ?? []).find((effect) => effect.key === `spell:${command.spellId}`);
+          const level = going?.level ?? spellExec(command.spellId!)!.baseLevel;
+          const cast = this.options.pcSpell?.(summoner.entry, command.spellId!, { kind: "slot", level });
+          if (!cast) return refuse("시전자가 이 주문을 쓸 수 없습니다");
+          const made = summonMonster(form, { level, attack: cast.casterStats.attackBonus, dc: cast.casterStats.saveDc, mod: cast.casterStats.modifier });
+          if ("error" in made) return refuse(`소환물을 만들 수 없습니다: ${made.error}`);
+          monster = made.monster;
+        }
         if (!monster) return refuse("그 괴물을 컴펜디움에서 찾을 수 없습니다");
-        const rule = command.spellId ? summonRule(command.spellId) : undefined;
-        const most = rule?.count ?? 8;
+        const rule = command.spellId && !template ? summonRule(command.spellId) : undefined;
+        const most = template ? 1 : rule?.count ?? 8;
         const count = Math.max(1, Math.min(most, command.count ?? 1));
         if (rule && rule.choices.length && !rule.choices.includes(command.monsterId)) return refuse(`${rule.spellId.split(".").pop()}은(는) 그 크리처를 소환하지 않습니다`);
         const summonerName = summoner.token?.name ?? summoner.entry.name;
@@ -1037,8 +1051,8 @@ export class TableHost {
         const controller = summoner.entry.kind === "character" ? summoner.entry.canEdit : [];
         const placed: string[] = [];
         for (let at = 0; at < count; at += 1) {
-          const name = count > 1 ? `${monster.name} ${at + 1}` : monster.name;
-          const entry: JournalNpc = { ...newJournalNpc(this.campaign.id, userId, monster, { name, now: this.now() }), folder: "소환", canView: controller, canEdit: controller, summonedBy: { entryId: summoner.entry.id, spellId: command.spellId, name: summonerName } };
+          const name = count > 1 ? `${monster!.name} ${at + 1}` : monster!.name;
+          const entry: JournalNpc = { ...newJournalNpc(this.campaign.id, userId, monster!, { name, now: this.now() }), folder: "소환", canView: controller, canEdit: controller, summonedBy: { entryId: summoner.entry.id, spellId: command.spellId, name: summonerName } };
           this.storeEntry(entry);
           const token = { ...tokenForNpc(entry), controlledBy: controller.length ? controller : ("inherit" as const), z: page.tokens.length + at };
           this.storeToken(this.pages.get(page.id) ?? page, token);

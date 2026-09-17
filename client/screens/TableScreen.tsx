@@ -8,6 +8,7 @@ import { controlsToken } from "../campaign/page";
 import { audienceIncludes } from "../campaign/journal";
 import type { SpellResolution, SpellTargetResult } from "../rules/spellcast";
 import { monsterById } from "../compendium/monsters";
+import { spellExec } from "../compendium/spells";
 import { summonRule, summonsNothing } from "../rules/summons";
 import { useClient } from "../app/context";
 import type { ChatMessage, Macro, RollTable } from "../campaign/model";
@@ -316,6 +317,18 @@ function SummonRow({ spell }: { spell: SpellResolution }) {
   const mine = isGm || Boolean(casterEntry && audienceIncludes(casterEntry.canEdit, c.userId));
   const [pick, setPick] = useState("");
   const placed = snapshot.journal.some((item) => item.kind === "npc" && item.summonedBy?.entryId === spell.caster.id && item.summonedBy.spellId === spell.spellId);
+  // R84 (D219): a spell that brings its own creature offers its forms; the host fills in the numbers for this cast.
+  const template = spellExec(spell.spellId)?.summon;
+  if (template && mine) {
+    if (!seat) return <div className="cl-small cl-quiet">🌀 시전자의 토큰이 장면에 없어 소환물을 놓을 수 없습니다.</div>;
+    return (
+      <div className="cl-row cl-small" style={{ gap: 4, flexWrap: "wrap" }}>
+        {template.note ? <span className="cl-quiet">🌀 {template.note}</span> : null}
+        {template.forms.length > 1 ? <select className="cl-select" style={{ height: 26 }} aria-label="소환 형태" value={pick || "0"} onChange={(event) => setPick(event.target.value)}>{template.forms.map((form, index) => <option key={form.name} value={index}>{form.name}</option>)}</select> : null}
+        {!placed ? <button type="button" className="cl-btn small primary" onClick={() => c.summon(seat, "", { spellId: spell.spellId, form: Number(pick || 0) })}>소환</button> : <button type="button" className="cl-btn small" onClick={() => c.dismissSummons(seat, spell.spellId)}>소환물 돌려보내기</button>}
+      </div>
+    );
+  }
   if (nothing) return <div className="cl-small cl-quiet">🌀 {nothing}</div>;
   if (!rule || !mine) return null;
   if (!seat) return <div className="cl-small cl-quiet">🌀 시전자의 토큰이 장면에 없어 소환물을 놓을 수 없습니다.</div>;

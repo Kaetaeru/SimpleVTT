@@ -470,6 +470,1578 @@
      }
     }
    ]
+  },
+  {
+   "id": "phb2024.spell.summon-beast",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "야수 정령 — 시전자의 턴 직후 행동, 시전자의 명령을 따름",
+       "forms": [
+        {
+         "name": "하늘",
+         "template": {
+          "name": "야수 정령 (하늘)",
+          "size": "small",
+          "type": "야수",
+          "creatureType": "beast",
+          "ac": "{11+level}",
+          "hp": "{20+5*(level-2)}",
+          "speed": 30,
+          "abilities": {
+           "str": 18,
+           "dex": 11,
+           "con": 16,
+           "int": 4,
+           "wis": 14,
+           "cha": 5
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "fly": 60
+          },
+          "traits": [
+           {
+            "name": "비행 공격",
+            "text": "적의 도달 거리 밖으로 날아가도 기회 공격을 유발하지 않음"
+           }
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "할퀴기을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "할퀴기",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "할퀴기",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{4+level}",
+               "type": "piercing"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "땅",
+         "template": {
+          "name": "야수 정령 (땅)",
+          "size": "small",
+          "type": "야수",
+          "creatureType": "beast",
+          "ac": "{11+level}",
+          "hp": "{30+5*(level-2)}",
+          "speed": 30,
+          "abilities": {
+           "str": 18,
+           "dex": 11,
+           "con": 16,
+           "int": 4,
+           "wis": 14,
+           "cha": 5
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "climb": 30
+          },
+          "traits": [
+           {
+            "name": "무리 전술",
+            "text": "아군이 대상 5피트 안에 있으면 명중에 이점"
+           }
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "할퀴기을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "할퀴기",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "할퀴기",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{4+level}",
+               "type": "piercing"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "물",
+         "template": {
+          "name": "야수 정령 (물)",
+          "size": "small",
+          "type": "야수",
+          "creatureType": "beast",
+          "ac": "{11+level}",
+          "hp": "{30+5*(level-2)}",
+          "speed": 30,
+          "abilities": {
+           "str": 18,
+           "dex": 11,
+           "con": 16,
+           "int": 4,
+           "wis": 14,
+           "cha": 5
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "swim": 30
+          },
+          "traits": [
+           {
+            "name": "무리 전술",
+            "text": "아군이 대상 5피트 안에 있으면 명중에 이점"
+           },
+           {
+            "name": "수중 호흡",
+            "text": "물속에서만 숨 쉼"
+           }
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "할퀴기을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "할퀴기",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "할퀴기",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{4+level}",
+               "type": "piercing"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.summon-fey",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "요정 정령 — 추가 행동으로 30피트 순간이동 (형태별 효과는 표에서)",
+       "forms": [
+        {
+         "name": "분노",
+         "template": {
+          "name": "요정 정령 (분노)",
+          "size": "small",
+          "type": "요정",
+          "creatureType": "fey",
+          "ac": "{12+level}",
+          "hp": "{30+10*(level-3)}",
+          "speed": 30,
+          "abilities": {
+           "str": 13,
+           "dex": 16,
+           "con": 14,
+           "int": 14,
+           "wis": 11,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "요정 칼날을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "요정 칼날",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "요정 칼날",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "2d6+{3+level}",
+               "type": "force"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "기쁨",
+         "template": {
+          "name": "요정 정령 (기쁨)",
+          "size": "small",
+          "type": "요정",
+          "creatureType": "fey",
+          "ac": "{12+level}",
+          "hp": "{30+10*(level-3)}",
+          "speed": 30,
+          "abilities": {
+           "str": 13,
+           "dex": 16,
+           "con": 14,
+           "int": 14,
+           "wis": 11,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "요정 칼날을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "요정 칼날",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "요정 칼날",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "2d6+{3+level}",
+               "type": "force"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "속임수",
+         "template": {
+          "name": "요정 정령 (속임수)",
+          "size": "small",
+          "type": "요정",
+          "creatureType": "fey",
+          "ac": "{12+level}",
+          "hp": "{30+10*(level-3)}",
+          "speed": 30,
+          "abilities": {
+           "str": 13,
+           "dex": 16,
+           "con": 14,
+           "int": 14,
+           "wis": 11,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "요정 칼날을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "요정 칼날",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "요정 칼날",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "2d6+{3+level}",
+               "type": "force"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.summon-undead",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "언데드 정령 — 시전자의 명령을 따름",
+       "forms": [
+        {
+         "name": "유령",
+         "template": {
+          "name": "언데드 정령 (유령)",
+          "size": "medium",
+          "type": "언데드",
+          "creatureType": "undead",
+          "ac": "{11+level}",
+          "hp": "{30+10*(level-3)}",
+          "speed": 30,
+          "abilities": {
+           "str": 12,
+           "dex": 16,
+           "con": 15,
+           "int": 4,
+           "wis": 10,
+           "cha": 9
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "fly": 40
+          },
+          "conditionImmunities": [
+           "exhaustion",
+           "frightened",
+           "paralyzed",
+           "poisoned"
+          ],
+          "damageImmunities": [
+           "necrotic",
+           "poison"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "죽음의 손길을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "죽음의 손길",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "죽음의 손길",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{3+level}",
+               "type": "necrotic"
+              }
+             ]
+            },
+            "text": ""
+           },
+           {
+            "name": "공포의 손길",
+            "save": {
+             "ability": "wis",
+             "dc": "{dc}",
+             "conditions": [
+              "frightened"
+             ],
+             "onSuccess": "none"
+            },
+            "text": "죽음의 손길이 명중한 대상: 지혜 내성 실패 시 다음 시전자 턴 끝까지 공포"
+           }
+          ]
+         }
+        },
+        {
+         "name": "부패",
+         "template": {
+          "name": "언데드 정령 (부패)",
+          "size": "medium",
+          "type": "언데드",
+          "creatureType": "undead",
+          "ac": "{11+level}",
+          "hp": "{30+10*(level-3)}",
+          "speed": 30,
+          "abilities": {
+           "str": 12,
+           "dex": 16,
+           "con": 15,
+           "int": 4,
+           "wis": 10,
+           "cha": 9
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "conditionImmunities": [
+           "exhaustion",
+           "frightened",
+           "paralyzed",
+           "poisoned"
+          ],
+          "damageImmunities": [
+           "necrotic",
+           "poison"
+          ],
+          "traits": [
+           {
+            "name": "썩은 오라",
+            "text": "5피트 안에서 턴을 시작한 크리처는 건강 내성 실패 시 중독 (표에서)"
+           }
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "썩은 발톱을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "썩은 발톱",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "썩은 발톱",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d6+{3+level}",
+               "type": "slashing"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "해골",
+         "template": {
+          "name": "언데드 정령 (해골)",
+          "size": "medium",
+          "type": "언데드",
+          "creatureType": "undead",
+          "ac": "{11+level}",
+          "hp": "{20+10*(level-3)}",
+          "speed": 30,
+          "abilities": {
+           "str": 12,
+           "dex": 16,
+           "con": 15,
+           "int": 4,
+           "wis": 10,
+           "cha": 9
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "conditionImmunities": [
+           "exhaustion",
+           "frightened",
+           "paralyzed",
+           "poisoned"
+          ],
+          "damageImmunities": [
+           "necrotic",
+           "poison"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "무덤 화살을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "무덤 화살",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "무덤 화살",
+            "attack": {
+             "mode": "ranged",
+             "bonus": "{attack}",
+             "rangeFeet": 150,
+             "damage": [
+              {
+               "formula": "2d4+{3+level}",
+               "type": "necrotic"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.summon-aberration",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "이형체 정령 — 시전자의 명령을 따름",
+       "forms": [
+        {
+         "name": "비홀더 친족",
+         "template": {
+          "name": "이형체 정령 (비홀더 친족)",
+          "size": "medium",
+          "type": "이형체",
+          "creatureType": "aberration",
+          "ac": "{11+level}",
+          "hp": "{40+10*(level-4)}",
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 10,
+           "con": 15,
+           "int": 16,
+           "wis": 10,
+           "cha": 6
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "fly": 30
+          },
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "눈 광선을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "눈 광선",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "눈 광선",
+            "attack": {
+             "mode": "ranged",
+             "bonus": "{attack}",
+             "rangeFeet": 150,
+             "damage": [
+              {
+               "formula": "1d8+{3+level}",
+               "type": "psychic"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "슬라드",
+         "template": {
+          "name": "이형체 정령 (슬라드)",
+          "size": "medium",
+          "type": "이형체",
+          "creatureType": "aberration",
+          "ac": "{11+level}",
+          "hp": "{40+10*(level-4)}",
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 10,
+           "con": 15,
+           "int": 16,
+           "wis": 10,
+           "cha": 6
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "traits": [
+           {
+            "name": "재생",
+            "text": "HP가 남아 있으면 턴 시작에 5 회복 (표에서)"
+           }
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "발톱을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "발톱",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "발톱",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d10+{3+level}",
+               "type": "slashing"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "별의 자손",
+         "template": {
+          "name": "이형체 정령 (별의 자손)",
+          "size": "medium",
+          "type": "이형체",
+          "creatureType": "aberration",
+          "ac": "{11+level}",
+          "hp": "{40+10*(level-4)}",
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 10,
+           "con": 15,
+           "int": 16,
+           "wis": 10,
+           "cha": 6
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "traits": [
+           {
+            "name": "속삭이는 오라",
+            "text": "5피트 안에서 턴을 시작한 적은 지혜 내성 실패 시 2d6 정신 피해 (표에서)"
+           }
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "정신 강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "정신 강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "정신 강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{3+level}",
+               "type": "psychic"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.summon-construct",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "구조물 정령 — 시전자의 명령을 따름",
+       "forms": [
+        {
+         "name": "점토",
+         "template": {
+          "name": "구조물 정령 (점토)",
+          "size": "medium",
+          "type": "구조물",
+          "creatureType": "construct",
+          "ac": "{13+level}",
+          "hp": "{40+15*(level-4)}",
+          "speed": 30,
+          "abilities": {
+           "str": 18,
+           "dex": 10,
+           "con": 18,
+           "int": 14,
+           "wis": 11,
+           "cha": 5
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "damageResistances": [
+           "poison"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "exhaustion",
+           "frightened",
+           "incapacitated",
+           "paralyzed",
+           "petrified",
+           "poisoned"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{4+level}",
+               "type": "bludgeoning"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "금속",
+         "template": {
+          "name": "구조물 정령 (금속)",
+          "size": "medium",
+          "type": "구조물",
+          "creatureType": "construct",
+          "ac": "{13+level}",
+          "hp": "{40+15*(level-4)}",
+          "speed": 30,
+          "abilities": {
+           "str": 18,
+           "dex": 10,
+           "con": 18,
+           "int": 14,
+           "wis": 11,
+           "cha": 5
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "damageResistances": [
+           "poison"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "exhaustion",
+           "frightened",
+           "incapacitated",
+           "paralyzed",
+           "petrified",
+           "poisoned"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{4+level}",
+               "type": "bludgeoning"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "돌",
+         "template": {
+          "name": "구조물 정령 (돌)",
+          "size": "medium",
+          "type": "구조물",
+          "creatureType": "construct",
+          "ac": "{13+level}",
+          "hp": "{40+15*(level-4)}",
+          "speed": 30,
+          "abilities": {
+           "str": 18,
+           "dex": 10,
+           "con": 18,
+           "int": 14,
+           "wis": 11,
+           "cha": 5
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "damageResistances": [
+           "poison"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "exhaustion",
+           "frightened",
+           "incapacitated",
+           "paralyzed",
+           "petrified",
+           "poisoned"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{4+level}",
+               "type": "bludgeoning"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.summon-elemental",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "원소 정령 — 시전자의 명령을 따름",
+       "forms": [
+        {
+         "name": "공기",
+         "template": {
+          "name": "원소 정령 (공기)",
+          "size": "large",
+          "type": "원소",
+          "creatureType": "elemental",
+          "ac": "{11+level}",
+          "hp": "{50+10*(level-4)}",
+          "speed": 40,
+          "abilities": {
+           "str": 18,
+           "dex": 15,
+           "con": 17,
+           "int": 4,
+           "wis": 10,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "conditionImmunities": [
+           "exhaustion",
+           "paralyzed",
+           "petrified",
+           "poisoned",
+           "unconscious"
+          ],
+          "damageImmunities": [
+           "poison"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d10+{4+level}",
+               "type": "lightning"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "땅",
+         "template": {
+          "name": "원소 정령 (땅)",
+          "size": "large",
+          "type": "원소",
+          "creatureType": "elemental",
+          "ac": "{11+level}",
+          "hp": "{50+10*(level-4)}",
+          "speed": 40,
+          "abilities": {
+           "str": 18,
+           "dex": 15,
+           "con": 17,
+           "int": 4,
+           "wis": 10,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "conditionImmunities": [
+           "exhaustion",
+           "paralyzed",
+           "petrified",
+           "poisoned",
+           "unconscious"
+          ],
+          "damageImmunities": [
+           "poison"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d10+{4+level}",
+               "type": "bludgeoning"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "불",
+         "template": {
+          "name": "원소 정령 (불)",
+          "size": "large",
+          "type": "원소",
+          "creatureType": "elemental",
+          "ac": "{11+level}",
+          "hp": "{50+10*(level-4)}",
+          "speed": 40,
+          "abilities": {
+           "str": 18,
+           "dex": 15,
+           "con": 17,
+           "int": 4,
+           "wis": 10,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "conditionImmunities": [
+           "exhaustion",
+           "paralyzed",
+           "petrified",
+           "poisoned",
+           "unconscious"
+          ],
+          "damageImmunities": [
+           "poison"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d10+{4+level}",
+               "type": "fire"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "물",
+         "template": {
+          "name": "원소 정령 (물)",
+          "size": "large",
+          "type": "원소",
+          "creatureType": "elemental",
+          "ac": "{11+level}",
+          "hp": "{50+10*(level-4)}",
+          "speed": 40,
+          "abilities": {
+           "str": 18,
+           "dex": 15,
+           "con": 17,
+           "int": 4,
+           "wis": 10,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "conditionImmunities": [
+           "exhaustion",
+           "paralyzed",
+           "petrified",
+           "poisoned",
+           "unconscious"
+          ],
+          "damageImmunities": [
+           "poison"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "강타을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "강타",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d10+{4+level}",
+               "type": "bludgeoning"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.summon-celestial",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "천상체 정령 — 한 번의 행동으로 치유의 손길(2d8+주문 레벨) 가능 (표에서)",
+       "forms": [
+        {
+         "name": "복수자",
+         "template": {
+          "name": "천상체 정령 (복수자)",
+          "size": "large",
+          "type": "천상체",
+          "creatureType": "celestial",
+          "ac": "{11+level}",
+          "hp": "{40+10*(level-5)}",
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 14,
+           "con": 16,
+           "int": 10,
+           "wis": 14,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "fly": 40
+          },
+          "damageResistances": [
+           "radiant"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "frightened"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "광휘 활을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "광휘 활",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "광휘 활",
+            "attack": {
+             "mode": "ranged",
+             "bonus": "{attack}",
+             "rangeFeet": 600,
+             "damage": [
+              {
+               "formula": "2d6+{2+level}",
+               "type": "radiant"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "수호자",
+         "template": {
+          "name": "천상체 정령 (수호자)",
+          "size": "large",
+          "type": "천상체",
+          "creatureType": "celestial",
+          "ac": "{13+level}",
+          "hp": "{40+10*(level-5)}",
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 14,
+           "con": 16,
+           "int": 10,
+           "wis": 14,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "fly": 40
+          },
+          "damageResistances": [
+           "radiant"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "frightened"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "광휘 철퇴을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "광휘 철퇴",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "광휘 철퇴",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d10+{3+level}",
+               "type": "radiant"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.summon-fiend",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "summon": {
+       "note": "악마 정령 — 시전자의 명령을 따름",
+       "forms": [
+        {
+         "name": "데몬",
+         "template": {
+          "name": "악마 정령 (데몬)",
+          "size": "large",
+          "type": "악마",
+          "creatureType": "fiend",
+          "ac": "{12+level}",
+          "hp": "{50+15*(level-6)}",
+          "speed": 40,
+          "abilities": {
+           "str": 13,
+           "dex": 16,
+           "con": 15,
+           "int": 10,
+           "wis": 10,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "damageResistances": [
+           "fire"
+          ],
+          "damageImmunities": [
+           "poison"
+          ],
+          "conditionImmunities": [
+           "poisoned"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "물기을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "물기",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "물기",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d12+{3+level}",
+               "type": "necrotic"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "데빌",
+         "template": {
+          "name": "악마 정령 (데빌)",
+          "size": "large",
+          "type": "악마",
+          "creatureType": "fiend",
+          "ac": "{12+level}",
+          "hp": "{40+15*(level-6)}",
+          "speed": 40,
+          "abilities": {
+           "str": 13,
+           "dex": 16,
+           "con": 15,
+           "int": 10,
+           "wis": 10,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "speeds": {
+           "fly": 60
+          },
+          "damageResistances": [
+           "fire"
+          ],
+          "damageImmunities": [
+           "poison"
+          ],
+          "conditionImmunities": [
+           "poisoned"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "불꽃 던지기을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "불꽃 던지기",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "불꽃 던지기",
+            "attack": {
+             "mode": "ranged",
+             "bonus": "{attack}",
+             "rangeFeet": 150,
+             "damage": [
+              {
+               "formula": "2d6+{3+level}",
+               "type": "fire"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "유골로스",
+         "template": {
+          "name": "악마 정령 (유골로스)",
+          "size": "large",
+          "type": "악마",
+          "creatureType": "fiend",
+          "ac": "{12+level}",
+          "hp": "{60+15*(level-6)}",
+          "speed": 40,
+          "abilities": {
+           "str": 13,
+           "dex": 16,
+           "con": 15,
+           "int": 10,
+           "wis": 10,
+           "cha": 16
+          },
+          "cr": 0,
+          "languages": "시전자의 언어를 이해",
+          "damageResistances": [
+           "fire"
+          ],
+          "damageImmunities": [
+           "poison"
+          ],
+          "conditionImmunities": [
+           "poisoned"
+          ],
+          "actions": [
+           {
+            "name": "다중공격",
+            "text": "발톱을(를) 주문 레벨의 절반(내림)만큼",
+            "multiattack": {
+             "routine": [
+              {
+               "name": "발톱",
+               "count": "{floor(level/2)}"
+              }
+             ]
+            }
+           },
+           {
+            "name": "발톱",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "damage": [
+              {
+               "formula": "1d8+{3+level}",
+               "type": "slashing"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
   }
  ]
 }

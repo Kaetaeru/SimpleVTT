@@ -172,7 +172,7 @@ export type ClientCommand =
    */
   | { type: "act.contract"; actor: ActorRef; ruleKey: string; targets?: ActorRef[] }
   /** R16: put a summoned creature on the summoner's scene — its own journal entry, controlled by the summoner's controller. */
-  | { type: "act.summon"; summoner: ActorRef; monsterId: string; count?: number; spellId?: string }
+  | { type: "act.summon"; summoner: ActorRef; monsterId: string; count?: number; spellId?: string; /** R84 (D219): which of a summon spell's forms, when the spell brings its own creature. */ form?: number }
   /** R16: send this summoner's creatures away (the spell ended, or the DM says so). */
   | { type: "act.dismiss"; summoner: ActorRef; spellId?: string }
   | { type: "act.resist"; messageId: string; targetId: string; /** R15: the target token, so two copies of one stat block are told apart. */ tokenId?: string }

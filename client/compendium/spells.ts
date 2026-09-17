@@ -6,6 +6,7 @@
 import catalogJson from "../../src/generated/spellExecutionCatalog.generated.json";
 import sustainJson from "../../content/indexes/dnd-srd-5.2.1.spell-sustain.json";
 import onHitJson from "../../content/indexes/dnd-srd-5.2.1.spell-on-hit.json";
+import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
 export interface SpellDuration { kind: "concentration" | "rounds" | "minutes" | "hours" | "instant" | "special" | "permanent"; amount?: number; anchorActorId?: string; boundary?: "start" | "end" }
@@ -35,6 +36,8 @@ export interface SpellExec {
   sustain?: Partial<SpellSustain> | false;
   /** R82 (D218): cast right after a weapon hit (the smites) — offered in the on-hit window. */
   onHit?: SpellOnHit;
+  /** R84 (D219): the creature a summon spell brings, as a template filled in at the cast (compendium/summonTemplate.ts). */
+  summon?: SpellSummon;
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
   repeat?: { economy: SpellSustain["economy"] };
 }
@@ -125,6 +128,7 @@ export function execForCatalogSpell(spell: CatalogSpell): SpellExec {
     // R82 (D218): a patch may give a spell only its on-hit rule or its repeat, without the rest of the mechanics.
     ...(mechanic && isObject(mechanic.onHit) ? { onHit: mechanic.onHit as unknown as SpellOnHit } : {}),
     ...(mechanic && mechanic.sustain !== undefined ? { sustain: mechanic.sustain as SpellExec["sustain"] } : {}),
+    ...(mechanic && isObject(mechanic.summon) && Array.isArray(mechanic.summon.forms) ? { summon: mechanic.summon as unknown as SpellSummon } : {}),
   };
 }
 
