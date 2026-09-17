@@ -253,6 +253,8 @@ export interface DerivedCharacter {
   damageReduction?: Array<{ types: string[]; amount: number; source: string }>;
   /** R51 (D186): damage types whose resistance this character's own damage ignores (원소 숙련자, 독 제조자). */
   ignoresResistance?: string[];
+  /** R93 (D228): cantrips whose damage adds the spellcasting modifier (고통스러운 폭발 picked for them). */
+  cantripDamageModifier?: string[];
   /** R55 (D190): reasons this character's attacks are advantaged, each with the weapon filter it applies to. */
   advantageOn?: Array<{ reason: string; scope?: string }>;
   /** R55 (D190): reasons attacks against this character are advantaged (무모한 공격's other half). */

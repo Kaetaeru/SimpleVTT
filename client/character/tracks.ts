@@ -394,7 +394,8 @@ function applyInvocations(ledger: Ledger, cls: ClassView, first: number, picked:
       if (feat) applyFeat(ledger, feat, { key: `invocation.${first}.${slug}`, sourceLabel: `${cls.name} · ${option.name}`, trackIndex: first });
     }
     if (option.targetKind === "damage-cantrip" || option.targetKind === "attack-cantrip") {
-      const known = [...entry.cantrips, ...entry.extraCantrips].map((id) => catalog.spellById(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell));
+      // R93 (D228): the class cantrips are picked after the invocations, so the picks in the source count as known too.
+      const known = [...new Set([...entry.cantrips, ...entry.extraCantrips, ...(ledger.source.choices[`class.${first}.cantrips`] ?? [])])].map((id) => catalog.spellById(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell));
       const target = ledger.askOne({ ...ask, id: `class.${first}.invocation.${slug}.target`, label: `${option.name} — 대상 소마법`, description: "알고 있는 워락 소마법 중 피해를 주는 것.", options: known.map((spell) => ({ id: spell.id, name: spell.name, nameEn: spell.nameEn, summary: spell.summary })), optional: true });
       if (target) ledger.flags.add(`invocation:${slug}:${target}`);
     }
