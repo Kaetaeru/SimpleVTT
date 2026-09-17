@@ -84,6 +84,7 @@
 - 풀의 `freeCastSpellIds`(이름 붙은 주문 목록만 무료 시전) (D279)
 - 속성 `spell.metamagic`(시전에 무엇을 바꾸는지) · `metamagicOptions` 리더 · 시전 명령의 `metamagic` · 해석기의 `saveDisadvantage` (D280)
 - `weapon.shillelagh`의 무기 목록·주사위를 데이터로(§2 위반 제거) · 주문 종료 `termination.bearerAttacksOrCasts`와 `consumeOn: "attack-or-cast"` (D281)
+- 주문 계약의 `turn-start` 시점을 호스트가 읽음 · 턴 시작의 임시 HP·피해 (D282)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

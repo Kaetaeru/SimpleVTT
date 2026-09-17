@@ -18,7 +18,7 @@ import { tableOutcome } from "../rules/contractTable";
 import { payContract, pcRescues } from "../rules/contractUse";
 import { itemUse } from "../rules/items";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
-import { metamagicOptions } from "../rules/contractActivation";
+import { formula as contractFormula, metamagicOptions } from "../rules/contractActivation";
 import { characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
@@ -84,10 +84,22 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     pcTurnStart: (entry) => {
       const derived = derivedOf(entry, catalog());
       const scope = characterScope(derived, { "actor.hp.current": entry.runtime.hp.current, "actor.hp.max": derived.hp.max });
-      return derived.features.flatMap((feature) => (featureContract(catalog(), featureRuleKey(feature.id))?.entryPoints ?? [])
+      // V4t (D282): a spell's own contract may carry a turn-start rule too, for the effects this sheet is under.
+      const sources: Array<{ label: string; contract: ReturnType<typeof featureContract> }> = [
+        ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)) })),
+        ...(entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").map((effect) => ({ label: effect.name, contract: catalog().contractFor(effect.key) })),
+      ];
+      return sources.flatMap(({ label, contract }) => (contract?.entryPoints ?? [])
         .filter((point) => point.invocation === TURN_START_INVOCATION)
         .flatMap((point) => point.operations)
-        .flatMap((operation) => ("when" in operation && operation.when && evaluate(operation.when, scope) !== true ? [] : operation.kind === "healing.apply" ? [{ label: feature.name, amount: Number(evaluate(operation.amount, scope)) || 0, max: derived.hp.max }] : operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain" ? [{ label: feature.name, amount: 0, max: derived.hp.max, inspiration: true }] : [])));
+        .flatMap((operation) => {
+          if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) return [];
+          if (operation.kind === "healing.apply") return [{ label, amount: Number(evaluate(operation.amount, scope)) || 0, max: derived.hp.max }];
+          if (operation.kind === "temp-hp.grant") return [{ label, amount: 0, max: derived.hp.max, tempHp: Number(evaluate(operation.amount, scope)) || 0 }];
+          if (operation.kind === "damage.apply") { const rolled = contractFormula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides); return rolled ? [{ label, amount: 0, max: derived.hp.max, damage: { formula: rolled, type: operation.damageType } }] : []; }
+          if (operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain") return [{ label, amount: 0, max: derived.hp.max, inspiration: true }];
+          return [];
+        }));
     },
     pcExtraTurns: (entry) => derivedOf(entry, catalog()).extraTurns ?? [],
     pcHitDefense: (entry) => derivedOf(entry, catalog()).hitDefense,

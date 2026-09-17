@@ -769,3 +769,25 @@ test("V4s: 나무 몽둥이 reads its weapons and dice from the spell, 투명화
   // 마법 무기: the bigger slots are variants the caster picks, not a sentence.
   assert.deepEqual(variantsOf("dnd.srd521.spell.magic-weapon").map((variant) => variant.id), ["plus-two", "plus-three"]);
 });
+
+test("V4t: a spell's own turn-start rule runs at the table — 영웅심's temp HP and 작열하는 강타's fire (D282)", async () => {
+  // 영웅심 on a paladin: temporary hit points equal to the caster's Charisma, every turn it starts.
+  const t = await table([
+    { classes: "paladin", level: 5, abilities: { cha: 16 }, runtime: (runtime) => ({ ...runtime, effects: [{ key: "spell:dnd.srd521.spell.heroism", name: "영웅심", source: "spell", duration: "집중, 최대 1분", concentration: true, rounds: 10, elapsed: 0, startedAt: "" }] }) },
+    { classes: "fighter", level: 5, runtime: (runtime) => ({ ...runtime, effects: [{ key: "spell:dnd.srd521.spell.searing-smite", name: "작열하는 강타", source: "spell", duration: "집중, 최대 1분", concentration: false, rounds: 10, elapsed: 0, startedAt: "", bearer: true }] }) },
+  ], [], () => 0.5);
+  for (const [index, name] of [[0, "팔라딘"], [1, "파이터"]] as Array<[number, string]>) {
+    t.dm.send({ type: "tracker.add", turn: { name, tokenId: t.ref(index).tokenId, pageId: t.scene.id, entryId: t.ref(index).entryId, initiative: 20 - index } });
+  }
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  const paladin = t.entry(0) as ReturnType<typeof newJournalCharacter>;
+  assert.equal(paladin.runtime.hp.temp, 3, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+
+  // 작열하는 강타: the creature carrying it takes its fire damage when its own turn starts.
+  const before = (t.entry(1) as ReturnType<typeof newJournalCharacter>).runtime.hp.current;
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  const after = (t.entry(1) as ReturnType<typeof newJournalCharacter>).runtime.hp.current;
+  assert.ok(after < before, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
+});

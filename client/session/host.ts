@@ -138,7 +138,7 @@ export interface TableHostOptions {
   /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
   pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;
   /** V3c (D257): the healing the sheet's turn-start contracts give now, with the maximum it stops at. */
-  pcTurnStart?: (entry: JournalCharacter) => Array<{ label: string; amount: number; max: number; /** V3h (D262): gain Heroic Inspiration if the sheet lacks it (영웅적 전사). */ inspiration?: boolean }>;
+  pcTurnStart?: (entry: JournalCharacter) => Array<{ label: string; amount: number; max: number; /** V3h (D262): gain Heroic Inspiration if the sheet lacks it (영웅적 전사). */ inspiration?: boolean; /** V4t (D282): temporary hit points instead of healing (영웅심). */ tempHp?: number; /** V4t (D282): damage the effect deals to its bearer, as a formula (작열하는 강타). */ damage?: { formula: string; type: string } }>;
   /** V3h (D262): the extra first-round turns this sheet takes, with their initiative offsets (도둑의 반사신경). */
   pcExtraTurns?: (entry: JournalCharacter) => Array<{ offset: number; label: string }>;
   /** V3h (D262): who hits this sheet attacks it at disadvantage for the rest of the turn — the rule's name, or nothing. */
@@ -2975,6 +2975,16 @@ export class TableHost {
         const live = this.journalEntries.get(started.id);
         if (live?.kind === "character" && heal.inspiration) {
           if (!live.runtime.heroicInspiration) { this.storeEntry({ ...live, runtime: { ...live.runtime, heroicInspiration: true, updatedAt: this.now() }, updatedAt: this.now() }); this.say({ type: "system", who: "", content: `${live.name}: ${heal.label} — 영웅적 영감을 얻음` }); }
+          continue;
+        }
+        // V4t (D282): temporary hit points at the start of a turn (영웅심), and damage an effect deals then.
+        if (live?.kind === "character" && heal.tempHp) {
+          if ((live.runtime.hp.temp ?? 0) < heal.tempHp) { this.storeEntry({ ...live, runtime: { ...live.runtime, hp: { ...live.runtime.hp, temp: heal.tempHp }, updatedAt: this.now() }, updatedAt: this.now() }); this.say({ type: "system", who: "", content: `${live.name}: ${heal.label} 임시 HP ${heal.tempHp}` }); }
+          continue;
+        }
+        if (live?.kind === "character" && heal.damage) {
+          const actor = this.resolveActor({ entryId: live.id });
+          if (actor) this.contractStrike(actor, [actor], heal.label, { formula: heal.damage.formula, damageType: heal.damage.type }, this.options.hostUserId, "");
           continue;
         }
         if (live?.kind !== "character" || heal.amount <= 0) continue;

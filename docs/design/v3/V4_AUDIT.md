@@ -182,8 +182,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - command — 효과 없음. — [picker]
 - ✔ D269 hideous-laughter — 반복 내성·피해 시 재내성 없음. — [data-fix + host-hook]
 - sleep — 두 번째 실패 무의식 없음. — [new-grammar]
-- heroism — 턴 시작 임시 HP 없음. — [new-grammar]
-- ensnaring-strike, searing-smite — 턴 시작 피해·종료 내성이 문구. — [new-grammar]
+- ✔ D282 heroism — 턴 시작 임시 HP 없음. — [new-grammar]
+- ✔ D282 ensnaring-strike, searing-smite — 턴 시작 피해·종료 내성이 문구. — [new-grammar]
 - shining-smite — 대상 공격 유리가 문구(문법 있음). — [data-fix]
 - hellish-rebuke — 반응으로 제시 안 됨. — [host-hook]
 - expeditious-retreat — 판정 표시, 추가 행동 질주 문법 있음. — [data-fix]
@@ -223,7 +223,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D281 mass-heal — 대상 1명. — [data-fix + picker]
 - conjure-minor-elementals — 항상 화염. — [picker]
 - ✔ D268 death-ward — 0 대신 1이 문구. — [host-hook]
-- aura-of-life — 턴 시작 1 HP가 문구. — [host-hook]
+- ✔ D282 aura-of-life — 턴 시작 1 HP가 문구. — [host-hook]
 
 ### 판정 주문 중 계산 가능한 것
 빈사 안정화, 신속 후퇴, 하급·상급 회복, 이동의 자유, 정신 방벽, 영웅의 연회, 기체 형태, 점멸, 침묵·어둠·안개 구름(안에 있음 버튼), 투명 간파, 비전의 손, 용 소환·거대 곤충·물체 살리기(SRD 소환 틀 없음), 거울 분신, 진실의 일격·가시 성장·사역마 찾기·군마 찾기·시체 조종(표시 버그). 나머지(탐지·점술·대화·이동·벽·소원·시간 정지·변신 등)는 사유 있는 DM 판정.
