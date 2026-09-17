@@ -28,7 +28,8 @@ import { longRest, setItemQuantity, shortRest } from "../character/play";
 import { restFeatures, spentSlots, useRestFeature } from "../character/rest";
 import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
-import { decodeInvite, encodeInvite } from "../session/protocol";
+import { contentHash, decodeInvite, encodeInvite } from "../session/protocol";
+import type { RuleModuleJson } from "../catalog/types";
 import { DEFAULT_SESSION_PORT, listSessionAddresses, tauriAvailable, TauriTcpTransport } from "../session/tauriTransport";
 import { BroadcastChannelTransport, MemoryHub } from "../session/transport";
 import { useClient } from "./context";
@@ -206,7 +207,9 @@ function storedId(key: string) {
 }
 
 export function CampaignsProvider({ children }: { children: ReactNode }) {
-  const { store, ready, catalog } = useClient();
+  const { store, ready, catalog, modules: installedModules, setSessionModules } = useClient();
+  const installedRef = useRef(installedModules);
+  installedRef.current = installedModules;
   const [seat] = useState(() => seatOf());
   const [userId] = useState(() => (typeof window === "undefined" ? newUserId() : storedId(userIdKey(seat))));
   const [seatSecret] = useState(() => (typeof window === "undefined" ? newUserId() : storedId(seatKey(seat))));
@@ -401,6 +404,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       pcRest: (entry, kind) => { const derived = derivedOf(entry, catalogRef.current); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
       pcReactionSpell: (entry, spellId) => { const derived = derivedOf(entry, catalogRef.current); if (!castableSpells(derived).includes(spellId)) return null; const view = catalogRef.current.spellById(spellId); return view ? cheapestCast(derived, entry.runtime, view.level) : null; },
       pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalogRef.current); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
+      // R83 (D217): the host offers the modules it plays with, so players need not install them by hand.
+      contentModules: () => installedRef.current.map((row) => row.module),
       artData: {
         get: async (hash) => (await store?.getAsset(hash))?.dataUrl,
         put: async (hash, dataUrl) => { await store?.putAsset({ hash, dataUrl, bytes: dataUrl.length, savedAt: new Date().toISOString() }); },
@@ -596,6 +601,25 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   useEffect(() => () => { if (archiveFor.current) flushArchive(archiveFor.current); clientRef.current?.leave(); hostRef.current?.close(); }, [flushArchive]);
 
   const client = clientRef.current;
+  // R83 (D217): a player's app fetches the host's modules it lacks (or holds in another version) and plays with them
+  // for as long as the table is open; leaving the table puts the library's own catalog back.
+  const contentKey = role === "player" ? (client?.snapshot?.modules ?? []).map((item) => `${item.moduleId}@${item.hash}`).join("|") : "";
+  useEffect(() => {
+    const current = clientRef.current;
+    const wanted = current?.snapshot?.modules ?? [];
+    if (!current || !contentKey) { setSessionModules([]); return; }
+    let cancelled = false;
+    void (async () => {
+      const fetched: RuleModuleJson[] = [];
+      for (const item of wanted) {
+        const local = installedRef.current.find((row) => row.moduleId === item.moduleId)?.module;
+        if (local && contentHash(local) === item.hash) continue;
+        try { fetched.push(await current.fetchContent(item.moduleId)); } catch (error) { console.warn("content fetch failed", item.moduleId, error); }
+      }
+      if (!cancelled) setSessionModules(fetched);
+    })();
+    return () => { cancelled = true; };
+  }, [contentKey, setSessionModules]);
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);

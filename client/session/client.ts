@@ -5,6 +5,7 @@
 import { ChunkAssembler } from "../campaign/art";
 import { emptyTracker } from "../campaign/tracker";
 import type { ClientCommand, HostMessage, TableEvent, TableSnapshot } from "./protocol";
+import type { RuleModuleJson } from "../catalog/types";
 import { PROTOCOL_VERSION, isHostMessage } from "./protocol";
 import type { Transport } from "./transport";
 import { emptyClock } from "../campaign/model";
@@ -26,6 +27,8 @@ export class TableClient {
   private readonly refusedListeners = new Set<(reason: string, commandType?: string) => void>();
   private readonly showListeners = new Set<(id: string) => void>();
   private readonly assembler = new ChunkAssembler();
+  /** R83 (D217): content modules being fetched from the host. */
+  private readonly contentWaiters = new Map<string, { resolve: (module: RuleModuleJson) => void; reject: (error: Error) => void }>();
   private readonly artWaiters = new Map<string, { resolve: (value: { hash: string; dataUrl: string }) => void; reject: (error: Error) => void; progress?: (done: number, total: number) => void }>();
   private readonly unsubscribe: Array<() => void> = [];
 
@@ -55,6 +58,14 @@ export class TableClient {
       if (this.artWaiters.has(id)) { reject(new Error("이미 받는 중입니다")); return; }
       this.artWaiters.set(id, { resolve, reject, progress });
       this.send({ type: "art.fetch", id });
+    });
+  }
+  /** R83 (D217): fetch a content module the snapshot lists; resolves with the module once every chunk arrived. */
+  fetchContent(moduleId: string): Promise<RuleModuleJson> {
+    return new Promise((resolve, reject) => {
+      if (this.contentWaiters.has(moduleId)) { reject(new Error("이미 받는 중입니다")); return; }
+      this.contentWaiters.set(moduleId, { resolve, reject });
+      this.send({ type: "content.fetch", moduleId });
     });
   }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
@@ -95,7 +106,16 @@ export class TableClient {
         waiter?.resolve({ hash: message.hash, dataUrl: whole });
         return;
       }
+      case "content.data": {
+        const whole = this.assembler.add(`content:${message.moduleId}`, message.index, message.total, message.data);
+        if (whole === null) return;
+        const waiter = this.contentWaiters.get(message.moduleId);
+        this.contentWaiters.delete(message.moduleId);
+        try { waiter?.resolve(JSON.parse(whole) as RuleModuleJson); } catch (error) { waiter?.reject(error as Error); }
+        return;
+      }
       case "refused":
+        if (message.commandType === "content.fetch" && message.id) { const waiter = this.contentWaiters.get(message.id); this.contentWaiters.delete(message.id); this.assembler.drop(`content:${message.id}`); waiter?.reject(new Error(message.reason)); return; }
         if (message.commandType === "hello" || message.commandType === "kicked") { this.statusState = "refused"; this.refusal = message.reason; }
         if (message.commandType === "art.fetch" && message.id) { const waiter = this.artWaiters.get(message.id); this.artWaiters.delete(message.id); this.assembler.drop(message.id); waiter?.reject(new Error(message.reason)); return; }
         for (const listener of [...this.refusedListeners]) listener(message.reason, message.commandType);

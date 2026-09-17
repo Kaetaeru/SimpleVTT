@@ -36,7 +36,8 @@ import { triggerPolicyKey } from "../character/rest";
 import { ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { parseChatInput, renderInline, visibleTo } from "./chat";
 import type { ClientCommand, HostMessage, Presence, RollPayload, TableEvent, TableSnapshot } from "./protocol";
-import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
+import { contentHash, PROTOCOL_VERSION, isClientCommand } from "./protocol";
+import type { RuleModuleJson } from "../catalog/types";
 import { economyBucketOf, planRollModify, type ContractPayment } from "../rules/contract";
 import type { AttackAftermath, AttackOutcomeKind } from "../rules/attackAftermath";
 import { guardHint, rollGuard, type GuardOffer, type ReactionTrigger } from "../rules/contractReactions";
@@ -143,6 +144,8 @@ export interface TableHostOptions {
   pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
+  /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
+  contentModules?: () => readonly RuleModuleJson[];
   /** R79 (D216), R81 (D215): what this character's features offer at a moment, and using one of them (dice rolled by `roll`). */
   pcTriggers?: (entry: JournalCharacter, event: "short-rest" | "initiative") => TriggerOffer[];
   pcTriggerApply?: (entry: JournalCharacter, event: "short-rest" | "initiative", choice: { featureId: string; slots?: number[] }, roll: (formula: string) => number) => CharacterRuntime | null;
@@ -268,6 +271,8 @@ export class TableHost {
       tables: (this.campaign.tables ?? []).filter((table) => viewer.role === "gm" || table.shared).map((table) => (viewer.role === "gm" ? table : { ...table, rows: [] })),
       lastEventN: this.n,
       sessionId: this.sessionId,
+      // R83 (D217): what the table is played with, so a player's app can bring the same rules.
+      ...(this.options.contentModules ? { modules: this.options.contentModules().map((module) => ({ moduleId: module.moduleId, moduleVersion: module.moduleVersion ?? "", hash: contentHash(module) })) } : {}),
     };
   }
 
@@ -515,6 +520,14 @@ export class TableHost {
         this.artAssets.delete(command.id);
         this.options.onArt?.({ removed: command.id });
         this.emit({ type: "art.removed", id: command.id });
+        return;
+      }
+      case "content.fetch": {
+        const module = this.options.contentModules?.().find((item) => item.moduleId === command.moduleId);
+        if (!module) return this.reply(peerId, { type: "refused", reason: "호스트에 그 모듈이 없습니다", commandType: command.type, id: String(command.moduleId) });
+        const hash = contentHash(module);
+        const chunks = chunkText(JSON.stringify(module));
+        chunks.forEach((data, index) => this.reply(peerId, { type: "content.data", moduleId: module.moduleId, hash, index, total: chunks.length, data }));
         return;
       }
       case "art.fetch": {

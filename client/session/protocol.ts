@@ -11,11 +11,13 @@ import type { ActionKind } from "../rules/actions";
 import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
+import type { RuleModuleJson } from "../catalog/types";
 
 // R57 (D192): 29 — declared facts travel with the riders and with a taken reaction.
 // R63 (D198): 30 — a hit opens a window for the attacker (`on-hit` prompt, `act.onhit` answer).
 // R81 (D215): 31 — a trigger window (`trigger` prompt, `act.trigger` answer) for initiative and the end of a short rest.
-export const PROTOCOL_VERSION = 31;
+// R83 (D217): 32 — the snapshot lists the host's content modules; `content.fetch` / `content.data` carry one across.
+export const PROTOCOL_VERSION = 32;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -47,6 +49,21 @@ export interface TableSnapshot {
    * the same session id; a relaunched host numbers from zero again and its events are a different stream (D122).
    */
   sessionId: string;
+  /** R83 (D217): the content modules the host plays with, in install order, so a player without one can fetch it. */
+  modules?: Array<{ moduleId: string; moduleVersion: string; hash: string }>;
+}
+
+/** R83 (D217): a module's fingerprint — FNV-1a over its JSON, so both sides agree whether they hold the same text. */
+const hashes = new WeakMap<object, string>();
+export function contentHash(module: RuleModuleJson): string {
+  const known = hashes.get(module);
+  if (known) return known;
+  const text = JSON.stringify(module);
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) { hash ^= text.charCodeAt(index); hash = Math.imul(hash, 0x01000193) >>> 0; }
+  const value = `${text.length.toString(36)}-${hash.toString(36)}`;
+  hashes.set(module, value);
+  return value;
 }
 
 /** Who acts or is targeted: a journal entry, usually through its token on a page. */
@@ -84,6 +101,8 @@ export type ClientCommand =
   | { type: "art.remove"; id: string }
   /** Ask for the bytes of an asset this viewer may see; the host answers this peer with art.data chunks. */
   | { type: "art.fetch"; id: string }
+  /** R83 (D217): ask for a content module the snapshot lists; the host answers this peer with content.data chunks. */
+  | { type: "content.fetch"; moduleId: string }
   /** Page settings (GM). Tokens in the payload are ignored for an existing page — token.* changes them. */
   | { type: "page.put"; page: Page }
   | { type: "page.remove"; id: string }
@@ -194,6 +213,7 @@ export type HostMessage =
   | { type: "welcome"; snapshot: TableSnapshot }
   | { type: "events"; events: TableEvent[] }
   | { type: "art.data"; id: string; hash: string; index: number; total: number; data: string }
+  | { type: "content.data"; moduleId: string; hash: string; index: number; total: number; data: string }
   | { type: "refused"; reason: string; commandType?: string; id?: string };
 
 export const isClientCommand = (value: unknown): value is ClientCommand => typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string";

@@ -65,6 +65,12 @@ export interface ClientState {
   deleteCharacter: (id: string) => Promise<void>;
   installModule: (module: RuleModuleJson, fileName?: string) => Promise<void>;
   removeModule: (moduleId: string) => Promise<void>;
+  /**
+   * R83 (D217): modules the table's host plays with that this app did not have (or had in another version). They join
+   * the catalog while the table is open and are never written to the library.
+   */
+  sessionModules: RuleModuleJson[];
+  setSessionModules: (modules: RuleModuleJson[]) => void;
   getDraft: () => Promise<CharacterSource | undefined>;
   putDraft: (source: CharacterSource | undefined) => Promise<void>;
 }
@@ -74,6 +80,7 @@ const ClientContext = createContext<ClientState | null>(null);
 export function ClientProvider({ children, store: presetStore, initialRoute }: { children: ReactNode; store?: ClientStore; initialRoute?: Route }) {
   const [store, setStore] = useState<ClientStore | null>(presetStore ?? null);
   const [modules, setModules] = useState<InstalledModuleRecord[]>([]);
+  const [sessionModules, setSessionModules] = useState<RuleModuleJson[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [ready, setReady] = useState(false);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
@@ -107,7 +114,8 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const catalog = useMemo(() => createCatalog(modules.map((row) => row.module)), [modules]);
+  // R83 (D217): the host's copy of a module wins over this app's, so everyone at the table reads the same rules.
+  const catalog = useMemo(() => createCatalog([...modules.map((row) => row.module).filter((module) => !sessionModules.some((item) => item.moduleId === module.moduleId)), ...sessionModules]), [modules, sessionModules]);
 
   const navigate = useCallback((next: Route) => {
     if (typeof location !== "undefined") { location.hash = routeHash(next); }
@@ -155,8 +163,8 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
   const getDraft = useCallback(async () => store?.getSetting<CharacterSource>("creation-draft"), [store]);
   const putDraft = useCallback(async (source: CharacterSource | undefined) => { await store?.putSetting("creation-draft", source ?? null); }, [store]);
 
-  const value = useMemo<ClientState>(() => ({ ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, getDraft, putDraft }),
-    [ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, getDraft, putDraft]);
+  const value = useMemo<ClientState>(() => ({ ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, sessionModules, setSessionModules, getDraft, putDraft }),
+    [ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, sessionModules, setSessionModules, getDraft, putDraft]);
   return <ClientContext.Provider value={value}>{children}</ClientContext.Provider>;
 }
 
