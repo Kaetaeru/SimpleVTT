@@ -6,12 +6,15 @@
  * slots through the reserved `resource.spell-slot-levels`), and the rest window offers them.
  */
 import type { ContentCatalog } from "../catalog/catalog";
-import { characterScope, evaluate, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE } from "../rules/contract";
+import { characterScope, evaluate, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, type TriggerEvent } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
-import { noteLog } from "./play";
+import { applyHealing, noteLog } from "./play";
 import type { CharacterRuntime } from "./runtime";
 import type { DerivedCharacter } from "./types";
+
+/** R79 (D216): the sheet setting for a trigger feature, by rule key so it survives a level up. */
+export const triggerPolicyKey = (featureId: string) => `trigger:${featureRuleKey(featureId)}`;
 
 /** The highest slot level the 2024 recoveries give back. */
 const SLOT_CAP = 5;
@@ -19,6 +22,10 @@ const SLOT_CAP = 5;
 export interface RestFeature {
   featureId: string;
   name: string;
+  /** R81 (D215): the moment it belongs to — a short rest's end or an initiative roll. */
+  event: TriggerEvent;
+  /** R81 (D215): hit points it restores, as a formula ("1d8+5"). */
+  heal?: string;
   note?: string;
   /** Pools the use spends (negative) or gives back (positive), by `derived.resources` id. */
   pools: Array<{ resourceId: string; amount: number }>;
@@ -30,16 +37,17 @@ export interface RestFeature {
   unavailable?: string;
 }
 
-export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntime, catalog: ContentCatalog): RestFeature[] {
+export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntime, catalog: ContentCatalog, event: TriggerEvent = REST_INVOCATION): RestFeature[] {
   const scope = characterScope(derived);
   return derived.features.flatMap((feature) => {
     const contract = featureContract(catalog, featureRuleKey(feature.id));
-    const entries = contract?.entryPoints.filter((entry) => entry.invocation === REST_INVOCATION) ?? [];
+    const entries = contract?.entryPoints.filter((entry) => entry.invocation === event) ?? [];
     if (!entries.length) return [];
-    const out: RestFeature = { featureId: feature.id, name: feature.name, pools: [] };
+    const out: RestFeature = { featureId: feature.id, name: feature.name, event, pools: [] };
     for (const operation of entries.flatMap((entry) => entry.operations)) {
       if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
       if (operation.kind === "adjudication.request") { out.note = out.note ? `${out.note} · ${operation.question}` : operation.question; continue; }
+      if (operation.kind === "healing.apply") { const flat = Number(evaluate(operation.amount, scope)) || 0; out.heal = `${operation.dice ?? ""}${operation.dice && flat ? "+" : ""}${flat || !operation.dice ? flat : ""}`; continue; }
       if (operation.kind !== "resource.change") continue;
       const amount = Number(evaluate(operation.amount, scope)) || 0;
       if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + amount;
@@ -50,7 +58,7 @@ export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntim
       const resource = derived.resources.find((item) => item.id === pool.resourceId);
       if (!resource || resource.max - (runtime.resourcesUsed[resource.id] ?? 0) < -pool.amount) out.unavailable = `${resource?.label ?? pool.resourceId}을(를) 이미 썼습니다`;
     }
-    const gives = out.pools.some((item) => item.amount > 0 && (runtime.resourcesUsed[item.resourceId] ?? 0) > 0) || Boolean(out.slotLevels && spentSlots(derived, runtime).length) || Boolean(out.pactSlots && runtime.pactSlotsUsed > 0);
+    const gives = out.pools.some((item) => item.amount > 0 && (runtime.resourcesUsed[item.resourceId] ?? 0) > 0) || Boolean(out.slotLevels && spentSlots(derived, runtime).length) || Boolean(out.pactSlots && runtime.pactSlotsUsed > 0) || Boolean(out.heal && runtime.hp.current < derived.hp.max);
     if (!out.unavailable && !gives) out.unavailable = "되찾을 것이 없습니다";
     return [out];
   });
@@ -94,7 +102,7 @@ export function restoreSlots(runtime: CharacterRuntime, derived: DerivedCharacte
 }
 
 /** Use a rest feature: pay its pool, give back what it gives. Null when it cannot be used or the slots chosen do not fit. */
-export function useRestFeature(runtime: CharacterRuntime, derived: DerivedCharacter, feature: RestFeature, chosen?: number[]): CharacterRuntime | null {
+export function useRestFeature(runtime: CharacterRuntime, derived: DerivedCharacter, feature: RestFeature, chosen?: number[], /** R81 (D215): what `feature.heal` rolled. */ healRoll?: number): CharacterRuntime | null {
   if (feature.unavailable) return null;
   const resourcesUsed = { ...runtime.resourcesUsed };
   const lines: string[] = [];
@@ -106,6 +114,7 @@ export function useRestFeature(runtime: CharacterRuntime, derived: DerivedCharac
     if (back) { resourcesUsed[pool.resourceId] = used - back; lines.push(`${resource?.label ?? pool.resourceId} ${back} 회복`); }
   }
   let next: CharacterRuntime = { ...runtime, resourcesUsed };
+  if (feature.heal && healRoll) { lines.push(`HP ${healRoll} 회복 (${feature.heal})`); next = applyHealing(next, derived, healRoll); }
   if (lines.length) next = noteLog(next, `${feature.name}: ${lines.join(", ")}`);
   return restoreSlots(next, derived, { levels: feature.slotLevels, pact: feature.pactSlots, chosen }, feature.name);
 }

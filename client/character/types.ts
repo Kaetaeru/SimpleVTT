@@ -266,7 +266,7 @@ export interface DerivedCharacter {
    * carried as plain data. Without this every caller of `featureActivation` would have to remember to hand it the
    * catalog, and the one that forgot would silently lose the feature's rule.
    */
-  featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean }; acts?: boolean; rest?: boolean }>;
+  featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean }; acts?: boolean; trigger?: string }>;
   hitDice: Record<string, number>;
   choices: ChoiceRequest[];
   validation: { blocking: string[]; warnings: string[] };

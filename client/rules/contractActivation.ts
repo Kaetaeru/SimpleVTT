@@ -6,14 +6,14 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { ATTACK_INVOCATIONS, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
 // readers that answer "what does the 사용 button do" leave it out. `contractSummary` still prints it as a rule.
 // R63 (D198): so is an `on-hit` one, chosen in the window a hit opens.
-// R78 (D213): nor a `short-rest` one, which the rest window runs.
-const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && entry.invocation !== REST_INVOCATION);
+// R78 (D213): nor a `short-rest` one, which the rest window runs. R81 (D215): nor an `initiative` one.
+const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && !TRIGGER_INVOCATIONS.has(entry.invocation));
 const operationsOf = (contract: CommonPlayContract) => [...livePoints(contract).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
 const live = (operation: ContractOperation, scope: Scope) => !("when" in operation && operation.when) || evaluate((operation as { when?: Parameters<typeof evaluate>[0] }).when, scope) === true;
 
@@ -57,8 +57,8 @@ export const contractDurations = (catalog: { contractFor(key: string): CommonPla
     const contract = featureContract(catalog, ruleKey);
     if (!contract) return undefined;
     // R41 (D181): a contract that only takes conditions off is still a reason for the feature to have a button.
-    const rest = contract.entryPoints.some((entry) => entry.invocation === REST_INVOCATION) && !livePoints(contract).length;
-    return { duration: contractDuration(contract, scope), use: contractUse(contract, scope, label), acts: !emptyOutcome(contractOutcome(contract, scope)), ...(rest ? { rest: true } : {}) };
+    const trigger = !livePoints(contract).length ? contract.entryPoints.find((entry) => TRIGGER_INVOCATIONS.has(entry.invocation))?.invocation : undefined;
+    return { duration: contractDuration(contract, scope), use: contractUse(contract, scope, label), acts: !emptyOutcome(contractOutcome(contract, scope)), ...(trigger ? { trigger } : {}) };
   };
 
 /**
@@ -236,14 +236,17 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
     if (entry.attack?.oncePerTurn) questions.push("턴당 한 번 (직접 세어 주세요)");
   }
   // R78 (D213): what a short rest's end does is said where the player looks for it — the rest window runs it.
-  for (const entry of contract.entryPoints.filter((item) => item.invocation === REST_INVOCATION)) {
+  for (const entry of contract.entryPoints.filter((item) => TRIGGER_INVOCATIONS.has(item.invocation))) {
     mechanical = true;
+    const where = entry.invocation === REST_INVOCATION ? "짧은 휴식 창에서" : "이니셔티브 굴릴 때 창에서";
     for (const operation of entry.operations) {
-      if (!live(operation, scope) || operation.kind !== "resource.change") continue;
+      if (!live(operation, scope)) continue;
+      if (operation.kind === "healing.apply") { rules.push(`${where} — HP ${operation.dice ?? ""}${operation.amount ? `+${number(operation.amount) ?? 0}` : ""} 회복`); continue; }
+      if (operation.kind !== "resource.change") continue;
       const amount = number(operation.amount) ?? 0;
-      if (operation.resourceId === SLOT_LEVELS_RESOURCE) rules.push(`짧은 휴식 창에서 — 레벨 합 ${amount}까지 슬롯 회복 (5레벨 이하)`);
-      else if (operation.resourceId === PACT_SLOT_RESOURCE) rules.push(`짧은 휴식 창에서 — 계약 슬롯 ${amount}개 회복`);
-      else if (amount > 0) rules.push(`짧은 휴식 창에서 — ${amount}회분 회복`);
+      if (operation.resourceId === SLOT_LEVELS_RESOURCE) rules.push(`${where} — 레벨 합 ${amount}까지 슬롯 회복 (5레벨 이하)`);
+      else if (operation.resourceId === PACT_SLOT_RESOURCE) rules.push(`${where} — 계약 슬롯 ${amount}개 회복`);
+      else if (amount > 0) rules.push(`${where} — ${amount}회분 회복`);
     }
   }
   for (const operation of operationsOf(contract)) {

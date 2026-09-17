@@ -231,6 +231,11 @@ export const FACT_MOMENTS = new Set(["pre-roll", "reaction", "on-hit"]);
 export const ATTACK_INVOCATIONS = new Set(["pre-roll-attack", "on-hit"]);
 /** R78 (D213): an entry point that runs when a short rest ends (비전 회복, 마력 회복) — chosen in the rest window, not pressed on the turn. */
 export const REST_INVOCATION = "short-rest";
+/** R81 (D215): an entry point that runs when this character rolls initiative (경이로운 신진대사). */
+export const INITIATIVE_INVOCATION = "initiative";
+/** R81 (D215): the moments the table asks about instead of a button: the end of a short rest, an initiative roll. */
+export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATION]);
+export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION;
 /**
  * R78 (D213): reserved resource ids a `resource.change` restores that are not pools — spell slots whose levels add up to
  * the amount (none above 5th, the rule both 2024 recoveries share) and Pact Magic slots. Same idea as R59's hit die.
@@ -355,7 +360,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const invocation = String(entry.invocation ?? "manual");
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
     // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
-    if (invocation !== "manual" && invocation !== REST_INVOCATION && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    if (invocation !== "manual" && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
     const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;

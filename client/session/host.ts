@@ -29,9 +29,10 @@ import { spellExec, sustainedExec } from "../compendium/spells";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
-import type { Campaign, CampaignClock, ChatMessage, HitOffer, PlayerRole } from "../campaign/model";
+import type { Campaign, CampaignClock, ChatMessage, HitOffer, PlayerRole, TriggerOffer } from "../campaign/model";
 import { advanceClock, clockText, emptyClock, newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { parseFormula, rollFormula } from "../character/dice";
+import { triggerPolicyKey } from "../character/rest";
 import { ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { parseChatInput, renderInline, visibleTo } from "./chat";
 import type { ClientCommand, HostMessage, Presence, RollPayload, TableEvent, TableSnapshot } from "./protocol";
@@ -142,6 +143,9 @@ export interface TableHostOptions {
   pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
+  /** R79 (D216), R81 (D215): what this character's features offer at a moment, and using one of them (dice rolled by `roll`). */
+  pcTriggers?: (entry: JournalCharacter, event: "short-rest" | "initiative") => TriggerOffer[];
+  pcTriggerApply?: (entry: JournalCharacter, event: "short-rest" | "initiative", choice: { featureId: string; slots?: number[] }, roll: (formula: string) => number) => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
   pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
@@ -621,6 +625,9 @@ export class TableHost {
           if (!runtime) continue;
           this.storeEntry({ ...entry, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
           rested.push(entry.name);
+          // R79 (D216): the end of the party's short rest is the moment 비전 회복 and 마력 회복 wait for.
+          const after = this.journalEntries.get(entry.id);
+          if (!long && after?.kind === "character") this.offerTriggers(after, "short-rest");
         }
         // R18: a long rest also gives the monsters their day back — per-day spells and traits, legendary resistance, recharges.
         if (long) for (const entry of [...this.journalEntries.values()]) {
@@ -704,6 +711,9 @@ export class TableHost {
           this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turnName} · 이니셔티브`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turnName} · 이니셔티브` } });
         }
         this.setTracker(withTurn(this.tracker, newTurn({ ...trusted, name: turnName, initiative })));
+        // R81 (D215): a rolled initiative is the moment 경이로운 신진대사 waits for.
+        const rolling = command.rollBonus !== undefined && trusted.entryId ? this.journalEntries.get(trusted.entryId) : undefined;
+        if (rolling?.kind === "character") this.offerTriggers(rolling, "initiative", { pageId: trusted.pageId, tokenId: trusted.tokenId });
         return;
       }
       case "tracker.swap": {
@@ -1384,6 +1394,19 @@ export class TableHost {
         this.takeHitChoices({ ...held, attacker, target }, { choices: picked, facts, smiteSlot }, auto);
         return;
       }
+      case "act.trigger": {
+        const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
+        const trigger = promptMessage?.prompt?.kind === "trigger" ? promptMessage.prompt.trigger : undefined;
+        if (!promptMessage?.prompt || !trigger || this.promptAnswered(command.messageId)) return refuse("그 창은 더 이상 열려 있지 않습니다");
+        const entry = this.journalEntries.get(promptMessage.prompt.reactor.entryId ?? "");
+        if (entry?.kind !== "character") return refuse("캐릭터를 찾을 수 없습니다");
+        if (!isGm && !canEdit(entry, this.viewer(userId))) return refuse("그 캐릭터의 주인만 답할 수 있습니다");
+        const offered = new Set(trigger.offers.map((offer) => offer.featureId));
+        const choices = (Array.isArray(command.choices) ? command.choices : []).filter((choice) => offered.has(choice?.featureId)).slice(0, trigger.offers.length);
+        const used = this.applyTriggers(entry.id, trigger.event, choices, trigger.offers);
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: used.length ? { chosen: used } : { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${used.length ? used.join(", ") : "안 함"}` });
+        return;
+      }
       case "act.decline": {
         const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
         if (!promptMessage?.prompt || this.promptAnswered(command.messageId)) return refuse("그 프롬프트는 더 이상 열려 있지 않습니다");
@@ -2028,6 +2051,38 @@ export class TableHost {
     if (recharge) setSpent(true);
     if (!options.legendary) this.markUsed({ entryId, pageId: actor.page?.id, tokenId: actor.token?.id }, "action");
     return this.postSpell(resolution, rows.map((row) => row.target), () => { if (recharge) setSpent(false); }, waits, options.displayName, options.by, { spec, casterStats: prepared.casterStats });
+  }
+
+  /**
+   * R79 (D216), R81 (D215): the features a character's contracts tie to this moment. Each follows its sheet setting
+   * (`hitPolicy["trigger:<feature>"]`): taken at once, never offered, or — the default — asked in a window the
+   * character's owner answers. Nothing waits on the answer; the rest of the table carries on.
+   */
+  private offerTriggers(entry: JournalCharacter, event: "short-rest" | "initiative", where: { pageId?: string; tokenId?: string } = {}) {
+    const offers = this.options.pcTriggers?.(entry, event) ?? [];
+    const policy = (offer: TriggerOffer) => entry.runtime.hitPolicy?.[triggerPolicyKey(offer.featureId)] ?? "ask";
+    const auto = offers.filter((offer) => policy(offer) === "always");
+    const ask = offers.filter((offer) => policy(offer) === "ask");
+    const moment = event === "initiative" ? "이니셔티브" : "짧은 휴식";
+    if (auto.length) { const used = this.applyTriggers(entry.id, event, auto.map((offer) => ({ featureId: offer.featureId })), auto); if (used.length) this.say({ type: "system", who: "", content: `${entry.name}: ${moment} — ${used.join(", ")} (자동)` }); }
+    if (!ask.length) return;
+    this.say({ type: "prompt", who: "", content: `${entry.name}: ${moment} — ${ask.map((offer) => offer.name).join(", ")}`, prompt: { kind: "trigger", mover: { name: entry.name }, reactor: { name: entry.name, entryId: entry.id, ...where }, trigger: { event, offers: ask } } });
+  }
+
+  /** Use the chosen trigger features one after another on the live sheet; returns what was used, by name. */
+  private applyTriggers(entryId: string, event: "short-rest" | "initiative", choices: Array<{ featureId: string; slots?: number[] }>, offers: TriggerOffer[]) {
+    const roll = (formula: string) => rollFormula({ label: "", formula }, this.options.random ?? Math.random).total;
+    const used: string[] = [];
+    for (const choice of choices) {
+      const live = this.journalEntries.get(entryId);
+      if (live?.kind !== "character") break;
+      const slots = Array.isArray(choice.slots) ? choice.slots.filter((level) => Number.isInteger(level)).slice(0, 20) : undefined;
+      const next = this.options.pcTriggerApply?.(live, event, { featureId: choice.featureId, ...(slots ? { slots } : {}) }, roll);
+      if (!next) continue;
+      this.storeEntry({ ...live, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() });
+      used.push(offers.find((offer) => offer.featureId === choice.featureId)?.name ?? choice.featureId);
+    }
+    return used;
   }
 
   /** R80 (D214): a monster concentrating on a spell carries it as an effect, so it can repeat it and lose it. */

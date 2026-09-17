@@ -14,7 +14,7 @@ import { build, catalog } from "./support";
 
 const USES: Array<[string, string, number]> = [
   ["fighter", "fighter.second-wind", 20],
-  ["monk", "monk.uncanny-metabolism", 20],
+  // R81 (D215): 경이로운 신진대사 is an initiative trigger now, not a button — tests/client/r81.test.ts.
   ["ranger", "ranger.tireless", 20],
   ["cleric", "cleric.life-domain.preserve-life", 20],
   ["druid", "druid.wild-shape", 20],

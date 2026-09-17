@@ -101,7 +101,7 @@ export function advanceClock(clock: CampaignClock, minutes: number): CampaignClo
 /** "○○이(가) △△에게서 벗어남": the reactor's controller may take an opportunity attack or let it go. */
 export interface ReactionPrompt {
   /** "opportunity": the mover leaves the reactor's reach (D96). "shield": the mover's attack hit the reactor, who may cast Shield (R11). "counterspell": the mover is casting and the reactor may counter it (R16). */
-  kind: "opportunity" | "shield" | "counterspell" | "death-save" | "rescue" | "guard" | "on-hit";
+  kind: "opportunity" | "shield" | "counterspell" | "death-save" | "rescue" | "guard" | "on-hit" | "trigger";
   mover: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   reactor: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   /** The held attack (shield prompts): what hit and by how much. */
@@ -122,10 +122,15 @@ export interface ReactionPrompt {
    * R63 (D198): the window a hit opens for the attacker. The reactor is the attacker (their controller answers), the
    * mover is the creature that was hit, and `offers` are what may still be added now that the hit is known.
    */
+  /** R79 (D216), R81 (D215): a moment a character's features wait for — the end of a short rest, an initiative roll. */
+  trigger?: { event: "short-rest" | "initiative"; offers: TriggerOffer[] };
   onHit?: { outcome: "hit" | "crit"; offers: HitOffer[]; /** R64 (D199): what the attacker's sheet takes without asking, by name, so the window can say so. */ auto?: string[] };
   /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. R63: `chosen` names what an on-hit window added. */
   outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string; chosen?: string[] };
 }
+
+/** R79 (D216), R81 (D215): a feature a trigger window offers — and, for 비전 회복, the spent slots it may give back. */
+export interface TriggerOffer { featureId: string; name: string; note?: string; heal?: string; slotLevels?: number; spent?: number[] }
 
 /** R63 (D198): one thing the attacker may add after a hit — a built-in rider (`sneak`, `smite`, `savage`) or a contract's rule key. */
 export interface HitOffer {

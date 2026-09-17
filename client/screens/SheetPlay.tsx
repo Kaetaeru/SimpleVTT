@@ -24,7 +24,7 @@ import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "..
 import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
 import { CUSTOM_ITEM_EXAMPLE, parseCustomItem } from "../character/customItem";
-import { pickSlots, restFeatures, spentSlots, useRestFeature } from "../character/rest";
+import { pickSlots, restFeatures, spentSlots, triggerPolicyKey, useRestFeature } from "../character/rest";
 
 export interface SheetPlayProps {
   source: CharacterSource;
@@ -66,6 +66,8 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const hpPreview = applyHpCommand(runtime, derived, hpInput);
   // R64 (D199): what this sheet may be asked after a hit, so its standing answers can be set (and a "never" undone).
   const hitSettings = useMemo(() => allHitOffers({ runtime }, derived), [runtime, derived]);
+  // R79 (D216), R81 (D215): features the table asks about at a moment, and the standing answer for each.
+  const triggerSettings = useMemo(() => [...restFeatures(derived, runtime, catalog, "short-rest"), ...restFeatures(derived, runtime, catalog, "initiative")], [runtime, derived, catalog]);
   // The slider previews while dragging and writes one log line on release.
   const commitSlider = () => { if (sliderHp !== null) { commit(setCurrentHp(runtime, derived, sliderHp)); setSliderHp(null); } };
   const submitHp = () => { if (hpPreview) { commit(hpPreview); setHpInput(""); } };
@@ -253,6 +255,20 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
             </div>
           ) : null}
         </div>
+        {triggerSettings.length ? (
+          <div className="cl-card">
+            <h3 className="cl-muted">휴식·이니셔티브 때 쓰는 특성</h3>
+            <p className="cl-quiet cl-small" style={{ marginTop: 0 }}>테이블에서 DM이 짧은 휴식을 하거나 이니셔티브를 굴리면 묻는 것들입니다.</p>
+            <div className="cl-list" style={{ gap: 4 }}>
+              {triggerSettings.map((feature) => (
+                <div key={feature.featureId} className="cl-row cl-small" style={{ gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
+                  <span><strong>{feature.name}</strong> <span className="cl-quiet">{feature.event === "initiative" ? "이니셔티브" : "짧은 휴식"}</span></span>
+                  <HitPolicySelect label={feature.name} value={runtime.hitPolicy?.[triggerPolicyKey(feature.featureId)] ?? "ask"} onChange={(policy) => commit({ ...runtime, hitPolicy: { ...(runtime.hitPolicy ?? {}), [triggerPolicyKey(feature.featureId)]: policy } })} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {hitSettings.length ? (
           <div className="cl-card">
             <h3 className="cl-muted">명중 후 선택</h3>

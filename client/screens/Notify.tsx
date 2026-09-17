@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import { canEdit } from "../campaign/journal";
-import type { ChatMessage, ReactionPrompt } from "../campaign/model";
+import type { ChatMessage, ReactionPrompt, TriggerOffer } from "../campaign/model";
+import { triggerPolicyKey } from "../character/rest";
 import { controlsToken } from "../campaign/page";
 import { deriveCharacter } from "../character/derive";
 import { weaponRange } from "../rules/attackSpec";
@@ -87,7 +88,7 @@ export function promptIsMine(message: ChatMessage, snapshot: { players: Array<{ 
 /** Buttons for the side a prompt is addressed to: the reactor's melee attacks as the reaction, or 안 함. Null when it is not yours or already answered. */
 const COUNTERSPELL_ID = "dnd.srd521.spell.counterspell";
 /** What a prompt is asking for, in one word. */
-export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "guard" ? "반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : kind === "rescue" ? "판정 다시 굴리기" : kind === "on-hit" ? "명중 후 선택" : "기회 공격");
+export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "guard" ? "반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : kind === "rescue" ? "판정 다시 굴리기" : kind === "on-hit" ? "명중 후 선택" : kind === "trigger" ? "특성 사용" : "기회 공격");
 
 /**
  * R63 (D198): the attacker's window after a hit. One checkbox per offer, the facts it turns on indented under it, a
@@ -140,6 +141,64 @@ function HitChoices({ message }: { message: ChatMessage }) {
       {auto.length ? <p className="cl-quiet cl-small" style={{ margin: 0 }}>항상 사용: {auto.join(", ")} — 고르지 않아도 적용됩니다.</p> : null}
       <div className="cl-row" style={{ gap: 4 }}>
         <button type="button" className="cl-btn small primary" disabled={!picked.length} onClick={() => c.hitChoice(message.id, picked, facts, picked.includes("smite") ? slot : undefined)}>적용</button>
+        <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * R79 (D216), R81 (D215): the features a moment offers (경이로운 신진대사 on initiative, 비전 회복 after a short rest) —
+ * a checkbox each, the slots 비전 회복 gives back, and the standing answer so the question need not come again.
+ */
+function TriggerChoices({ message }: { message: ChatMessage }) {
+  const c = useCampaigns();
+  const offers = message.prompt!.trigger?.offers ?? [];
+  const entry = c.table.snapshot!.journal.find((item) => item.id === message.prompt!.reactor.entryId);
+  const [picked, setPicked] = useState<Record<string, number[]>>({});
+  const policyOf = (featureId: string) => (entry?.kind === "character" ? entry.runtime.hitPolicy?.[triggerPolicyKey(featureId)] ?? "ask" : "ask");
+  const setPolicy = (featureId: string, policy: "ask" | "always" | "never") => {
+    if (entry?.kind !== "character") return;
+    const now = new Date().toISOString();
+    c.putJournal({ ...entry, runtime: { ...entry.runtime, hitPolicy: { ...(entry.runtime.hitPolicy ?? {}), [triggerPolicyKey(featureId)]: policy }, updatedAt: now }, updatedAt: now });
+  };
+  const autoSlots = (offer: TriggerOffer) => { const out: number[] = []; let left = offer.slotLevels ?? 0; for (const level of offer.spent ?? []) if (level <= left) { out.push(level); left -= level; } return out; };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {offers.map((offer) => {
+        const chosen = picked[offer.featureId];
+        const total = (chosen ?? []).reduce((sum, level) => sum + level, 0);
+        const set = (value: number[] | undefined) => setPicked((map) => { const next = { ...map }; if (value) next[offer.featureId] = value; else delete next[offer.featureId]; return next; });
+        return (
+          <div key={offer.featureId}>
+            <div className="cl-row" style={{ gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
+              <label className="cl-row cl-small" style={{ gap: 6 }}>
+                <input type="checkbox" checked={Boolean(chosen)} onChange={(event) => set(event.target.checked ? autoSlots(offer) : undefined)} />
+                <strong>{offer.name}</strong><span className="cl-quiet">{offer.note ?? (offer.heal ? `HP ${offer.heal}` : "")}</span>
+              </label>
+              {entry?.kind === "character" ? <HitPolicySelect label={offer.name} value={policyOf(offer.featureId)} allowAlways onChange={(policy) => setPolicy(offer.featureId, policy)} /> : null}
+            </div>
+            {chosen && offer.slotLevels ? (
+              <div className="cl-row cl-small" style={{ gap: 4, flexWrap: "wrap", paddingLeft: 22 }}>
+                <span>회복할 슬롯 (레벨 합 {total}/{offer.slotLevels})</span>
+                {[...new Set(offer.spent ?? [])].map((level) => {
+                  const count = chosen.filter((item) => item === level).length;
+                  const max = (offer.spent ?? []).filter((item) => item === level).length;
+                  return (
+                    <span key={level} className="cl-row" style={{ gap: 2 }}>
+                      <button type="button" className="cl-btn small" aria-label={`${level}레벨 슬롯 하나 덜`} disabled={count <= 0} onClick={() => { const at = chosen.indexOf(level); set(chosen.filter((_, index) => index !== at)); }}>−</button>
+                      {level}레벨 {count}/{max}
+                      <button type="button" className="cl-btn small" aria-label={`${level}레벨 슬롯 하나 더`} disabled={count >= max || total + level > offer.slotLevels!} onClick={() => set([...chosen, level])}>+</button>
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+      <div className="cl-row" style={{ gap: 4 }}>
+        <button type="button" className="cl-btn small primary" disabled={!Object.keys(picked).length} onClick={() => c.triggerChoice(message.id, Object.entries(picked).map(([featureId, slots]) => ({ featureId, ...(slots.length ? { slots } : {}) })))}>사용</button>
         <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
       </div>
     </div>
@@ -200,6 +259,7 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
     );
   }
   if (prompt.kind === "on-hit") return <HitChoices message={message} />;
+  if (prompt.kind === "trigger") return <TriggerChoices message={message} />;
   // R11 (Shield) and R54 (D189, a contract's own reaction) answer the same window: the attack that just hit.
   if (prompt.kind === "shield" || prompt.kind === "guard") {
     return (
@@ -268,6 +328,7 @@ export function ApprovalLayer() {
     return prompt.kind === "counterspell" ? <div className="cl-approval-body">🚫 <strong>{prompt.mover.name}</strong>이(가) {prompt.spell?.name}{prompt.spell ? ` (${prompt.spell.level}레벨)` : ""}을(를) 시전하려 합니다.<br />주문 차단을 하시겠습니까?</div>
       : prompt.kind === "shield" || prompt.kind === "guard" ? <div className="cl-approval-body">🛡 <strong>{prompt.mover.name}</strong>의 {prompt.attack?.name}이(가) <strong>{prompt.reactor.name}</strong>에게 적중했습니다 (명중 {prompt.attack?.total} vs AC {prompt.attack?.ac}).<br />{prompt.kind === "shield" ? "방패를 시전하시겠습니까?" : "반응을 쓰시겠습니까?"}</div>
       : prompt.kind === "on-hit" ? <div className="cl-approval-body">⚔ <strong>{prompt.reactor.name}</strong>의 {prompt.attack?.name}이(가) <strong>{prompt.mover.name}</strong>에게 {prompt.onHit?.outcome === "crit" ? <strong>치명타!</strong> : "명중했습니다"} (명중 {prompt.attack?.total} vs AC {prompt.attack?.ac}).<br />더할 것을 고르세요.{prompt.onHit?.outcome === "crit" ? " 추가 주사위도 두 배로 굴립니다." : ""}</div>
+      : prompt.kind === "trigger" ? <div className="cl-approval-body">✨ <strong>{prompt.reactor.name}</strong>: {prompt.trigger?.event === "initiative" ? "이니셔티브를 굴렸습니다" : "짧은 휴식을 마쳤습니다"}.<br />지금 쓸 수 있는 특성이 있습니다.</div>
       : prompt.kind === "rescue" ? <div className="cl-approval-body">🎲 <strong>{prompt.reactor.name}</strong>의 굴림이 실패했습니다 ({prompt.rescue?.roll}).<br />특성을 써서 다시 굴릴 수 있습니다.</div>
       : prompt.kind === "death-save" ? <div className="cl-approval-body">💀 <strong>{prompt.reactor.name}</strong>은(는) 쓰러져 있습니다.<br />죽음 내성을 굴리세요 (성공 3번이면 안정, 실패 3번이면 사망).</div>
       : <div className="cl-approval-body">🏃 <strong>{prompt.mover.name}</strong>이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>;

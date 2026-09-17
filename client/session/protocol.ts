@@ -14,7 +14,8 @@ import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, R
 
 // R57 (D192): 29 — declared facts travel with the riders and with a taken reaction.
 // R63 (D198): 30 — a hit opens a window for the attacker (`on-hit` prompt, `act.onhit` answer).
-export const PROTOCOL_VERSION = 30;
+// R81 (D215): 31 — a trigger window (`trigger` prompt, `act.trigger` answer) for initiative and the end of a short rest.
+export const PROTOCOL_VERSION = 31;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -118,6 +119,7 @@ export type ClientCommand =
   | { type: "act.guard"; messageId: string; feature: string; /** R57 (D192): the facts the reactor confirmed when taking it. */ facts?: string[] }
   /** R63 (D198): the attacker answers the window a hit opened — the offers they took, the facts they confirmed, the smite slot. "안 함" is `act.decline`. */
   | { type: "act.onhit"; messageId: string; choices: string[]; facts?: string[]; smiteSlot?: number }
+  | { type: "act.trigger"; messageId: string; choices: Array<{ featureId: string; slots?: number[] }> }
   /** D96: `mover` leaves `from`'s reach (the 벗어남 button); the host asks `from`'s controller for an opportunity attack. */
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */
