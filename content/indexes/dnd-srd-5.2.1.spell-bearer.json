@@ -1,0 +1,8 @@
+{
+  "description": "R90 (D225): lasting-effect parts the generated spell catalog does not carry, in the same shape as a spell's trackedEffects (modifier, attackDamage). They are added to what the catalog already says.",
+  "spells": {
+    "dnd.srd521.spell.guiding-bolt": [
+      { "summary": "다음 명중 굴림 이점", "modifier": { "family": "attack-roll", "rollState": "advantage", "scope": "target", "consumeOnUse": true } }
+    ]
+  }
+}

@@ -11,11 +11,12 @@ import type { CharacterRuntime, HitPolicy } from "../character/runtime";
 import { castSpell, spendResource, useSpellSlot } from "../character/play";
 import { CONDITION_KO, onHitOf, spellExec, type SpellOnHit } from "../compendium/spells";
 import { damageTypeKo } from "./resolve";
+import { bearerPartsOf } from "../compendium/spells";
 import { offeredRiders, riderFitsAttack } from "./attackRiders";
 import type { HitOffer } from "../campaign/model";
 import { critRiders } from "./attackAftermath";
 import { attackScopeFilter } from "./contractEffects";
-import type { DerivedAttack, DerivedCharacter } from "../character/types";
+import type { ActiveEffect, DerivedAttack, DerivedCharacter } from "../character/types";
 import type { MonsterAction, MonsterView } from "../compendium/monsters";
 import { damageFormula } from "../compendium/monsters";
 import type { AttackRiders } from "../session/protocol";
@@ -25,8 +26,41 @@ import type { CasterStats, SpellCastSpec } from "./spellcast";
 
 const diceOf = (terms: Array<{ dice?: string }>) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
 
+type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "consumable" | "markedBy">;
+/**
+ * R90 (D225): the spell effects a creature is under, as what they do at the table — 축복·액운's d4 on its attack rolls
+ * and saves, 요정 불꽃·유도 화살's advantage for whoever attacks it, 사냥꾼의 표식·주술's dice for the caster who marked
+ * it, and which effects end once used. Only effects it is under count (`bearer`, or put there by someone else), not a
+ * caster merely concentrating on 액운. `flat` is false for a character: the sheet already adds flat bonuses through the
+ * effect contracts, while dice never reached a table roll, so the dice come from here for everyone.
+ */
+export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): BearerRolls {
+  const out: Required<BearerRolls> = { d20Dice: [], rollStates: [], grantsAdvantage: [], grantsDisadvantage: [], consumable: [], markedBy: [] };
+  for (const effect of effects) {
+    if (!effect.key.startsWith("spell:") || !(effect.bearer || effect.from)) continue;
+    for (const part of bearerPartsOf(effect.key.slice("spell:".length))) {
+      const modifier = part.modifier;
+      const on = modifier?.family === "attack-roll" ? "attack" : modifier?.family === "saving-throw" ? "save" : null;
+      if (modifier && on && modifier.scope === "target") {
+        if (on === "attack" && modifier.rollState) (modifier.rollState === "advantage" ? out.grantsAdvantage : out.grantsDisadvantage).push(`대상 ${effect.name}`);
+        if (on === "attack" && modifier.consumeOnUse) out.consumable.push({ key: effect.key, on: "attacked" });
+      } else if (modifier && on) {
+        const sign = (modifier.bonus?.sign ?? 1) < 0 ? "-" : "";
+        const dice = modifier.bonus?.dice ? `${sign}${modifier.bonus.dice.count}d${modifier.bonus.dice.sides}` : flat && modifier.bonus?.flat ? `${sign}${modifier.bonus.flat}` : "";
+        if (dice) out.d20Dice.push({ on, dice, label: effect.name });
+        if (modifier.rollState) out.rollStates.push({ on, state: modifier.rollState, label: effect.name, ...(modifier.ability ? { ability: modifier.ability } : {}) });
+        if (on === "attack" && modifier.consumeOnUse) out.consumable.push({ key: effect.key, on: "attack" });
+      }
+      const damage = part.attackDamage;
+      if (damage?.againstTargetOnly && effect.from && (damage.dice || damage.flat)) out.markedBy.push({ from: effect.from, formula: damage.dice ? `${damage.dice.count}d${damage.dice.sides}` : String(damage.flat), type: damageTypeKo(damage.damageType), label: effect.name });
+    }
+  }
+  return Object.fromEntries(Object.entries(out).filter(([, list]) => list.length)) as BearerRolls;
+}
+
 export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter): Combatant {
   const runtime = entry.runtime;
+  const bearer = bearerRolls(runtime.effects, false);
   const concentration = (runtime.effects ?? []).find((effect) => effect.concentration);
   return {
     // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
@@ -37,7 +71,8 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     // R51 (D186): 중갑 달인 — flat reduction per damage type, from whatever effect or feat contract granted it.
     ...(derived.damageReduction?.length ? { reduction: derived.damageReduction } : {}),
     // R55 (D190): what this character gives away by attacking recklessly — anyone swinging at them gets advantage.
-    ...(derived.grantsAdvantage?.length ? { grantsAdvantage: derived.grantsAdvantage } : {}),
+    ...bearer,
+    ...(derived.grantsAdvantage?.length ? { grantsAdvantage: [...derived.grantsAdvantage, ...(bearer.grantsAdvantage ?? [])] } : {}),
   };
 }
 
@@ -70,6 +105,7 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities, conditionImmunities: block.conditionImmunities },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),
+    ...bearerRolls(entry.runtime.effects, true),
     // R80 (D214): a monster concentrating makes the same save a character does when it is hurt.
     ...((entry.runtime.effects ?? []).some((effect) => effect.concentration) || markers.includes("집중") ? { concentration: (entry.runtime.effects ?? []).find((effect) => effect.concentration)?.name ?? "집중" } : {}),
   };

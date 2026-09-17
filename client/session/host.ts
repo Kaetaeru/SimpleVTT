@@ -17,13 +17,13 @@ import { advanceRound, ageEffects, endEffect, noteLog, recordDeathSave, wakeUp }
 import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
 import { npcAttackSpec, npcCombatant, npcSaveExec, regenerationOf } from "../rules/attackSpec";
-import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
+import type { AttackOverrides, AttackResolution, AttackSpec, Combatant, DamagePart } from "../rules/resolve";
 import { carryDice, describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
-import { smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
+import { bearerRolls, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -1305,7 +1305,7 @@ export class TableHost {
           if (!shooter || !victim || !ready) return refuse("공격자나 대상이 더 없습니다");
           const overrides: AttackOverrides = { ...(attackRecord.resolution.overrides ?? {}), rollDelta: (attackRecord.resolution.overrides?.rollDelta ?? 0) + plan.delta, note: command.feature };
           // Like the palette's own edit, the re-resolved card is a new message that supersedes the old one.
-          const newCardId = this.runAttack(attackRecord.inputs, shooter, victim, ready, overrides, { d20s: plan.d20 === undefined ? attackRecord.resolution.d20s : [plan.d20], ...(attackRecord.resolution.damage.length ? { damage: attackRecord.resolution.damage.map((item) => item.dice) } : {}) }, cardId);
+          const newCardId = this.runAttack(attackRecord.inputs, shooter, victim, ready, overrides, { d20s: plan.d20 === undefined ? attackRecord.resolution.d20s : [plan.d20], bonusDice: attackRecord.resolution.bonusDice?.map((item) => item.total), ...(attackRecord.resolution.damage.length ? { damage: attackRecord.resolution.damage.map((item) => item.dice) } : {}) }, cardId);
           const landed = newCardId ? this.actions.get(newCardId)?.resolution.outcome : undefined;
           const hit = landed === "hit" || landed === "crit";
           const sheetNow = this.journalEntries.get(reactor.entry.id);
@@ -1482,7 +1482,7 @@ export class TableHost {
         const prepared = attackerEntry ? this.prepareAttack(attackerEntry, record.inputs.attack, record.inputs.riders ?? {}) : null;
         if (!attackerEntry || !targetEntry || !prepared) return refuse("공격자나 대상이 더 없습니다");
         const overrides = { ...(record.resolution.overrides ?? {}), ...command.overrides };
-        this.runAttack(record.inputs, attackerEntry, targetEntry, prepared, overrides, command.reroll ? undefined : { d20s: record.resolution.d20s, damage: record.resolution.damage.map((item) => item.dice) }, command.messageId);
+        this.runAttack(record.inputs, attackerEntry, targetEntry, prepared, overrides, command.reroll ? undefined : { d20s: record.resolution.d20s, bonusDice: record.resolution.bonusDice?.map((item) => item.total), damage: record.resolution.damage.map((item) => item.dice) }, command.messageId);
         return;
       }
       case "act.undo": {
@@ -1558,13 +1558,30 @@ export class TableHost {
     return null;
   }
 
-  private runAttack(inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, prepared: { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime }, overrides?: AttackOverrides, fixed?: { d20s: number[]; damage?: number[][] }, supersedes?: string, spend?: (runtime: CharacterRuntime) => CharacterRuntime): string | undefined {
+  /**
+   * Damage that depends on who was hit, added per target: R15 Divine Smite's +1d8 against a Fiend or an Undead, and
+   * R90 (D225) 사냥꾼의 표식 and 주술, whose dice land only when their caster hits the creature they marked.
+   */
+  private perTargetRiders(spec: AttackSpec, attacker: { entry: JournalEntry }, target: { entry: JournalEntry }, targetCombatant: Combatant): AttackSpec {
+    const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(spec, target.entry.statBlock.creatureType) : null;
+    const marks = (targetCombatant.markedBy ?? []).filter((mark) => mark.from === attacker.entry.id).map((mark): DamagePart => ({ formula: mark.formula, type: mark.type, label: mark.label }));
+    return fiendBonus || marks.length ? { ...spec, riders: [...(spec.riders ?? []), ...(fiendBonus ? [fiendBonus] : []), ...marks] } : spec;
+  }
+
+  /** R90 (D225): take off the effects that end once used — 유도 화살 by the attack against it, 잔혹한 조롱 by the attack it hindered. */
+  private consumeOnUse(entryId: string, on: "attack" | "attacked") {
+    const live = this.journalEntries.get(entryId);
+    if (!live || live.kind === "handout") return;
+    const keys = (bearerRolls(live.runtime.effects, false).consumable ?? []).filter((item) => item.on === on).map((item) => item.key);
+    if (keys.length) this.shedEffects(live, (live.runtime.effects ?? []).filter((effect) => keys.includes(effect.key)), "사용함");
+  }
+
+  private runAttack(inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, prepared: { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime }, overrides?: AttackOverrides, fixed?: { d20s: number[]; damage?: number[][]; bonusDice?: number[] }, supersedes?: string, spend?: (runtime: CharacterRuntime) => CharacterRuntime): string | undefined {
     const attackerCombatant = this.combatantOf(attacker);
     const targetCombatant = this.combatantOf(target);
     if (!attackerCombatant || !targetCombatant) return undefined;
     // R15: Divine Smite's +1d8 against a Fiend or an Undead depends on who was hit, so it is added here, per target.
-    const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(prepared.spec, target.entry.statBlock.creatureType) : null;
-    if (fiendBonus) prepared = { ...prepared, spec: { ...prepared.spec, riders: [...(prepared.spec.riders ?? []), fiendBonus] } };
+    prepared = { ...prepared, spec: this.perTargetRiders(prepared.spec, attacker, target, targetCombatant) };
     // D95: a scene (Theatre of the Mind) tracks no positions, so range never decides; the DM adjusts by hand.
     const waits = Boolean(this.campaign.settings.dmConfirmsResults) && this.roleOf(inputs.by) !== "gm";
     const resolution: AttackResolution = { ...resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits }), attackRef: inputs.attack, attackerRef: inputs.attacker };
@@ -1640,14 +1657,13 @@ export class TableHost {
     const attackerCombatant = this.combatantOf(attacker);
     const targetCombatant = this.combatantOf(target);
     if (!prepared || !attackerCombatant || !targetCombatant) return this.finishAttack({ ...held, attacker, target });
-    const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(prepared.spec, target.entry.statBlock.creatureType) : null;
-    if (fiendBonus) prepared = { ...prepared, spec: { ...prepared.spec, riders: [...(prepared.spec.riders ?? []), fiendBonus] } };
+    prepared = { ...prepared, spec: this.perTargetRiders(prepared.spec, attacker, target, targetCombatant) };
     // A reaction that raised the AC (방패, 공격 흘리기) already had its say; keep the AC the card was decided against.
     const decidedAc = held.resolution.targetAc - held.resolution.cover;
     if (targetCombatant.ac < decidedAc) targetCombatant.ac = decidedAc;
     const crit = held.resolution.outcome === "crit";
     const parts = [...prepared.spec.damage, ...(prepared.spec.riders ?? []), ...(crit ? prepared.spec.critRiders ?? [] : [])];
-    const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: held.overrides, fixed: { d20s: held.resolution.d20s, damage: carryDice(held.resolution.damage, parts), ...(held.resolution.mastery?.save ? { masteryD20: held.resolution.mastery.save.d20 } : {}) }, apply: !held.waits, rerollOnce: true });
+    const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: held.overrides, fixed: { d20s: held.resolution.d20s, bonusDice: held.resolution.bonusDice?.map((item) => item.total), damage: carryDice(held.resolution.damage, parts), ...(held.resolution.mastery?.save ? { masteryD20: held.resolution.mastery.save.d20 } : {}) }, apply: !held.waits, rerollOnce: true });
     if (fresh?.spend && attacker.entry.kind === "character") { const before = attacker.entry; this.storeEntry({ ...before, runtime: fresh.spend(before.runtime), updatedAt: this.now() }); }
     // R82 (D218): a smite spell is cast as a bonus action.
     if (riders.spellSmite) this.markUsed(held.inputs.attacker, "bonus");
@@ -2035,7 +2051,7 @@ export class TableHost {
       if (attackerCombatant && targetCombatant) {
         if (acBonus && targetCombatant.ac < held.resolution.targetAc + acBonus) targetCombatant.ac = held.resolution.targetAc + acBonus;
         overrides = { ...(held.overrides ?? {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
-        resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed: { d20s: held.resolution.d20s, damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
+        resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed: { d20s: held.resolution.d20s, bonusDice: held.resolution.bonusDice?.map((item) => item.total), damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
       }
     }
     // R63 (D198): the target's answer is in; if the swing still landed, the attacker is asked next.
@@ -2231,7 +2247,9 @@ export class TableHost {
       if (downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       runtime = this.takeDeathFailures(runtime, row.attack?.deathFailures ?? row.damage?.deathFailures, row.target.name, resolution.name);
       // A lasting effect on a target: on the caster's own sheet castSpell already started it (with concentration); others get it without.
-      if (row.effect && !(runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
+      // R90 (D225): the creature is now under the spell — a caster who targeted themselves too, whose effect castSpell started.
+      if (row.effect && (runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = { ...runtime, effects: runtime.effects.map((effect) => (effect.key === row.effect!.key ? { ...effect, bearer: true } : effect)) };
+      else if (row.effect) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", bearer: true, duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed) this.releaseGrapples(target.page, target.token?.id);
       // R26 (D136): reverse this row, not the sheet as it was — healing, damage, marks and the effect it started.
@@ -2258,11 +2276,11 @@ export class TableHost {
     if (row.effect) {
       const key = row.effect.key;
       const already = (npcBefore.runtime.effects ?? []).some((effect) => effect.key === key);
-      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(resolution.caster.id !== npcBefore.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
+      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", bearer: true, duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(resolution.caster.id !== npcBefore.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
       const endSaves = row.effect.endSave
         ? [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== key), { key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }]
         : npcBefore.runtime.endSaves;
-      this.storeEntry({ ...npcBefore, runtime: { ...npcBefore.runtime, effects: already ? npcBefore.runtime.effects : [...(npcBefore.runtime.effects ?? []), started], endSaves, updatedAt: now }, updatedAt: now });
+      this.storeEntry({ ...npcBefore, runtime: { ...npcBefore.runtime, effects: already ? (npcBefore.runtime.effects ?? []).map((effect) => (effect.key === key ? { ...effect, bearer: true } : effect)) : [...(npcBefore.runtime.effects ?? []), started], endSaves, updatedAt: now }, updatedAt: now });
       restoreEndSaves = () => { const current = this.journalEntries.get(npcBefore.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: (current.runtime.endSaves ?? []).filter((item) => item.key !== key), effects: already ? current.runtime.effects : (current.runtime.effects ?? []).filter((effect) => effect.key !== key), updatedAt: this.now() }, updatedAt: this.now() }); };
     }
     const token = target.token;
@@ -2427,7 +2445,15 @@ export class TableHost {
   }
 
   /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
-  private applyResolution(...args: Parameters<TableHost["applyResolutionNow"]>) { return this.asCause(args[3], () => this.applyResolutionNow(...args)); }
+  private applyResolution(...args: Parameters<TableHost["applyResolutionNow"]>) {
+    return this.asCause(args[3], () => {
+      const out = this.applyResolutionNow(...args);
+      // R90 (D225): after the card has written its own changes, so they do not put the spent effect back.
+      this.consumeOnUse(args[2].entry.id, "attack");
+      this.consumeOnUse(args[1].entry.id, "attacked");
+      return out;
+    });
+  }
 
   private applyResolutionNow(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
     const restores: Array<() => void> = [];

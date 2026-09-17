@@ -114,6 +114,8 @@ export interface ActiveEffect {
   anchor?: { who: "source" | "bearer"; boundary: "start" | "end" };
   /** R85 (D220): conditions the effect put on the bearer, which come off with it. */
   conditions?: string[];
+  /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */
+  bearer?: boolean;
 }
 
 /** What an active effect changed on the sheet, for the effects card. `applied` false: no rule yet, apply the text by hand. */

@@ -67,6 +67,16 @@ export interface Combatant {
    * their Strength melee swings; what they give away is here, because anyone attacking them gets it.
    */
   grantsAdvantage?: string[];
+  /** R90 (D225): reasons attacks against this creature are at disadvantage (흐림). */
+  grantsDisadvantage?: string[];
+  /** R90 (D225): dice a spell it is under adds to its own attack rolls or saves (축복 +1d4, 액운 −1d4). */
+  d20Dice?: Array<{ on: "attack" | "save"; dice: string; label: string }>;
+  /** R90 (D225): advantage or disadvantage on its own attack rolls or saves, from a spell it is under. */
+  rollStates?: Array<{ on: "attack" | "save"; state: "advantage" | "disadvantage"; label: string; ability?: string }>;
+  /** R90 (D225): effects that end once used — by attacking (잔혹한 조롱) or by being attacked (유도 화살). */
+  consumable?: Array<{ key: string; on: "attack" | "attacked" }>;
+  /** R90 (D225): damage the caster who marked this creature adds when they hit it (사냥꾼의 표식, 주술). */
+  markedBy?: Array<{ from: string; formula: string; type: string; label: string }>;
 }
 
 export interface DamagePart {
@@ -179,6 +189,8 @@ export interface AttackResolution {
   downed?: "unconscious" | "dead" | "instant-death";
   /** Death-save failures the hit caused on a PC already at 0 HP. */
   deathFailures?: number;
+  /** R90 (D225): dice a spell added to the attack roll (축복, 액운), with what they rolled. */
+  bonusDice?: Array<{ label: string; dice: string; total: number }>;
   inflicted: string[];
   overrides?: AttackOverrides;
   /** True once HP was written (D90: with "DM 확인 후 적용" the card waits). */
@@ -227,6 +239,9 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   // R55 (D190): whatever the two sheets' own contracts declared, on either side of the swing.
   for (const reason of spec.advantageOn ?? []) plus.push(reason);
   for (const reason of target.grantsAdvantage ?? []) plus.push(reason);
+  // R90 (D225): spells on either side — 흐림 on the target, 액운·잔혹한 조롱·예지 on the attacker.
+  for (const reason of target.grantsDisadvantage ?? []) minus.push(reason);
+  for (const state of (attacker.rollStates ?? []).filter((item) => item.on === "attack")) (state.state === "advantage" ? plus : minus).push(`공격자 ${state.label}`);
   if (plus.length && minus.length) return { advantage: "normal", reasons: [...plus, ...minus, "유리·불리가 상쇄"] };
   if (plus.length) return { advantage: "advantage", reasons: plus };
   if (minus.length) return { advantage: "disadvantage", reasons: minus };
@@ -273,6 +288,9 @@ function rollParts(formula: string, dice: DiceSource, doubleDice: boolean, dieMi
   }
   return { dice: rolled, total };
 }
+
+/** R90 (D225): roll a signed formula ("-1d4", "1d4+1") and give its total. */
+export const rollFormula = (formula: string, dice: DiceSource) => rollParts(formula, dice, false).total;
 
 /**
  * R60 (D195): apply a swing's dice rules to one part's roll. `die` is the part's own die size, read from its formula,
@@ -330,7 +348,7 @@ export function diceRuleOf(property: string, value: number, label: string, onCri
 
 /* ---------- resolution ---------- */
 
-export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides; apply?: boolean; /** Fixed d20s and damage dice from an earlier resolution (palette edits keep the rolls). */ fixed?: { masteryD20?: number; d20s: number[]; /** R37 (D177): absent when the earlier resolution rolled no damage (a miss being re-resolved). R63 (D198): an entry may be missing for a part added since. */ damage?: Array<number[] | undefined> };
+export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides; apply?: boolean; /** Fixed d20s and damage dice from an earlier resolution (palette edits keep the rolls). */ fixed?: { masteryD20?: number; d20s: number[]; /** R90 (D225): the spell dice added to the roll, in order. */ bonusDice?: number[]; /** R37 (D177): absent when the earlier resolution rolled no damage (a miss being re-resolved). R63 (D198): an entry may be missing for a part added since. */ damage?: Array<number[] | undefined> };
   /**
    * R63 (D198): the swing is re-resolved because the attacker just chose a rider in the window a hit opens. The dice
    * the card showed stay, but a reroll chosen *now* (야만적 공격자, 관통자) happens once against them — which a plain
@@ -351,7 +369,10 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   if (spec.ignoresCover && declaredCover) reasons.push(`엄폐 +${declaredCover} 무시`);
   const targetAc = target.ac + cover;
   const exhausted = 2 * Math.max(0, attacker.exhaustion ?? 0);
-  const attackTotal = kept + spec.attackBonus - exhausted + (overrides.rollDelta ?? 0);
+  // R90 (D225): the dice a spell adds to this creature's attack rolls, kept on a re-resolution like the d20.
+  const bonusDice = (attacker.d20Dice ?? []).filter((item) => item.on === "attack").map((item, index) => ({ label: item.label, dice: item.dice, total: options.fixed?.bonusDice?.[index] ?? rollFormula(item.dice, options.dice) }));
+  for (const item of bonusDice) reasons.push(`${item.label} ${item.total >= 0 ? "+" : ""}${item.total} (${item.dice})`);
+  const attackTotal = kept + spec.attackBonus - exhausted + (overrides.rollDelta ?? 0) + bonusDice.reduce((total, item) => total + item.total, 0);
   if (exhausted) reasons.push(`탈진 ${attacker.exhaustion}단계 (−${exhausted})`);
   // R43 (D183): 향상된 치명타 lowers the number a d20 has to reach for a critical hit; 20 is the default.
   const critRange = Math.max(2, Math.min(20, spec.critRange ?? 20));
@@ -383,7 +404,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   return {
     attacker: { id: attacker.id, name: attacker.name, kind: attacker.kind }, target: { id: target.id, name: target.name, kind: target.kind },
     attack: { name: spec.name, source: spec.source, mode: spec.mode, bonus: spec.attackBonus },
-    advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures,
+    advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures, ...(bonusDice.length ? { bonusDice } : {}),
     inflicted, mastery, overrides: Object.keys(overrides).length ? overrides : undefined, applied: options.apply ?? true,
   };
 }

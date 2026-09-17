@@ -14,7 +14,7 @@ import { castSpell, type CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
 import { spellExec, sustainedExec } from "../compendium/spells";
-import { applyDamage, immuneToCondition, noDamage, resolveAttack, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
+import { applyDamage, immuneToCondition, noDamage, resolveAttack, rollFormula as rollSigned, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
 import { scrollStats } from "./scrolls";
 
 export interface CasterStats {
@@ -39,7 +39,7 @@ export interface SpellCastSpec {
   exec: SpellExec;
 }
 
-export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
+export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; /** R90 (D225): rolled with disadvantage, and why. */ disadvantage?: string; /** R90 (D225): spell dice in the bonus ("액운 −2"). */ dice?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
 export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R85 (D220): whose turn boundary counts the rounds. */ anchor?: { who: "source" | "bearer"; boundary: "start" | "end" }; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
 
 /** R10: the SRD text that lets a target repeat the save at the end of each of its turns (hold person, blindness/deafness, sleep breath …). */
@@ -127,11 +127,17 @@ export function resolveSpell(input: CastInput): SpellResolution {
     // R61 (D196): and whatever the target's own contracts said about saving throws (전투 시전자's concentration,
     // 튼튼함's death saves). The reason rides on the row, as 회피 and 마법 저항 already do.
     const declared = advantageFor(stats, "saving-throw", { ability: key });
-    const advantaged = dodging || resistant || Boolean(declared);
-    const first = dice.d(20); const second = advantaged ? dice.d(20) : undefined; const rolled = second !== undefined ? Math.max(first, second) : first;
+    // R90 (D225): a spell the target is under — 축복·액운's d4, 신속's advantage on Dexterity saves, 저주's disadvantage.
+    const states = (target.rollStates ?? []).filter((item) => item.on === "save" && (!item.ability || item.ability === key));
+    const upBy = dodging ? "회피" : resistant ? "마법 저항" : declared ? declared.reason : states.find((item) => item.state === "advantage")?.label;
+    const downBy = states.find((item) => item.state === "disadvantage")?.label;
+    const advantaged = Boolean(upBy) && !downBy;
+    const disadvantaged = Boolean(downBy) && !upBy;
+    const first = dice.d(20); const second = advantaged || disadvantaged ? dice.d(20) : undefined; const rolled = second === undefined ? first : advantaged ? Math.max(first, second) : Math.min(first, second);
+    const extra = (target.d20Dice ?? []).filter((item) => item.on === "save").map((item) => ({ label: item.label, total: rollSigned(item.dice, dice) }));
     // R35 (D174): the rescue replaces the die and adds its own dice before the DC is compared, so a save that was a
     // failure can become a success and the whole row is resolved again from there.
-    const d20 = input.saveAdjust?.d20 ?? rolled; const bonus = (stats.saves[key] ?? 0) - 2 * Math.max(0, target.exhaustion ?? 0); const total = d20 + bonus + (input.saveAdjust?.delta ?? 0); return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.saveAdjust?.label ? { rescue: input.saveAdjust.label } : {}), ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: dodging ? "회피" : resistant ? "마법 저항" : declared!.reason, dropped: Math.min(first, second) } : {}) }; };
+    const d20 = input.saveAdjust?.d20 ?? rolled; const bonus = (stats.saves[key] ?? 0) - 2 * Math.max(0, target.exhaustion ?? 0) + extra.reduce((sum, item) => sum + item.total, 0); const total = d20 + bonus + (input.saveAdjust?.delta ?? 0); return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.saveAdjust?.label ? { rescue: input.saveAdjust.label } : {}), ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? (advantaged ? { advantage: upBy, dropped: Math.min(first, second) } : { disadvantage: downBy, dropped: Math.max(first, second) }) : {}), ...(extra.length ? { dice: extra.map((item) => `${item.label} ${item.total >= 0 ? "+" : ""}${item.total}`).join(", ") } : {}) }; };
   // R28 (D150): a condition the target is immune to never lands, whoever asked for it.
   const conditionMarks = (trigger: "failed-save" | "hit" | "always", target?: Combatant) => (exec.effects ?? [])
     .filter((effect) => effect.trigger === trigger || effect.trigger === "always")

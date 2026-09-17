@@ -6,6 +6,7 @@
 import catalogJson from "../../src/generated/spellExecutionCatalog.generated.json";
 import sustainJson from "../../content/indexes/dnd-srd-5.2.1.spell-sustain.json";
 import onHitJson from "../../content/indexes/dnd-srd-5.2.1.spell-on-hit.json";
+import bearerJson from "../../content/indexes/dnd-srd-5.2.1.spell-bearer.json";
 import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
@@ -30,7 +31,7 @@ export interface SpellExec {
   primary: SpellPrimary;
   concentration?: boolean;
   effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration }>;
-  trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration }>;
+  trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration } & SpellBearerPart>;
   ritual?: boolean;
   /** R77 (D212): how the spell is used again while it lasts, when that differs from the default (see `sustainOf`). */
   sustain?: Partial<SpellSustain> | false;
@@ -56,6 +57,18 @@ export interface SpellOnHit {
 const BUILTIN_ON_HIT = (onHitJson as unknown as { spells: Record<string, SpellOnHit> }).spells;
 /** R82 (D218): the spell's on-hit rule, from its mechanics or the SRD index. */
 export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => (exec ? exec.onHit ?? BUILTIN_ON_HIT[exec.spellId] : undefined);
+
+/**
+ * R90 (D225): what a spell's lasting effect does to the dice of the creature under it (`scope: "actor"`) or of whoever
+ * attacks it (`scope: "target"`), and the damage its caster adds against it (`againstTargetOnly`).
+ */
+export interface SpellBearerPart {
+  modifier?: { family: string; scope?: "actor" | "target"; rollState?: "advantage" | "disadvantage"; bonus?: { dice?: { count: number; sides: number }; flat?: number; sign?: number }; consumeOnUse?: boolean; ability?: string };
+  attackDamage?: { damageType: string; dice?: { count: number; sides: number }; flat?: number; againstTargetOnly?: boolean; sourceKinds?: string[] };
+}
+const BUILTIN_BEARER = (bearerJson as unknown as { spells: Record<string, SpellBearerPart[]> }).spells;
+/** R90 (D225): the lasting-effect parts of a spell — the catalog's, plus what the SRD index adds (유도 화살's advantage). */
+export const bearerPartsOf = (spellId: string): SpellBearerPart[] => [...(spellExec(spellId)?.trackedEffects ?? []), ...(BUILTIN_BEARER[spellId] ?? [])];
 
 /** R77 (D212): a concentration spell used again without a slot — its economy, and a different effect when it has one. */
 export interface SpellSustain { economy: "action" | "bonus-action" | "none"; primary?: SpellPrimary; note?: string; /** R89 (D224): the repeat happens per this many feet moved inside the area (가시 성장), not on entering. */ move?: number }
