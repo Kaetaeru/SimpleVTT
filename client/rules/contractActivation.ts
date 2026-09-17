@@ -6,13 +6,14 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { ATTACK_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
 // readers that answer "what does the 사용 button do" leave it out. `contractSummary` still prints it as a rule.
 // R63 (D198): so is an `on-hit` one, chosen in the window a hit opens.
-const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation));
+// R78 (D213): nor a `short-rest` one, which the rest window runs.
+const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation) && entry.invocation !== REST_INVOCATION);
 const operationsOf = (contract: CommonPlayContract) => [...livePoints(contract).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
 const live = (operation: ContractOperation, scope: Scope) => !("when" in operation && operation.when) || evaluate((operation as { when?: Parameters<typeof evaluate>[0] }).when, scope) === true;
 
@@ -56,7 +57,8 @@ export const contractDurations = (catalog: { contractFor(key: string): CommonPla
     const contract = featureContract(catalog, ruleKey);
     if (!contract) return undefined;
     // R41 (D181): a contract that only takes conditions off is still a reason for the feature to have a button.
-    return { duration: contractDuration(contract, scope), use: contractUse(contract, scope, label), acts: !emptyOutcome(contractOutcome(contract, scope)) };
+    const rest = contract.entryPoints.some((entry) => entry.invocation === REST_INVOCATION) && !livePoints(contract).length;
+    return { duration: contractDuration(contract, scope), use: contractUse(contract, scope, label), acts: !emptyOutcome(contractOutcome(contract, scope)), ...(rest ? { rest: true } : {}) };
   };
 
 /**
@@ -176,6 +178,9 @@ export interface ContractOutcome {
   notes: string[];
   recharges: Array<{ resourceId: string; die: string; succeedsOn: number[] }>;
   artifacts: Array<{ kind: string; monsterId?: string; name?: string; count?: number; artifact?: string; amount?: number }>;
+  /** R78 (D213): spell slots given back — levels adding up to this much (none above 5th), and Pact Magic slots. */
+  slotLevels?: number;
+  pactSlots?: number;
 }
 
 export function contractOutcome(contract: CommonPlayContract, scope: Scope): ContractOutcome {
@@ -190,6 +195,7 @@ export function contractOutcome(contract: CommonPlayContract, scope: Scope): Con
       case "life.death-save": out.deathSave = true; break;
       case "movement.stand": out.stand = true; break;
       case "content.grant": out.grants.push(operation.contentId); break;
+      case "resource.change": if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + number(operation.amount); else if (operation.resourceId === PACT_SLOT_RESOURCE) out.pactSlots = (out.pactSlots ?? 0) + number(operation.amount); break;
       case "resource.recharge": out.recharges.push({ resourceId: operation.resourceId, die: operation.die, succeedsOn: operation.succeedsOn }); break;
       case "movement.relocate": out.notes.push(operation.note ?? `${operation.mode}${operation.distance ? ` ${number(operation.distance)}피트` : ""}`); break;
       case "movement.grant": out.notes.push(operation.note ?? `이동 ${number(operation.distance)}피트`); break;
@@ -205,7 +211,7 @@ export function contractOutcome(contract: CommonPlayContract, scope: Scope): Con
 
 /** Nothing to do: the contract asked for none of these. */
 export const emptyOutcome = (outcome: ContractOutcome) =>
-  !outcome.conditionsRemoved.length && !outcome.hpMaximumDelta && !outcome.stabilize && !outcome.deathSave && !outcome.stand && !outcome.grants.length && !outcome.notes.length && !outcome.recharges.length && !outcome.artifacts.length;
+  !outcome.slotLevels && !outcome.pactSlots && !outcome.conditionsRemoved.length && !outcome.hpMaximumDelta && !outcome.stabilize && !outcome.deathSave && !outcome.stand && !outcome.grants.length && !outcome.notes.length && !outcome.recharges.length && !outcome.artifacts.length;
 
 /** R50 (D185): what a contract does, in one line each, for the sheet — the same job `featNotes` does for a feat. */
 export function contractSummary(contract: CommonPlayContract, scope: Scope): { rules: string[]; execution: "derived" | "descriptive" } {
@@ -228,6 +234,17 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
       } else if (operation.kind === "adjudication.request") questions.push(operation.question);
     }
     if (entry.attack?.oncePerTurn) questions.push("턴당 한 번 (직접 세어 주세요)");
+  }
+  // R78 (D213): what a short rest's end does is said where the player looks for it — the rest window runs it.
+  for (const entry of contract.entryPoints.filter((item) => item.invocation === REST_INVOCATION)) {
+    mechanical = true;
+    for (const operation of entry.operations) {
+      if (!live(operation, scope) || operation.kind !== "resource.change") continue;
+      const amount = number(operation.amount) ?? 0;
+      if (operation.resourceId === SLOT_LEVELS_RESOURCE) rules.push(`짧은 휴식 창에서 — 레벨 합 ${amount}까지 슬롯 회복 (5레벨 이하)`);
+      else if (operation.resourceId === PACT_SLOT_RESOURCE) rules.push(`짧은 휴식 창에서 — 계약 슬롯 ${amount}개 회복`);
+      else if (amount > 0) rules.push(`짧은 휴식 창에서 — ${amount}회분 회복`);
+    }
   }
   for (const operation of operationsOf(contract)) {
     if (!live(operation, scope)) continue;

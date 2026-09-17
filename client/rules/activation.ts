@@ -110,7 +110,7 @@ const ACTIVE_WORDING = /(추가 행동|반응 ?행동|반응|행동)(으로|을 
 const NOT_ACTIVATABLE = new Set(["monk.martial-arts", "invocation.investment-of-the-chain-master", "rogue.sneak-attack", "rogue.cunning-strike", "fighter.extra-attack"]);
 
 /** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
-export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean } | undefined;
+export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean; /** R78 (D213): used when a short rest ends, not pressed. */ rest?: boolean } | undefined;
 
 /** The activation for a feature: from the table, else a pool named after the feature, else a log-only use for features worded as an action. */
 export function featureActivation(feature: DerivedFeature, derived: DerivedCharacter, contract?: ContractDurationSource): FeatureActivation | undefined {
@@ -120,6 +120,8 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
   // the pool it spends and the dice it rolls. Whatever the contract does not say, the table still answers.
   // R49 (D184): the sheet carries its own features' contracts, so a caller that does not pass one still gets them.
   const fromContract = contract?.(key) ?? derived.featureContracts?.[key];
+  // R78 (D213): a feature the content says is used at the end of a short rest has no button — the rest window offers it.
+  if (fromContract?.rest) return undefined;
   if (fromContract?.duration || fromContract?.use || fromContract?.acts) {
     const table = FEATURE_ACTIVATIONS[key];
     const use = fromContract.use;

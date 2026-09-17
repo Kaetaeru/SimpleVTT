@@ -24,6 +24,7 @@ import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "..
 import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
 import { CUSTOM_ITEM_EXAMPLE, parseCustomItem } from "../character/customItem";
+import { pickSlots, restFeatures, spentSlots, useRestFeature } from "../character/rest";
 
 export interface SheetPlayProps {
   source: CharacterSource;
@@ -52,7 +53,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const [sliderHp, setSliderHp] = useState<number | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  const [resting, setResting] = useState<{ spends: Record<string, number> } | null>(null);
+  const [resting, setResting] = useState<{ spends: Record<string, number>; /** R78 (D213): rest features chosen, with the slot levels each gives back. */ uses?: Record<string, number[]> } | null>(null);
   const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string; json: string } | null>(null);
   const [showLog, setShowLog] = useState(true);
   const [customRoll, setCustomRoll] = useState("");
@@ -133,7 +134,17 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
       const result = await rollDice({ label: `히트 다이스 ${count}${die}`, formula: `${count}${die}`, note: `건강 ${derived.abilities.con.modifier >= 0 ? "+" : ""}${derived.abilities.con.modifier} ×${count}`, kind: "hit-die" });
       for (const rolled of result.dice) spends.push({ die, roll: rolled.value });
     }
-    void save((current) => shortRest(current, derived, spends));
+    const uses = Object.entries(resting?.uses ?? {});
+    void save((current) => {
+      let next = shortRest(current, derived, spends);
+      // R78 (D213): then the features that happen as the rest ends, against the rested sheet.
+      for (const [featureId, chosen] of uses) {
+        const feature = restFeatures(derived, next, catalog).find((item) => item.featureId === featureId);
+        const used = feature ? useRestFeature(next, derived, feature, feature.slotLevels ? chosen : undefined) : null;
+        next = used ?? noteLog(next, `${feature?.name ?? featureId}: 쓸 수 없음 (${feature?.unavailable ?? "고른 슬롯이 맞지 않습니다"})`);
+      }
+      return next;
+    });
   };
   const submitCustomRoll = () => {
     if (!parseFormula(customRoll)) return;
@@ -282,11 +293,52 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
           {Object.entries(available).map(([die, count]) => (
             <div className="cl-row" key={die}>
               <span style={{ width: 60 }}>{die}</span>
-              <button type="button" className="cl-btn small" disabled={(resting.spends[die] ?? 0) <= 0} onClick={() => setResting({ spends: { ...resting.spends, [die]: (resting.spends[die] ?? 0) - 1 } })}>−</button>
+              <button type="button" className="cl-btn small" disabled={(resting.spends[die] ?? 0) <= 0} onClick={() => setResting({ ...resting, spends: { ...resting.spends, [die]: (resting.spends[die] ?? 0) - 1 } })}>−</button>
               <span style={{ width: 48, textAlign: "center" }}>{resting.spends[die] ?? 0} / {count}</span>
-              <button type="button" className="cl-btn small" disabled={(resting.spends[die] ?? 0) >= count} onClick={() => setResting({ spends: { ...resting.spends, [die]: (resting.spends[die] ?? 0) + 1 } })}>+</button>
+              <button type="button" className="cl-btn small" disabled={(resting.spends[die] ?? 0) >= count} onClick={() => setResting({ ...resting, spends: { ...resting.spends, [die]: (resting.spends[die] ?? 0) + 1 } })}>+</button>
             </div>
           ))}
+          {(() => {
+            // R78 (D213): 비전 회복, 마력 회복 — used as the rest ends, chosen here instead of pressed on the turn.
+            const features = restFeatures(derived, runtime, catalog);
+            if (!features.length) return null;
+            const spent = spentSlots(derived, runtime);
+            return (
+              <div className="cl-field" style={{ marginTop: 8 }}>
+                <strong className="cl-small">휴식을 마칠 때 쓰는 특성</strong>
+                {features.map((feature) => {
+                  const chosen = resting.uses?.[feature.featureId];
+                  const setChosen = (value: number[] | undefined) => { const uses = { ...(resting.uses ?? {}) }; if (value) uses[feature.featureId] = value; else delete uses[feature.featureId]; setResting({ ...resting, uses }); };
+                  const total = (chosen ?? []).reduce((sum, level) => sum + level, 0);
+                  return (
+                    <div key={feature.featureId} className="cl-list" style={{ gap: 4 }}>
+                      <label className="cl-row" style={{ gap: 6 }} title={feature.note}>
+                        <input type="checkbox" disabled={Boolean(feature.unavailable)} checked={Boolean(chosen)} onChange={(event) => setChosen(event.target.checked ? (feature.slotLevels ? pickSlots(derived, runtime, feature.slotLevels) : []) : undefined)} />
+                        <span>{feature.name}</span>
+                        <span className="cl-quiet cl-small">{feature.unavailable ?? feature.note}</span>
+                      </label>
+                      {chosen && feature.slotLevels ? (
+                        <div className="cl-row" style={{ gap: 4, flexWrap: "wrap", paddingLeft: 22 }}>
+                          <span className="cl-small">회복할 슬롯 (레벨 합 {total}/{feature.slotLevels})</span>
+                          {[...new Set(spent)].map((level) => {
+                            const count = chosen.filter((item) => item === level).length;
+                            const max = spent.filter((item) => item === level).length;
+                            return (
+                              <span key={level} className="cl-row" style={{ gap: 2 }}>
+                                <button type="button" className="cl-btn small" aria-label={`${level}레벨 슬롯 하나 덜`} disabled={count <= 0} onClick={() => { const at = chosen.indexOf(level); setChosen(chosen.filter((_, index) => index !== at)); }}>−</button>
+                                <span className="cl-small">{level}레벨 {count}/{max}</span>
+                                <button type="button" className="cl-btn small" aria-label={`${level}레벨 슬롯 하나 더`} disabled={count >= max || total + level > feature.slotLevels!} onClick={() => setChosen([...chosen, level])}>+</button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </Modal>
       ) : null}
       {adding ? (

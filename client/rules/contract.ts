@@ -33,6 +33,9 @@ export function evaluate(expr: Expr | undefined, scope: Scope): ExprValue {
     case "add": return args.reduce<number>((sum, value) => sum + numeric(value), 0);
     case "sub": return numeric(left) - numeric(right);
     case "mul": return args.reduce<number>((product, value) => product * numeric(value), 1);
+    // R78 (D213): "half your wizard level, rounded up" and "half your sorcerer level, rounded down".
+    case "floor-div": return Math.floor(numeric(left) / numeric(right));
+    case "ceil-div": return Math.ceil(numeric(left) / numeric(right));
     case "min": return Math.min(...args.map(numeric));
     case "max": return Math.max(...args.map(numeric));
     case "eq": return left === right;
@@ -226,6 +229,14 @@ export const FACT_MOMENTS = new Set(["pre-roll", "reaction", "on-hit"]);
  * declared before the dice; `on-hit` is chosen once the swing has landed — most 2024 riders say "when you hit".
  */
 export const ATTACK_INVOCATIONS = new Set(["pre-roll-attack", "on-hit"]);
+/** R78 (D213): an entry point that runs when a short rest ends (비전 회복, 마력 회복) — chosen in the rest window, not pressed on the turn. */
+export const REST_INVOCATION = "short-rest";
+/**
+ * R78 (D213): reserved resource ids a `resource.change` restores that are not pools — spell slots whose levels add up to
+ * the amount (none above 5th, the rule both 2024 recoveries share) and Pact Magic slots. Same idea as R59's hit die.
+ */
+export const SLOT_LEVELS_RESOURCE = "resource.spell-slot-levels";
+export const PACT_SLOT_RESOURCE = "resource.pact-slot";
 const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "set-die", "subtract-die"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
@@ -344,7 +355,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const invocation = String(entry.invocation ?? "manual");
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
     // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
-    if (invocation !== "manual" && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    if (invocation !== "manual" && invocation !== REST_INVOCATION && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
     const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;
@@ -453,6 +464,8 @@ export interface ScopeCharacter {
   level?: number;
   /** R51 (D186): what is worn, for a feat written as "while wearing <training> armour". */
   armor?: { training: string; dexCapped: boolean; shield: boolean };
+  /** R78 (D213): Pact Magic, for "half your Pact Magic slots". */
+  pactMagic?: { count: number; level: number };
 }
 
 /**
@@ -479,6 +492,7 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     if (ref === "armor.training") return character.armor?.training ?? "none";
     if (ref === "armor.dex-capped") return Boolean(character.armor?.dexCapped);
     if (ref === "equipment.shield") return Boolean(character.armor?.shield);
+    if (ref === "actor.pact-slots") return character.pactMagic?.count ?? 0;
     return undefined;
   };
 }

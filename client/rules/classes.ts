@@ -113,6 +113,8 @@ export const CLASS_RESOURCES: ClassResourceRule[] = [
   { id: "resource.paladin.channel-divinity", label: "신성 변환", classSlug: "paladin", column: COLUMN.channelDivinity, recovery: "short-rest:1", minLevel: 3 },
   { id: "resource.ranger.favored-enemy", label: "주적 (사냥꾼의 표식 무료 시전)", classSlug: "ranger", column: COLUMN.favoredEnemy, recovery: "long-rest", minLevel: 1, spell: "Hunter's Mark" },
   { id: "resource.sorcerer.sorcery-points", label: "마법 점수", classSlug: "sorcerer", column: COLUMN.sorceryPoints, recovery: "long-rest", minLevel: 2 },
+  // R78 (D213): 마력 회복 is once per long rest, so it is a pool its short-rest use spends.
+  { id: "resource.sorcerer.sorcerous-restoration", label: "마력 회복", classSlug: "sorcerer", maximum: () => 1, recovery: "long-rest", minLevel: 5 },
   { id: "resource.sorcerer.innate-sorcery", label: "선천 마법", classSlug: "sorcerer", maximum: () => 2, recovery: "long-rest", minLevel: 1 },
   { id: "resource.warlock.magical-cunning", label: "마법적 책략", classSlug: "warlock", maximum: () => 1, recovery: "long-rest", minLevel: 2 },
   { id: "resource.wizard.arcane-recovery", label: "비전 회복", classSlug: "wizard", maximum: () => 1, recovery: "long-rest", minLevel: 1 },

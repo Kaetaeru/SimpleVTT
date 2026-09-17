@@ -11,6 +11,7 @@ import type { DerivedCharacter } from "./types";
 import type { ContractOutcome } from "../rules/contractActivation";
 import { addItem, noteLog, toggleCondition } from "./play";
 import type { CharacterRuntime } from "./runtime";
+import { restoreSlots } from "./rest";
 
 export function applyContractOutcome(runtime: CharacterRuntime, derived: DerivedCharacter, catalog: ContentCatalog, outcome: ContractOutcome, label: string): CharacterRuntime {
   let next = runtime;
@@ -26,7 +27,8 @@ export function applyContractOutcome(runtime: CharacterRuntime, derived: Derived
     if (item) next = addItem(next, { itemId: item.id, name: item.name });
     else next = noteLog(next, `${label}: ${catalog.name(id)} 획득 (표에서 처리)`);
   }
+  // R78 (D213): slots a use gives back (마법적 책략's Pact Magic slots).
+  if (outcome.slotLevels || outcome.pactSlots) next = restoreSlots(next, derived, { levels: outcome.slotLevels, pact: outcome.pactSlots }, label) ?? next;
   for (const note of outcome.notes) next = noteLog(next, `${label}: ${note}`);
-  void derived;
   return next;
 }
