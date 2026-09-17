@@ -62,7 +62,7 @@ export const PROPERTIES = [
   // R56 (D191): training a feat hands out. The sheet shows it; nothing else in this engine gates on it yet.
   "proficiency.armor", "proficiency.weapon", "skill.<id>.expertise",
   // R61 (D196): the other two kinds of d20 test, after R55 did attack rolls.
-  "ability-check.advantage", "saving-throw.advantage", "skill.<id>.advantage",
+  "ability-check.advantage", "saving-throw.advantage", "saving-throw.advantage-vs-condition", "skill.<id>.advantage", "heroic-inspiration.gain",
   // R72 (D207): the number of attacks in one Attack action — Extra Attack is content, not a name the code knows.
   "attack-action.attacks",
   // R60 (D195): the weapon's own damage dice (read by the rider and crit paths, not as a standing effect).
@@ -180,6 +180,10 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "effect.upkeep-waived": if (operation.params?.effect) application.upkeepWaived = [...(application.upkeepWaived ?? []), String(operation.params.effect)]; break;
       case "attunement.slots": application.attunementBonus = (application.attunementBonus ?? 0) + (number(operation, scope) ?? 0); break;
       // V3c (D257): advantage on death saving throws (생존자, 튼튼함).
+      // V4m (D275): advantage only on saves against these conditions (요정 혈통, 용감함, 드워프 강인함, 마귀의 인내).
+      case "saving-throw.advantage-vs-condition": { const p = operation.params ?? {}; const conditions = Array.isArray(p.conditions) ? p.conditions.map(String) : []; if (conditions.length) application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["saving-throw"], conditions }]; break; }
+      // V4m (D275): handed over by the rest itself (longRestGains), so there is nothing to put on the sheet here.
+      case "heroic-inspiration.gain": break;
       case "death-save.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["death-save"] }]; break;
       // V3c (D257): a d20 below this counts as this on checks the character adds its proficiency bonus to (믿음직한 재능).
       case "ability-check.minimum-d20": application.checkMinimumD20 = Math.max(application.checkMinimumD20 ?? 0, number(operation, scope) ?? 0); break;

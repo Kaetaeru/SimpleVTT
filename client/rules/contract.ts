@@ -268,10 +268,12 @@ export const REST_INVOCATION = "short-rest";
 export const INITIATIVE_INVOCATION = "initiative";
 /** R99 (D234): this creature brought a hostile creature to 0 hit points (어둠의 존재의 축복). */
 export const KILL_INVOCATION = "kill";
+/** V4m (D275): an entry point that runs when a long rest ends (인간의 수완). */
+export const LONG_REST_INVOCATION = "long-rest";
 /** H3 (D240): the moment a feature is gained during character building — its choices and grants (tracks.ts runs it). */
 export const GAIN_INVOCATION = "gain";
 /** R81 (D215): the moments the table asks about instead of a button: the end of a short rest, an initiative roll. */
-export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATION, KILL_INVOCATION]);
+export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATION, KILL_INVOCATION, LONG_REST_INVOCATION]);
 /**
  * V3c (D257): what happens by itself at the start of the owner's turn, with no window (생존자's healing). Its
  * operations run when their `when` holds against the sheet and its hit points (`actor.hp.current`, `actor.hp.max`).
@@ -279,7 +281,7 @@ export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATI
 export const TURN_START_INVOCATION = "turn-start";
 /** V4h (D270): what the end of the owner's turn does by itself (자기 회복: one of three conditions goes). */
 export const TURN_END_INVOCATION = "turn-end";
-export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION | typeof KILL_INVOCATION;
+export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION | typeof KILL_INVOCATION | typeof LONG_REST_INVOCATION;
 /**
  * R78 (D213): reserved resource ids a `resource.change` restores that are not pools — spell slots whose levels add up to
  * the amount (none above 5th, the rule both 2024 recoveries share) and Pact Magic slots. Same idea as R59's hit die.

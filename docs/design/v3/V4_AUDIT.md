@@ -157,16 +157,16 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - alert — 이니셔티브 교환이 손 작업. — [picker]
 
 ### 종족
-- goliath 거대한 형태 — 5레벨부터 +10 속도가 항상 켜짐, 내성 유리는 틀림, 크기 그대로. — [data-fix] 추가 행동 10분 효과.
-- dragonborn 용의 비행 — 비행 30이 항상 켜짐. — [data-fix] 추가 행동 10분 효과.
-- dragonborn 브레스 웨폰 — 민첩 내성 없음, DC·혈통 피해 유형·절반·공격 하나 대신 없음. — [data-fix] D263 `save`.
+- ✔ D275 goliath 거대한 형태 — 5레벨부터 +10 속도가 항상 켜짐, 내성 유리는 틀림, 크기 그대로. — [data-fix] 추가 행동 10분 효과.
+- ✔ D275 dragonborn 용의 비행 — 비행 30이 항상 켜짐. — [data-fix] 추가 행동 10분 효과.
+- ✔ D275 dragonborn 브레스 웨폰 — 민첩 내성 없음, DC·혈통 피해 유형·절반·공격 하나 대신 없음. — [data-fix] D263 `save`.
 - goliath 거인 혈통 6종 — 풀만 있음. — [data-fix + host-hook]
 - ✔ D266 orc 불굴의 인내 — 0 HP 대신 1 없음. — [host-hook]
 - ✔ D266 halfling 행운 — 1 재굴림 없음. — [data-fix + new-grammar]
-- elf 요정 혈통, halfling 용감함, dwarf 드워프 강인함 — 매혹·공포·중독 내성 유리 없음. — [new-grammar] 상태 한정 내성 유리.
-- gnome 노움의 교활함 — 지·지·매 내성 유리 없음(문법 있음). — [data-fix]
-- human 수완 — 긴 휴식에 영웅적 영감 없음. — [data-fix + host-hook]
-- goliath 강력한 체격 — 붙잡힘 탈출 판정 유리. — [data-fix]
+- ✔ D275 elf 요정 혈통, halfling 용감함, dwarf 드워프 강인함 — 매혹·공포·중독 내성 유리 없음. — [new-grammar] 상태 한정 내성 유리.
+- ✔ D275 gnome 노움의 교활함 — 지·지·매 내성 유리 없음(문법 있음). — [data-fix]
+- ✔ D275 human 수완 — 긴 휴식에 영웅적 영감 없음. — [data-fix + host-hook]
+- ✔ D275 goliath 강력한 체격 — 붙잡힘 탈출 판정 유리. — [data-fix]
 - 하플링 민첩함·은신 본능, 엘프 무아지경 — 표시 없음. — [DM-label]
 
 ### 주문 (소마법·1~3레벨)

@@ -147,7 +147,9 @@ export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter): 
     exhaustion: Math.max(0, runtime.exhaustion - 1),
     deathSaves: { success: 0, failure: 0 },
     effects: [],
-  }, `긴 휴식 — HP ${derived.hp.max}/${derived.hp.max}, 슬롯·자원 전부 회복, 히트 다이스 절반 회복${(runtime.effects ?? []).length ? `, 효과 종료: ${runtime.effects.map((effect) => effect.name).join(", ")}` : ""}`);
+    // V4m (D275): what a contract says the end of a long rest hands over (인간의 수완).
+    ...(derived.longRestGains?.heroicInspiration ? { heroicInspiration: true } : {}),
+  }, `긴 휴식 — HP ${derived.hp.max}/${derived.hp.max}, 슬롯·자원 전부 회복, 히트 다이스 절반 회복${derived.longRestGains?.heroicInspiration ? ", 영웅적 영감" : ""}${(runtime.effects ?? []).length ? `, 효과 종료: ${runtime.effects.map((effect) => effect.name).join(", ")}` : ""}`);
 }
 
 // ---- slots and resources

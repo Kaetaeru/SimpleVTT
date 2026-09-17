@@ -94,12 +94,16 @@ export interface RollAdvantage {
   abilities?: AbilityKey[];
   /** Skill ids it is limited to; empty means all. */
   skills?: string[];
+  /** V4m (D275): conditions the roll must be *against* (매혹·공포·중독 내성 유리); empty means any save. */
+  conditions?: string[];
 }
 
 /** Whether any of these reasons covers this roll, and the first one that does. */
-export function advantageFor(stats: ActorStats, family: "ability-check" | "saving-throw" | "death-save", options: { ability?: AbilityKey; skill?: string } = {}) {
+export function advantageFor(stats: ActorStats, family: "ability-check" | "saving-throw" | "death-save", options: { ability?: AbilityKey; skill?: string; /** V4m (D275): the conditions this save is against, when the roll is about any. */ conditions?: string[] } = {}) {
   return (stats.advantage ?? []).find((item) => {
     if (item.families?.length && !item.families.includes(family)) return false;
+    // V4m (D275): a reason tied to conditions covers the roll only when one of them is what the save is against.
+    if (item.conditions?.length && !(options.conditions ?? []).some((condition) => item.conditions!.includes(condition))) return false;
     if (item.skills?.length) return Boolean(options.skill && item.skills.includes(options.skill));
     if (item.abilities?.length) return Boolean(options.ability && item.abilities.includes(options.ability));
     return true;

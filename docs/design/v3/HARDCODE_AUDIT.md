@@ -77,6 +77,7 @@
 - `resource.change`의 `level`(예약 슬롯 자원이 쓰거나 돌려주는 슬롯 레벨) · 사용의 `slotLevel`·`slotGain` (D272)
 - 속성 `form.assume`(형태 후보를 콘텐츠가 정함) · 효과의 `form` · 공격 범위 `weapon-or-form` (D273)
 - `roll.modify`의 `diceSides`(식이 정하는 주사위 크기) · 인터셉터 사실의 `unknownPolicy: "ask"`와 `question` · 남의 성공을 깎는 창(`rescue.interfere`) (D274)
+- 속성 `saving-throw.advantage-vs-condition` · 시점 `long-rest`와 `longRestGains` · 속성 `heroic-inspiration.gain`을 긴 휴식이 적용 (D275)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

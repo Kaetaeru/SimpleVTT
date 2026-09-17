@@ -6,7 +6,7 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { resourceIdOf, ATTACK_INVOCATIONS, GAIN_INVOCATION, TURN_END_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { resourceIdOf, ATTACK_INVOCATIONS, GAIN_INVOCATION, LONG_REST_INVOCATION, TURN_END_INVOCATION, TURN_START_INVOCATION, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, TRIGGER_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
@@ -168,6 +168,28 @@ export function formula(dice: string | undefined, amount: Parameters<typeof eval
   return `${dice}${flat > 0 ? "+" : "-"}${Math.abs(flat)}`;
 }
 
+/**
+ * V4m (D275): what the end of a long rest hands a character by contract (인간의 수완: 영웅적 영감). A long rest
+ * already gives every pool back, so this reads only what a rest does *beside* that.
+ */
+export function longRestGains(derived: { features: Array<{ id: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }) {
+  const gains: { heroicInspiration?: boolean } = {};
+  const seen = new Set<string>();
+  for (const feature of derived.features) {
+    const key = featureRuleKey(feature.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const contract = featureContract(catalog, key);
+    if (!contract) continue;
+    for (const entry of contract.entryPoints.filter((item) => item.invocation === LONG_REST_INVOCATION)) {
+      for (const operation of entry.operations) {
+        if (operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain") gains.heroicInspiration = true;
+      }
+    }
+  }
+  return Object.keys(gains).length ? gains : undefined;
+}
+
 export function contractUse(contract: CommonPlayContract, scope: Scope, label: string): ContractUse | undefined {
   const use: ContractUse = {};
   let found = false;
@@ -326,12 +348,14 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
   // R78 (D213): what a short rest's end does is said where the player looks for it — the rest window runs it.
   for (const entry of contract.entryPoints.filter((item) => TRIGGER_INVOCATIONS.has(item.invocation))) {
     mechanical = true;
-    const where = entry.invocation === REST_INVOCATION ? "짧은 휴식 창에서" : entry.invocation === "kill" ? "적을 쓰러뜨렸을 때 창에서" : "이니셔티브 굴릴 때 창에서";
+    const where = entry.invocation === LONG_REST_INVOCATION ? "긴 휴식이 끝날 때" : entry.invocation === REST_INVOCATION ? "짧은 휴식 창에서" : entry.invocation === "kill" ? "적을 쓰러뜨렸을 때 창에서" : "이니셔티브 굴릴 때 창에서";
     for (const operation of entry.operations) {
       if (!live(operation, scope)) continue;
       if (operation.kind === "healing.apply") { rules.push(`${where} — HP ${operation.dice ?? ""}${operation.amount ? `+${number(operation.amount) ?? 0}` : ""} 회복`); continue; }
       // R99 (D234): 어둠의 존재의 축복.
       if (operation.kind === "temp-hp.grant") { rules.push(`${where} — 임시 HP ${number(operation.amount) ?? 0}`); continue; }
+      // V4m (D275): 수완 — a long rest hands over heroic inspiration.
+      if (operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain") { rules.push(`${where} — 영웅적 영감`); continue; }
       if (operation.kind !== "resource.change") continue;
       const amount = number(operation.amount) ?? 0;
       if (operation.resourceId === SLOT_LEVELS_RESOURCE) rules.push(`${where} — 레벨 합 ${amount}까지 슬롯 회복 (5레벨 이하)`);

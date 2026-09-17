@@ -560,3 +560,39 @@ test("V4l: 날카로운 말 lowers somebody else's hit with the bard's own inspi
   assert.equal(bard.runtime.resourcesUsed["resource.bard.bardic-inspiration"], 1, "한 번 쓰면 영감 하나");
   void before;
 });
+
+test("V4m: species traits are rules — 용감함 gives advantage only against fear, 수완 hands inspiration after a long rest, 브레스 웨폰 asks for a save (D275)", async () => {
+  const { pcStats } = await import("../../client/rules/actions");
+  const { advantageFor } = await import("../../client/rules/actions");
+  const cat = catalog();
+
+  // 용감함: advantage on a save against 공포, and nothing on any other save.
+  const halfling = build({ name: "하플링", species: "halfling", classes: "rogue", level: 3 }).derived;
+  const stats = pcStats(halfling);
+  assert.equal(advantageFor(stats, "saving-throw", { ability: "wis", conditions: ["공포"] })?.reason, "용감함");
+  assert.equal(advantageFor(stats, "saving-throw", { ability: "wis", conditions: ["중독"] }), undefined);
+  assert.equal(advantageFor(stats, "saving-throw", { ability: "wis" }), undefined, "a save about nothing in particular is not covered");
+  // 요정 혈통 and 드워프 강인함 are the same rule about other conditions.
+  assert.equal(advantageFor(pcStats(build({ name: "엘프", species: "elf", classes: "wizard", level: 3 }).derived), "saving-throw", { ability: "cha", conditions: ["매혹"] })?.reason, "요정 혈통");
+  assert.ok(advantageFor(pcStats(build({ name: "드워프", species: "dwarf", classes: "fighter", level: 3 }).derived), "saving-throw", { ability: "con", conditions: ["중독"] }), "드워프의 독 저항은 중독 내성에도 유리를 준다");
+
+  // 수완: the long rest hands over heroic inspiration; another species' rest does not.
+  const human = build({ name: "인간", species: "human", classes: "fighter", level: 3 });
+  assert.equal(human.derived.longRestGains?.heroicInspiration, true);
+  const rested = longRest(initialRuntime(human.derived), human.derived);
+  assert.equal(rested.heroicInspiration, true);
+  const elf = build({ name: "엘프", species: "elf", classes: "fighter", level: 3 });
+  assert.equal(longRest(initialRuntime(elf.derived), elf.derived).heroicInspiration, false);
+
+  // 브레스 웨폰: one line per damage type, each a Dexterity save for half at the dragonborn's own DC.
+  const dragonborn = build({ name: "용인", species: "dragonborn", classes: "paladin", level: 5, abilities: { con: 16 } });
+  const breath = tableOutcome(dragonborn.derived, cat, "species.breath-weapon#fire")!;
+  assert.deepEqual(breath.strikes?.map((strike) => [strike.formula, strike.damageType, strike.save?.ability, strike.save?.dc, strike.save?.success]), [["2d10", "화염", "dex", 8 + 3 + dragonborn.derived.proficiencyBonus, "half"]]);
+  assert.equal(dragonborn.derived.resources.find((resource) => resource.id === "resource.species.breath-weapon")?.max, dragonborn.derived.proficiencyBonus);
+
+  // 거대한 형태: the +10 feet comes with the effect, not for ever.
+  const goliath = build({ name: "골리앗", species: "goliath", classes: "fighter", level: 5 });
+  assert.equal(goliath.derived.speed.walk, 35);
+  const large = deriveCharacter(goliath.source, cat, { effects: [{ key: "feature:species.large-form", name: "거대한 형태", source: "feature", duration: "10분 (100라운드)", concentration: false, rounds: 100, elapsed: 0, startedAt: "" }] });
+  assert.equal(large.speed.walk, 45);
+});

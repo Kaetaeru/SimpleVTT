@@ -168,7 +168,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
     const resistant = Boolean(target.magicResistance) && !/^(npc|feature):/.test(input.spec.exec.spellId);
     // R61 (D196): and whatever the target's own contracts said about saving throws (전투 시전자's concentration,
     // 튼튼함's death saves). The reason rides on the row, as 회피 and 마법 저항 already do.
-    const declared = advantageFor(stats, "saving-throw", { ability: key });
+    const declared = advantageFor(stats, "saving-throw", { ability: key, conditions: conditionMarks("failed-save") });
     // R90 (D225): a spell the target is under — 축복·액운's d4, 신속's advantage on Dexterity saves, 저주's disadvantage.
     const states = (target.rollStates ?? []).filter((item) => item.on === "save" && (!item.ability || item.ability === key));
     // H1 (D238): bloodied-advantage on saves (피투성이 광분).

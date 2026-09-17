@@ -16,7 +16,7 @@ import { Ledger } from "./ledger";
 import { applyPassiveContracts, applyActiveEffects } from "../rules/effects";
 import { featureRuleKey, qualifyRuleKey } from "../rules/activation";
 import { characterScope } from "../rules/contract";
-import { contractDurations, contractSummary, featureContract } from "../rules/contractActivation";
+import { contractDurations, contractSummary, featureContract, longRestGains } from "../rules/contractActivation";
 import { characterRiders } from "../rules/attackRiders";
 import { contractBonusActions } from "../rules/contractActivation";
 import { applyBackground, applyLanguages, applySpecies, damageTypeKo } from "./origin";
@@ -78,6 +78,8 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
     else if (derived.classes.some((state) => catalog.classById(state.classId)?.rules.spellcastingFeature === key)) { feature.rules = [...(feature.rules ?? []), "주문 시전: 슬롯·소마법·준비 주문을 주문 칸에서 자동 계산"]; feature.execution = "derived"; }
   }
   derived.featureContracts = featureContracts;
+  // V4m (D275): a contract that names the end of a long rest — the rest applies it, nothing is pressed.
+  derived.longRestGains = longRestGains(derived, catalog);
   // R52 (D187): what this sheet may declare in the attack dialog, worked out once and carried with it.
   derived.attackRiders = characterRiders(derived, catalog);
   // R59 (D194): official actions a contract said may be taken as a bonus action instead.
