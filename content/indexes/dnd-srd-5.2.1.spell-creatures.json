@@ -1,0 +1,16 @@
+{
+ "description": "H6a (D248): the creatures a spell puts on the board. choices = monster ids the caster may pick (missing ones are skipped); filter = every compendium monster of that creature type and challenge rating; count = how many one cast places; needsOwnBlock = the SRD block is not in the compendium, the DM picks one; none = the spell places no creature, and why (the 2024 conjures). A module spell may put the same object under its spell-mechanic config as \"creatures\".",
+ "spells": {
+  "dnd.srd521.spell.find-familiar": {"filter":{"creatureType":"beast","cr":"0"},"count":1,"note":"도전 등급 0 야수의 수치를 쓰되 유형은 천상체·요정·악마 중 하나입니다."},
+  "dnd.srd521.spell.find-steed": {"choices":["dnd.srd521.monster.warhorse","dnd.srd521.monster.pony","dnd.srd521.monster.camel","dnd.srd521.monster.elk","dnd.srd521.monster.dire-wolf","dnd.srd521.monster.mastiff"],"count":1,"note":"대형 탑승 동물의 모습이고, 유형은 천상체·요정·악마 중 하나입니다."},
+  "dnd.srd521.spell.animate-dead": {"choices":["dnd.srd521.monster.skeleton","dnd.srd521.monster.zombie"],"count":1,"note":"뼈 무더기는 스켈레톤, 시체는 좀비가 됩니다."},
+  "dnd.srd521.spell.create-undead": {"choices":["dnd.srd521.monster.ghoul"],"count":3,"note":"밤에만 시전할 수 있고, 시체 셋까지 구울이 됩니다."},
+  "dnd.srd521.spell.summon-dragon": {"choices":[],"count":1,"note":"드라코닉 스피릿 스탯 블록은 컴펜디움에 없습니다 — DM이 쓸 괴물을 고릅니다.","needsOwnBlock":true},
+  "dnd.srd521.spell.conjure-animals": {"none":"정령 무리는 시전자를 따라다니는 오라입니다 — 놓을 크리처가 없습니다."},
+  "dnd.srd521.spell.conjure-celestial": {"none":"빛의 기둥이라 크리처가 아닙니다."},
+  "dnd.srd521.spell.conjure-elemental": {"none":"원소 정령은 지속되는 효과이고 스탯 블록이 없습니다."},
+  "dnd.srd521.spell.conjure-fey": {"none":"요정 정령은 지속되는 효과입니다."},
+  "dnd.srd521.spell.conjure-minor-elementals": {"none":"시전자 주위 15피트 오라입니다."},
+  "dnd.srd521.spell.conjure-woodland-beings": {"none":"시전자 주위 10피트 오라입니다."}
+ }
+}

@@ -10,7 +10,7 @@ import test from "node:test";
 
 const CEILINGS = {
   /** A content id literal. */
-  contentIds: 17,
+  contentIds: 6,
   /** A branch on a feature, option or event key. */
   keyBranches: 30,
   /** A branch on a class slug or a picked option id. */
@@ -141,6 +141,19 @@ test("H5c: a use is its contract — a chosen number of points, dice by level, t
   const { featureActivation } = await import("../../client/rules/activation");
   const derived = build({ name: "x", classes: "fighter", level: 1 }).derived;
   assert.equal(featureActivation({ id: "module.nothing", name: "무언가", source: "class", sourceLabel: "", description: "추가 행동으로 무언가를 합니다." } as never, derived), undefined);
+});
+
+test("H6a: which creatures a spell places is data — a module spell names its own (D248)", async () => {
+  const { createCatalog } = await import("../../client/catalog");
+  const { summonRule, summonsNothing } = await import("../../client/rules/summons");
+  const spell = (slug: string, creatures: unknown) => ({ id: `module.spell.${slug}`, category: "spell", presentation: { originalName: slug, defaultLocale: "ko-KR", locales: { "ko-KR": { name: slug } } },
+    mechanics: [{ kind: "spell-definition", config: { level: 2, castingTimeText: "행동", rangeText: "30피트", durationText: "1시간", classes: ["wizard"] } }, { kind: "spell-mechanic", config: { creatures } }] });
+  createCatalog([{ moduleId: "module.bones", moduleVersion: "1", content: [spell("raise-bones", { choices: ["dnd.srd521.monster.skeleton", "module.monster.missing"], count: 2, note: "뼈" }), spell("mist-shape", { none: "안개일 뿐입니다." }), spell("call-rats", { filter: { creatureType: "beast", cr: "0" } })] } as never]);
+  assert.deepEqual(summonRule("module.spell.raise-bones"), { spellId: "module.spell.raise-bones", choices: ["dnd.srd521.monster.skeleton"], count: 2, note: "뼈" });
+  assert.equal(summonsNothing("module.spell.mist-shape"), "안개일 뿐입니다.");
+  assert.equal(summonRule("module.spell.mist-shape"), undefined);
+  assert.ok(summonRule("module.spell.call-rats")!.choices.includes("dnd.srd521.monster.rat"));
+  createCatalog();
 });
 
 test("H4: a class module's definition carries its training, resources, option pools and multiclass rules (D243)", async () => {

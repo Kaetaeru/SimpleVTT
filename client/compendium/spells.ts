@@ -8,6 +8,7 @@ import sustainJson from "../../content/indexes/dnd-srd-5.2.1.spell-sustain.json"
 import onHitJson from "../../content/indexes/dnd-srd-5.2.1.spell-on-hit.json";
 import bearerJson from "../../content/indexes/dnd-srd-5.2.1.spell-bearer.json";
 import weaponSpellJson from "../../content/indexes/dnd-srd-5.2.1.spell-weapon.json";
+import creaturesJson from "../../content/indexes/dnd-srd-5.2.1.spell-creatures.json";
 import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
@@ -44,6 +45,8 @@ export interface SpellExec {
   weaponSpell?: WeaponSpell;
   /** R84 (D219): the creature a summon spell brings, as a template filled in at the cast (compendium/summonTemplate.ts). */
   summon?: SpellSummon;
+  /** H6a (D248): the compendium creatures a spell places, or that it places none (see `creaturesOf`). */
+  creatures?: SpellCreatures;
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
   repeat?: { economy: SpellSustain["economy"] };
 }
@@ -62,6 +65,19 @@ export interface SpellOnHit {
   note?: string;
 }
 const BUILTIN_ON_HIT = (onHitJson as unknown as { spells: Record<string, SpellOnHit> }).spells;
+
+/** H6a (D248): which compendium creatures a spell places — named ones, or every monster of a type and challenge rating — or why it places none. */
+export interface SpellCreatures {
+  choices?: string[];
+  filter?: { creatureType?: string; cr?: string };
+  count?: number;
+  note?: string;
+  needsOwnBlock?: boolean;
+  none?: string;
+}
+const BUILTIN_CREATURES = (creaturesJson as unknown as { spells: Record<string, SpellCreatures> }).spells;
+/** H6a (D248): the spell's creature rule, from its mechanics or the SRD index. */
+export const creaturesOf = (spellId: string): SpellCreatures | undefined => spellExec(spellId)?.creatures ?? BUILTIN_CREATURES[spellId];
 /** R82 (D218): the spell's on-hit rule, from its mechanics or the SRD index. */
 export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => (exec ? exec.onHit ?? BUILTIN_ON_HIT[exec.spellId] : undefined);
 
@@ -157,6 +173,7 @@ export function execForCatalogSpell(spell: CatalogSpell): SpellExec {
     ...(mechanic && isObject(mechanic.onHit) ? { onHit: mechanic.onHit as unknown as SpellOnHit } : {}),
     ...(mechanic && mechanic.sustain !== undefined ? { sustain: mechanic.sustain as SpellExec["sustain"] } : {}),
     ...(mechanic && isObject(mechanic.summon) && Array.isArray(mechanic.summon.forms) ? { summon: mechanic.summon as unknown as SpellSummon } : {}),
+    ...(mechanic && isObject(mechanic.creatures) ? { creatures: mechanic.creatures as unknown as SpellCreatures } : {}),
   };
 }
 

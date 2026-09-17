@@ -48,7 +48,7 @@
 | P11 ✔ H5c | `activation.ts` `FEATURE_ACTIVATIONS` 4개(공격 흘리기, 브레스 무기, 아드레날린 분출, 안수), `breathDice`, `METAMAGIC_COST`, `NOT_ACTIVATABLE` | 손으로 쓴 사용 규칙 | 각 특성 계약(`damage.apply` 레벨 표현식, `temp-hp.grant`, 점수 풀 사용), 메타매직 선택지 계약 `resource.change` | 점수형 풀 사용 연산 |
 | P12 ✔ H5d | `effects.ts` `EFFECT_RULES["spell:aid"]` | 남은 손 규칙 1개 | 효과 계약 `hp.maximum` + 시작 시 `healing.apply` | 기존 문법 |
 | P13 ✔ H5d | `items.ts` `POTIONS` 정규식(치유 물약 등급), 소모품 판정 정규식 | 아이템 이름 정규식 | 아이템 메커닉 JSON `use: { heal: "2d4+2" }`, `consumable: true` | 아이템 사용 메커닉 |
-| P14 | `summons.ts` `SUMMON_RULES`(5), `CONJURES_NOTHING`(6), `STEEDS` | 주문 ID별 소환 규칙 | 주문 메커닉 `summon`(R84에 이미 있음)으로 합치고, 소환 없음은 `summon: false` + 사유 | 기존(R84) |
+| P14 ✔ H6a | `summons.ts` `SUMMON_RULES`(5), `CONJURES_NOTHING`(6), `STEEDS` | 주문 ID별 소환 규칙 | 주문 메커닉 `summon`(R84에 이미 있음)으로 합치고, 소환 없음은 `summon: false` + 사유 | 기존(R84) |
 | P15 | `host.ts` `COUNTERSPELL`, 방패 반응(`pcReactionSpell(… "shield")`), `Notify.tsx` 두 ID | 반응 주문 ID | 주문 메커닉 `reaction: { trigger: "attack.hit-self", acBonus: 5 }`, `reaction: { trigger: "spell.cast-seen", counter: true }` — 반응 창이 주문 목록을 읽음 | 반응 주문 트리거 |
 | P16 ✔ H1 | `PageCanvas.tsx` `SITUATIONAL`(무리 전술·태양광 과민성·투명 정규식) | 특성 이름 정규식 | S6 색인 패턴 `pack-tactics`, `sunlight-sensitivity` → 상황 버튼 | S6 |
 | P18 (H5d에서 발견) | `spellcast.ts` `REPEAT_SAVE` — 주문 요약문에서 "턴이 끝날 때 … 내성 굴림을 반복"을 정규식으로 찾음 | 설명문 정규식 | 주문 실행 데이터 필드(`repeatSave: "turn-end"`) | 주문 메커닉 필드 |
