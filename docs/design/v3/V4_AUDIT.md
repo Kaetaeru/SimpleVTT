@@ -190,7 +190,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D283 hellish-rebuke — 반응으로 제시 안 됨. — [host-hook]
 - ✔ D290 expeditious-retreat — 판정 표시, 추가 행동 질주 문법 있음. — [data-fix]
 - grease — 들어감·턴 끝 내성 없음. — [button]
-- acid-arrow — 다음 턴 2d4·빗나감 절반 없음. — [new-grammar]
+- ✔ D292 (다음 턴 2d4는 턴 시작 규칙으로; 빗나감 절반은 사유 있는 라벨) acid-arrow — 다음 턴 2d4·빗나감 절반 없음. — [new-grammar]
 - ✔ D269 spiritual-weapon — 슬롯당 +1d8 없음. — [data-fix]
 - ✔ D281 aid — 최대 HP +5 고정. — [data-fix]
 - ✔ D268 blindness-deafness — 둘 다 부여. — [picker]
