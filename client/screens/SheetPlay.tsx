@@ -65,7 +65,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const rollAndLog = async (spec: RollSpec) => { const result = await rollDice(spec); void save((current) => noteLog(current, describeRoll(result))); return result; };
   const hpPreview = applyHpCommand(runtime, derived, hpInput);
   // R64 (D199): what this sheet may be asked after a hit, so its standing answers can be set (and a "never" undone).
-  const hitSettings = useMemo(() => allHitOffers({ runtime }, derived), [runtime, derived]);
+  const hitSettings = useMemo(() => allHitOffers({ runtime }, derived, catalog), [runtime, derived, catalog]);
   // R79 (D216), R81 (D215): features the table asks about at a moment, and the standing answer for each.
   const triggerSettings = useMemo(() => [...restFeatures(derived, runtime, catalog, "short-rest"), ...restFeatures(derived, runtime, catalog, "initiative")], [runtime, derived, catalog]);
   // The slider previews while dragging and writes one log line on release.

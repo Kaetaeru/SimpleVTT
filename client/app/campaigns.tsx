@@ -147,7 +147,7 @@ export interface CampaignsState {
   /** R54 (D189): take a reaction this character's own contract declared against the attack the prompt is holding. */
   guard: (messageId: string, feature: string, facts?: string[]) => void;
   /** R63 (D198): answer the window a hit opened — what to add, the facts confirmed, the smite slot. */
-  hitChoice: (messageId: string, choices: string[], facts?: string[], smiteSlot?: number) => void;
+  hitChoice: (messageId: string, choices: string[], facts?: string[], smiteSlot?: number, spellSmite?: { spellId: string; slot: number }) => void;
   /** R79 (D216), R81 (D215): answer a trigger window — the features used, with the slots each gives back. */
   triggerChoice: (messageId: string, choices: Array<{ featureId: string; slots?: number[] }>) => void;
   adjustAction: (messageId: string, overrides: AttackOverrides, reroll?: boolean) => void;
@@ -379,7 +379,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       // R54 (D189): the reactions this sheet's contracts open a window for.
       pcGuards: (entry, trigger) => pcGuards(entry, derivedOf(entry, catalogRef.current), catalogRef.current, trigger),
       // R63 (D198): what the attacker may add once a swing has landed.
-      pcHitOffers: (entry, attackId, riders) => hitOffers(entry, derivedOf(entry, catalogRef.current), attackId, riders),
+      pcHitOffers: (entry, attackId, riders) => hitOffers(entry, derivedOf(entry, catalogRef.current), attackId, riders, catalogRef.current),
       pcAttackActionAttacks: (entry) => derivedOf(entry, catalogRef.current).attackActionAttacks ?? 1,
       // R53 (D188): what the attacker's contracts do once the swing has landed.
       pcAftermath: (entry, attackId, outcomes) => { const derived = derivedOf(entry, catalogRef.current); const attack = derived.attacks.find((item) => item.id === attackId); return attack ? attackAftermath(derived, catalogRef.current, attack, outcomes) : emptyAftermath(); },
@@ -568,7 +568,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const act = useCallback((actor: ActorRef, kind: ActionKind, options: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean } = {}) => send({ type: "act.action", actor, kind, ...options }), [send]);
   const declineReaction = useCallback((messageId: string) => send({ type: "act.decline", messageId }), [send]);
   const guard = useCallback((messageId: string, feature: string, facts?: string[]) => send({ type: "act.guard", messageId, feature, ...(facts?.length ? { facts } : {}) }), [send]);
-  const hitChoice = useCallback((messageId: string, choices: string[], facts?: string[], smiteSlot?: number) => send({ type: "act.onhit", messageId, choices, ...(facts?.length ? { facts } : {}), ...(smiteSlot ? { smiteSlot } : {}) }), [send]);
+  const hitChoice = useCallback((messageId: string, choices: string[], facts?: string[], smiteSlot?: number, spellSmite?: { spellId: string; slot: number }) => send({ type: "act.onhit", messageId, choices, ...(facts?.length ? { facts } : {}), ...(smiteSlot ? { smiteSlot } : {}), ...(spellSmite ? { spellSmite } : {}) }), [send]);
   const triggerChoice = useCallback((messageId: string, choices: Array<{ featureId: string; slots?: number[] }>) => send({ type: "act.trigger", messageId, choices }), [send]);
   const adjustAction = useCallback((messageId: string, overrides: AttackOverrides, reroll?: boolean) => send({ type: "act.adjust", messageId, overrides, reroll }), [send]);
   const undoAction = useCallback((messageId: string) => send({ type: "act.undo", messageId }), [send]);

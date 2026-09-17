@@ -3,10 +3,23 @@
  "schemaVersion": "0.1-draft",
  "moduleId": "phb-2024.spell-mechanics-patch",
  "moduleVersion": "0.1-draft",
- "rulesProfile": { "id": "dnd.srd-5.2.1", "version": "0.1-draft" },
+ "rulesProfile": {
+  "id": "dnd.srd-5.2.1",
+  "version": "0.1-draft"
+ },
  "defaultLocale": "ko-KR",
- "source": { "document": "Player's Handbook", "version": "2024", "license": "not-srd", "srdDerived": false },
- "dependencies": [ { "moduleId": "phb-2024-supplement", "version": "1" } ],
+ "source": {
+  "document": "Player's Handbook",
+  "version": "2024",
+  "license": "not-srd",
+  "srdDerived": false
+ },
+ "dependencies": [
+  {
+   "moduleId": "phb-2024-supplement",
+   "version": "1"
+  }
+ ],
  "conflicts": [],
  "capabilities": [],
  "extensionPoints": [],
@@ -14,16 +27,446 @@
   {
    "id": "phb2024.spell.witch-bolt",
    "category": "spell",
-   "tags": [ "spell", "phb-2024", "config-patch" ],
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
    "mechanics": [
     {
      "kind": "spell-mechanic",
      "config": {
       "sustain": {
        "economy": "bonus-action",
-       "primary": { "kind": "automatic-projectiles", "damageType": "lightning", "projectileDice": { "sides": 12 }, "baseProjectiles": 1 },
+       "primary": {
+        "kind": "automatic-projectiles",
+        "damageType": "lightning",
+        "projectileDice": {
+         "sides": 12
+        },
+        "baseProjectiles": 1
+       },
        "note": "R77 (D212): 이후 각 턴 추가 행동으로 번개 피해 1d12 자동 적중"
       }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.wrathful-smite",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "onHit": {
+       "damage": {
+        "count": 1,
+        "sides": 6,
+        "perSlot": 1,
+        "type": "necrotic"
+       },
+       "save": {
+        "ability": "wis",
+        "conditions": [
+         "frightened"
+        ],
+        "note": "공포는 대상의 턴이 끝날 때마다 지혜 내성으로 끝남 (표에서)"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.thunderous-smite",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "onHit": {
+       "damage": {
+        "count": 2,
+        "sides": 6,
+        "perSlot": 1,
+        "type": "thunder"
+       },
+       "save": {
+        "ability": "str",
+        "conditions": [
+         "prone"
+        ],
+        "note": "실패하면 10피트 밀려남"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.blinding-smite",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "onHit": {
+       "damage": {
+        "count": 3,
+        "sides": 8,
+        "perSlot": 1,
+        "type": "radiant"
+       },
+       "inflicts": [
+        "blinded"
+       ],
+       "note": "실명은 대상의 턴이 끝날 때마다 건강 내성으로 끝남 (표에서)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.staggering-smite",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "onHit": {
+       "damage": {
+        "count": 4,
+        "sides": 6,
+        "perSlot": 1,
+        "type": "psychic"
+       },
+       "save": {
+        "ability": "wis",
+        "conditions": [
+         "stunned"
+        ],
+        "note": "다음 자기 턴이 끝날 때까지"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.banishing-smite",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "onHit": {
+       "damage": {
+        "count": 5,
+        "sides": 10,
+        "type": "force"
+       },
+       "note": "공격 뒤 HP 50 이하면 매력 내성, 실패 시 반차원으로 추방·행동불능 (표에서)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.hail-of-thorns",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "onHit": {
+       "weapon": "ranged",
+       "save": {
+        "ability": "dex",
+        "damage": {
+         "count": 1,
+         "sides": 10,
+         "perSlot": 1,
+         "type": "piercing"
+        },
+        "successDamage": "half",
+        "note": "대상 5피트 안의 다른 크리처도 같은 내성 (표에서)"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.lightning-arrow",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "onHit": {
+       "weapon": "ranged",
+       "damage": {
+        "count": 4,
+        "sides": 8,
+        "perSlot": 1,
+        "type": "lightning"
+       },
+       "note": "원래 무기 피해 대신 · 빗나가도 절반 · 대상 10피트 안 민첩 내성 2d8 번개 (표에서)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.aura-of-vitality",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "baseLevel": 3,
+      "castingEconomy": "action",
+      "targeting": {
+       "kind": "creature",
+       "minTargets": 1,
+       "maxTargets": 1,
+       "allowedRelations": [
+        "self",
+        "ally"
+       ]
+      },
+      "primary": {
+       "kind": "tracked-effect",
+       "summary": "30피트 오라: 추가 행동으로 오라 안 크리처 하나 2d6 회복"
+      },
+      "concentration": true,
+      "sustain": {
+       "economy": "bonus-action",
+       "primary": {
+        "kind": "healing",
+        "dice": {
+         "count": 2,
+         "sides": 6
+        }
+       },
+       "note": "추가 행동으로 오라 안 크리처 하나 2d6 회복"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.cloud-of-daggers",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "baseLevel": 2,
+      "castingEconomy": "action",
+      "targeting": {
+       "kind": "creature",
+       "minTargets": 1,
+       "maxTargets": 1,
+       "rangeFeet": 60
+      },
+      "primary": {
+       "kind": "automatic-projectiles",
+       "damageType": "slashing",
+       "projectileDice": {
+        "sides": 4
+       },
+       "baseProjectiles": 4,
+       "projectilesPerSlotAboveBase": 2
+      },
+      "concentration": true,
+      "sustain": {
+       "economy": "none",
+       "note": "구역에 들어오거나 그 안에서 턴을 끝낸 크리처"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.spell.hunger-of-hadar",
+   "category": "spell",
+   "tags": [
+    "spell",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "baseLevel": 3,
+      "castingEconomy": "action",
+      "targeting": {
+       "kind": "creature",
+       "minTargets": 1,
+       "maxTargets": 1,
+       "rangeFeet": 150
+      },
+      "primary": {
+       "kind": "automatic-projectiles",
+       "damageType": "cold",
+       "projectileDice": {
+        "sides": 6
+       },
+       "baseProjectiles": 2,
+       "projectilesPerSlotAboveBase": 1
+      },
+      "concentration": true,
+      "sustain": {
+       "economy": "none",
+       "note": "턴 시작에 냉기 2d6 · 턴 끝에 민첩 내성 실패 시 산성 2d6 (표에서)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.spell.phb2024.crusaders-mantle",
+   "category": "option",
+   "presentation": {
+    "originalName": "Crusader's Mantle",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "Crusader's Mantle",
+      "summary": "Crusader's Mantle이(가) 걸려 있는 동안 시트가 바뀌는 값"
+     }
+    }
+   },
+   "tags": [
+    "effect",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "spell:crusaders-mantle",
+      "entryPoints": [
+       {
+        "id": "while-active",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "damage.bonus",
+          "operation": "add",
+          "dice": "1d4",
+          "scope": "weapon",
+          "note": "30피트 오라 안 아군의 무기 명중에 광휘 1d4 (시전자 시트에만 자동)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.spell.phb2024.elemental-weapon",
+   "category": "option",
+   "presentation": {
+    "originalName": "Elemental Weapon",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "Elemental Weapon",
+      "summary": "Elemental Weapon이(가) 걸려 있는 동안 시트가 바뀌는 값"
+     }
+    }
+   },
+   "tags": [
+    "effect",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "spell:elemental-weapon",
+      "entryPoints": [
+       {
+        "id": "while-active",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "attack-roll.bonus",
+          "operation": "add",
+          "value": {
+           "value": 1
+          },
+          "scope": "weapon"
+         },
+         {
+          "kind": "property.modify",
+          "property": "damage.bonus",
+          "operation": "add",
+          "dice": "1d4",
+          "scope": "weapon",
+          "note": "고른 원소 피해 1d4 · 상위 슬롯이면 +2/+3 (표에서)"
+         }
+        ]
+       }
+      ]
      }
     }
    ]

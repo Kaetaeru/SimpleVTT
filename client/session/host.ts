@@ -25,7 +25,7 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { spellExec, sustainedExec } from "../compendium/spells";
+import { onHitOf, spellExec, sustainedExec, type SpellExec } from "../compendium/spells";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
@@ -1398,13 +1398,15 @@ export class TableHost {
         const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.options.pcHitOffers?.(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []);
         const offered = new Map(ask.map((offer) => [offer.key, offer]));
         const smiteSlot = command.choices.includes("smite") && offered.get("smite")?.slots?.some((slot) => slot.level === command.smiteSlot) ? command.smiteSlot : undefined;
-        const picked = [...new Set(command.choices)].filter((key) => offered.has(key) && (key !== "smite" || smiteSlot));
+        // R82 (D218): a smite spell counts only with a slot its offer listed, and only one on a hit.
+        const spellSmite = command.spellSmite && offered.get(`spell:${command.spellSmite.spellId}`)?.slots?.some((slot) => slot.level === command.spellSmite!.slot) ? { spellId: String(command.spellSmite.spellId), slot: command.spellSmite.slot } : undefined;
+        const picked = [...new Set(command.choices)].filter((key) => offered.has(key) && (key !== "smite" || smiteSlot) && (!key.startsWith("spell:") || key === `spell:${spellSmite?.spellId}`));
         const confirmable = new Set(picked.flatMap((key) => (offered.get(key)!.facts ?? []).map((fact) => fact.id)));
         const facts = (command.facts ?? []).filter((id) => confirmable.has(id));
-        const labels = picked.map((key) => `${offered.get(key)!.label}${key === "smite" ? ` (${smiteSlot}레벨 슬롯)` : ""}`);
+        const labels = picked.map((key) => `${offered.get(key)!.label}${key === "smite" ? ` (${smiteSlot}레벨 슬롯)` : key.startsWith("spell:") ? ` (${spellSmite!.slot}레벨 슬롯)` : ""}`);
         this.held.delete(command.messageId);
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: picked.length ? { chosen: labels } : { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${labels.length ? labels.join(", ") : "안 함"}` });
-        this.takeHitChoices({ ...held, attacker, target }, { choices: picked, facts, smiteSlot }, auto);
+        this.takeHitChoices({ ...held, attacker, target }, { choices: picked, facts, smiteSlot, spellSmite }, auto);
         return;
       }
       case "act.trigger": {
@@ -1605,8 +1607,8 @@ export class TableHost {
    * resolved again on the same d20 and the same dice (new parts roll fresh, a reroll chosen now happens once). Only
    * these choices are paid for now; whatever was declared before the roll already was.
    */
-  private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; smiteSlot?: number }, auto: HitOffer[]): string {
-    const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], smiteSlot: answer.smiteSlot };
+  private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; smiteSlot?: number; spellSmite?: { spellId: string; slot: number } }, auto: HitOffer[]): string {
+    const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], smiteSlot: answer.smiteSlot, spellSmite: answer.spellSmite };
     if (!all.choices.length) return this.finishAttack(held);
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
     const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
@@ -1625,7 +1627,36 @@ export class TableHost {
     const parts = [...prepared.spec.damage, ...(prepared.spec.riders ?? []), ...(crit ? prepared.spec.critRiders ?? [] : [])];
     const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: held.overrides, fixed: { d20s: held.resolution.d20s, damage: carryDice(held.resolution.damage, parts), ...(held.resolution.mastery?.save ? { masteryD20: held.resolution.mastery.save.d20 } : {}) }, apply: !held.waits, rerollOnce: true });
     if (fresh?.spend && attacker.entry.kind === "character") { const before = attacker.entry; this.storeEntry({ ...before, runtime: fresh.spend(before.runtime), updatedAt: this.now() }); }
-    return this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
+    // R82 (D218): a smite spell is cast as a bonus action.
+    if (riders.spellSmite) this.markUsed(held.inputs.attacker, "bonus");
+    const card = this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
+    if (riders.spellSmite && attacker.entry.kind === "character") this.smiteSave(attacker, target, riders.spellSmite, Boolean(held.waits), held.inputs.by);
+    return card;
+  }
+
+  /**
+   * R82 (D218): the save a smite spell asks of the creature it hit (분노의 강타's 지혜, 휘감는 일격's 근력), rolled against
+   * the caster's spell DC and posted as its own card — the same card, conditions, effects and undo a cast save gets.
+   */
+  private smiteSave(attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, smite: { spellId: string; slot: number }, waits: boolean, by: string) {
+    const rule = onHitOf(spellExec(smite.spellId))?.save;
+    if (!rule || attacker.entry.kind !== "character") return;
+    const cast = this.options.pcSpell?.(attacker.entry, smite.spellId, { kind: "slot", level: smite.slot });
+    const live = this.resolveActor(this.refOf(target)) ?? target;
+    const combatant = this.combatantOf(live);
+    const stats = this.statsOf(live);
+    const caster = this.combatantOf(this.resolveActor(this.refOf(attacker)) ?? attacker);
+    if (!cast || !combatant || !stats || !caster) return;
+    const base = cast.spec.exec;
+    const above = Math.max(0, smite.slot - base.baseLevel);
+    const primary: SpellExec["primary"] = rule.damage
+      ? { kind: "save-damage", saveAbility: rule.ability, damageType: rule.damage.type, dice: { count: rule.damage.count + (rule.damage.perSlot ?? 0) * above, sides: rule.damage.sides }, successDamage: rule.successDamage ?? "half" }
+      : { kind: "save-effect", saveAbility: rule.ability, ...(rule.note ? { summary: rule.note } : {}), ...(base.concentration ? { duration: { kind: "concentration" as const } } : {}) };
+    const exec: SpellExec = { ...base, primary, effects: (rule.conditions ?? []).map((conditionId) => ({ conditionId, trigger: "failed-save" as const, ...(base.concentration ? { duration: { kind: "concentration" as const } } : {}) })), trackedEffects: undefined, concentration: false, repeat: { economy: "none" } };
+    const spec = { ...cast.spec, exec };
+    const resolution = resolveSpell({ caster, casterStats: cast.casterStats, spec, targets: [{ combatant, stats }], dice: diceFrom(this.options.random ?? Math.random), apply: !waits });
+    const player = this.campaign.players.find((item) => item.userId === by);
+    this.postSpell(resolution, [live], () => undefined, waits, player?.displayName ?? "", by, { spec, casterStats: cast.casterStats });
   }
 
   /** The card, applied now or (D90) waiting for the DM. */

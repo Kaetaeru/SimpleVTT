@@ -5,6 +5,7 @@
  */
 import catalogJson from "../../src/generated/spellExecutionCatalog.generated.json";
 import sustainJson from "../../content/indexes/dnd-srd-5.2.1.spell-sustain.json";
+import onHitJson from "../../content/indexes/dnd-srd-5.2.1.spell-on-hit.json";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
 export interface SpellDuration { kind: "concentration" | "rounds" | "minutes" | "hours" | "instant" | "special" | "permanent"; amount?: number; anchorActorId?: string; boundary?: "start" | "end" }
@@ -32,9 +33,26 @@ export interface SpellExec {
   ritual?: boolean;
   /** R77 (D212): how the spell is used again while it lasts, when that differs from the default (see `sustainOf`). */
   sustain?: Partial<SpellSustain> | false;
+  /** R82 (D218): cast right after a weapon hit (the smites) — offered in the on-hit window. */
+  onHit?: SpellOnHit;
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
   repeat?: { economy: SpellSustain["economy"] };
 }
+
+/**
+ * R82 (D218): what a spell cast right after a weapon hit does. `damage` joins the swing (doubled on a critical),
+ * `inflicts` lands with the hit, `save` is the target's roll against the caster's DC, posted as its own card.
+ */
+export interface SpellOnHit {
+  weapon?: "melee" | "ranged" | "any";
+  damage?: { count: number; sides: number; perSlot?: number; type: string };
+  inflicts?: string[];
+  save?: { ability: string; conditions?: string[]; damage?: { count: number; sides: number; perSlot?: number; type: string }; successDamage?: "half" | "none"; note?: string };
+  note?: string;
+}
+const BUILTIN_ON_HIT = (onHitJson as unknown as { spells: Record<string, SpellOnHit> }).spells;
+/** R82 (D218): the spell's on-hit rule, from its mechanics or the SRD index. */
+export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => (exec ? exec.onHit ?? BUILTIN_ON_HIT[exec.spellId] : undefined);
 
 /** R77 (D212): a concentration spell used again without a slot — its economy, and a different effect when it has one. */
 export interface SpellSustain { economy: "action" | "bonus-action" | "none"; primary?: SpellPrimary; note?: string }
@@ -104,6 +122,9 @@ export function execForCatalogSpell(spell: CatalogSpell): SpellExec {
     targeting: self ? { kind: "self", minTargets: 1, maxTargets: 1, allowedRelations: ["self"] } : { kind: "creature", minTargets: 1, maxTargets: 8, ...(feet ? { rangeFeet: feet } : {}), allowedRelations: ["self", "ally", "enemy", "neutral"] },
     primary: { kind: "tracked-effect", ...(spell.summary ? { summary: spell.summary } : {}), ...(concentration ? { duration: { kind: "concentration" } } : {}) },
     concentration, ritual: spell.ritual,
+    // R82 (D218): a patch may give a spell only its on-hit rule or its repeat, without the rest of the mechanics.
+    ...(mechanic && isObject(mechanic.onHit) ? { onHit: mechanic.onHit as unknown as SpellOnHit } : {}),
+    ...(mechanic && mechanic.sustain !== undefined ? { sustain: mechanic.sustain as SpellExec["sustain"] } : {}),
   };
 }
 

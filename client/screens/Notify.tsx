@@ -111,8 +111,10 @@ function HitChoices({ message }: { message: ChatMessage }) {
   };
   const [picked, setPicked] = useState<string[]>([]);
   const [facts, setFacts] = useState<string[]>([]);
-  const smite = offers.find((offer) => offer.key === "smite");
-  const [slot, setSlot] = useState<number>(smite?.slots?.[0]?.level ?? 0);
+  // R82 (D218): each offer with slots keeps its own pick — 신성한 강타 and a smite spell may both be on the list.
+  const [slotOf, setSlotOf] = useState<Record<string, number>>(() => Object.fromEntries(offers.filter((offer) => offer.slots?.length).map((offer) => [offer.key, offer.slots![0].level])));
+  // A smite spell is one per hit: ticking one unticks another.
+  const pickOne = (list: string[], key: string, on: boolean) => (on && key.startsWith("spell:") ? [...list.filter((item) => !item.startsWith("spell:")), key] : toggle(list, key, on));
   const toggle = (list: string[], key: string, on: boolean) => (on ? [...list, key] : list.filter((item) => item !== key));
   return (
     <div className="cl-hit-choices" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -120,13 +122,13 @@ function HitChoices({ message }: { message: ChatMessage }) {
         <div key={offer.key}>
           <div className="cl-row" style={{ gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
             <label className="cl-row cl-small" style={{ gap: 6 }}>
-              <input type="checkbox" checked={picked.includes(offer.key)} onChange={(event) => setPicked((list) => toggle(list, offer.key, event.target.checked))} />
+              <input type="checkbox" checked={picked.includes(offer.key)} onChange={(event) => setPicked((list) => pickOne(list, offer.key, event.target.checked))} />
               <strong>{offer.label}</strong>{offer.hint ? <span className="cl-quiet">{offer.hint}</span> : null}
             </label>
             {entry?.kind === "character" ? <HitPolicySelect label={offer.label} value={policyOf(offer.key)} allowAlways={!offer.slots} onChange={(policy) => setPolicy(offer.key, policy)} /> : null}
           </div>
           {picked.includes(offer.key) && offer.slots?.length ? (
-            <select className="cl-select" aria-label={`${offer.label} 슬롯`} style={{ marginLeft: 22, width: "auto" }} value={slot} onChange={(event) => setSlot(Number(event.target.value))}>
+            <select className="cl-select" aria-label={`${offer.label} 슬롯`} style={{ marginLeft: 22, width: "auto" }} value={slotOf[offer.key]} onChange={(event) => setSlotOf((map) => ({ ...map, [offer.key]: Number(event.target.value) }))}>
               {offer.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}
             </select>
           ) : null}
@@ -140,7 +142,7 @@ function HitChoices({ message }: { message: ChatMessage }) {
       ))}
       {auto.length ? <p className="cl-quiet cl-small" style={{ margin: 0 }}>항상 사용: {auto.join(", ")} — 고르지 않아도 적용됩니다.</p> : null}
       <div className="cl-row" style={{ gap: 4 }}>
-        <button type="button" className="cl-btn small primary" disabled={!picked.length} onClick={() => c.hitChoice(message.id, picked, facts, picked.includes("smite") ? slot : undefined)}>적용</button>
+        <button type="button" className="cl-btn small primary" disabled={!picked.length} onClick={() => { const spell = picked.find((key) => key.startsWith("spell:")); c.hitChoice(message.id, picked, facts, picked.includes("smite") ? slotOf.smite : undefined, spell ? { spellId: spell.slice("spell:".length), slot: slotOf[spell] } : undefined); }}>적용</button>
         <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
       </div>
     </div>

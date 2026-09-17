@@ -8,7 +8,9 @@ import type { Token } from "../campaign/page";
 import type { ContentCatalog } from "../catalog/catalog";
 import { deriveCharacter } from "../character/derive";
 import type { CharacterRuntime, HitPolicy } from "../character/runtime";
-import { spendResource, useSpellSlot } from "../character/play";
+import { castSpell, spendResource, useSpellSlot } from "../character/play";
+import { CONDITION_KO, onHitOf, spellExec, type SpellOnHit } from "../compendium/spells";
+import { damageTypeKo } from "./resolve";
 import { offeredRiders, riderFitsAttack } from "./attackRiders";
 import type { HitOffer } from "../campaign/model";
 import { critRiders } from "./attackAftermath";
@@ -128,6 +130,19 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     extra.push({ formula: `${1 + level}d8`, type: "광휘", label: `${SMITE_LABEL} (${level}레벨 슬롯)` });
     spenders.push((runtime) => useSpellSlot(runtime, derived, level));
   }
+  // R82 (D218): a smite spell chosen in the on-hit window — its dice join the swing, its slot is spent by casting it
+  // (so a lasting one starts its effect), and what it inflicts outright lands with the hit.
+  const inflicts: string[] = [];
+  const smite = riders.spellSmite ? smiteSpells(derived, entry.runtime, attack).find((item) => item.spellId === riders.spellSmite!.spellId && item.slots.some((slot) => slot.level === riders.spellSmite!.slot)) : undefined;
+  if (smite) {
+    const slot = riders.spellSmite!.slot;
+    const view = catalog?.spellById(smite.spellId);
+    const name = view?.name ?? smite.spellId;
+    const rolled = smite.rule.damage;
+    if (rolled) extra.push({ formula: `${rolled.count + (rolled.perSlot ?? 0) * (slot - smite.exec.baseLevel)}d${rolled.sides}`, type: damageTypeKo(rolled.type), label: `${name} (${slot}레벨 슬롯)` });
+    inflicts.push(...(smite.rule.inflicts ?? []).map((id) => CONDITION_KO[id] ?? id));
+    spenders.push((runtime) => (view ? castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, { kind: "slot", level: slot }) : null) ?? useSpellSlot(runtime, derived, slot));
+  }
   // R52 (D187): the open half of the riders — whatever the player ticked in the dialog, matched against the riders
   // this sheet actually offers. A key the sheet does not carry is dropped, so the wire cannot invent damage.
   for (const key of riders.contracts ?? []) {
@@ -155,7 +170,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     ...crits.dice,
   ];
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 /**
@@ -164,13 +179,37 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
  * instead of being ticked blind before the dice. `already` is what the attack was declared with, so nothing is offered
  * twice.
  */
-export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: DerivedCharacter, attackId: string, already: AttackRiders = {}): HitOffer[] {
+/** R82 (D218): the smite spells this sheet can cast on a hit with this weapon, with the slots each may spend. */
+export function smiteSpells(derived: DerivedCharacter, runtime: CharacterRuntime, attack: DerivedAttack): Array<{ spellId: string; exec: SpellExec; rule: SpellOnHit; slots: Array<{ level: number; free: number }> }> {
+  const ids = new Set(derived.spellcasting.flatMap((list) => [...list.cantrips, ...list.prepared, ...list.alwaysPrepared]));
+  const ranged = weaponRange(attack).mode === "ranged";
+  return [...ids].flatMap((spellId) => {
+    const exec = spellExec(spellId);
+    const rule = onHitOf(exec);
+    if (!exec || !rule) return [];
+    const weapon = rule.weapon ?? "melee";
+    if (weapon !== "any" && (weapon === "ranged") !== ranged) return [];
+    const slots = smiteSlots(derived, runtime).filter((slot) => slot.level >= exec.baseLevel);
+    return slots.length ? [{ spellId, exec, rule, slots }] : [];
+  });
+}
+
+const ABILITY_SHORT: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
+
+export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: DerivedCharacter, attackId: string, already: AttackRiders = {}, catalog?: ContentCatalog): HitOffer[] {
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return [];
   const offers: HitOffer[] = [];
   if (!already.sneak && hasSneakAttack(derived, attack)) offers.push({ key: "sneak", label: "암습", hint: `+${sneakDice(derived)}d6 · 유리하거나 아군이 대상 곁에 있을 때 · 턴당 한 번` });
   const slots = !already.smiteSlot && hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
   if (slots.length) offers.push({ key: "smite", label: SMITE_LABEL, hint: "슬롯 소비 · 2d8 + 슬롯 레벨당 1d8 광휘", slots });
+  // R82 (D218): the smite spells (분노의 강타, 작열하는 강타 …) — cast on this hit with a slot, as a bonus action.
+  for (const smite of smiteSpells(derived, entry.runtime, attack)) {
+    if (already.spellSmite?.spellId === smite.spellId) continue;
+    const damage = smite.rule.damage ? `+${smite.rule.damage.count}d${smite.rule.damage.sides} ${damageTypeKo(smite.rule.damage.type)}${smite.rule.damage.perSlot ? " (슬롯 레벨당 +1주사위)" : ""}` : "";
+    const save = smite.rule.save ? `${ABILITY_SHORT[smite.rule.save.ability] ?? smite.rule.save.ability} 내성${smite.rule.save.conditions?.length ? ` 실패 시 ${smite.rule.save.conditions.map((id) => CONDITION_KO[id] ?? id).join("·")}` : ""}` : "";
+    offers.push({ key: `spell:${smite.spellId}`, label: catalog?.spellById(smite.spellId)?.name ?? smite.spellId, hint: [damage, save, smite.rule.inflicts?.length ? smite.rule.inflicts.map((id) => CONDITION_KO[id] ?? id).join("·") : "", "슬롯 · 추가 행동", smite.rule.note ?? ""].filter(Boolean).join(" · "), slots: smite.slots });
+  }
   const savage = !already.savage ? savageAttackerFeat(derived) : undefined;
   if (savage) offers.push({ key: "savage", label: savage, hint: "무기 피해 주사위를 한 번 더 굴려 높은 쪽 · 턴당 한 번" });
   const runtime = entry.runtime;
@@ -180,15 +219,16 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
 }
 
 /** R63 (D198): the riders an attack carries once the attacker answered the on-hit window. Built-in keys are named; the rest are contract rule keys. */
-export function withHitChoices(riders: AttackRiders, answer: { choices: string[]; facts?: string[]; smiteSlot?: number }): AttackRiders {
+export function withHitChoices(riders: AttackRiders, answer: { choices: string[]; facts?: string[]; smiteSlot?: number; spellSmite?: { spellId: string; slot: number } }): AttackRiders {
   const picked = new Set(answer.choices);
-  const contracts = [...(riders.contracts ?? []), ...answer.choices.filter((key) => !HIT_BUILT_INS.has(key))];
+  const contracts = [...(riders.contracts ?? []), ...answer.choices.filter((key) => !HIT_BUILT_INS.has(key) && !key.startsWith("spell:"))];
   const facts = [...(riders.facts ?? []), ...(answer.facts ?? [])];
   return {
     ...riders,
     ...(picked.has("sneak") ? { sneak: true } : {}),
     ...(picked.has("savage") ? { savage: true } : {}),
     ...(picked.has("smite") && answer.smiteSlot ? { smiteSlot: answer.smiteSlot } : {}),
+    ...(answer.spellSmite && picked.has(`spell:${answer.spellSmite.spellId}`) ? { spellSmite: answer.spellSmite } : {}),
     ...(contracts.length ? { contracts: [...new Set(contracts)] } : {}),
     ...(facts.length ? { facts: [...new Set(facts)] } : {}),
   };
@@ -208,9 +248,9 @@ export function splitHitOffers(runtime: CharacterRuntime, offers: HitOffer[]): {
   return { ask: offers.filter((offer) => hitPolicyOf(runtime, offer) === "ask"), auto: offers.filter((offer) => hitPolicyOf(runtime, offer) === "always") };
 }
 /** R64 (D199): every offer this sheet can make on any of its attacks, once each — what the sheet lists for its settings. */
-export function allHitOffers(entry: Pick<JournalCharacter, "runtime">, derived: DerivedCharacter): HitOffer[] {
+export function allHitOffers(entry: Pick<JournalCharacter, "runtime">, derived: DerivedCharacter, catalog?: ContentCatalog): HitOffer[] {
   const seen = new Map<string, HitOffer>();
-  for (const attack of derived.attacks) for (const offer of hitOffers(entry, derived, attack.id)) if (!seen.has(offer.key)) seen.set(offer.key, offer);
+  for (const attack of derived.attacks) for (const offer of hitOffers(entry, derived, attack.id, {}, catalog)) if (!seen.has(offer.key)) seen.set(offer.key, offer);
   return [...seen.values()];
 }
 
