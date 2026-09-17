@@ -56,7 +56,8 @@ export interface Page {
   campaignId: string;
   name: string;
   order: number;
-  background: { color: string; image?: string };
+  /** R73 (D208): `fit` is how the image meets the board — fill it (default), fit inside it, its own size, or stretched. */
+  background: { color: string; image?: string; fit?: BackgroundFit };
   /** A few lines the DM writes for the scene ("비 오는 밤, 여관 뒷마당…"), shown on the stage card. */
   description?: string;
   archived: boolean;
@@ -81,6 +82,9 @@ export const isConditionMarker = (name: string) => (CONDITION_MARKERS as readonl
 const randomId = (prefix: string) => `${prefix}_${typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14)}`;
 
 export const emptyBar = (link?: string): TokenBar => ({ link, visible: true, editable: false });
+
+export type BackgroundFit = "cover" | "contain" | "original" | "stretch";
+export const BACKGROUND_FIT_KO: Record<BackgroundFit, string> = { cover: "채우기 (잘릴 수 있음)", contain: "창에 맞추기 (전체가 보임)", original: "원본 크기", stretch: "늘리기" };
 
 /** A Theatre-of-the-Mind scene (D95): the actors present, no positions and no distances. */
 export function newScene(campaignId: string, name: string, order: number, now = new Date().toISOString()): Page {

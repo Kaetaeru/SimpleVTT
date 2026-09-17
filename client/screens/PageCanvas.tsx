@@ -42,6 +42,8 @@ import { Modal as RiderModal } from "../ui/components";
 import { toggleCondition } from "../character/play";
 import { Modal, Notice } from "../ui/components";
 import { ART_DRAG_TYPE, ArtImage, ArtPicker } from "./ArtPanel";
+import { artRef } from "../campaign/art";
+import { BACKGROUND_FIT_KO, type BackgroundFit } from "../campaign/page";
 import { scrollCheckDc, scrollSpellId } from "../rules/scrolls";
 import { fitOnScreen } from "../ui/place";
 
@@ -143,7 +145,12 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
         c.putJournal(npc);
         placeTokenAt(tokenForNpc(npc));
       }
-    } else if (artId && isGm) placeTokenAt(newToken({ name: snapshot.art.find((asset) => asset.id === artId)?.name ?? "이미지", image: `art:${artId}`, layer }));
+    // R73 (D208): on a scene an image dropped on the board is its background — from the art tab, or a file from this PC.
+    } else if (artId && isGm) c.putPage({ ...page, background: { ...page.background, image: artRef(artId) } });
+    else if (isGm) {
+      const file = [...event.dataTransfer.files].find((item) => item.type.startsWith("image/"));
+      if (file) void c.uploadArt(file).then((id) => { const current = c.table.snapshot?.pages.find((item) => item.id === page.id) ?? page; c.putPage({ ...current, background: { ...current.background, image: artRef(id) } }); }).catch((error) => alert(`이미지를 올리지 못했습니다: ${error instanceof Error ? error.message : String(error)}`));
+    }
   };
   const placeTokenAt = (token: Token) => {
     if (!page) return;
@@ -219,7 +226,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
         <ToastLayer boardShowsResults />
         <ApprovalLayer />
         {snapshot.tracker.turns.length ? <TurnRibbon page={page} onOpenTracker={onOpenTracker} /> : null}
-        <div className={`cl-canvas-viewport scene${targeting ? " targeting" : ""}`} ref={board} onDragOver={(event) => { const types = [...event.dataTransfer.types]; if (types.includes(JOURNAL_DRAG_TYPE) || types.includes(ART_DRAG_TYPE) || types.includes(COMPENDIUM_DRAG_TYPE)) event.preventDefault(); }} onDrop={onDrop}>
+        <div className={`cl-canvas-viewport scene${targeting ? " targeting" : ""}`} ref={board} onDragOver={(event) => { const types = [...event.dataTransfer.types]; if (types.includes(JOURNAL_DRAG_TYPE) || types.includes(ART_DRAG_TYPE) || types.includes(COMPENDIUM_DRAG_TYPE) || (isGm && types.includes("Files"))) event.preventDefault(); }} onDrop={onDrop}>
           <SceneBoard page={page} tokens={sortedTokens} selected={selected} targeting={targeting} turnTokenId={turnToken?.id} acting={acting} journal={journal} isGm={isGm}
             onPointerDown={onIconPointerDown} onPointerDownBoard={() => { setSelected([]); setMenu(null); }}
             onContextMenu={(event, token) => { event.preventDefault(); event.stopPropagation(); setSelected([token.id]); setMenu({ tokenId: token.id, x: event.clientX, y: event.clientY }); }}
@@ -895,7 +902,9 @@ function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, jo
       <div className="cl-scene-stage" aria-label="장면">
         <span className="cl-scene-chip cl-scene-title">{page.name}</span>
         {page.description ? <p className="cl-scene-desc">{page.description}</p> : null}
-        {page.background.image ? <ArtImage src={page.background.image} className="cl-scene-backdrop" alt={page.name} /> : <span className="cl-scene-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.8" /><path d="M3.5 18.5 9 13l3.5 3.5L16 13l4.5 5" strokeLinejoin="round" /></svg>{isGm ? <small>⋯ → 페이지 설정 → 배경 이미지</small> : null}</span>}
+        {/* R73 (D208): one press takes the background away; the fit comes from the page settings. */}
+        {isGm && page.background.image ? <button type="button" className="cl-scene-chip cl-scene-clear" onClick={() => c.putPage({ ...page, background: { ...page.background, image: undefined } })}>배경 지우기 ✕</button> : null}
+        {page.background.image ? <ArtImage src={page.background.image} className={`cl-scene-backdrop fit-${page.background.fit ?? "cover"}`} alt={page.name} /> : <span className="cl-scene-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.8" /><path d="M3.5 18.5 9 13l3.5 3.5L16 13l4.5 5" strokeLinejoin="round" /></svg>{isGm ? <small>이미지를 여기로 끌어 놓으세요 (아트 탭이나 PC의 파일) · 맞춤은 ⋯ → 페이지 설정</small> : null}</span>}
       </div>
       {row("플레이어", "pc", party, "저널의 \"토큰\"이나 끌어 놓기로 캐릭터를 세웁니다.")}
     </div>
@@ -1191,6 +1200,7 @@ export function PageSettingsWindow({ pageId, onClose }: { pageId: string; onClos
         <div className="cl-field"><label htmlFor={`pg-bg-${draft.id}`}>배경색</label><input id={`pg-bg-${draft.id}`} type="color" value={draft.background.color} onChange={(event) => edit({ background: { ...draft.background, color: event.target.value } })} /></div>
         <div className="cl-field" style={{ gridColumn: "1 / -1" }}><label htmlFor="cl-scene-desc">장면 설명</label><textarea id="cl-scene-desc" className="cl-input" rows={3} value={draft.description ?? ""} placeholder="비 오는 밤, 여관 뒷마당. 횃불 하나가 흔들린다…" onChange={(event) => edit({ description: event.target.value })} /></div>
         <div className="cl-field"><label>배경 이미지</label><div className="cl-row" style={{ gap: 6 }}><span className="cl-art-thumb" style={{ width: 40, height: 40 }}>{draft.background.image ? <ArtImage src={draft.background.image} /> : null}</span><button type="button" className="cl-btn small" onClick={() => setPicking(true)}>라이브러리에서</button>{draft.background.image ? <button type="button" className="cl-btn small quiet" onClick={() => edit({ background: { ...draft.background, image: undefined } })}>지우기</button> : null}</div></div>
+        <div className="cl-field"><label htmlFor={`pg-fit-${draft.id}`}>배경 맞춤</label><select id={`pg-fit-${draft.id}`} className="cl-select" value={draft.background.fit ?? "cover"} onChange={(event) => edit({ background: { ...draft.background, fit: event.target.value as BackgroundFit } })}>{(Object.keys(BACKGROUND_FIT_KO) as BackgroundFit[]).map((fit) => <option key={fit} value={fit}>{BACKGROUND_FIT_KO[fit]}</option>)}</select></div>
         <div className="cl-field"><label>동적 조명</label><span className="cl-quiet cl-small">이후 단계.</span></div>
       </div>
       <div className="cl-row" style={{ gap: 6 }}>

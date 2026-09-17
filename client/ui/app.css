@@ -688,6 +688,14 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-scene-ac,.cl-scene-markers,.cl-scene-name,.cl-scene-effects{z-index:2}
 /* R69 (D204): the party stands bottom-left now, so the waiting note keeps to the right. */
 .cl-waiting-note{left:auto;right:14px;transform:none}
+/* R73 (D208): how the background meets the board, and the button that takes it away. */
+.cl-scene-backdrop.fit-cover{object-fit:cover}
+.cl-scene-backdrop.fit-contain{object-fit:contain}
+.cl-scene-backdrop.fit-original{object-fit:none}
+.cl-scene-backdrop.fit-stretch{object-fit:fill}
+.cl-scene-clear{right:12px;top:48px;left:auto;z-index:2;cursor:pointer;font:inherit;font-size:12px}
+.cl-scene-clear:hover{border-color:#e5484d;color:#ffb4b6}
+.cl-scene-desc{top:84px}
 .cl-invite .cl-code{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
 .cl-clock-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:80;display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:10px;background:var(--overlay);border:1px solid var(--line-2);box-shadow:var(--elev-2);min-width:140px}
 .cl-clock-menu .cl-btn{justify-content:flex-start}
