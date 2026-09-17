@@ -83,7 +83,7 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   // R52 (D187): what this sheet may declare in the attack dialog, worked out once and carried with it.
   derived.attackRiders = characterRiders(derived, catalog);
   // R59 (D194): official actions a contract said may be taken as a bonus action instead.
-  derived.bonusActions = contractBonusActions(derived, catalog, characterScope(derived));
+  derived.bonusActions = contractBonusActions({ features: [...derived.features, ...(options.effects ?? []).map((effect) => ({ id: effect.key, name: effect.name }))] }, catalog, characterScope(derived));
   // R43 (D183): passives first (they are always on), then whatever is running right now.
   const passive = applyPassiveContracts(derived, catalog, (options.effects ?? []).map((effect) => effect.name));
   // R75 (D210): pasted magic items, as always-on effects while attuned (and worn, for armour).

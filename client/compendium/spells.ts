@@ -75,6 +75,8 @@ export interface SpellOnHit {
   /** H5b (D245): more damage only against these creature types (신성한 강타: 악마·언데드 +1d8), added per target. */
   versus?: { creatureTypes: string[]; damage: { count: number; sides: number; type: string } };
   save?: { ability: string; conditions?: string[]; damage?: { count: number; sides: number; perSlot?: number; type: string }; successDamage?: "half" | "none"; note?: string };
+  /** V5b (D290): a mark the hit leaves on the target (빛나는 강타: 그 대상을 노리는 명중에 유리). */
+  mark?: { name: string; nextAttack?: { advantage?: boolean; bonus?: number; by: "any" | "others" } };
   note?: string;
 }
 const BUILTIN_ON_HIT = (onHitJson as unknown as { spells: Record<string, SpellOnHit> }).spells;

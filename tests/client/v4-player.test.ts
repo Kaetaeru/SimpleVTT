@@ -895,3 +895,21 @@ test("V5a: the spells that ask what they do now have their choices — 명령, �
   const card = t.host.archive.filter((message) => message.type === "spell").at(-1)!;
   assert.ok(card.content.includes("엎드려"), card.content);
 });
+
+test("V5b: 빛나는 강타 marks what it hit, 신속한 후퇴 puts Dash in the bonus menu, 악취 구름's poison lasts a turn (D290)", async () => {
+  const { spellExec, onHitOf } = await import("../../client/compendium/spells");
+  const cat = catalog();
+
+  // 빛나는 강타: the glow is a mark, so the next attack against that target has advantage.
+  const smite = onHitOf(spellExec("dnd.srd521.spell.shining-smite")!)!;
+  assert.deepEqual([smite.mark?.name, smite.mark?.nextAttack?.advantage, smite.mark?.nextAttack?.by], ["빛남 (빛나는 강타)", true, "any"]);
+
+  // 신속한 후퇴: while it runs, Dash is on the bonus-action menu.
+  const wizard = build({ name: "위저드", classes: "wizard", level: 5 });
+  const hasty = deriveCharacter(wizard.source, cat, { effects: [{ key: "spell:dnd.srd521.spell.expeditious-retreat", name: "신속한 후퇴", source: "spell", duration: "집중, 최대 10분", concentration: true, rounds: 100, elapsed: 0, startedAt: "" }] });
+  assert.ok((hasty.bonusActions ?? []).some((item) => item.kind === "dash"), JSON.stringify(hasty.bonusActions));
+
+  // 악취 구름: the poison lasts until that creature's next turn starts, not for the whole spell.
+  const cloud = spellExec("dnd.srd521.spell.stinking-cloud")!;
+  assert.deepEqual(cloud.effects?.map((effect) => [effect.conditionId, effect.duration?.kind]), [["poisoned", "rounds"]]);
+});

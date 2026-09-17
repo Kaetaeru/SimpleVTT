@@ -206,6 +206,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   // R82 (D218): a smite spell chosen in the on-hit window — its dice join the swing, its slot is spent by casting it
   // (so a lasting one starts its effect), and what it inflicts outright lands with the hit.
   const inflicts: string[] = [];
+  const hitMarksFromSmite: Array<{ label: string; mark: { name: string; nextAttack?: { advantage?: boolean; bonus?: number; by: "any" | "others" } } }> = [];
   const versusRiders: NonNullable<AttackSpec["versusRiders"]> = [];
   const smite = riders.spellSmite ? smiteSpells(derived, entry.runtime, attack).find((item) => item.spellId === riders.spellSmite!.spellId && item.slots.some((slot) => slot.level === riders.spellSmite!.slot)) : undefined;
   if (smite) {
@@ -215,6 +216,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     const rolled = smite.rule.damage;
     if (rolled) extra.push({ formula: `${rolled.count + (rolled.perSlot ?? 0) * (slot - smite.exec.baseLevel)}d${rolled.sides}`, type: damageTypeKo(rolled.type), label: `${name} (${slot}레벨 슬롯)` });
     inflicts.push(...(smite.rule.inflicts ?? []).map((id) => CONDITION_KO[id] ?? id));
+    // V5b (D290): the mark the smite leaves (빛나는 강타의 빛남).
+    if (smite.rule.mark) hitMarksFromSmite.push({ label: name, mark: smite.rule.mark });
     const versus = smite.rule.versus;
     if (versus) versusRiders.push({ creatureTypes: versus.creatureTypes, part: { formula: `${versus.damage.count}d${versus.damage.sides}`, type: damageTypeKo(versus.damage.type), label: `${name} (대상 유형 추가)` } });
     spenders.push((runtime) => (view ? castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, { kind: "slot", level: slot }) : null) ?? useSpellSlot(runtime, derived, slot));
@@ -264,7 +267,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   ];
   // V4i (D271): a declared rider's save-less condition lands with the hit (마력의 강타's 넘어짐).
   for (const key of chosen) { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); if (rider && riderFitsAttack(rider, attack)) inflicts.push(...(rider.conditions ?? [])); }
-  const hitMarks = chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? (rider.marks ?? []).map((mark) => ({ label: rider.label, mark })) : []; });
+  const hitMarks = [...hitMarksFromSmite, ...chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? (rider.marks ?? []).map((mark) => ({ label: rider.label, mark })) : []; })];
   const hitSaves = chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
   const declared = chosen.map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
   if (strike) declared.unshift(strikeName);
