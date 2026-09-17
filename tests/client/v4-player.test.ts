@@ -498,3 +498,33 @@ test("V4j: 마력의 샘 turns a slot into sorcery points and points back into a
   assert.equal(sheet.slotsUsed[1], 1);
   assert.equal(sheet.resourcesUsed["resource.druid.wild-shape"], 1);
 });
+
+test("V4k: 야생 변신 takes a beast's stat block — AC, speed, senses, Strength and its attacks — and 원초의 일격 rides them (D273)", async () => {
+  const { pcAttackSpec, hitOffers } = await import("../../client/rules/attackSpec");
+  const cat = catalog();
+  const druid = build({ name: "드루이드", classes: "druid", level: 15, abilities: { wis: 16 }, choices: { "class.6.elemental-fury": ["druid.elemental-fury.primal-strike"] } });
+  let sheet: CharacterRuntime = initialRuntime(druid.derived);
+  const deps = { source: druid.source, catalog: cat, derived: druid.derived, get runtime() { return sheet; }, rollDice: async (spec: { label: string; formula: string }) => ({ id: "r", at: "", label: spec.label, formula: spec.formula, total: 4, dice: [], modifier: 0 }), save: (update: (current: CharacterRuntime) => CharacterRuntime) => { sheet = update(sheet); }, askForm: (_name: string, options: Array<{ id: string; name: string; crText: string }>) => options.find((option) => option.name === "흑곰")?.id ?? null };
+  const wild = druid.derived.features.find((feature) => feature.name === "야생 변신")!;
+
+  // 야생 변신 (15레벨): a CR 1 beast is on the list, and the form's numbers replace the druid's own.
+  assert.equal(await activateFeature(wild, deps as unknown as Parameters<typeof activateFeature>[1]), "done");
+  const bear = sheet.effects!.find((effect) => effect.name === "야생 변신")!;
+  assert.equal(bear.form, "dnd.srd521.monster.black-bear");
+  assert.equal(sheet.hp.temp, 15, "임시 HP = 드루이드 레벨");
+  const inForm = deriveCharacter(druid.source, cat, { effects: sheet.effects });
+  const black = (await import("../../client/compendium/monsters")).monsterById("dnd.srd521.monster.black-bear")!;
+  assert.equal(inForm.ac.value, black.ac);
+  assert.equal(inForm.speed.walk, black.speeds.walk ?? black.speed);
+  assert.equal(inForm.abilities.str.score, black.abilities.str);
+  assert.ok(inForm.attacks.every((attack) => attack.properties.includes("form")), JSON.stringify(inForm.attacks.map((attack) => attack.name)));
+  assert.ok(inForm.attacks.length && inForm.attacks[0].name.startsWith("흑곰: "), inForm.attacks[0]?.name);
+
+  // 원초의 일격 (elemental fury): the form's own claws carry its damage, and the on-hit window offers it.
+  const entry = newJournalCharacter("c", "p", druid.source, sheet);
+  const claw = inForm.attacks[0];
+  const offers = hitOffers(entry, inForm, claw.id, {}, cat).map((offer) => offer.key);
+  assert.ok(offers.some((key) => key.startsWith("druid.elemental-fury.primal-strike#")), JSON.stringify(offers));
+  const spec = pcAttackSpec(entry, inForm, claw.id, { contracts: [offers.find((key) => key.startsWith("druid.elemental-fury.primal-strike#"))!] }, cat)!.spec;
+  assert.ok(spec.riders?.some((rider) => rider.formula === "2d8"), JSON.stringify(spec.riders));
+});

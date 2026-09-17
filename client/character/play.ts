@@ -348,7 +348,7 @@ export function spendableHitDie(runtime: CharacterRuntime, derived: DerivedChara
   return sizes.find((die) => (runtime.hitDiceSpent[die] ?? 0) < derived.hitDice[die]);
 }
 
-export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number; /** A logged roll ("브레스 무기 피해 14"). */ rolled?: { label: string; total: number } }
+export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number; /** V4k (D273): the creature whose stat block this use takes on (야생 변신의 형태). */ form?: string; /** A logged roll ("브레스 무기 피해 14"). */ rolled?: { label: string; total: number } }
 
 /** Press "사용" on a feature: spend the pool (one use or a number of points), heal or grant temp HP from a roll, start its timed effect, log. */
 export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter, feature: { id: string; name: string }, activation: FeatureActivation, extras: FeatureUseExtras = {}): CharacterRuntime | null {
@@ -391,7 +391,7 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
   if (extras.tempRoll !== undefined) { next = grantTempHp(next, extras.tempRoll); parts.push(`임시 HP ${extras.tempRoll}`); }
   const duration = activation.duration?.(derived);
   if (duration && !duration.instantaneous) {
-    next = startEffect(next, { key: effectKeyForFeature(feature.id), name: feature.name, source: "feature", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds, ...(duration.consumeOn ? { consumeOn: duration.consumeOn } : {}) });
+    next = startEffect(next, { key: effectKeyForFeature(feature.id), name: feature.name, source: "feature", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds, ...(duration.consumeOn ? { consumeOn: duration.consumeOn } : {}), ...(extras.form ? { form: extras.form } : {}) });
     parts.push(duration.text);
   }
   return stamp(next, `사용: ${feature.name}${parts.length ? ` (${parts.join(" · ")})` : ""}`);

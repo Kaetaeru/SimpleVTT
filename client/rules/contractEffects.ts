@@ -29,6 +29,8 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
   "two-handed": (attack) => attack.properties.includes("two-handed"),
   /** No weapon in hand at all: 비무장 전투 and 선술집 싸움꾼. */
   unarmed: (attack) => !attack.itemId,
+  /** V4k (D273): a weapon, or one of an assumed form's own attacks (원초의 일격). */
+  "weapon-or-form": (attack) => Boolean(attack.itemId) || attack.properties.includes("form"),
   /** 결투: a melee weapon held in one hand. Whether the other hand is empty is the table's to see. */
   "one-handed-melee": (attack) => Boolean(attack.itemId) && !attack.range && !attack.properties.includes("two-handed"),
   // R53 (D188): 분쇄자·관통자·참격자 narrow themselves by the damage type the weapon deals, not by its properties.
@@ -52,7 +54,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "effect.upkeep", "effect.upkeep-waived", "hp.zero.hold", "aura.grant", "death-save.crit-range", "rider.forgo-limit", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "effect.upkeep", "effect.upkeep-waived", "hp.zero.hold", "aura.grant", "death-save.crit-range", "rider.forgo-limit", "form.assume", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -158,6 +160,9 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "aura.grant": { const p = operation.params ?? {}; application.auras = [...(application.auras ?? []), { name: String(p.name ?? operation.note ?? ""), saveBonus: number(operation, scope) ?? 0, conditionImmunities: Array.isArray(p.conditionImmunities) ? p.conditionImmunities.map(String) : [] }]; break; }
       // V4d (D266): dropping to 0 hit points leaves this many instead — after a save, from a pool, while an effect runs (불굴의 격노, 끈질긴 인내).
       case "hp.zero.hold": { const p = operation.params ?? {}; const save = p.save as { ability?: string; dc?: unknown; step?: number; stepResource?: string } | undefined; application.zeroHolds = [...(application.zeroHolds ?? []), { label: operation.note ?? "", hp: Math.max(1, number(operation, scope) ?? 1), ...(save?.ability ? { save: { ability: save.ability, dc: typeof save.dc === "number" ? save.dc : Number(evaluate(save.dc as never, scope)) || 10, step: save.step ?? 0, ...(save.stepResource ? { stepResourceId: resourceIdOf(save.stepResource) } : {}) } } : {}), ...(p.resource ? { resourceId: resourceIdOf(String(p.resource)) } : {}), ...(p.requiresEffect ? { requiresEffect: String(p.requiresEffect) } : {}) }]; break; }
+      // V4k (D273): the use turns its user into a creature the content names (야생 변신) — the value is the
+      // highest challenge rating it may take, and the params say which creatures and which movement is allowed.
+      case "form.assume": { const p = operation.params ?? {}; application.form = { creatureTypes: Array.isArray(p.creatureTypes) ? p.creatureTypes.map(String) : [], maxCr: Number(evaluate(operation.value, scope)) || 0, ...(typeof p.swimFrom === "number" ? { swimFrom: p.swimFrom } : {}), ...(typeof p.flyFrom === "number" ? { flyFrom: p.flyFrom } : {}), level: Number(evaluate(p.level as never, scope)) || 0 }; break; }
       case "spell.cantrip-potent": application.potentCantrip = true; break;
       case "spell.damage-type.ability-modifier": application.damageTypeModifier = [...(application.damageTypeModifier ?? []), ...(operation.damageTypes ?? [])]; break;
       // V3f (D260): opportunity attacks against this creature are made at disadvantage (기회 공격 회피).

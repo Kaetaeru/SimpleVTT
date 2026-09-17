@@ -55,6 +55,8 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
 
   const [resting, setResting] = useState<{ spends: Record<string, number>; /** R78 (D213): rest features chosen, with the slot levels each gives back. */ uses?: Record<string, number[]> } | null>(null);
   const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string; json: string } | null>(null);
+  // V4k (D273): which form a use turns this character into (야생 변신) — a window, never a typed name.
+  const [formAsk, setFormAsk] = useState<{ name: string; options: Array<{ id: string; name: string; crText: string }>; resolve: (id: string | null) => void } | null>(null);
   const [showLog, setShowLog] = useState(true);
   const [customRoll, setCustomRoll] = useState("");
   const dice = useDice();
@@ -121,7 +123,8 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const withEffectStart = (previous: CharacterRuntime, next: CharacterRuntime) => withEffectStartShared(source, catalog, derived, previous, next);
   /** "사용": the shared activation flow (points prompt, heal/temp HP/logged dice through the overlay, applied against the stored runtime). */
   const activateFeature = async (feature: Parameters<SheetActions["useFeature"]>[0]) => {
-    const outcome = await activateFeatureShared(feature, { source, catalog, derived, runtime, rollDice, save: (updater) => save(updater) });
+    const outcome = await activateFeatureShared(feature, { source, catalog, derived, runtime, rollDice, save: (updater) => save(updater),
+      askForm: (name, options) => new Promise<string | null>((resolve) => setFormAsk({ name, options, resolve })) });
     if (outcome === "refused") alert("남은 횟수가 없습니다.");
   };
 
@@ -301,6 +304,16 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
         </>}>
           {copied ? <Notice tone={copied.startsWith("클립보드") ? "good" : "bad"}>{copied}</Notice> : null}
           <pre>{exporting}</pre>
+        </Modal>
+      ) : null}
+      {formAsk ? (
+        <Modal title={`${formAsk.name} — 어떤 형태로`} onClose={() => { formAsk.resolve(null); setFormAsk(null); }}>
+          <p className="cl-muted cl-small">본 적 있는 야수만 고를 수 있습니다. 고른 형태의 AC·이동·감각·근력·민첩·건강과 공격을 씁니다.</p>
+          <div className="cl-list" style={{ gap: 6, maxHeight: 360, overflowY: "auto" }}>
+            {formAsk.options.map((option) => (
+              <button type="button" key={option.id} className="cl-btn" onClick={() => { formAsk.resolve(option.id); setFormAsk(null); }}>{option.name} (도전 지수 {option.crText})</button>
+            ))}
+          </div>
         </Modal>
       ) : null}
       {resting ? (

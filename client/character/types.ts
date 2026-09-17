@@ -125,6 +125,8 @@ export interface ActiveEffect {
   rescue?: { dice: string };
   /** V4f (D268): the variant of the spell this effect was cast with (에너지 보호's damage type). */
   variant?: string;
+  /** V4k (D273): the creature whose stat block the bearer took on while this effect runs (야생 변신의 형태). */
+  form?: string;
   /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */
   bearer?: boolean;
   /** H2 (D239): the choice the feature behind a passive effect was made for (the cantrip 고통스러운 폭발 names). */

@@ -13,7 +13,8 @@ import { featureActivation, featureRuleKey } from "../rules/activation";
 import { characterScope } from "../rules/contract";
 import { contractDurations, contractOutcome, contractRemovals, featureContract } from "../rules/contractActivation";
 import { applyContractOutcome } from "./contractOutcome";
-import { effectApplication } from "../rules/effects";
+import { effectApplication, formOptions } from "../rules/effects";
+import { contractEffect } from "../rules/contractEffects";
 
 export interface ActivateDeps {
   source: CharacterSource;
@@ -28,6 +29,8 @@ export interface ActivateDeps {
   confirmSelfHeal?: (points: number) => Promise<boolean> | boolean;
   /** V4c (D265): the points chosen and whether they went to the user — the table heals somebody else with them. */
   onChosenPoints?: (points: number, self: boolean) => void;
+  /** V4k (D273): which form to take (야생 변신); null cancels. Defaults to a prompt over the list. */
+  askForm?: (name: string, options: Array<{ id: string; name: string; crText: string }>) => Promise<string | null> | string | null;
 }
 
 /** A formula with dice goes through the overlay; a plain number (temp HP = level) is applied at once. */
@@ -71,6 +74,20 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
     if (self) extras.healRoll = points;
     deps.onChosenPoints?.(points, self);
   }
+  // V4k (D273): a use that turns its user into something asks which form before anything is spent (야생 변신).
+  const formContract = featureContract(deps.catalog, featureRuleKey(feature.id));
+  const formSpec = formContract ? contractEffect(formContract, characterScope(derived)).application.form : undefined;
+  if (formSpec) {
+    const options = formOptions(formSpec).map((monster) => ({ id: monster.id, name: monster.name, crText: monster.crText }));
+    const ask = deps.askForm ?? ((name: string, list: typeof options) => {
+      const answer = prompt(`${name}: 어떤 형태로? (${list.map((item) => item.name).slice(0, 12).join(", ")} …)`, list[0]?.name ?? "");
+      if (answer === null) return null;
+      return list.find((item) => item.name === answer.trim())?.id ?? null;
+    });
+    const picked = await ask(feature.name, options);
+    if (!picked) return "cancelled";
+    extras.form = picked;
+  }
   const lines: string[] = [];
   if (activation.heal) extras.healRoll = await rollTotal(rollDice, { label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" }, lines);
   if (activation.tempHp) extras.tempRoll = await rollTotal(rollDice, { label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" }, lines);
@@ -79,13 +96,16 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
   if (activation.roll) { const roll = activation.roll(derived); extras.rolled = { label: roll.label, total: await rollTotal(rollDice, { label: roll.label, formula: roll.formula, kind: "custom" }, lines) }; }
   let refused = false;
   await deps.save((current) => {
-    const used = useFeature(lines.reduce((acc, line) => noteLog(acc, line), current), derived, feature, activation, extras);
+    // R39 (D179): a contract may end other effects as part of the use (a new Wild Shape replacing the last one).
+    // V4k (D273): the old one goes before the new one starts, or the removal takes the fresh effect off again.
+    const contractFirst = featureContract(deps.catalog, featureRuleKey(feature.id));
+    const cleared = contractFirst ? contractRemovals(contractFirst, characterScope(derived)).reduce((acc, key) => endEffect(acc, key, feature.name), current) : current;
+    const used = useFeature(lines.reduce((acc, line) => noteLog(acc, line), cleared), derived, feature, activation, extras);
     const lock = activation.lockout;
     const next = used && lock && lockRests ? noteLog({ ...used, resourcesUsed: { ...used.resourcesUsed, [lock.resourceId]: derived.resources.find((resource) => resource.id === lock.resourceId)?.max ?? 1 }, resourceLockouts: { ...(used.resourceLockouts ?? {}), [lock.resourceId]: lockRests } }, `${feature.name}: 긴 휴식 ${lockRests}번 동안 다시 못 씀`) : used;
     if (!next) { refused = true; return current; }
-    // R39 (D179): a contract may end other effects as part of the use (a new Wild Shape replacing the last one).
-    const contract = featureContract(deps.catalog, featureRuleKey(feature.id));
-    const ended = contract ? contractRemovals(contract, characterScope(derived)).reduce((acc, key) => endEffect(acc, key, feature.name), next) : next;
+    const contract = contractFirst;
+    const ended = next;
     // R41 (D181): the rest of the vocabulary that lands on a sheet — conditions taken off, a hit-point maximum moved,
     // stabilising, standing up, an item granted. Everything the contract says happens; what it does not say is untouched.
     const settled = contract ? applyContractOutcome(ended, derived, deps.catalog, contractOutcome(contract, characterScope(derived)), feature.name) : ended;

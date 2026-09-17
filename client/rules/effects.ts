@@ -14,6 +14,8 @@ import { featureRuleKey, qualifyRuleKey } from "./activation";
 import { characterScope } from "./contract";
 import { contractEffect } from "./contractEffects";
 import { contractSuppressions, featureContract, selectorMatches } from "./contractActivation";
+import { crNumber, damageFormula, MONSTERS, monsterById, type MonsterAttack } from "../compendium/monsters";
+import { damageTypeKo } from "./resolve";
 import { onHitOf, spellExec, type SpellDice } from "../compendium/spells";
 
 
@@ -35,6 +37,11 @@ export interface EffectApplication {
   spellAttack?: number;
   /** Club/quarterstaff attacks use the best spellcasting ability and a bigger die (Shillelagh). */
   shillelagh?: boolean;
+  /**
+   * V4k (D273): the creatures this use may turn its user into (야생 변신) — the pool the picker lists, and, on an
+   * effect that already carries a chosen `form`, the stat block the sheet takes its numbers from.
+   */
+  form?: { creatureTypes: string[]; maxCr: number; swimFrom?: number; flyFrom?: number; level: number };
   /** R43 (D183): the lowest d20 that counts as a critical hit (Improved Critical 19, Superior Critical 18). */
   critRange?: number;
   /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
@@ -189,6 +196,40 @@ const term = (label: string, value?: number, dice?: string): Term | null => (dic
 const describe = (label: string, value?: number, dice?: string) => (dice ? `+${dice}` : value !== undefined ? `${value >= 0 ? "+" : ""}${value}` : "") + ` ${label}`;
 
 /** Apply every effect in force to a derived character: new arrays, totals recomputed from terms, a summary per effect. */
+/** V4k (D273): one of a form's attacks as the sheet's own (그 형태의 물기·발톱). */
+function formAttack(formName: string, name: string, attack: MonsterAttack, index: number): DerivedAttack {
+  const part = attack.damage[0];
+  const flat = part?.flat ?? 0;
+  return {
+    id: `form.${index}`,
+    name: `${formName}: ${name}`,
+    ability: attack.mode === "ranged" ? "dex" : "str",
+    attackBonus: attack.bonus,
+    attackTerms: [{ label: formName, value: attack.bonus }],
+    damage: part ? damageFormula(part) : "0",
+    damageBonus: flat,
+    damageTerms: flat ? [{ label: formName, value: flat }] : [],
+    damageType: damageTypeKo(part?.type ?? "bludgeoning"),
+    properties: ["form"],
+    masteryActive: false,
+    ...(attack.rangeFeet ? { range: `${attack.rangeFeet}피트` } : {}),
+  };
+}
+
+/**
+ * V4k (D273): the creatures a `form.assume` use may turn into — the content names the pool (creature types and the
+ * highest challenge rating), and a form whose movement the bearer has not earned yet is left out.
+ */
+export function formOptions(spec: NonNullable<EffectApplication["form"]>) {
+  return MONSTERS.filter((monster) => {
+    if (spec.creatureTypes.length && !spec.creatureTypes.includes(monster.creatureType)) return false;
+    if (crNumber(monster.crText) > spec.maxCr) return false;
+    if (monster.speeds.fly && spec.flyFrom !== undefined && spec.level < spec.flyFrom) return false;
+    if (monster.speeds.swim && spec.swimFrom !== undefined && spec.level < spec.swimFrom) return false;
+    return true;
+  });
+}
+
 export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog, options: { list?: boolean; /** R75 (D210): applications given directly (a pasted magic item), keyed by effect key. */ inline?: Record<string, EffectApplication> } = {}): DerivedCharacter {
   let next: DerivedCharacter = { ...derived, activeEffects: options.list === false ? derived.activeEffects : [], checkTerms: [...derived.checkTerms] };
   const applied: AppliedEffect[] = [];
@@ -209,6 +250,28 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     const notes: string[] = [];
     const label = effect.name;
 
+    // V4k (D273): a form the use already chose replaces the numbers a stat block carries — AC, speeds, senses,
+    // Strength, Dexterity, Constitution and the attacks. The bearer keeps their own hit points, mental scores and
+    // proficiency bonus (that is what "your game statistics are replaced" leaves alone).
+    if (effect.form) {
+      const beast = monsterById(effect.form);
+      if (beast) {
+        const abilities = { ...next.abilities };
+        for (const key of ["str", "dex", "con"] as AbilityKey[]) {
+          const score = beast.abilities[key];
+          abilities[key] = { score, modifier: Math.floor((score - 10) / 2), base: score, bonuses: [{ source: `${effect.name}: ${beast.name}`, value: score - next.abilities[key].score }] };
+        }
+        next = {
+          ...next,
+          abilities,
+          ac: { value: beast.ac, source: `${effect.name}: ${beast.name}`, breakdown: [`${beast.name} AC ${beast.ac}`], terms: [{ label: beast.name, value: beast.ac }] },
+          speed: { walk: beast.speeds.walk ?? beast.speed, ...(beast.speeds.climb ? { climb: beast.speeds.climb } : {}), ...(beast.speeds.swim ? { swim: beast.speeds.swim } : {}), ...(beast.speeds.fly ? { fly: beast.speeds.fly } : {}), terms: [{ label: beast.name, value: beast.speeds.walk ?? beast.speed }] },
+          senses: { ...next.senses, ...(beast.senses.darkvision ? { darkvision: beast.senses.darkvision } : {}), ...(beast.senses.blindsight ? { blindsight: beast.senses.blindsight } : {}) },
+          attacks: beast.actions.filter((action) => action.attack).map((action, index) => formAttack(beast.name, action.name, action.attack!, index)),
+        };
+        notes.push(`${beast.name}의 능력치 · AC ${beast.ac} · 이동 ${beast.speeds.walk ?? beast.speed}피트`);
+      } else notes.push("형태를 찾을 수 없음 — 표에서");
+    }
     if (application.ac) {
       let baseTerms = next.ac.terms.filter((item) => !acEffectTerms.includes(item));
       let source = next.ac.source;

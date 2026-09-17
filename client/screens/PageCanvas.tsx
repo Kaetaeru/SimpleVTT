@@ -406,6 +406,12 @@ export const requestSpellVariant = async (spellId: string, name: string): Promis
   const answer = await requestCastMethod({ name, title: `${name} — 무엇을 고를까요`, options: variants.map((variant) => ({ label: variant.label, method: variant.id })) });
   return typeof answer === "string" ? answer : null;
 };
+/** V4k (D273): ask which form a use takes (야생 변신); the first one when nobody is there to ask (tests). */
+export const requestForm = async (name: string, options: Array<{ id: string; name: string; crText: string }>): Promise<string | null> => {
+  if (!options.length) return null;
+  const answer = await requestCastMethod({ name, title: `${name} — 어떤 형태로`, options: options.map((option) => ({ label: `${option.name} (도전 지수 ${option.crText})`, method: option.id })) });
+  return typeof answer === "string" ? answer : null;
+};
 function CastAskBridge() {
   const [ask, setAsk] = useState<CastAsk | null>(null);
   useEffect(() => { castAskListeners.add(setAsk); return () => { castAskListeners.delete(setAsk); }; }, []);
@@ -491,7 +497,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const useIt = async (feature: DerivedFeature, bonus = false) => {
     if (entry.kind !== "character" || !derived) return;
     let given: { points: number; self: boolean } | undefined;
-    const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime, onChosenPoints: (points, self) => { given = { points, self }; } });
+    const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime, onChosenPoints: (points, self) => { given = { points, self }; }, askForm: requestForm });
     if (outcome === "refused") alert("남은 횟수가 없습니다.");
     if (outcome !== "done") return;
     c.say(`/em ${token.name}: ${feature.name} 사용`);
