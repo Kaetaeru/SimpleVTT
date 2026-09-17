@@ -24,6 +24,7 @@ import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
 import { deriveSpellSlots } from "./spells";
 import { applyTracks } from "./tracks";
+import { customAttackId, customItemActive, customItemApplication } from "./customItem";
 import type { ActiveEffect, CharacterSource, DerivedAttack, DerivedCharacter, DerivedItem, DerivedSkill, DerivedSpellcasting, InventoryPatch, Term } from "./types";
 
 const ARMOR_KO: Record<string, string> = { light: "경장 방어구", medium: "평장 방어구", heavy: "중장 방어구", shield: "방패" };
@@ -73,7 +74,10 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   derived.bonusActions = contractBonusActions(derived, catalog);
   // R43 (D183): passives first (they are always on), then whatever is running right now.
   const passive = applyPassiveContracts(derived, catalog);
-  return options.effects?.length ? applyActiveEffects(passive, options.effects, catalog) : passive;
+  // R75 (D210): pasted magic items, as always-on effects while attuned (and worn, for armour).
+  const magic = passive.inventory.filter(customItemActive);
+  const equipped = magic.length ? applyActiveEffects(passive, magic.map((item) => ({ key: `item:${item.instanceId}`, name: item.name, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" })), catalog, { list: false, inline: Object.fromEntries(magic.map((item) => [`item:${item.instanceId}`, customItemApplication(item)])) }) : passive;
+  return options.effects?.length ? applyActiveEffects(equipped, options.effects, catalog) : equipped;
 }
 
 function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
@@ -82,9 +86,10 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
   for (const item of ledger.inventory) { const quantity = patch.quantities[item.instanceId]; if (quantity !== undefined) item.quantity = Math.max(0, quantity); }
   for (const extra of patch.extra) {
     if (removed.has(extra.instanceId)) continue;
-    const view = extra.itemId ? ledger.catalog.itemById(extra.itemId) : undefined;
+    const itemId = extra.custom ? extra.custom.base : extra.itemId;
+    const view = itemId ? ledger.catalog.itemById(itemId) : undefined;
     const quantity = patch.quantities[extra.instanceId] ?? extra.quantity;
-    const item: DerivedItem = { instanceId: extra.instanceId, itemId: extra.itemId ?? `custom:${extra.instanceId}`, name: view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view };
+    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: extra.custom?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !extra.custom, ...(extra.custom ? { magic: extra.custom, attuned: extra.attuned === true } : {}) };
     ledger.inventory.push(item);
   }
 }
@@ -250,7 +255,10 @@ function finalize(ledger: Ledger): DerivedCharacter {
   const seenWeapons = new Set<string>();
   for (const item of ledger.inventory) {
     const view = itemOf(item.itemId);
-    if (!view?.weapon || seenWeapons.has(view.id)) continue;
+    if (!view?.weapon) continue;
+    // R75 (D210): a magic weapon is its own row, named for itself, so its bonus does not land on the plain one.
+    if (item.magic) { attacks.push({ ...weaponAttack(ledger, view, abilities, pb), id: customAttackId(item), name: item.name }); continue; }
+    if (seenWeapons.has(view.id)) continue;
     seenWeapons.add(view.id);
     attacks.push(weaponAttack(ledger, view, abilities, pb));
   }

@@ -12,6 +12,7 @@ import type { DerivedAttack, DerivedCharacter, DerivedFeature, Term } from "../c
 import { effectKeyForFeature, effectKeyForSpell, featureActivation, parseDuration } from "../rules/activation";
 import { characterScope } from "../rules/contract";
 import { contractDurations } from "../rules/contractActivation";
+import { RARITY_KO } from "../character/customItem";
 import { Pill, signed } from "../ui/components";
 import { Explain } from "../ui/Explain";
 
@@ -41,6 +42,8 @@ export interface SheetActions {
   setQuantity: (instanceId: string, quantity: number) => void;
   removeItem: (instanceId: string) => void;
   openAddItem: () => void;
+  /** R75 (D210): attune to a pasted magic item or end it. */
+  toggleAttune?: (instanceId: string) => void;
   /** Roll dice with the overlay: label, formula ("1d20+5"), note. */
   roll: (label: string, formula: string, note?: string, kind?: "check" | "attack" | "damage" | "save" | "initiative" | "custom") => void;
   /** "사용" on a feature: spend its pool, heal/temp HP rolls, start its effect. */
@@ -193,7 +196,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
                   return (
                     <div className="cl-item-row" key={item.instanceId}>
                       {live ? <button type="button" className={`cl-eq${item.equipped ? " on" : ""}`} disabled={!equippable} title={equippable ? (item.equipped ? "해제" : "착용/장비") : "착용 불가"} aria-label={`${item.name} ${item.equipped ? "해제" : "장비"}`} onClick={() => actions!.toggleEquip(item.instanceId)} /> : <span className="cl-small">{item.equipped ? "●" : "○"}</span>}
-                      <span>{item.name}{item.custom ? <span className="cl-quiet cl-small"> (직접 입력)</span> : null}{item.equipped && item.wieldSlot === "off-hand" ? <span className="cl-quiet cl-small"> 보조손</span> : null}</span>
+                      <span title={item.magic ? [item.magic.description, ...(item.magic.notes ?? [])].filter(Boolean).join("\n") : undefined}>{item.name}{item.custom ? <span className="cl-quiet cl-small"> (직접 입력)</span> : null}{item.magic ? <span className="cl-quiet cl-small"> ✦ {item.magic.rarity ? RARITY_KO[item.magic.rarity] ?? item.magic.rarity : "마법"}</span> : null}{item.magic?.attunement ? (live && actions!.toggleAttune ? <button type="button" className={`cl-btn small quiet${item.attuned ? " active" : ""}`} style={{ marginLeft: 4 }} aria-pressed={item.attuned} title={item.attuned ? "조율 해제" : "조율 (최대 3개)"} onClick={() => actions!.toggleAttune!(item.instanceId)}>{item.attuned ? "조율됨" : "조율"}</button> : <span className="cl-quiet cl-small"> {item.attuned ? "조율됨" : "조율 안 함"}</span>) : null}{item.equipped && item.wieldSlot === "off-hand" ? <span className="cl-quiet cl-small"> 보조손</span> : null}</span>
                       {live ? <input className="cl-input cl-qty" type="number" min={0} value={item.quantity} aria-label={`${item.name} 수량`} onChange={(event) => actions!.setQuantity(item.instanceId, Number(event.target.value))} /> : <span className="cl-small">{item.quantity > 1 ? `×${item.quantity}` : ""}</span>}
                       {live ? <button type="button" className="cl-btn small quiet" title="버리기" onClick={() => actions!.removeItem(item.instanceId)}>✕</button> : <span />}
                     </div>

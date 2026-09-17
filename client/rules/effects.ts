@@ -141,7 +141,7 @@ const term = (label: string, value?: number, dice?: string): Term | null => (dic
 const describe = (label: string, value?: number, dice?: string) => (dice ? `+${dice}` : value !== undefined ? `${value >= 0 ? "+" : ""}${value}` : "") + ` ${label}`;
 
 /** Apply every effect in force to a derived character: new arrays, totals recomputed from terms, a summary per effect. */
-export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog, options: { list?: boolean } = {}): DerivedCharacter {
+export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog, options: { list?: boolean; /** R75 (D210): applications given directly (a pasted magic item), keyed by effect key. */ inline?: Record<string, EffectApplication> } = {}): DerivedCharacter {
   let next: DerivedCharacter = { ...derived, activeEffects: options.list === false ? derived.activeEffects : [], checkTerms: [...derived.checkTerms] };
   const applied: AppliedEffect[] = [];
   // AC terms added by effects so far, so a replacement base (Mage Armor) compares against the real base and keeps them.
@@ -156,7 +156,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
   for (const effect of effects) {
     const paused = pausedBy(effect);
     if (paused) { applied.push({ key: effect.key, name: effect.name, applied: false, notes: [`멈춤 — ${paused}`], narrative: true }); continue; }
-    const application = effectApplication(effect, next, catalog);
+    const application = options.inline?.[effect.key] ?? effectApplication(effect, next, catalog);
     if (!application) { applied.push({ key: effect.key, name: effect.name, applied: false, notes: ["규칙 없음 — 설명대로 수동 적용"] }); continue; }
     const notes: string[] = [];
     const label = effect.name;

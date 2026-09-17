@@ -9,6 +9,7 @@ import type { ActiveEffect, CharacterRuntime } from "./runtime";
 import { emptyInventoryPatch } from "./runtime";
 import type { DerivedCharacter } from "./types";
 import { scrollSpellId } from "../rules/scrolls";
+import type { CustomItem } from "./customItem";
 
 const MAX_LOG = 200;
 const stamp = (runtime: CharacterRuntime, text: string): CharacterRuntime => ({ ...runtime, log: [...(runtime.log ?? []), { at: new Date().toISOString(), text }].slice(-MAX_LOG), updatedAt: new Date().toISOString() });
@@ -198,11 +199,21 @@ export function setGold(runtime: CharacterRuntime, gold: number): CharacterRunti
 
 const patchOf = (runtime: CharacterRuntime) => runtime.inventory ?? emptyInventoryPatch();
 
-export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number }): CharacterRuntime {
+export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem }): CharacterRuntime {
   const patch = patchOf(runtime);
   const instanceId = `extra:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const quantity = Math.max(1, Math.floor(item.quantity ?? 1));
-  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
+  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
+}
+
+/** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */
+export function toggleAttune(runtime: CharacterRuntime, instanceId: string): CharacterRuntime {
+  const patch = patchOf(runtime);
+  const target = patch.extra.find((item) => item.instanceId === instanceId);
+  if (!target?.custom?.attunement) return runtime;
+  if (!target.attuned && patch.extra.filter((item) => item.attuned && !patch.removed.includes(item.instanceId)).length >= 3) return stamp(runtime, `조율할 수 없음: ${target.custom.name} (이미 3개 조율 중)`);
+  const extra = patch.extra.map((item) => (item.instanceId === instanceId ? { ...item, attuned: !item.attuned } : item));
+  return stamp({ ...runtime, inventory: { ...patch, extra } }, `${target.attuned ? "조율 해제" : "조율"}: ${target.custom.name}`);
 }
 
 export function removeItem(runtime: CharacterRuntime, derived: DerivedCharacter, instanceId: string): CharacterRuntime {

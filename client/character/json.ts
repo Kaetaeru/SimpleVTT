@@ -6,6 +6,7 @@
 import type { ContentCatalog } from "../catalog/catalog";
 import { ABILITY_KEYS } from "../catalog/types";
 import { emptyInventoryPatch, initialRuntime, type ActiveEffect, type CharacterRuntime } from "./runtime";
+import type { CustomItem } from "./customItem";
 import type { CharacterSource, DerivedCharacter } from "./types";
 
 export const CHARACTER_FILE_FORMAT = "simplevtt.character";
@@ -170,8 +171,9 @@ function parseInventoryPatch(value: unknown): CharacterRuntime["inventory"] {
   const quantities: Record<string, number> = {};
   if (isObject(value.quantities)) for (const [key, count] of Object.entries(value.quantities)) if (Number.isInteger(count)) quantities[key] = count as number;
   const extra = Array.isArray(value.extra)
-    ? value.extra.filter((item): item is { instanceId: string; itemId?: string; name: string; quantity: number } => isObject(item) && typeof item.instanceId === "string" && typeof item.name === "string" && Number.isInteger(item.quantity))
-      .map((item) => ({ instanceId: item.instanceId, itemId: typeof item.itemId === "string" ? item.itemId : undefined, name: item.name, quantity: item.quantity }))
+    ? value.extra.filter((item): item is { instanceId: string; itemId?: string; name: string; quantity: number; custom?: unknown; attuned?: unknown } => isObject(item) && typeof item.instanceId === "string" && typeof item.name === "string" && Number.isInteger(item.quantity))
+      .map((item) => ({ instanceId: item.instanceId, itemId: typeof item.itemId === "string" ? item.itemId : undefined, name: item.name, quantity: item.quantity,
+        ...(isObject(item.custom) && typeof item.custom.name === "string" ? { custom: item.custom as unknown as CustomItem } : {}), ...(item.attuned === true ? { attuned: true } : {}) }))
     : [];
   return { removed: isStringArray(value.removed) ? value.removed : [], quantities, extra };
 }

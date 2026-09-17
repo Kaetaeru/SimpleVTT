@@ -6,6 +6,7 @@ import type { AbilityKey } from "../catalog/types";
 import type { ParsedDuration } from "../rules/activation";
 import type { ContractRider } from "../rules/attackRiders";
 import type { RollAdvantage } from "../rules/actions";
+import type { CustomItem } from "./customItem";
 
 export type AbilityScores = Record<AbilityKey, number>;
 
@@ -168,13 +169,13 @@ export interface DerivedResource {
   freeCastSpellId?: string;
 }
 
-export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean }
+export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean }
 
 /** Runtime-side changes to the bag: items removed, quantities changed, items added during play. */
 export interface InventoryPatch {
   removed: string[];
   quantities: Record<string, number>;
-  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number }>;
+  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number; /** R75 (D210) */ custom?: CustomItem; attuned?: boolean }>;
 }
 
 /** R33 (D168): feat numbers that only matter once a swing is being rolled. */

@@ -11,7 +11,7 @@ import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
   addItem, adjustGold, advanceRound, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
-  restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
+  restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleAttune, toggleCondition, toggleEquip,
   usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
@@ -22,6 +22,7 @@ import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared,
 import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "../ui/components";
 import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
+import { CUSTOM_ITEM_EXAMPLE, parseCustomItem } from "../character/customItem";
 
 export interface SheetPlayProps {
   source: CharacterSource;
@@ -49,7 +50,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const [copied, setCopied] = useState<string | null>(null);
 
   const [resting, setResting] = useState<{ spends: Record<string, number> } | null>(null);
-  const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string } | null>(null);
+  const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string; json: string } | null>(null);
   const [showLog, setShowLog] = useState(true);
   const [customRoll, setCustomRoll] = useState("");
   const dice = useDice();
@@ -82,7 +83,8 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
     toggleEquip: (instanceId) => commit(toggleEquip(runtime, derived, instanceId)),
     setQuantity: (instanceId, quantity) => commit(setItemQuantity(runtime, derived, instanceId, quantity)),
     removeItem: (instanceId) => commit(removeItem(runtime, derived, instanceId)),
-    openAddItem: () => setAdding({ query: "", custom: "", quantity: "1" }),
+    openAddItem: () => setAdding({ query: "", custom: "", quantity: "1", json: "" }),
+    toggleAttune: (instanceId) => commit(toggleAttune(runtime, instanceId)),
     roll: (label, formula, note, kind) => { void rollAndLog({ label, formula, note, kind }); },
     useFeature: (feature) => { void activateFeature(feature); },
     endEffect: (key) => commit(endEffect(runtime, key)),
@@ -300,6 +302,22 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
             </div>
           ) : adding.query.trim() ? <p className="cl-quiet cl-small">목록에 없습니다. 아래에 이름을 직접 적어 추가할 수 있습니다.</p> : null}
           <div className="cl-field"><label htmlFor="cl-custom-item">직접 입력</label><input id="cl-custom-item" className="cl-input" placeholder="예: 고대의 열쇠" value={adding.custom} onChange={(event) => setAdding({ ...adding, custom: event.target.value })} /></div>
+          <details className="cl-field" open={Boolean(adding.json)}>
+            <summary>커스텀 마법 아이템 (JSON 붙여넣기)</summary>
+            <p className="cl-quiet cl-small">형식은 docs/guides/CUSTOM_ITEM_JSON.md. 명중·피해·AC·내성 보너스와 저항이 시트에 계산됩니다(조율이 필요하면 조율한 동안, 방어구는 입은 동안).</p>
+            <textarea id="cl-custom-item-json" className="cl-input" aria-label="마법 아이템 JSON" rows={8} style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }} value={adding.json} placeholder='{ "name": "...", "base": "longsword", "bonus": { "attack": 1, "damage": 1 } }' onChange={(event) => setAdding({ ...adding, json: event.target.value })} />
+            {(() => {
+              if (!adding.json.trim()) return <button type="button" className="cl-btn small quiet" onClick={() => setAdding({ ...adding, json: JSON.stringify(CUSTOM_ITEM_EXAMPLE, null, 2) })}>예시 넣기</button>;
+              const parsed = parseCustomItem(adding.json, catalog);
+              if ("error" in parsed) return <Notice tone="warn">{parsed.error}</Notice>;
+              return (
+                <>
+                  <Notice tone={parsed.warnings.length ? "warn" : "good"}>{parsed.item.name}{parsed.item.base ? ` · ${catalog.itemById(parsed.item.base)?.name}` : ""}{parsed.item.attunement ? " · 조율 필요" : ""}{parsed.warnings.map((warning) => <div key={warning} className="cl-small">⚠ {warning}</div>)}</Notice>
+                  <button type="button" className="cl-btn small primary" onClick={() => { commit(addItem(runtime, { name: parsed.item.name, custom: parsed.item, quantity: Number(adding.quantity) || 1 })); setAdding(null); }}>이 캐릭터에게 지급</button>
+                </>
+              );
+            })()}
+          </details>
         </Modal>
       ) : null}
     </div>
