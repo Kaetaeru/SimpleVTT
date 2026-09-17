@@ -32,7 +32,9 @@ function check(species: string, cls: string, background: string, level: number) 
   const view = catalog().classBySlug(cls)!;
   const con = derived.abilities.con.modifier;
   const dwarf = species === "dwarf" ? level : 0;
-  const expectedHp = Math.max(1, view.hitDie + con) + (level - 1) * Math.max(1, fixedHitPoints(view.hitDie) + con) + dwarf;
+  // H3c (D241): the only SRD sorcerer subclass is draconic, and 용의 회복력 adds a hit point per sorcerer level from 3 (it never applied before).
+  const draconic = cls === "sorcerer" && level >= 3 ? level : 0;
+  const expectedHp = Math.max(1, view.hitDie + con) + (level - 1) * Math.max(1, fixedHitPoints(view.hitDie) + con) + dwarf + draconic;
   assert.equal(derived.hp.max, expectedHp, `${label}: hp`);
   assert.deepEqual(derived.hitDice, { [`d${view.hitDie}`]: level }, label);
   assert.ok(derived.ac.value >= 10, label);

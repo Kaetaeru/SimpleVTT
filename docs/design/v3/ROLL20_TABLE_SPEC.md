@@ -563,8 +563,10 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D238 몬스터 특성은 데이터 규칙이다 (V0.9 H1)**: 소유자 기준(CLAUDE.md §2, 모듈은 JSON뿐). D162·D164·D237은 특성 이름·설명문 정규식으로 규칙을 추측했고, 재생 수치는 한국어 문장에 숫자가 없어 전부 1로 읽히는 버그였다. 이제 특성은 `traits[].rules`(범용 패턴 + 수치)를 갖고, 엔진은 패턴만 실행한다: `magic-resistance`, `legendary-resistance`, `regeneration {amount, suppressedByDamageTypes}`, `absorb`, `hold-at-one-hp`, `bloodied-advantage {rolls}`, `evasion`, `aura-damage {dice, damageType, timing}`, `situational {side, note, button, grants}`. SRD 규칙은 `content/indexes/dnd-srd-5.2.1.monster-traits.json`(97종 108개, 재생은 SRD 값 10·15·5로 교정)에 몬스터 ID와 특성 영문명으로 적었고, 규칙이 없는 저장된 스탯 블록도 이 색인을 읽는다. 붙여넣은 NPC와 모듈 몬스터는 같은 형식을 직접 쓴다(가이드 §10, 잘못된 규칙은 경고). 새로 계산되는 것: 재생은 막는 피해 유형을 받으면 다음 턴에 멈춘다. 몬스터 오라 피해는 상황 버튼(들어감/빠져나감)으로 표시한 크리처에게 주인의 턴 끝마다 한 번 굴려 적용한다(주문 주요 효과 `area-damage`). 무리 전술 같은 상황 특성은 판정 전 창의 체크박스로 유리·불리를 준다. 함께 고친 버그: 재생이 연결되지 않은 토큰의 HP 막대를 채우지 않고 시트 HP만 올렸다.
 - **D239 전투 문법은 콘텐츠를 매개변수로 받는다 (V0.9 H2)**: CLAUDE.md §2. R98~R100·R92가 넣은 콘텐츠 이름을 걷어냈다. `property.modify`에 `spell`·`school` 매개변수: `marked-spell.die`·`marked-spell.advantage`·`concentration.damage-immune`(헌터 계약이 사냥꾼의 표식 ID를 데이터로 적음), `spell.damage.ability-modifier`(값 `{ref:"effect.target"}` — 특성을 고른 대상마다 수동 효과가 돌고 스코프에 대상이 들어감, 고통스러운 폭발 계약 추가, 플래그 파싱 삭제), `spell.school-damage.ability-modifier`(학파·직업, 강화된 방출). 무기로 거는 주문은 주문 메커닉 `weaponSpell {ability, damageType, extraDice[{level,dice}]}`(SRD 색인 `spell-weapon.json`, 진실의 일격), 판정 전 창은 아는 무기 주문 목록을 고르게 하고 프로토콜은 `weaponSpell: spellId`. 명중 창 사실에 `auto`(`target.hp.below-max`)를 두어 호스트가 계산하고 묻지 않는다(거상 학살자). 행동불능 목록은 `CANNOT_ACT` 하나를 쓴다. `HUNTERS_MARK`·`TRUE_STRIKE`·`WOUNDED_FACT` 상수 삭제. 모듈 주문 ID로 같은 문법이 도는 단위 테스트와 게이트의 하드코딩 상한 테스트(`hardcode.test.ts`)를 두었다.
 - **D240 특성을 얻을 때의 선택과 부여는 계약의 `gain` 진입점이다 (V0.9 H3a·b)**: CLAUDE.md §2. `tracks.ts`가 특성 키(`key === "expertise"` 등 19종)와 기원술 slug로 분기하던 것을 계약으로 옮겼다. 새 진입점 `invocation: "gain"`은 캐릭터를 만들 때 한 번 돌고, 연산은 `property.modify` + `params`: `choice.skills {id, mode: proficiency|expertise, from: any|class|[ids]}`, `choice.languages`, `choice.class-option {list}`, `choice.fighting-style {extra[]}`, `choice.spell {level=value, resourceId}`, `choice.spells {level, ritual, into}`, `grant.language`, `grant.save-proficiency {abilities|all}`, `grant.ability {abilities, cap}`, `grant.senses`, `grant.speed {mode, equalsWalk}`, `grant.spell-lists {classes}`. 선택 ID(`class.N.<id>`)는 예전과 같아 저장된 캐릭터가 그대로다. 전문화 개수표(`EXPERTISE_SCHEDULE`)와 전투 방식 대체 선택지(팔라딘·레인저 slug 분기)도 계약 데이터로 옮겼다. 함께 계산이 된 것: 불굴의 힘(`saving-throw.minimum-score`: 근력 내성 합계 최소 근력 점수). 생존자(챔피언 18)는 코드가 우연히 이름을 담고 있어 언급됨으로 세어지던 것이라 판정 요청으로 적었고 V3에서 자동화한다. 점수판: 계약 164→183, 이름만 앎 51→32. 하드코딩 상한: 키 분기 54→38, slug 분기 16→10.
+- **D241 방어구·이동·절반 숙련·무술도 획득 계약이다 (V0.9 H3c)**: CLAUDE.md §2. `derive.ts`가 플래그(`unarmored-defense:<slug>`, `fast-movement`, `unarmored-movement`, `jack-of-all-trades`, `martial-arts`, `all-saves`)와 직업 slug(방랑자 레인저 6, 보호의 오라 팔라딘 6, 용의 회복력 소서러)로 계산하던 것을 `gain` 연산으로 옮겼다: `grant.ac-formula {abilities, shield}`, `grant.speed-bonus {value|column, unless: heavy-armor|armor-or-shield, modes}`, `grant.hp-per-level`, `grant.half-proficiency`, `grant.martial-arts {column, ability}`. 파생은 원장에 모인 규칙만 돈다. 함께 고친 버그 둘: 보호의 오라가 코드와 계약에서 두 번 더해져 내성이 매력 수정치만큼 더 높았다. 용의 회복력의 HP는 서브클래스 ID 비교(`endsWith("draconic")`)가 `draconic-sorcery`와 맞지 않아 한 번도 적용되지 않았다. 점수판: 계약 191, 이름만 앎 24. 하드코딩 상한: 키 분기 33, slug 분기 7.
 
 | R49 표 비우기 ✔ | D184: `EFFECT_RULES` 63→1, `FEATURE_ACTIVATIONS` 49→4, 옮긴 값 전부 대조 후 삭제, 문법에 `if` 추가, 파생이 계약을 들고 다님 | 단위 235개 통과(r49.test.ts 3개 새로), E2E 17개 전부 통과 |
+| H3c 파생 획득 계약 ✔ | D241: AC 공식·이동 속도·HP·절반 숙련·무술 연산, 보호의 오라 이중 계산·용의 회복력 미적용 버그 수정 | 게이트 통과 |
 | H3a·b 획득 계약 ✔ | D240: `gain` 진입점과 선택·부여 연산 12종, 특성 19종 분기 제거 | 게이트 통과 |
 | H2 전투 문법 매개변수화 ✔ | D239: `spell`·`school` 매개변수, 무기 주문 메커닉, 대상 참조 사실, 상수 3개 삭제 | 게이트 통과 |
 | H1 몬스터 특성 규칙 JSON ✔ | D238: `traits[].rules` 9개 패턴, SRD 색인, 오라 구역, 재생 멈춤, 상황 체크박스, 이름·설명문 정규식 제거 | 게이트 통과 |
@@ -651,7 +653,7 @@ R33~R35에서 방향이 정해졌다: 규칙은 코드가 아니라 **카탈로�
 | **연산** — 실행기가 계산한다 | 27 / 27 | 27 | `parseContract`가 읽고 실행기가 값을 내는 `operation` 정의 수 |
 | **연산** — 표까지 닿는다 | 27 / 27 | 27 | 그 값을 실제로 적용하는 호출 자리가 있는 수 |
 | **슬롯** — **요구되는** 자리가 열렸다 | 3 / 4 | 4 | 계약이 실제로 쓰는 슬롯 중 호스트가 여는 수. 요구되는 집합은 카탈로그에서 **재서** 나온다 (R54) |
-| **계약** — 특성이 카탈로그에서 굴러간다 | 183 / 223 | 223 | 20레벨 12직업의 직업·서브클래스 특성 중 계약이 있거나 "기계화하지 않음"에 이름이 있는 수 |
+| **계약** — 특성이 카탈로그에서 굴러간다 | 191 / 223 | 223 | 20레벨 12직업의 직업·서브클래스 특성 중 계약이 있거나 "기계화하지 않음"에 이름이 있는 수 |
 
 `schemas/common-play-contract.schema.json`의 정의는 26개지만 **종류는 27개**다(`condition.apply`/`condition.remove`가 한 정의). 계약이 실제로 쓰는 건 종류이므로 종류로 센다. **27종 전부 읽고, 27종 전부 표까지 닿는다.**
 
@@ -661,9 +663,9 @@ R33~R35에서 방향이 정해졌다: 규칙은 코드가 아니라 **카탈로�
 
 | | 개수 | 뜻 |
 |---|---|---|
-| 계약이 있다 | 183 | 카탈로그가 굴리거나, 표가 무엇을 판단할지 계약이 적어 둔다 |
+| 계약이 있다 | 191 | 카탈로그가 굴리거나, 표가 무엇을 판단할지 계약이 적어 둔다 |
 | 사용 버튼이 있다 | 8 | `activation.ts`에 손으로 쓴 항목 — 굴러가지만 코드다 |
-| 코드가 이름은 안다 | 32 | 파생·리졸버 어딘가에 하드코딩돼 있다 |
+| 코드가 이름은 안다 | 24 | 파생·리졸버 어딘가에 하드코딩돼 있다 |
 | **코드가 이름조차 모른다** | **0** | 앱이 아무것도 하지 않는다. 시트에 설명만 있다 |
 
 #### 축 1 — 엔진 ✔ (R37~R42에서 끝났다)

@@ -54,7 +54,8 @@ test("plan: the document's scoreboard is the measured one (D176)", () => {
   // R72 (D207): Extra Attack moved from a name the code compared to a contract — five from "mentioned" to "contract".
   // R95 (D230): 기묘한 회피 got its reaction contract — one more from "activation" to "contract".
   // H3 (D240): nineteen creation-time features moved from a name the code compared to a gain contract.
-  assert.deepEqual(counts, { contract: 183, activation: 8, mentioned: 32, silent: 0 });
+  // H3c (D241): eight more — armour, speed, half proficiency and martial arts are gain contracts now.
+  assert.deepEqual(counts, { contract: 191, activation: 8, mentioned: 24, silent: 0 });
   // Every slot a contract asks for is one this executor actually opens; nothing is demanded and ignored.
   assert.deepEqual(wantedSlots().filter((slot) => !OPEN_SLOTS.includes(slot)), ["primary.damage"], "R42's one outstanding demand");
   for (const [label, value] of [["계약이 있다", counts.contract], ["사용 버튼이 있다", counts.activation], ["코드가 이름은 안다", counts.mentioned]] as Array<[string, number]>) {

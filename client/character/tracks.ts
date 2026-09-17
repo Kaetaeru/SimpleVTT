@@ -201,13 +201,8 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
 
     // H3 (D240): what gaining this feature asks or grants is in its contract.
     applyGainContract(ledger, cls, index, `${cls.slug}.${level}.${feature.id}`, feature.name, sourceLabel);
-    if (key === "unarmored-defense") ledger.flags.add(`unarmored-defense:${cls.slug}`);
-    if (key === "fast-movement") ledger.flags.add("fast-movement");
-    if (key === "unarmored-movement") ledger.flags.add("unarmored-movement");
-    if (key === "jack-of-all-trades") ledger.flags.add("jack-of-all-trades");
     if (key === "pact-magic") ledger.flags.add("pact-magic");
     if (key === "spellcasting") ledger.flags.add(`spellcasting:${cls.id}`);
-    if (key === "martial-arts") ledger.flags.add("martial-arts");
   }
 
   applySubclassLevel(ledger, cls, state, index, sourceLabel);
@@ -287,7 +282,12 @@ export function applyGainContract(ledger: Ledger, cls: ClassView, index: number,
       case "grant.ability": for (const ability of strings(p.abilities) as AbilityKey[]) ledger.addAbilityBonus(ability, amount, label, typeof p.cap === "number" ? p.cap : undefined); break;
       case "grant.senses": { const sense = String(p.sense ?? "") as keyof typeof ledger.senses; ledger.senses[sense] = Math.max(ledger.senses[sense] ?? 0, amount); break; }
       case "grant.speed": { const mode = String(p.mode ?? "") as keyof typeof ledger.extraSpeeds; ledger.extraSpeeds[mode] = p.equalsWalk === true ? -1 : amount; break; }
-      case "grant.spell-lists": ledger.extraSpellLists.set(cls.id, [...new Set([...(ledger.extraSpellLists.get(cls.id) ?? []), ...strings(p.classes)])]); break;
+      case "grant.ac-formula": ledger.acFormulas.push({ abilities: strings(p.abilities) as AbilityKey[], shield: p.shield === true, label }); break;
+      case "grant.speed-bonus": ledger.speedGrants.push({ amount: Number(evaluate(operation.value, () => undefined)) || 0, classId: cls.id, ...(p.column ? { column: String(p.column) } : {}), unless: String(p.unless ?? "none"), modes: strings(p.modes), label }); break;
+      case "grant.hp-per-level": ledger.hpPerClassLevel.push({ classId: cls.id, amount, label }); break;
+      case "grant.half-proficiency": ledger.halfProficiency = label; break;
+      case "grant.martial-arts": ledger.martialArts = { classId: cls.id, column: String(p.column ?? ""), ability: String(p.ability ?? "dex") as AbilityKey }; break;
+      case "grant.spell-lists":
       default: ledger.warnings.push(`${featureName}: 알 수 없는 획득 연산 ${operation.property}`);
     }
   }

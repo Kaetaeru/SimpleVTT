@@ -12,9 +12,9 @@ const CEILINGS = {
   /** A content id literal. */
   contentIds: 20,
   /** A branch on a feature, option or event key. */
-  keyBranches: 38,
+  keyBranches: 33,
   /** A branch on a class slug or a picked option id. */
-  slugBranches: 10,
+  slugBranches: 7,
   /** A regex run over a name or a description. */
   nameRegex: 4,
 };
@@ -79,4 +79,17 @@ test("H3: a gain entry point is creation grammar, not a standing property, and t
   const rogue = build({ name: "로그", classes: "rogue", level: 1 });
   assert.equal(rogue.source.choices["class.0.expertise"]?.length, 2, "rogue expertise asked from its contract");
   assert.ok(rogue.derived.proficiencies.languages.includes("도둑 은어"));
+});
+
+test("H3c: armour, speed and saves come from gain contracts — and 보호의 오라 is counted once (D241)", async () => {
+  const { build } = await import("./support");
+  const paladin = build({ name: "팔라딘", classes: "paladin", level: 6, abilities: { cha: 16 } }).derived;
+  assert.equal(paladin.saves.str.terms.filter((term) => term.label.includes("보호의 오라")).length, 1, JSON.stringify(paladin.saves.str.terms));
+  const monk = build({ name: "몽크", classes: "monk", level: 6, abilities: { dex: 16, wis: 14 } }).derived;
+  assert.equal(monk.ac.value, 10 + monk.abilities.dex.modifier + monk.abilities.wis.modifier, monk.ac.source);
+  assert.ok(monk.speed.terms.some((term) => term.label.includes("비무장 이동") && term.value > 0), JSON.stringify(monk.speed.terms));
+  const ranger = build({ name: "레인저", classes: "ranger", level: 6 }).derived;
+  assert.equal(ranger.speed.climb, ranger.speed.walk, "방랑자 gives climb and swim at walking speed");
+  const sorcerer = build({ name: "소서러", classes: "sorcerer", level: 5 }).derived;
+  assert.ok(sorcerer.hp.terms.some((term) => term.label.includes("용의 회복력") && term.value === 5), JSON.stringify(sorcerer.hp.terms));
 });

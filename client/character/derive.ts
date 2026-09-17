@@ -140,8 +140,12 @@ function finalize(ledger: Ledger): DerivedCharacter {
   if (hpFloorFix) hpTerms.push({ label: "레벨당 최소 1 보정", value: hpFloorFix });
   if (ledger.hpPerLevelBonus) { hpMax += ledger.hpPerLevelBonus * level; hpBreakdown.push(`레벨당 +${ledger.hpPerLevelBonus} × ${level} = ${ledger.hpPerLevelBonus * level}`); hpTerms.push({ label: `${ledger.hpPerLevelSource ?? "특성"} +${ledger.hpPerLevelBonus} × ${level}레벨`, value: ledger.hpPerLevelBonus * level }); }
   if (ledger.hpFlatBonus) { hpMax += ledger.hpFlatBonus; hpBreakdown.push(`추가 +${ledger.hpFlatBonus}`); hpTerms.push({ label: "추가", value: ledger.hpFlatBonus }); }
-  const draconic = [...ledger.classes.values()].find((state) => state.slug === "sorcerer" && state.level >= 3 && state.subclassId?.endsWith("draconic"));
-  if (draconic) { hpMax += draconic.level; hpBreakdown.push(`용의 회복력 +${draconic.level}`); hpTerms.push({ label: "용의 회복력 (소서러 레벨)", value: draconic.level }); }
+  // H3c (D241): hit points per level of a class, from the feature that grants them (용의 회복력).
+  for (const grant of ledger.hpPerClassLevel) {
+    const owner = [...ledger.classes.values()].find((state) => state.classId === grant.classId);
+    const extra = (owner?.level ?? 0) * grant.amount;
+    if (extra) { hpMax += extra; hpBreakdown.push(`${grant.label} +${extra}`); hpTerms.push({ label: grant.label, value: extra }); }
+  }
 
   // Worn armor and shield.
   const itemOf = (itemId: string) => catalog.itemById(itemId);
@@ -175,9 +179,12 @@ function finalize(ledger: Ledger): DerivedCharacter {
   } else {
     const shieldTerm: Term[] = shieldBonus ? [{ label: shieldView?.name ?? "방패", value: shieldBonus }] : [];
     acCandidates.push({ value: 10 + dex + shieldBonus, source: "방어구 없음", breakdown: [`기본 10`, `민첩 ${dex}`, ...(shieldBonus ? [`방패 +${shieldBonus}`] : [])], terms: [{ label: "기본", value: 10 }, { label: "민첩 수정치", value: dex }, ...shieldTerm] });
-    if (ledger.flags.has("unarmored-defense:barbarian")) acCandidates.push({ value: 10 + dex + mod("con") + shieldBonus, source: "비무장 방어 (바바리안)", breakdown: ["기본 10", `민첩 ${dex}`, `건강 ${mod("con")}`, ...(shieldBonus ? [`방패 +${shieldBonus}`] : [])], terms: [{ label: "기본", value: 10 }, { label: "민첩 수정치", value: dex }, { label: "건강 수정치 (비무장 방어)", value: mod("con") }, ...shieldTerm] });
-    if (ledger.flags.has("unarmored-defense:monk") && !shieldView) acCandidates.push({ value: 10 + dex + mod("wis"), source: "비무장 방어 (몽크)", breakdown: ["기본 10", `민첩 ${dex}`, `지혜 ${mod("wis")}`], terms: [{ label: "기본", value: 10 }, { label: "민첩 수정치", value: dex }, { label: "지혜 수정치 (비무장 방어)", value: mod("wis") }] });
-    if (ledger.features.some((feature) => feature.id.endsWith("draconic-sorcery.draconic-resilience"))) acCandidates.push({ value: 10 + dex + mod("cha") + shieldBonus, source: "용의 회복력", breakdown: ["기본 10", `민첩 ${dex}`, `매력 ${mod("cha")}`, ...(shieldBonus ? [`방패 +${shieldBonus}`] : [])], terms: [{ label: "기본", value: 10 }, { label: "민첩 수정치", value: dex }, { label: "매력 수정치 (용의 회복력)", value: mod("cha") }, ...shieldTerm] });
+    // H3c (D241): the unarmoured AC formulas features granted.
+    for (const formula of ledger.acFormulas) {
+      if (!formula.shield && shieldView) continue;
+      const terms: Term[] = [{ label: "기본", value: 10 }, ...formula.abilities.map((key) => ({ label: `${ABILITY_KO[key]} 수정치 (${formula.label})`, value: mod(key) })), ...(formula.shield && shieldBonus ? [{ label: shieldView?.name ?? "방패", value: shieldBonus }] : [])];
+      acCandidates.push({ value: terms.reduce((total, term) => total + term.value, 0), source: formula.label, breakdown: terms.map((term) => `${term.label} ${term.value}`), terms });
+    }
   }
   const ac = acCandidates.reduce((best, candidate) => (candidate.value > best.value ? candidate : best));
 
@@ -185,34 +192,35 @@ function finalize(ledger: Ledger): DerivedCharacter {
   const speedTerms: Term[] = [{ label: `종족 기본 (${catalog.speciesById(source.origin.speciesId)?.name ?? "종족"})`, value: ledger.speedBase }];
   if (ledger.speedBonus) speedTerms.push({ label: "추가 속도", value: ledger.speedBonus });
   let walk = ledger.speedBase + ledger.speedBonus;
-  if (ledger.flags.has("fast-movement") && !heavyArmorWorn) { walk += 10; speedTerms.push({ label: "빠른 이동 (바바리안)", value: 10 }); }
-  if (ledger.flags.has("unarmored-movement") && !armorView && !shieldView) {
-    const monk = ledger.classBySlug("monk");
-    const cls = monk ? catalog.classById(monk.classId) : undefined;
-    const row = cls && monk ? cls.progression[monk.level - 1] : undefined;
-    const bonus = numericColumn(row?.columns[COLUMN.unarmoredMovement]);
-    if (bonus) { walk += bonus; speedTerms.push({ label: "비무장 이동 (몽크)", value: bonus }); }
+  // H3c (D241): speed the features grant (빠른 이동, 비무장 이동, 방랑자), and the movement modes that follow walking.
+  const speedModes: string[] = [];
+  for (const grant of ledger.speedGrants) {
+    if (grant.unless === "heavy-armor" && heavyArmorWorn) continue;
+    if (grant.unless === "armor-or-shield" && (armorView || shieldView)) continue;
+    const owner = [...ledger.classes.values()].find((state) => state.classId === grant.classId);
+    const row = owner && grant.column ? catalog.classById(owner.classId)?.progression[owner.level - 1] : undefined;
+    const bonus = grant.column ? numericColumn(row?.columns[grant.column]) : grant.amount;
+    if (!bonus) continue;
+    walk += bonus;
+    speedTerms.push({ label: grant.label, value: bonus });
+    speedModes.push(...grant.modes);
   }
   if (strengthShort) { walk -= 10; speedTerms.push({ label: `${armorView?.name} 근력 요구치 미달`, value: -10 }); }
-  const roving = [...ledger.classes.values()].some((state) => state.slug === "ranger" && state.level >= 6) && !heavyArmorWorn;
-  if (roving) { walk += 10; speedTerms.push({ label: "로빙 (레인저)", value: 10 }); }
   const speed: DerivedCharacter["speed"] = { walk, terms: speedTerms };
-  if (roving) { speed.climb = walk; speed.swim = walk; }
+  for (const mode of speedModes) if (mode === "climb" || mode === "swim" || mode === "fly") speed[mode] = walk;
   if (ledger.extraSpeeds.swim !== undefined) speed.swim = ledger.extraSpeeds.swim < 0 ? walk : ledger.extraSpeeds.swim;
   if (ledger.extraSpeeds.climb !== undefined) speed.climb = ledger.extraSpeeds.climb < 0 ? walk : ledger.extraSpeeds.climb;
   if (ledger.extraSpeeds.fly !== undefined) speed.fly = ledger.extraSpeeds.fly < 0 ? walk : ledger.extraSpeeds.fly;
 
   // Saves and skills.
   const saves = {} as DerivedCharacter["saves"];
-  const auraOfProtection = [...ledger.classes.values()].some((state) => state.slug === "paladin" && state.level >= 6) ? Math.max(1, mod("cha")) : 0;
   for (const key of ABILITY_KEYS) {
-    const proficient = ledger.saves.has(key) || ledger.flags.has("all-saves");
+    const proficient = ledger.saves.has(key);
     const terms: Term[] = [{ label: `${ABILITY_KO[key]} 수정치`, value: mod(key) }];
-    if (proficient) terms.push({ label: `숙련 보너스 (${ledger.saves.get(key) ?? "단련된 생존자"})`, value: pb });
-    if (auraOfProtection) terms.push({ label: "보호의 오라 (매력)", value: auraOfProtection });
+    if (proficient) terms.push({ label: `숙련 보너스 (${ledger.saves.get(key)})`, value: pb });
     saves[key] = { proficient, bonus: terms.reduce((total, term) => total + term.value, 0), terms };
   }
-  const jack = ledger.flags.has("jack-of-all-trades") ? Math.floor(pb / 2) : 0;
+  const jack = ledger.halfProficiency ? Math.floor(pb / 2) : 0;
   const skills: DerivedSkill[] = Object.entries(catalog.skills).map(([id, name]) => {
     const ability = SKILL_ABILITY[id] ?? "int";
     const proficient = ledger.hasSkill(id);
@@ -224,7 +232,7 @@ function finalize(ledger: Ledger): DerivedCharacter {
     const terms: Term[] = [{ label: `${ABILITY_KO[ability]} 수정치`, value: mod(ability) }];
     if (expertise) terms.push({ label: `전문화 ×2 (${record?.expertise[0] ?? ""})`, value: pb * 2 });
     else if (proficient) terms.push({ label: `숙련 보너스 (${record?.proficient[0] ?? ""})`, value: pb });
-    else if (jack) terms.push({ label: "만능재주 (숙련 보너스 절반)", value: jack });
+    else if (jack) terms.push({ label: `${ledger.halfProficiency} (숙련 보너스 절반)`, value: jack });
     if (wisBonus) terms.push({ label: "지혜 수정치 (신성·원초 질서)", value: wisBonus });
     return { id, name, ability, proficient, expertise, bonus, terms };
   }).sort((a, b) => a.name.localeCompare(b.name, "ko"));
@@ -347,7 +355,7 @@ function weaponAttack(ledger: Ledger, view: ItemView, abilities: DerivedCharacte
   const properties = weapon.properties;
   const finesse = properties.includes("finesse");
   const light = properties.includes("light");
-  const monkWeapon = ledger.flags.has("martial-arts") && weapon.mode === "melee" && (weapon.training === "simple" || light) && !properties.includes("two-handed") && !properties.includes("heavy");
+  const monkWeapon = Boolean(ledger.martialArts) && weapon.mode === "melee" && (weapon.training === "simple" || light) && !properties.includes("two-handed") && !properties.includes("heavy");
   let ability: AbilityKey = weapon.mode === "ranged" ? "dex" : "str";
   if (finesse || monkWeapon) ability = abilities.dex.modifier >= abilities.str.modifier ? "dex" : "str";
   const proficient = weaponIsProficient(view, ledger.weapons);
@@ -377,14 +385,14 @@ function weaponAttack(ledger: Ledger, view: ItemView, abilities: DerivedCharacte
 }
 
 function unarmedStrike(ledger: Ledger, abilities: DerivedCharacter["abilities"], pb: number): DerivedAttack {
-  const monk = ledger.classBySlug("monk");
+  const arts = ledger.martialArts;
+  const monk = arts ? [...ledger.classes.values()].find((state) => state.classId === arts.classId) : undefined;
   let ability: AbilityKey = "str";
   let damage = "1";
-  if (monk && ledger.flags.has("martial-arts")) {
-    const cls = ledger.catalog.classById(monk.classId);
-    const row = cls?.progression[monk.level - 1];
-    damage = row?.columns[COLUMN.martialArtsDie] ?? "1d6";
-    if (abilities.dex.modifier >= abilities.str.modifier) ability = "dex";
+  if (monk && arts) {
+    const row = ledger.catalog.classById(monk.classId)?.progression[monk.level - 1];
+    damage = row?.columns[arts.column] ?? "1d6";
+    if (abilities[arts.ability].modifier >= abilities.str.modifier) ability = arts.ability;
   }
   const modifier = abilities[ability].modifier;
   return {

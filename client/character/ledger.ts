@@ -103,6 +103,16 @@ export class Ledger {
   senses: { darkvision?: number; blindsight?: number; truesight?: number } = {};
   size = "medium";
   hpPerLevelBonus = 0;
+  /** H3c (D241): unarmoured AC formulas features granted (비무장 방어, 용의 회복력). */
+  readonly acFormulas: Array<{ abilities: AbilityKey[]; shield: boolean; label: string }> = [];
+  /** H3c (D241): walking speed features add — a fixed amount or a class progression column — and what switches it off. */
+  readonly speedGrants: Array<{ amount: number; classId: string; column?: string; unless: string; modes: string[]; label: string }> = [];
+  /** H3c (D241): hit points per level of the granting class (용의 회복력). */
+  readonly hpPerClassLevel: Array<{ classId: string; amount: number; label: string }> = [];
+  /** H3c (D241): half the proficiency bonus on unproficient checks, and the feature that grants it (만능재주). */
+  halfProficiency?: string;
+  /** H3c (D241): weapons and unarmed strikes use this class column's die and the better of Strength or this ability (무술). */
+  martialArts?: { classId: string; column: string; ability: AbilityKey };
   hpPerLevelSource: string | undefined;
   hpFlatBonus = 0;
   initiativeBonus = 0;
