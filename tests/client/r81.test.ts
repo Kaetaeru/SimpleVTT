@@ -7,14 +7,15 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { newJournalCharacter } from "../../client/campaign/journal";
+import { newJournalCharacter, newJournalNpc } from "../../client/campaign/journal";
+import { monsterById } from "../../client/compendium/monsters";
 import { newCampaign } from "../../client/campaign/model";
-import { newScene, tokenForCharacter } from "../../client/campaign/page";
+import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/page";
 import { longRest, shortRest, useResource, useSpellSlot } from "../../client/character/play";
 import { restFeatures, spentSlots, useRestFeature } from "../../client/character/rest";
 import { initialRuntime, type CharacterRuntime } from "../../client/character/runtime";
 import { pcStats } from "../../client/rules/actions";
-import { derivedOf, pcCombatant, pcConcentrationKey } from "../../client/rules/attackSpec";
+import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../../client/rules/attackSpec";
 import { TableClient } from "../../client/session/client";
 import { TableHost } from "../../client/session/host";
 import { MemoryHub } from "../../client/session/transport";
@@ -22,12 +23,12 @@ import { build, catalog } from "./support";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-async function table(classes: string, runtimeOf: (runtime: CharacterRuntime, derived: ReturnType<typeof build>["derived"]) => CharacterRuntime, setTimer?: (ms: number, run: () => void) => void) {
+async function table(classes: string, runtimeOf: (runtime: CharacterRuntime, derived: ReturnType<typeof build>["derived"]) => CharacterRuntime, setTimer?: (ms: number, run: () => void) => void, prefer: Record<string, string[]> = {}) {
   const hub = new MemoryHub();
   const campaign = { ...newCampaign("R81 시험", { userId: "dm", displayName: "DM" }), joinCode: "R81AAA" };
   new TableHost(hub.hostEndpoint(), { campaign, hostUserId: "dm", hostSecret: "s", random: () => 0.5, setTimer,
     attributeOf: (entry, link) => (link === "hp" ? { value: entry.runtime.hp.current, max: entry.runtime.hp.maxSeen } : undefined),
-    pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalog())), pcConcentrationKey, pcStats: (entry) => pcStats(derivedOf(entry, catalog())),
+    pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalog())), pcConcentrationKey, pcAttackSpec: (entry, id, riders) => pcAttackSpec(entry, derivedOf(entry, catalog()), id, riders, catalog()), pcStats: (entry) => pcStats(derivedOf(entry, catalog())),
     pcRest: (entry, kind) => { const derived = derivedOf(entry, catalog()); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
     pcTriggers: (entry, event) => { const derived = derivedOf(entry, catalog()); return restFeatures(derived, entry.runtime, catalog(), event).filter((feature) => !feature.unavailable).map((feature) => ({ featureId: feature.featureId, name: feature.name, ...(feature.heal ? { heal: feature.heal } : {}), ...(feature.slotLevels ? { slotLevels: feature.slotLevels, spent: spentSlots(derived, entry.runtime) } : {}) })); },
     pcTriggerApply: (entry, event, choice, roll) => { const derived = derivedOf(entry, catalog()); const feature = restFeatures(derived, entry.runtime, catalog(), event).find((item) => item.featureId === choice.featureId); return feature ? useRestFeature(entry.runtime, derived, feature, feature.slotLevels ? choice.slots : undefined, feature.heal ? roll(feature.heal) : undefined) : null; } });
@@ -35,7 +36,7 @@ async function table(classes: string, runtimeOf: (runtime: CharacterRuntime, der
   await tick();
   const scene = newScene(campaign.id, "길", 0);
   dm.send({ type: "page.put", page: scene });
-  const made = build({ name: classes, classes, level: 5 });
+  const made = build({ name: classes, classes, level: 5 }, prefer);
   const pc = newJournalCharacter(campaign.id, "dm", made.source, runtimeOf(initialRuntime(made.derived), made.derived));
   dm.send({ type: "journal.put", entry: pc });
   await tick();
@@ -105,4 +106,22 @@ test("R87: a window nobody answers takes its default answer after the table time
   await tick();
   assert.equal(prompts().length, 0, "declined for the absent player");
   assert.deepEqual(sheet().slotsUsed, { 3: 1 }, "declining uses nothing");
+});
+
+test("R99: a fiend warlock who drops a monster is offered the temporary hit points of 어둠의 존재의 축복 (D234)", async () => {
+  const { dm, pc, scene, token, made, sheet, prompts } = await table("warlock", (runtime) => runtime, undefined, { "class.0.subclass": ["dnd.srd521.subclass.warlock.fiend-patron"] });
+  const goblin = newJournalNpc(pc.campaignId, "dm", monsterById("dnd.srd521.monster.goblin-warrior")!);
+  dm.send({ type: "journal.put", entry: goblin });
+  await tick();
+  const goblinToken = tokenForNpc(goblin);
+  dm.send({ type: "token.put", pageId: scene.id, token: goblinToken });
+  await tick();
+  const weapon = made.derived.attacks.find((attack) => attack.itemId)!;
+  dm.send({ type: "act.attack", attacker: { entryId: pc.id, pageId: scene.id, tokenId: token.id }, targets: [{ pageId: scene.id, tokenId: goblinToken.id }], attack: { source: "weapon", attackId: weapon.id }, overrides: { outcome: "hit", damageDelta: 50 } });
+  await tick();
+  const [prompt] = prompts();
+  assert.equal(prompt?.prompt?.trigger?.event, "kill", JSON.stringify(dm.snapshot!.chat.slice(-3).map((message) => message.content)));
+  dm.send({ type: "act.trigger", messageId: prompt.id, choices: [{ featureId: prompt.prompt!.trigger!.offers[0].featureId }] });
+  await tick();
+  assert.equal(sheet().hp.temp, Math.max(1, made.derived.abilities.cha.modifier + 5));
 });

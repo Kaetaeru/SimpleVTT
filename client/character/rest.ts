@@ -9,7 +9,7 @@ import type { ContentCatalog } from "../catalog/catalog";
 import { characterScope, evaluate, PACT_SLOT_RESOURCE, REST_INVOCATION, SLOT_LEVELS_RESOURCE, type TriggerEvent } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
-import { applyHealing, noteLog } from "./play";
+import { applyHealing, grantTempHp, noteLog } from "./play";
 import type { CharacterRuntime } from "./runtime";
 import type { DerivedCharacter } from "./types";
 
@@ -26,6 +26,8 @@ export interface RestFeature {
   event: TriggerEvent;
   /** R81 (D215): hit points it restores, as a formula ("1d8+5"). */
   heal?: string;
+  /** R99 (D234): temporary hit points it grants (어둠의 존재의 축복). */
+  tempHp?: number;
   note?: string;
   /** Pools the use spends (negative) or gives back (positive), by `derived.resources` id. */
   pools: Array<{ resourceId: string; amount: number }>;
@@ -48,6 +50,7 @@ export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntim
       if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
       if (operation.kind === "adjudication.request") { out.note = out.note ? `${out.note} · ${operation.question}` : operation.question; continue; }
       if (operation.kind === "healing.apply") { const flat = Number(evaluate(operation.amount, scope)) || 0; out.heal = `${operation.dice ?? ""}${operation.dice && flat ? "+" : ""}${flat || !operation.dice ? flat : ""}`; continue; }
+      if (operation.kind === "temp-hp.grant") { out.tempHp = (out.tempHp ?? 0) + Math.max(0, Number(evaluate(operation.amount, scope)) || 0); continue; }
       if (operation.kind !== "resource.change") continue;
       const amount = Number(evaluate(operation.amount, scope)) || 0;
       if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + amount;
@@ -58,7 +61,7 @@ export function restFeatures(derived: DerivedCharacter, runtime: CharacterRuntim
       const resource = derived.resources.find((item) => item.id === pool.resourceId);
       if (!resource || resource.max - (runtime.resourcesUsed[resource.id] ?? 0) < -pool.amount) out.unavailable = `${resource?.label ?? pool.resourceId}을(를) 이미 썼습니다`;
     }
-    const gives = out.pools.some((item) => item.amount > 0 && (runtime.resourcesUsed[item.resourceId] ?? 0) > 0) || Boolean(out.slotLevels && spentSlots(derived, runtime).length) || Boolean(out.pactSlots && runtime.pactSlotsUsed > 0) || Boolean(out.heal && runtime.hp.current < derived.hp.max);
+    const gives = Boolean(out.tempHp) || out.pools.some((item) => item.amount > 0 && (runtime.resourcesUsed[item.resourceId] ?? 0) > 0) || Boolean(out.slotLevels && spentSlots(derived, runtime).length) || Boolean(out.pactSlots && runtime.pactSlotsUsed > 0) || Boolean(out.heal && runtime.hp.current < derived.hp.max);
     if (!out.unavailable && !gives) out.unavailable = "되찾을 것이 없습니다";
     return [out];
   });
@@ -114,6 +117,7 @@ export function useRestFeature(runtime: CharacterRuntime, derived: DerivedCharac
     if (back) { resourcesUsed[pool.resourceId] = used - back; lines.push(`${resource?.label ?? pool.resourceId} ${back} 회복`); }
   }
   let next: CharacterRuntime = { ...runtime, resourcesUsed };
+  if (feature.tempHp) { lines.push(`임시 HP ${feature.tempHp}`); next = grantTempHp(next, feature.tempHp); }
   if (feature.heal && healRoll) { lines.push(`HP ${healRoll} 회복 (${feature.heal})`); next = applyHealing(next, derived, healRoll); }
   if (lines.length) next = noteLog(next, `${feature.name}: ${lines.join(", ")}`);
   return restoreSlots(next, derived, { levels: feature.slotLevels, pact: feature.pactSlots, chosen }, feature.name);

@@ -148,8 +148,8 @@ export interface TableHostOptions {
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
   contentModules?: () => readonly RuleModuleJson[];
   /** R79 (D216), R81 (D215): what this character's features offer at a moment, and using one of them (dice rolled by `roll`). */
-  pcTriggers?: (entry: JournalCharacter, event: "short-rest" | "initiative") => TriggerOffer[];
-  pcTriggerApply?: (entry: JournalCharacter, event: "short-rest" | "initiative", choice: { featureId: string; slots?: number[] }, roll: (formula: string) => number) => CharacterRuntime | null;
+  pcTriggers?: (entry: JournalCharacter, event: "short-rest" | "initiative" | "kill") => TriggerOffer[];
+  pcTriggerApply?: (entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", choice: { featureId: string; slots?: number[] }, roll: (formula: string) => number) => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
   pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
@@ -183,6 +183,8 @@ export class TableHost {
   /** R89 (D224): per area and creature, the tracker turn ("round:index") the area last hurt it — kept through leaving and coming back. ponytail: in memory, a host restart forgets this turn's hits. */
   private readonly zoneHits = new Map<string, string>();
   /** R91 (D226): per creature, the once-per-turn offers it took and the tracker turn ("round:index") it took them in. */
+  /** R99 (D234): per attacker with 연구된 공격, the creature its last miss was against. ponytail: in memory, and it waits for the next attack rather than ending with the next turn. */
+  private readonly studied = new Map<string, string>();
   private readonly turnUses = new Map<string, { mark: string; keys: string[] }>();
   /** R86 (D221): per card, how to take back what happened automatically because of it (effects shed, a smite save card). */
   private readonly childUndos = new Map<string, Array<() => void>>();
@@ -1578,6 +1580,8 @@ export class TableHost {
     // R98 (D233): 적 학살자 rolls a d10 for the mark, and 정밀한 사냥꾼 gives advantage against the marked creature.
     const marks = mine.map((mark): DamagePart => ({ formula: mark.spellId === HUNTERS_MARK && attackerCombatant?.markDie ? mark.formula.replace(/d[0-9]+/, `d${attackerCombatant.markDie}`) : mark.formula, type: mark.type, label: mark.label }));
     const precise = attackerCombatant?.markAdvantage && mine.some((mark) => mark.spellId === HUNTERS_MARK) ? ["정밀한 사냥꾼"] : [];
+    // R99 (D234): 연구된 공격 — the attack after a miss against this creature has advantage.
+    if (attackerCombatant?.studiedAttacks && this.studied.get(attacker.entry.id) === target.entry.id) precise.push("연구된 공격");
     return fiendBonus || marks.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...(fiendBonus ? [fiendBonus] : []), ...marks], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
   }
 
@@ -2128,6 +2132,9 @@ export class TableHost {
     const messageId = newMessageId();
     const apply = () => this.asCause(messageId, () => {
       const rows = resolution.targets.map((row, index) => this.applySpellRow(row, targets[index], resolution));
+      // R99 (D234): a spell that dropped a monster is the moment 어둠의 존재의 축복 waits for.
+      const killer = this.journalEntries.get(resolution.caster.id);
+      if (killer?.kind === "character" && resolution.targets.some((row, index) => targets[index]?.entry.kind === "npc" && (row.attack?.downed ?? row.damage?.downed))) this.offerTriggers(killer, "kill");
       // R28 (D151): forcing a save and taking damage both keep a rage going.
       this.ragingDeeds([this.resolveActor({ entryId: resolution.caster.id }) ?? undefined, ...targets.filter((_, index) => (resolution.targets[index]?.damage?.damageTotal ?? 0) > 0)]);
       const applied = { ...resolution, applied: true };
@@ -2245,19 +2252,19 @@ export class TableHost {
    * (`hitPolicy["trigger:<feature>"]`): taken at once, never offered, or — the default — asked in a window the
    * character's owner answers. Nothing waits on the answer; the rest of the table carries on.
    */
-  private offerTriggers(entry: JournalCharacter, event: "short-rest" | "initiative", where: { pageId?: string; tokenId?: string } = {}) {
+  private offerTriggers(entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", where: { pageId?: string; tokenId?: string } = {}) {
     const offers = this.options.pcTriggers?.(entry, event) ?? [];
     const policy = (offer: TriggerOffer) => entry.runtime.hitPolicy?.[triggerPolicyKey(offer.featureId)] ?? "ask";
     const auto = offers.filter((offer) => policy(offer) === "always");
     const ask = offers.filter((offer) => policy(offer) === "ask");
-    const moment = event === "initiative" ? "이니셔티브" : "짧은 휴식";
+    const moment = event === "initiative" ? "이니셔티브" : event === "kill" ? "적을 쓰러뜨림" : "짧은 휴식";
     if (auto.length) { const used = this.applyTriggers(entry.id, event, auto.map((offer) => ({ featureId: offer.featureId })), auto); if (used.length) this.say({ type: "system", who: "", content: `${entry.name}: ${moment} — ${used.join(", ")} (자동)` }); }
     if (!ask.length) return;
     this.say({ type: "prompt", who: "", content: `${entry.name}: ${moment} — ${ask.map((offer) => offer.name).join(", ")}`, prompt: { kind: "trigger", mover: { name: entry.name }, reactor: { name: entry.name, entryId: entry.id, ...where }, trigger: { event, offers: ask } } });
   }
 
   /** Use the chosen trigger features one after another on the live sheet; returns what was used, by name. */
-  private applyTriggers(entryId: string, event: "short-rest" | "initiative", choices: Array<{ featureId: string; slots?: number[] }>, offers: TriggerOffer[]) {
+  private applyTriggers(entryId: string, event: "short-rest" | "initiative" | "kill", choices: Array<{ featureId: string; slots?: number[] }>, offers: TriggerOffer[]) {
     const roll = (formula: string) => rollFormula({ label: "", formula }, this.options.random ?? Math.random).total;
     const used: string[] = [];
     for (const choice of choices) {
@@ -2513,6 +2520,11 @@ export class TableHost {
   private applyResolution(...args: Parameters<TableHost["applyResolutionNow"]>) {
     return this.asCause(args[3], () => {
       const out = this.applyResolutionNow(...args);
+      // R99 (D234): a swing that dropped a monster is the moment 어둠의 존재의 축복 waits for.
+      const killer = this.journalEntries.get(args[2].entry.id);
+      // R99 (D234): 연구된 공격 remembers the miss; any other attack by the same creature settles the last one.
+      if (!args[6] && this.combatantOf(args[2])?.studiedAttacks) { if (args[0].outcome === "miss" || args[0].outcome === "fumble") this.studied.set(args[2].entry.id, args[1].entry.id); else this.studied.delete(args[2].entry.id); }
+      if (args[0].downed && args[1].entry.kind === "npc" && killer?.kind === "character" && !args[6]) this.offerTriggers(killer, "kill");
       // R90 (D225): after the card has written its own changes, so they do not put the spent effect back.
       this.consumeOnUse(args[2].entry.id, "attack");
       this.consumeOnUse(args[1].entry.id, "attacked");

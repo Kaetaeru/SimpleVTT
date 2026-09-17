@@ -233,9 +233,11 @@ export const ATTACK_INVOCATIONS = new Set(["pre-roll-attack", "on-hit"]);
 export const REST_INVOCATION = "short-rest";
 /** R81 (D215): an entry point that runs when this character rolls initiative (경이로운 신진대사). */
 export const INITIATIVE_INVOCATION = "initiative";
+/** R99 (D234): this creature brought a hostile creature to 0 hit points (어둠의 존재의 축복). */
+export const KILL_INVOCATION = "kill";
 /** R81 (D215): the moments the table asks about instead of a button: the end of a short rest, an initiative roll. */
-export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATION]);
-export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION;
+export const TRIGGER_INVOCATIONS = new Set([REST_INVOCATION, INITIATIVE_INVOCATION, KILL_INVOCATION]);
+export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION | typeof KILL_INVOCATION;
 /**
  * R78 (D213): reserved resource ids a `resource.change` restores that are not pools — spell slots whose levels add up to
  * the amount (none above 5th, the rule both 2024 recoveries share) and Pact Magic slots. Same idea as R59's hit die.

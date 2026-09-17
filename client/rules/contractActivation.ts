@@ -238,10 +238,12 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
   // R78 (D213): what a short rest's end does is said where the player looks for it — the rest window runs it.
   for (const entry of contract.entryPoints.filter((item) => TRIGGER_INVOCATIONS.has(item.invocation))) {
     mechanical = true;
-    const where = entry.invocation === REST_INVOCATION ? "짧은 휴식 창에서" : "이니셔티브 굴릴 때 창에서";
+    const where = entry.invocation === REST_INVOCATION ? "짧은 휴식 창에서" : entry.invocation === "kill" ? "적을 쓰러뜨렸을 때 창에서" : "이니셔티브 굴릴 때 창에서";
     for (const operation of entry.operations) {
       if (!live(operation, scope)) continue;
       if (operation.kind === "healing.apply") { rules.push(`${where} — HP ${operation.dice ?? ""}${operation.amount ? `+${number(operation.amount) ?? 0}` : ""} 회복`); continue; }
+      // R99 (D234): 어둠의 존재의 축복.
+      if (operation.kind === "temp-hp.grant") { rules.push(`${where} — 임시 HP ${number(operation.amount) ?? 0}`); continue; }
       if (operation.kind !== "resource.change") continue;
       const amount = number(operation.amount) ?? 0;
       if (operation.resourceId === SLOT_LEVELS_RESOURCE) rules.push(`${where} — 레벨 합 ${amount}까지 슬롯 회복 (5레벨 이하)`);

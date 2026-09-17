@@ -110,3 +110,12 @@ test("R98: a level-20 hunter marks with a d10, attacks the mark with advantage, 
   const ranger = t.dm.snapshot!.journal.find((entry) => entry.id === t.refs.pc.entryId) as JournalCharacter;
   assert.equal(pcCombatant(ranger, derivedOf(ranger, catalog())).concentration, undefined, "끈질긴 사냥꾼: no concentration save for the mark");
 });
+
+test("R99: after a miss, a level-13 fighter attacks the same creature with advantage (D234)", async () => {
+  const t = await table("fighter", [], 13);
+  const swing = async (target: typeof t.refs.ogre, outcome: "hit" | "miss") => { t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [target], attack: { source: "weapon", attackId: t.weapon.id }, overrides: { outcome } }); await tick(); return t.lastCard(); };
+  assert.ok(!(await swing(t.refs.ogre, "miss")).reasons.includes("연구된 공격"));
+  assert.ok(!(await swing(t.refs.other, "hit")).reasons.includes("연구된 공격"), "not against another creature");
+  await swing(t.refs.ogre, "miss");
+  assert.ok((await swing(t.refs.ogre, "hit")).reasons.includes("연구된 공격"), JSON.stringify(t.lastCard().reasons));
+});

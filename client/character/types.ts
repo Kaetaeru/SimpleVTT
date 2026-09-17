@@ -254,6 +254,7 @@ export interface DerivedCharacter {
   markAdvantage?: boolean;
   markKeepsConcentration?: boolean;
   potentCantrip?: boolean;
+  studiedAttacks?: boolean;
   evocationModifierClasses?: string[];
   /** R72 (D207): attacks per Attack action, from whatever contract says so (1 when none does). */
   attackActionAttacks?: number;

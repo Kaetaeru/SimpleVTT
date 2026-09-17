@@ -84,6 +84,8 @@ export interface Combatant {
   /** R98 (D233): this attacker hunter mark rolls this die (적 학살자) and gives advantage (정밀한 사냥꾼). */
   markDie?: number;
   markAdvantage?: boolean;
+  /** R99 (D234): 연구된 공격. */
+  studiedAttacks?: boolean;
 }
 
 export interface DamagePart {

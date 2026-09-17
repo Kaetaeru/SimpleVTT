@@ -125,7 +125,7 @@ export interface ReactionPrompt {
    * mover is the creature that was hit, and `offers` are what may still be added now that the hit is known.
    */
   /** R79 (D216), R81 (D215): a moment a character's features wait for — the end of a short rest, an initiative roll. */
-  trigger?: { event: "short-rest" | "initiative"; offers: TriggerOffer[] };
+  trigger?: { event: "short-rest" | "initiative" | "kill"; offers: TriggerOffer[] };
   onHit?: { outcome: "hit" | "crit"; offers: HitOffer[]; /** R64 (D199): what the attacker's sheet takes without asking, by name, so the window can say so. */ auto?: string[] };
   /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. R63: `chosen` names what an on-hit window added. */
   outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string; chosen?: string[] };

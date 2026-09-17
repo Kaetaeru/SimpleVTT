@@ -52,6 +52,8 @@ export interface EffectApplication {
   markKeepsConcentration?: boolean;
   /** R98 (D233): a damage cantrip deals half on a miss or a successful save (강력한 소마법). */
   potentCantrip?: boolean;
+  /** R99 (D234): a miss gives advantage on the next attack against that creature (연구된 공격). */
+  studiedAttacks?: boolean;
   /** R98 (D233): class slugs whose evocation spells add the spellcasting modifier to one damage roll (강화된 방출). */
   evocationModifierClasses?: string[];
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
@@ -314,6 +316,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.markDie) { next = { ...next, markDie: Math.max(next.markDie ?? 6, application.markDie) }; notes.push(`사냥꾼의 표식 d${application.markDie}`); }
     if (application.markAdvantage) { next = { ...next, markAdvantage: true }; notes.push("표식한 대상 공격에 유리"); }
     if (application.markKeepsConcentration) { next = { ...next, markKeepsConcentration: true }; notes.push("피해로 사냥꾼의 표식 집중이 깨지지 않음"); }
+    if (application.studiedAttacks) { next = { ...next, studiedAttacks: true }; notes.push("빗나간 대상에게 다음 공격 유리"); }
     if (application.potentCantrip) { next = { ...next, potentCantrip: true }; notes.push("피해 소마법: 빗나감·내성 성공에도 절반"); }
     if (application.evocationModifierClasses?.length) { next = { ...next, evocationModifierClasses: [...new Set([...(next.evocationModifierClasses ?? []), ...application.evocationModifierClasses])] }; notes.push("방출술 피해 한 번에 주문 능력 수정치"); }
     if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }

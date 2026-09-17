@@ -76,6 +76,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     ...(derived.elusive ? { elusive: true } : {}),
     ...(derived.markDie ? { markDie: derived.markDie } : {}),
     ...(derived.markAdvantage ? { markAdvantage: true } : {}),
+    ...(derived.studiedAttacks ? { studiedAttacks: true } : {}),
     // R51 (D186): 중갑 달인 — flat reduction per damage type, from whatever effect or feat contract granted it.
     ...(derived.damageReduction?.length ? { reduction: derived.damageReduction } : {}),
     // R55 (D190): what this character gives away by attacking recklessly — anyone swinging at them gets advantage.

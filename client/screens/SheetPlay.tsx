@@ -262,7 +262,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
             <div className="cl-list" style={{ gap: 4 }}>
               {triggerSettings.map((feature) => (
                 <div key={feature.featureId} className="cl-row cl-small" style={{ gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
-                  <span><strong>{feature.name}</strong> <span className="cl-quiet">{feature.event === "initiative" ? "이니셔티브" : "짧은 휴식"}</span></span>
+                  <span><strong>{feature.name}</strong> <span className="cl-quiet">{feature.event === "initiative" ? "이니셔티브" : feature.event === "kill" ? "적을 쓰러뜨림" : "짧은 휴식"}</span></span>
                   <HitPolicySelect label={feature.name} value={runtime.hitPolicy?.[triggerPolicyKey(feature.featureId)] ?? "ask"} onChange={(policy) => commit({ ...runtime, hitPolicy: { ...(runtime.hitPolicy ?? {}), [triggerPolicyKey(feature.featureId)]: policy } })} />
                 </div>
               ))}
