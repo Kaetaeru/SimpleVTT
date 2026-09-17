@@ -3,14 +3,13 @@
  * option (holy symbol kind, instrument, artisan tool) and the resulting inventory with default equip state.
  */
 import type { LoadoutOption } from "../catalog/catalog";
-import { artisanToolOptions, GAMING_SET_KO, instrumentOptions, INSTRUMENT_KO } from "./choices";
+import { artisanToolOptions, instrumentOptions, variantNameOf } from "./choices";
 import type { Ledger } from "./ledger";
 import type { ChoiceOption, DerivedItem } from "./types";
 
 interface LoadoutOptionChoice { kind: string; itemIds?: string[]; categories?: string[]; quantity?: number }
 type ItemOption = Extract<LoadoutOption, { items: unknown }> & { itemVariants?: Record<string, string>; choices?: LoadoutOptionChoice[] };
 
-const BOOK_VARIANT_KO: Record<string, string> = { "prayer-book": "기도서", "history-book": "역사서", "occult-lore-book": "비술서" };
 
 function optionSummary(ledger: Ledger, option: LoadoutOption): string {
   if ("startingGoldGp" in option) return `${option.startingGoldGp} GP`;
@@ -85,8 +84,8 @@ function addItem(ledger: Ledger, itemId: string, quantity: number, sourceLabel: 
   // A variant tool without a variant (the soldier's gaming set) takes the variant the character is trained in.
   if (!variant && Array.isArray(view.config.variants)) variant = [...ledger.tools.keys()].find((id) => id.startsWith(`${itemId}:`))?.split(":")[1];
   const bundle = view.kind === "ammunition" ? Number((view.config.quantity as number | undefined) ?? 1) : 1;
-  const variantName = variant ? (INSTRUMENT_KO[variant] ?? GAMING_SET_KO[variant] ?? BOOK_VARIANT_KO[variant] ?? variant) : undefined;
-  const name = variantName ? (view.id.endsWith("musical-instrument") || view.id.endsWith("gaming-set") ? variantName : `${view.name} (${variantName})`) : view.name;
+  const variantName = variant ? variantNameOf(view, variant) : undefined;
+  const name = variantName ? (view.config.variantLabel === "alone" ? variantName : `${view.name} (${variantName})`) : view.name;
   const existing = ledger.inventory.find((item) => item.itemId === itemId && item.name === name);
   if (existing) { existing.quantity += quantity * bundle; return; }
   const item: DerivedItem = { instanceId: `${itemId}${variant ? `:${variant}` : ""}`, itemId, name, kind: view.kind, quantity: quantity * bundle, source: sourceLabel };

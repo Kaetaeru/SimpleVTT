@@ -1,7 +1,11 @@
 /**
  * V0.9 guard (CLAUDE.md §2): content names, ids and feature keys do not belong in client code. This counts the
- * shapes that betray them and fails when any count grows. Moving one to JSON lowers its ceiling here; the ceilings
- * only ever go down, and V0.9 ends with them at the exceptions HARDCODE_AUDIT.md §4 records.
+ * shapes that betray them and fails when any count grows.
+ *
+ * V1 (D253): the ceilings are at the exceptions HARDCODE_AUDIT.md §4 records, and the patterns are the ones the
+ * migration actually met — the first version's `key === "` counted keyboard keys and missed `traitKey === "…"`.
+ * Every count but two is zero; those two are the progression table's own row words (tracks.ts) and a token's
+ * numbered copy name (PageCanvas.tsx), both named in §4.
  */
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -10,26 +14,32 @@ import test from "node:test";
 
 const CEILINGS = {
   /** A content id literal. */
-  contentIds: 2,
-  /** A branch on a feature, option or event key. */
-  keyBranches: 30,
-  /** A branch on a class slug or a picked option id. */
+  contentIds: 0,
+  /** A kebab-case content key compared to a key, slug, option or id (`traitKey === "dwarven-toughness"`). */
+  contentKeyBranches: 0,
+  /** A class slug or a picked option compared to a literal (`slug === "wizard"`). */
   slugBranches: 0,
-  /** A regex run over a name or a description. */
+  /** A content id checked by its ending or a piece of it (`classId.endsWith(".rogue")`). */
+  idPieces: 0,
+  /** A name compared to a literal. §4: "Ability Score Improvement", "Epic Boon", "Subclass Feature". */
+  nameCompares: 3,
+  /** A regex run over a name, a description or a note. §4: `/Subclass$/` on a progression row, a token's copy number. */
   nameRegex: 2,
 };
 
 const PATTERNS: Record<keyof typeof CEILINGS, RegExp> = {
   contentIds: /"dnd\.srd521\./,
-  keyBranches: /key === "/,
+  contentKeyBranches: /(key|Key|Id|\.id) === "[a-z0-9]+(-[a-z0-9]+)+"/,
   slugBranches: /(slug|picked) === "/,
-  nameRegex: /\.test\([^)]*(nameEn|\.name\b|\.text\b)/,
+  idPieces: /(classId|spellId|featureId|itemId|subclassId|speciesId|feature\.id|entry\.id)\.(endsWith|includes)\("\.?[a-z]/,
+  nameCompares: /(nameEn|\.name) === "[A-Z]/,
+  nameRegex: /\.test\([^)]*(nameEn|\.name\b|\.text\b|description|summary|\.note\b)/,
 };
 
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) return name === "data" ? [] : files(path);
+    if (statSync(path).isDirectory()) return files(path);
     return /\.tsx?$/.test(name) ? [path] : [];
   });
 }

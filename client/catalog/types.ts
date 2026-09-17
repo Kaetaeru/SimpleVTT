@@ -136,8 +136,6 @@ export interface CreationIndexJson {
   generalLanguages: Array<{ id: string; name: string; nameEn: string }>;
   classes: Record<string, IndexClassJson>;
   spellLists: Record<string, Record<string, string[]>>;
-  instrumentVariants: string[];
-  gamingSetVariants: string[];
   artisanToolIds: string[];
   species: Record<string, IndexSpeciesSemanticsJson>;
 }

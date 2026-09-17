@@ -8,7 +8,8 @@ import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import { SIZE_KO } from "../rules/tables";
 import type { SpeciesOptionEffect } from "../data/srd";
-import { abilityOptions, featOptions, fixedOptions, gamingSetOptions, languageOptions, skillOptions, toolName, TOOL_ID_PREFIX } from "./choices";
+import { abilityOptions, featOptions, fixedOptions, gamingSetOptions, languageOptions, skillOptions, toolName } from "./choices";
+import { slugOfId } from "../catalog/catalog";
 import { applyFeat } from "./feats";
 import { applyGainContract } from "./tracks";
 import type { Ledger } from "./ledger";
@@ -120,11 +121,8 @@ export function resolveToolId(ledger: Ledger, ref: string): string {
   const { catalog } = ledger;
   if (catalog.itemById(ref)) return ref;
   const candidates = [ref, ref.replace(/-(supplies|tools)$/, "s-$1"), ref.replace(/s-(supplies|tools)$/, "-$1")];
-  for (const candidate of candidates) {
-    const id = `${TOOL_ID_PREFIX}${candidate}`;
-    if (catalog.itemById(id)) return id;
-  }
-  return ref;
+  // V1b (D253): a tool named by its slug is found among the catalog's tools, whatever module prefix its id has.
+  return catalog.items.find((item) => item.kind === "tool" && candidates.includes(slugOfId(item.id)))?.id ?? ref;
 }
 
 export function applyBackground(ledger: Ledger) {

@@ -250,7 +250,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     }
     if (application.hpMax) { next = { ...next, hp: { ...next.hp, max: next.hp.max + application.hpMax, terms: [...next.hp.terms, { label, value: application.hpMax }], breakdown: [...next.hp.breakdown, `${label} +${application.hpMax}`] } }; notes.push(`최대 HP +${application.hpMax}`); }
     if (application.spellDc || application.spellAttack) {
-      next = { ...next, spellcasting: next.spellcasting.map((entry) => (application.spellcastingClass && !(entry.source === "class" && entry.classId.endsWith(`.${application.spellcastingClass}`)) ? entry : {
+      next = { ...next, spellcasting: next.spellcasting.map((entry) => (application.spellcastingClass && !(entry.source === "class" && catalog.classBySlug(application.spellcastingClass)?.id === entry.classId) ? entry : {
         ...entry,
         ...(application.spellDc ? { saveDc: entry.saveDc + application.spellDc, saveDcTerms: [...entry.saveDcTerms, { label, value: application.spellDc }] } : {}),
         ...(application.spellAttack ? { attackBonus: entry.attackBonus + application.spellAttack, attackTerms: [...entry.attackTerms, { label, value: application.spellAttack }] } : {}),

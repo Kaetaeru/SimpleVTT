@@ -17,14 +17,21 @@ export const SKILL_ABILITY: Record<string, AbilityKey> = {
   stealth: "dex", survival: "wis",
 };
 
-export const INSTRUMENT_KO: Record<string, string> = {
-  bagpipes: "백파이프", drum: "북", dulcimer: "덜시머", flute: "플루트", horn: "호른", lute: "류트", lyre: "리라", "pan-flute": "팬플루트", shawm: "숌", viol: "비올",
-};
-export const GAMING_SET_KO: Record<string, string> = { dice: "주사위 세트", dragonchess: "드래곤체스 세트", "playing-cards": "카드 세트", "three-dragon-ante": "삼룡 앤티 세트" };
-
-export const TOOL_ID_PREFIX = "dnd.srd521.item.tool.";
-export const instrumentToolId = (variant: string) => `${TOOL_ID_PREFIX}musical-instrument:${variant}`;
-export const gamingSetToolId = (variant: string) => `${TOOL_ID_PREFIX}gaming-set:${variant}`;
+/**
+ * V1b (D253): a tool or item that comes in variants names them in its own config — `variants`, `variantNames`
+ * (the label of each), `variantGroup` (the choice lists that offer it: `instrument`, `gaming-set`) and
+ * `variantLabel: "alone"` when a variant is called by its own name ("류트", not "악기 (류트)").
+ */
+export const variantNameOf = (item: { config: Record<string, unknown> } | undefined, variant: string) => (item?.config.variantNames as Record<string, string> | undefined)?.[variant] ?? variant;
+const variantTool = (catalog: ContentCatalog, group: string) => catalog.items.find((item) => item.config.variantGroup === group);
+function variantOptions(catalog: ContentCatalog, group: string, label: string, taken?: (id: string) => boolean): ChoiceOption[] {
+  const base = variantTool(catalog, group);
+  const variants = Array.isArray(base?.config.variants) ? (base!.config.variants as string[]) : [];
+  return variants.map((variant) => {
+    const id = `${base!.id}:${variant}`;
+    return { id, name: variantNameOf(base, variant), nameEn: variant, group: label, ...(taken?.(id) ? { disabledReason: "이미 숙련" } : {}) };
+  });
+}
 
 export function skillOptions(catalog: ContentCatalog, filter?: string[] | "any", taken?: (id: string) => boolean): ChoiceOption[] {
   const ids = filter && filter !== "any" ? filter : Object.keys(catalog.skills);
@@ -53,26 +60,16 @@ export function abilityOptions(keys: readonly AbilityKey[] = ABILITY_KEYS, score
 export function toolName(catalog: ContentCatalog, toolId: string) {
   const [base, variant] = toolId.split(":");
   const item = catalog.itemById(base);
-  if (variant) {
-    if (base.endsWith("musical-instrument")) return INSTRUMENT_KO[variant] ?? variant;
-    if (base.endsWith("gaming-set")) return GAMING_SET_KO[variant] ?? variant;
-    return `${item?.name ?? base} (${variant})`;
-  }
+  if (variant) return item?.config.variantLabel === "alone" ? variantNameOf(item, variant) : `${item?.name ?? base} (${variantNameOf(item, variant)})`;
   return item?.name ?? base;
 }
 
 export function instrumentOptions(catalog: ContentCatalog, taken?: (id: string) => boolean): ChoiceOption[] {
-  return catalog.index.instrumentVariants.map((variant) => {
-    const id = instrumentToolId(variant);
-    return { id, name: INSTRUMENT_KO[variant] ?? variant, nameEn: variant, group: "악기", ...(taken?.(id) ? { disabledReason: "이미 숙련" } : {}) };
-  });
+  return variantOptions(catalog, "instrument", "악기", taken);
 }
 
 export function gamingSetOptions(catalog: ContentCatalog, taken?: (id: string) => boolean): ChoiceOption[] {
-  return catalog.index.gamingSetVariants.map((variant) => {
-    const id = gamingSetToolId(variant);
-    return { id, name: GAMING_SET_KO[variant] ?? variant, nameEn: variant, group: "게임 도구", ...(taken?.(id) ? { disabledReason: "이미 숙련" } : {}) };
-  });
+  return variantOptions(catalog, "gaming-set", "게임 도구", taken);
 }
 
 export function artisanToolOptions(catalog: ContentCatalog, taken?: (id: string) => boolean): ChoiceOption[] {

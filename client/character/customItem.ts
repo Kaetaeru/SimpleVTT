@@ -41,7 +41,7 @@ type Raw = Record<string, unknown>;
 const isObject = (value: unknown): value is Raw => typeof value === "object" && value !== null && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === "string" ? value : undefined);
 
-/** A base named by catalog id, English name or Korean name ("longsword", "dnd.srd521.item.weapon.longsword", "장검"). */
+/** A base named by catalog id, English name or Korean name ("longsword", a full catalog id, "장검"). */
 function findBase(catalog: ContentCatalog, name: string) {
   const needle = name.trim().toLowerCase();
   return catalog.itemById(name) ?? catalog.items.find((item) => item.id.endsWith(`.${needle}`) || item.nameEn.toLowerCase() === needle || item.name === name.trim());

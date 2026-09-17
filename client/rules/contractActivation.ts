@@ -122,6 +122,8 @@ export interface ContractUse {
   hitDie?: boolean;
   /** H5c (D246): the pool is spent by a number the player chooses (안수) — `resource.change` with amount `{ref: "use.points"}`. */
   points?: boolean;
+  /** V1a (D253): the part of the turn a use takes, from the contract's `economy` payment (`action`, `bonus-action`, `reaction`). */
+  economy?: string;
 }
 
 /** H5c (D246): the amount a player chooses when pressing the button. */
@@ -144,6 +146,8 @@ function formula(dice: string | undefined, amount: Parameters<typeof evaluate>[0
 export function contractUse(contract: CommonPlayContract, scope: Scope, label: string): ContractUse | undefined {
   const use: ContractUse = {};
   let found = false;
+  const economy = contract.payments.find((payment) => payment.kind === "economy")?.bucket;
+  if (economy) use.economy = economy;
   for (const operation of operationsOf(contract)) {
     if (!live(operation, scope)) continue;
     if (operation.kind === "resource.change") {

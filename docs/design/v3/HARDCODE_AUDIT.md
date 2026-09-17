@@ -84,6 +84,8 @@
 | `activation.ts` `featureRuleKey` ID 규칙 | ID 체계 해석. |
 | `model.ts` `ReactionPrompt.kind`의 `"shield"`·`"counterspell"` (H6b) | 저장된 캠페인 채팅 기록이 이 창 종류를 들고 있다. 이름을 바꾸면 옛 기록이 깨진다. 어떤 주문이 답하는지는 `spellId`와 색인이 정한다. |
 | `scripts/generate-monster-catalog.mjs` 스탯 블록 문장 해석(명중·피해·내성·`repeatSave`) (H6c) | 콘텐츠 생성기가 SRD 번역 문장을 한 번 읽어 몬스터 JSON 필드로 적는다. 실행 코드는 필드만 읽고, 모듈·붙여넣은 NPC는 필드를 직접 쓴다. |
+| `PageCanvas.tsx` 토큰 복제 이름 정규식("고블린 2") | 사용자가 붙인 토큰 이름에 번호를 붙이는 UI. 콘텐츠 규칙이 아니다. |
+| 계약 안내문 | V1(D253)부터 규칙을 읽지 않는다. 행동 경제는 `payments`의 `economy`. |
 | `tracks.ts` 진행표 행 단어 `"Ability Score Improvement"`, `"Epic Boon"`, `"Subclass Feature"`, `/Subclass$/` (H4) | 직업 진행표 형식의 어휘. SRD와 모듈 직업표가 같은 단어로 행을 쓴다. |
 
 ## 5. 진행 순서 (제안)

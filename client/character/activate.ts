@@ -88,17 +88,13 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
 }
 
 /**
- * R65 (D200): which part of the turn a use belongs to. The content carries no economy payments yet, so the
- * activation note decides — "추가 행동" and "반응" are written there; a bare "행동" is the action; anything else
- * (행동 폭증, 기 점수 소비) costs nothing of the turn by itself and sits with the actions.
+ * R65 (D200): which part of the turn a use belongs to. V1a (D253): the contract says so with an `economy` payment
+ * (`bonus-action`, `reaction`, `action`); it used to be read out of the reminder text, which also took "행동 폭증"
+ * and "질주 행동 동안" for the action itself. Anything without one costs nothing of the turn and sits with the actions.
  */
 export type FeatureEconomy = "action" | "bonus" | "reaction" | "free";
-export function featureEconomy(note: string | undefined): FeatureEconomy {
-  const text = note ?? "";
-  if (/추가 행동|Bonus/i.test(text)) return "bonus";
-  if (/반응/.test(text)) return "reaction";
-  if (/(^|[\s·])행동($|[\s·])/.test(text)) return "action";
-  return "free";
+export function featureEconomy(bucket: string | undefined): FeatureEconomy {
+  return bucket === "bonus-action" ? "bonus" : bucket === "reaction" ? "reaction" : bucket === "action" ? "action" : "free";
 }
 
 /** Features the turn panel offers: those with a rule to activate, with their remaining uses. */
@@ -114,7 +110,7 @@ export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRunt
     const contract = catalog ? featureContract(catalog, featureRuleKey(feature.id)) : undefined;
     const pressable = Boolean(activation.resourceId || activation.points || activation.roll || activation.duration || activation.heal || activation.tempHp || activation.hitDie
       || contract?.entryPoints.some((entry) => entry.invocation === "manual" && entry.operations.some((operation) => operation.kind !== "adjudication.request")));
-    const economy = featureEconomy(activation.note);
+    const economy = featureEconomy(activation.economy);
     return [{ feature, activation, pool, left, bonus: economy === "bonus", economy, pressable }];
   });
 }

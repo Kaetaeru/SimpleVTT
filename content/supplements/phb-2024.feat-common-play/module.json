@@ -292,6 +292,16 @@
          }
         ]
        }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
       ]
      }
     }
@@ -668,6 +678,16 @@
           "question": "추가 행동 · 히트 다이스의 크기대로 굴리세요 (여기서는 d10으로 적어 둡니다)"
          }
         ]
+       }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
        }
       ]
      }
@@ -1743,6 +1763,16 @@
          }
         ]
        }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
       ]
      }
     }
@@ -1793,6 +1823,16 @@
          }
         ]
        }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "reaction",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
       ]
      }
     }
@@ -1833,6 +1873,16 @@
           "question": "5피트 안의 다른 이를 노린 공격에 반응으로 불리 (방패 필요) — 장면에 위치가 없어 표에서 선언합니다"
          }
         ]
+       }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "reaction",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
        }
       ]
      }
@@ -2130,6 +2180,16 @@
           "question": "장비한 방패로 후려치기: DC 8 + 근력 + 숙련의 근력 내성, 실패면 5피트 밀기 또는 넘어짐 (턴당 한 번)"
          }
         ]
+       }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "reaction",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
        }
       ]
      }
@@ -2557,6 +2617,16 @@
          }
         ]
        }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "reaction",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
       ]
      }
     }
@@ -2688,6 +2758,16 @@
          }
         ]
        }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
       ]
      }
     }
@@ -2815,6 +2895,16 @@
          }
         ]
        }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "reaction",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
       ]
      }
     }
@@ -2902,6 +2992,16 @@
           "question": "d10 열 개의 풀 — 추가 행동으로 원하는 만큼 굴려 회복, 긴 휴식에 전부 회복"
          }
         ]
+       }
+      ],
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
        }
       ]
      }

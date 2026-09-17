@@ -68,6 +68,8 @@ export interface FeatureActivation {
   note?: string;
   /** R59 (D194): the use spends one of this character's hit dice and heals by what it rolls (튼튼함's 신속한 회복). */
   hitDie?: boolean;
+  /** V1a (D253): the part of the turn the use takes (the contract's economy payment). */
+  economy?: string;
 }
 
 
@@ -93,7 +95,7 @@ export function featureRuleKey(featureId: string) {
 
 
 /** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
-export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean; /** R78 (D213), R81 (D215): used when a short rest ends or initiative is rolled, not pressed. */ trigger?: string } | undefined;
+export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean; /** R78 (D213), R81 (D215): used when a short rest ends or initiative is rolled, not pressed. */ trigger?: string } | undefined;
 
 /**
  * The activation for a feature: from its contract, else a pool named after the feature (`resource.<rule key>`).
@@ -112,7 +114,7 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
   if (fromContract?.duration || fromContract?.use || fromContract?.acts) {
     const use = fromContract.use;
     return {
-      ...(use?.points ? { points: true } : {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
+      ...(use?.points ? { points: true } : {}), ...(use?.economy ? { economy: use.economy } : {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
       ...(use?.heal ? { heal: () => use.heal! } : {}), ...(use?.tempHp ? { tempHp: () => use.tempHp! } : {}),
       ...(use?.roll ? { roll: () => use.roll! } : {}), ...(use?.note ? { note: use.note } : {}),
       // R59 (D194): a use that spends a hit die rolls it and heals by the result.
