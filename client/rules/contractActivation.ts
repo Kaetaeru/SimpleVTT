@@ -129,6 +129,13 @@ export interface ContractUse {
 /** H5c (D246): the amount a player chooses when pressing the button. */
 export const CHOSEN_POINTS_REF = "use.points";
 
+/**
+ * V3b (D256): the property a contract uses to say "the app applies this elsewhere" — a subclass line whose features
+ * each have their own contract, a choice the creation screen asks, a pool whose size the progression already sets.
+ * It changes nothing and asks nothing; the sheet marks the feature as applied instead of "표에서 판단".
+ */
+export const APPLIED_ELSEWHERE = "rule.applied-elsewhere";
+
 /** R59 (D194): the id a contract uses to mean "one of this character's hit dice". */
 export const HIT_DIE_RESOURCE = "resource.hit-die";
 
@@ -278,6 +285,8 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
       case "adjudication.request": questions.push(operation.question); break;
       case "property.modify": {
         mechanical = true;
+        // V3b (D256): a rule the app applies somewhere else (a choice, the progression table, another feature's contract) says so here.
+        if (operation.property === APPLIED_ELSEWHERE) { rules.push(operation.note ?? ""); break; }
         const amount = operation.dice ? `+${operation.dice}` : signed(number(operation.value));
         const WHERE: Record<string, string> = {
           "ac.bonus": "AC", "ac.unarmored-base": "방어구 없을 때 기본 AC", "ac.minimum": "AC 최소",

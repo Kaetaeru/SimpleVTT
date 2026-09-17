@@ -93,6 +93,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
     // were, and an effect whose whole rule is prose is described by its `adjudication.request`s.
     if (operation.kind === "adjudication.request") { if (!operation.when || evaluate(operation.when, scope) === true) { notes.push(operation.question); describes = true; } continue; }
     if (operation.kind !== "property.modify") continue;
+    // V3b (D256): a note that the rule is applied elsewhere is not a standing property of this effect.
+    if (operation.property === "rule.applied-elsewhere") continue;
     describes = true;
     if (operation.when && evaluate(operation.when, scope) !== true) continue;
     if (operation.note) notes.push(operation.note);

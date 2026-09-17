@@ -1650,7 +1650,7 @@ export class TableHost {
     const shieldSpell = targetCharacter && !waits && resolution.outcome === "hit" && !fixed && !this.reactionUsed(targetRef) ? reactionSpellIds("attack.hit-self").find((spellId) => Boolean(this.options.pcReactionSpell?.(targetCharacter, spellId))) : undefined;
     const canShield = Boolean(shieldSpell);
     const guards = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef)
-      ? this.options.pcGuards?.(target.entry, "attack.hit-self") ?? [] : [];
+      ? (this.options.pcGuards?.(target.entry, "attack.hit-self") ?? []).filter((guard) => !guard.damageTypes?.length || prepared.spec.damage.some((part) => guard.damageTypes!.map(damageTypeKey).includes(damageTypeKey(part.type)))) : [];
     // R57 (D192): if the creature that was hit has nothing to answer with, a bystander whose contract declares
     // `attack.hit-ally` is asked instead. The target is always asked first — it is their skin — and only one window
     // opens per swing, because the card is held once and a second holder would fight the first over it.

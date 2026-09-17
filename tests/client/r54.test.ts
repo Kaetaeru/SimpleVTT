@@ -35,7 +35,10 @@ test("R54: 공격 흘리기 offers itself when an attack lands, with its own num
   assert.equal(offers[0].reduce, `1d10+${expected}`);
   assert.equal(offers[0].acBonus, undefined, "this one soaks damage rather than raising AC");
   assert.ok(guardHint(offers[0]).startsWith(`피해 −1d10+${expected}`), guardHint(offers[0]));
-  assert.ok(guardHint(offers[0]).includes("타격·관통·참격"), guardHint(offers[0]));
+  assert.ok(guardHint(offers[0]).includes("타격·관통·참격 피해에만"), guardHint(offers[0]));
+  // V3b (D256): from monk 13 (에너지 흘리기) the reduction is for every type.
+  const master = build({ name: "몽크", classes: "monk", level: 13, abilities: { dex: 16 } });
+  assert.equal(pcGuards({ runtime: initialRuntime(master.derived) }, master.derived, catalog(), "attack.hit-self")[0].damageTypes, undefined);
   // A fighter has no such contract, so no window opens for them.
   const fighter = build({ name: "전사", classes: "fighter", level: 5 });
   assert.deepEqual(pcGuards({ runtime: initialRuntime(fighter.derived) }, fighter.derived, catalog(), "attack.hit-self"), []);

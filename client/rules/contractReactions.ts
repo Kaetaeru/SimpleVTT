@@ -17,6 +17,7 @@ import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
 import { characterScope, evaluate, type ContractPayment, type Scope } from "./contract";
 import { featureRuleKey } from "./activation";
+import { damageTypeKo } from "./resolve";
 import { featureContract } from "./contractActivation";
 
 /**
@@ -35,6 +36,8 @@ export interface GuardOffer {
   acBonus?: number;
   /** Damage it takes off, as a formula the host rolls ("1d10+8"). */
   reduce?: string;
+  /** V3b (D256): the damage types the reduction is for (공격 흘리기: bludgeoning, piercing, slashing below monk 13). */
+  damageTypes?: string[];
   /** R95 (D230): the damage of the attack that just landed is halved (기묘한 회피). */
   halve?: boolean;
   /** R57 (D192): facts those two numbers wait on — unticked, the reaction does nothing but say its line. */
@@ -82,7 +85,7 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
         } else if (operation.kind === "property.modify" && operation.property === "damage-taken.reduce") {
           const flat = Number(evaluate(operation.value, scope));
           const parts = [operation.dice, Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""].filter(Boolean);
-          if (parts.length) { offer.reduce = parts.join(""); if (factId) offer.reduceFact = factId; }
+          if (parts.length) { offer.reduce = parts.join(""); if (factId) offer.reduceFact = factId; if (operation.damageTypes?.length) offer.damageTypes = operation.damageTypes; }
         } else if (operation.kind === "adjudication.request") {
           if (operation.fact?.at === "reaction") offer.facts.push({ id: operation.fact.id, question: operation.question });
           else offer.notes.push(operation.question);
@@ -98,7 +101,7 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
 
 /** One line for the prompt, so the player can choose without opening their sheet. */
 export const guardHint = (offer: GuardOffer) =>
-  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}` : "", offer.halve ? "피해 절반" : "", ...offer.notes, ...offer.facts.map((fact) => fact.question)].filter(Boolean).join(" · ");
+  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}${offer.damageTypes?.length ? ` (${offer.damageTypes.map(damageTypeKo).join("·")} 피해에만)` : ""}` : "", offer.halve ? "피해 절반" : "", ...offer.notes, ...offer.facts.map((fact) => fact.question)].filter(Boolean).join(" · ");
 
 /** Roll a plain `NdX+M` formula with the host's own roller, so a reaction's number is as reproducible as any other. */
 export function rollGuard(formula: string, random: () => number): number {
