@@ -4,6 +4,7 @@
  * concentration and conditions. Read-only views for the resolver and the command bar.
  */
 import catalogJson from "../../src/generated/spellExecutionCatalog.generated.json";
+import sustainJson from "../../content/indexes/dnd-srd-5.2.1.spell-sustain.json";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
 export interface SpellDuration { kind: "concentration" | "rounds" | "minutes" | "hours" | "instant" | "special" | "permanent"; amount?: number; anchorActorId?: string; boundary?: "start" | "end" }
@@ -29,11 +30,44 @@ export interface SpellExec {
   effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration }>;
   trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration }>;
   ritual?: boolean;
+  /** R77 (D212): how the spell is used again while it lasts, when that differs from the default (see `sustainOf`). */
+  sustain?: Partial<SpellSustain> | false;
+  /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
+  repeat?: { economy: SpellSustain["economy"] };
 }
+
+/** R77 (D212): a concentration spell used again without a slot — its economy, and a different effect when it has one. */
+export interface SpellSustain { economy: "action" | "bonus-action" | "none"; primary?: SpellPrimary; note?: string }
 
 const raw = catalogJson as unknown as { definitions: Record<string, SpellExec> | SpellExec[] };
 const list: SpellExec[] = Array.isArray(raw.definitions) ? raw.definitions : Object.values(raw.definitions);
 const byId = new Map(list.map((entry) => [entry.spellId, entry]));
+
+const DAMAGE_KINDS = new Set(["attack-damage", "save-damage", "save-compound-damage", "automatic-projectiles", "multi-attack-damage"]);
+const BUILTIN_SUSTAIN = (sustainJson as unknown as { spells: Record<string, Partial<SpellSustain> | false> }).spells;
+
+/**
+ * R77 (D212): whether a spell in effect can be used again without a slot, and how. A concentration spell that deals
+ * damage repeats its first effect: a single-target one with the economy it was cast with (영적 무기's bonus action,
+ * 흡혈의 손길's action), an area one as a roll that costs the caster nothing (a creature entered 달빛 광선). Anything
+ * else — 마녀 화살's bonus-action 1d12, a spell with no repeat — is written as `sustain` on the spell's mechanics or in
+ * content/indexes/dnd-srd-5.2.1.spell-sustain.json.
+ */
+export function sustainOf(exec: SpellExec): SpellSustain | null {
+  const authored = exec.sustain ?? BUILTIN_SUSTAIN[exec.spellId];
+  if (authored === false) return null;
+  if (!authored && !(exec.concentration && DAMAGE_KINDS.has(exec.primary.kind))) return null;
+  const economy = authored?.economy ?? (exec.targeting.maxTargets > 1 ? "none" : exec.castingEconomy === "bonus-action" ? "bonus-action" : "action");
+  return { economy, ...(authored?.primary ? { primary: authored.primary } : {}), ...(authored?.note ? { note: authored.note } : {}) };
+}
+
+/** R77 (D212): the execution of one repeat — the sustain's effect, no new lasting effect, marked as a repeat. */
+export function sustainedExec(exec: SpellExec): SpellExec | null {
+  const sustain = sustainOf(exec);
+  if (!sustain) return null;
+  const { trackedEffects: _tracked, ...rest } = exec;
+  return { ...rest, primary: sustain.primary ?? exec.primary, castingEconomy: sustain.economy === "bonus-action" ? "bonus-action" : "action", repeat: { economy: sustain.economy } };
+}
 
 /** R76 (D211): spells the generated catalog does not know — an installed module's, and any spell with no mechanics at all. */
 const installed = new Map<string, SpellExec>();

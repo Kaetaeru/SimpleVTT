@@ -805,7 +805,7 @@ export class TableHost {
         const prepared = this.prepareSpell(caster, command.spellId, command.method);
         if (!prepared) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
         const exec = prepared.spec.exec;
-        if (!isGm && !command.readied && exec.castingEconomy !== "reaction" && this.tracker.turns.length && this.turnOf(command.caster)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 시전할 수 있습니다 (남의 턴에는 반응 주문·준비한 행동만)");
+        if (!isGm && !command.readied && exec.castingEconomy !== "reaction" && exec.repeat?.economy !== "none" && this.tracker.turns.length && this.turnOf(command.caster)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 시전할 수 있습니다 (남의 턴에는 반응 주문·준비한 행동만)");
         // R11: answering a shield prompt — the reaction spell against the held attack.
         // R16: answering a counterspell prompt — Counterspell against the held cast.
         let heldPrompt: ChatMessage | undefined;
@@ -841,7 +841,8 @@ export class TableHost {
         const alreadyAsked = this.counterAsked ?? [];
         this.counterAsked = null;
         const economy = exec.castingEconomy === "bonus-action" ? "bonus" : "action";
-        if (!command.reaction && exec.castingEconomy !== "reaction") {
+        // R77 (D212): a repeat of a spell already in effect is not a casting, so there is nothing to counter.
+        if (!command.reaction && exec.castingEconomy !== "reaction" && !exec.repeat) {
           const counterer = this.findCounterspeller(command.caster, caster, alreadyAsked);
           if (counterer) {
             const promptId = newMessageId();
@@ -863,6 +864,7 @@ export class TableHost {
         // slot and charge they had spent in between. It now refunds exactly what this cast took.
         const restoreCaster = () => { restoreNpcUse?.(); if (casterBefore.kind === "character" && spent) this.undoOnCaster(casterBefore.id, casterBefore.runtime, spent); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
         if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
+        else if (exec.repeat?.economy === "none") { /* R77 (D212): an area spell's roll when somebody walks in costs the caster nothing */ }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
         if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → 방패 시전` }); this.releaseHeld(heldPrompt.id, true); }

@@ -13,7 +13,7 @@ import type { ContentCatalog } from "../catalog/catalog";
 import { castSpell, type CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
-import { spellExec } from "../compendium/spells";
+import { spellExec, sustainedExec } from "../compendium/spells";
 import { applyDamage, immuneToCondition, noDamage, resolveAttack, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
 import { scrollStats } from "./scrolls";
 
@@ -367,7 +367,9 @@ export function castableSpells(derived: DerivedCharacter) {
 
 /** A PC's spell: the spec at the chosen level, the list's attack bonus and DC, and how the cost is paid (null: cannot). */
 export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCharacter, catalog: ContentCatalog, spellId: string, method?: CastMethod): { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null {
-  const exec = spellExec(spellId);
+  const base = spellExec(spellId);
+  // R77 (D212): a repeat of a spell in effect runs the sustain's execution at the level the spell was cast.
+  const exec = base && method?.kind === "sustain" ? sustainedExec(base) : base;
   const view = catalog.spellById(spellId);
   if (!exec || !view) return null;
   const list = derived.spellcasting.find((item) => item.cantrips.includes(spellId) || item.prepared.includes(spellId) || item.alwaysPrepared.includes(spellId)) ?? derived.spellcasting[0];
@@ -375,7 +377,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const fromScroll = method?.kind === "scroll";
   if (!list && !fromScroll) return null;
   const chosen: CastMethod = method ?? (view.level === 0 ? { kind: "cantrip" } : { kind: "slot", level: view.level });
-  const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : view.level;
+  const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec },
     casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}) },

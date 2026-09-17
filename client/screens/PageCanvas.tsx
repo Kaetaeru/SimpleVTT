@@ -29,7 +29,7 @@ import { resolveRuntime } from "../character/save";
 import type { DerivedFeature, DerivedItem } from "../character/types";
 import { itemUse } from "../rules/items";
 import { castableSpells } from "../rules/spellcast";
-import { describeSpellExec, spellExec } from "../compendium/spells";
+import { describeSpellExec, spellExec, sustainedExec, sustainOf } from "../compendium/spells";
 import type { CastMethod } from "../character/play";
 import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
@@ -586,7 +586,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   ];
   // 마법 (D102): the sheet's castable spells or the stat block's lists; targets from the board, the slot from a dialog.
   const castIt = async (spellId: string, name: string, forced?: CastMethod) => {
-    const exec = spellExec(spellId);
+    const base = spellExec(spellId);
+    const exec = base && forced?.kind === "sustain" ? sustainedExec(base) : base;
     if (!exec) return;
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
     let targets: string[] = selfOnly ? [token.id] : [];
@@ -608,11 +609,22 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, gm: true }); if (answer === null) return; overrides = answer.overrides; }
     c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined);
   };
+  // R77 (D212): a concentration spell that is still going can be used again without a slot — 영적 무기 as a bonus
+  // action, 흡혈의 손길 as an action, 달빛 광선's damage when somebody walks in (no economy at all).
+  const sustainItems = entry.kind === "character" && derived ? (currentRuntime().effects ?? []).filter((effect) => effect.source === "spell").flatMap((effect) => {
+    const spellId = effect.key.replace(/^spell:/, "");
+    const exec = spellExec(spellId);
+    const sustain = exec ? sustainOf(exec) : null;
+    if (!sustain) return [];
+    return [{ key: `sustain:${spellId}`, economy: sustain.economy, label: `↻ ${effect.name}`, hint: `${sustain.note ?? "지속 중인 주문을 다시"} · 슬롯 없음${sustain.economy === "none" ? " · 행동 소모 없음 (범위에 들어온 대상)" : ""}`, onSelect: () => void castIt(spellId, effect.name, { kind: "sustain" }) }];
+  }) : [];
   const spellItems = entry.kind === "character" && derived
     ? castableSpells(derived).map((id) => ({ id, view: catalog.spellById(id), exec: spellExec(id)! })).sort((a, b) => (a.view?.level ?? 0) - (b.view?.level ?? 0) || (a.view?.name ?? "").localeCompare(b.view?.name ?? "", "ko")).map(({ id, view, exec }) => ({ key: id, label: `${view?.level ? `${view.level}레벨 ` : "소마법 "}${view?.name ?? id}`, hint: describeSpellExec(exec), onSelect: () => void castIt(id, view?.name ?? id) }))
     : entry.kind === "npc"
       ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, label: `${item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${Math.max(0, (list.uses ?? 1) - (entry.runtime.uses?.[item.spellId!] ?? 0))}/${list.uses ?? 1} 남음 (일)` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, disabled: list.frequency === "per-day" && (entry.runtime.uses?.[item.spellId!] ?? 0) >= (list.uses ?? 1), onSelect: () => void castIt(item.spellId!, item.name) })))
       : [];
+  // R77 (D212): a bonus-action spell is found on the bonus-action row too, where the turn says it belongs.
+  const bonusSpellItems = spellItems.filter((item) => spellExec(item.key.split(":").pop() ?? "")?.castingEconomy === "bonus-action");
   // R9: the stat block's multiattack routine as one button (each attack its own card, one pre-roll dialog for all), its save
   // actions (breath, gaze) resolved like save spells (D103), and its legendary actions from the per-round pool (D104).
   const block = entry.kind === "npc" ? entry.statBlock : null;
@@ -663,6 +675,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={offAttack || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
           {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => { const needsHand = (def.kind === "grapple" || def.kind === "shove") && !freeHand; return <button type="button" key={def.kind} className="cl-btn small" disabled={off || needsHand || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={needsHand ? "빈 손이 없습니다 (보조 손이나 양손 무기를 내려놓으세요)" : def.summary} onClick={() => void take(def)}>{def.name}</button>; })}
           {saveActions.map((action) => { const waiting = Boolean(action.timing?.recharge && entry.kind === "npc" && entry.runtime.spent[action.name]); return <button type="button" key={action.name} className="cl-btn small attack" disabled={off || waiting} title={`${action.text.slice(0, 160)}${waiting ? " — 재충전 대기" : ""}`} onClick={() => void npcSaveWith(action.name)}>☄ {action.name} <b>DC {action.save!.dc}</b>{waiting ? <small className="cl-extra">재충전 대기</small> : null}</button>; })}
+          {sustainItems.filter((item) => item.economy !== "bonus-action").map((item) => <button type="button" key={item.key} className="cl-btn small attack" disabled={item.economy === "none" ? Boolean(blocked) : offAttack} title={item.hint} onClick={item.onSelect}>{item.label}{item.economy === "none" ? <small className="cl-extra">무료</small> : null}</button>)}
           <Dropdown up label="✨ 마법" disabled={offAttack || !spellItems.length} items={spellItems} />
           {legendaryPer ? <Dropdown up label={`👑 전설 ${legendaryLeft}/${legendaryPer}`} disabled={off || !inCombat || !legendaryLeft} items={legendaryItems} /> : null}
           <Dropdown up label="공식 행동" disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
@@ -670,6 +683,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
         </div>
         <div className="cl-cmd-row">
           <span className="cl-cmd-label">{mode === "turn" || inCombat ? chip("추가 행동", turn?.bonusUsed) : "추가 행동"}</span>
+          {sustainItems.filter((item) => item.economy === "bonus-action").map((item) => <button type="button" key={item.key} className="cl-btn small attack" disabled={off} title={item.hint} onClick={item.onSelect}>{item.label}</button>)}
+          {bonusSpellItems.length ? <Dropdown up label="✨ 추가 행동 마법" disabled={off} items={bonusSpellItems} /> : null}
           {bonusItems.map((item) => <button type="button" key={item.key} className={`cl-btn small${item.key === "note" ? " quiet" : " feature"}`} disabled={off || item.disabled} title={item.hint} onClick={item.onSelect}>{item.label}{item.uses ? <small className="cl-uses">{item.uses}</small> : null}</button>)}
         </div>
         {/* R29 (D155): the reaction is the one thing a player needs out of turn, so the row is there in combat. */}

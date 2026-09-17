@@ -374,12 +374,14 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
 }
 
 export interface SpellSummary { id: string; name: string; level: number; duration?: string; ritual?: boolean }
-export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string } | { kind: "scroll"; instanceId: string };
+export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string } | { kind: "scroll"; instanceId: string } | /** R77 (D212): using a spell in effect again — no cost, no new effect. */ { kind: "sustain" };
 
 /** Cast a spell: spend the slot, pact slot, free-cast pool or nothing (cantrip, ritual); a lasting spell becomes an effect. Null when the cost cannot be paid. */
 export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, spell: SpellSummary, method: CastMethod): CharacterRuntime | null {
   let next = runtime;
   let how = "";
+  // R77 (D212): a repeat pays nothing and starts nothing; it only needs the spell to still be going.
+  if (method.kind === "sustain") return (runtime.effects ?? []).some((effect) => effect.key === effectKeyForSpell(spell.id)) ? stamp(runtime, `지속: ${spell.name} (슬롯 없이)`) : null;
   switch (method.kind) {
     case "slot": {
       const max = derived.spellSlots[method.level] ?? 0;
@@ -415,6 +417,6 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
     }
   }
   const duration: ParsedDuration = parseDuration(spell.duration);
-  if (!duration.instantaneous) next = startEffect(next, { key: effectKeyForSpell(spell.id), name: spell.name, source: "spell", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds });
+  if (!duration.instantaneous) next = startEffect(next, { key: effectKeyForSpell(spell.id), name: spell.name, source: "spell", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds, level: method.kind === "slot" ? method.level : method.kind === "pact" ? derived.pactMagic?.level ?? spell.level : spell.level });
   return stamp(next, `시전: ${spell.name} (${how})${duration.instantaneous ? "" : ` — ${duration.text}`}`);
 }

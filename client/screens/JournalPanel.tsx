@@ -11,7 +11,7 @@ import type { Macro } from "../campaign/model";
 import { canEdit, findByName, journalFolders, journalTree, newHandout, newJournalCharacter, newJournalNpc, parseJournalText, pendingFor, pendingValue } from "../campaign/journal";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import type { SpellView } from "../catalog/catalog";
-import { spellExec } from "../compendium/spells";
+import { spellExec, sustainedExec } from "../compendium/spells";
 import { castSpell, type CastMethod } from "../character/play";
 import { CUSTOM_MONSTER_EXAMPLE, parseCustomMonster } from "../compendium/customMonster";
 import { deriveCharacter } from "../character/derive";
@@ -496,7 +496,8 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
   const castFromSheet = async (spell: SpellView, method: CastMethod) => {
     const page = viewer.snapshot.pages.find((item) => item.tokens.some((token) => token.represents === entry.id));
     const token = page?.tokens.find((item) => item.represents === entry.id);
-    const exec = spellExec(spell.id);
+    const base = spellExec(spell.id);
+    const exec = base && method.kind === "sustain" ? sustainedExec(base) : base;
     if (!page || !token || !exec) { saveRuntime((current) => castSpell(current, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method) ?? current); return; }
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
     let targets = selfOnly ? [token.id] : await requestTargets(`${spell.name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`}, Shift로 여러 명)` : ""}`, { multi: exec.targeting.maxTargets > 1 });

@@ -104,6 +104,8 @@ export interface ActiveEffect {
   endSave?: { ability: AbilityKey; dc: number; conditions: string[] };
   /** R39 (D179): paused by another effect (an antimagic field) — still on the sheet, contributing nothing, with the reason. */
   suppressed?: string;
+  /** R77 (D212): the slot level a spell was cast at, so a repeat rolls the same dice. */
+  level?: number;
 }
 
 /** What an active effect changed on the sheet, for the effects card. `applied` false: no rule yet, apply the text by hand. */

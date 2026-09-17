@@ -13,6 +13,7 @@ import { effectKeyForFeature, effectKeyForSpell, featureActivation, parseDuratio
 import { characterScope } from "../rules/contract";
 import { contractDurations } from "../rules/contractActivation";
 import { RARITY_KO } from "../character/customItem";
+import { spellExec, sustainOf } from "../compendium/spells";
 import { Pill, signed } from "../ui/components";
 import { Explain } from "../ui/Explain";
 
@@ -351,7 +352,7 @@ function SpellRows({ ids, catalog, derived, runtime, actions, casting, setCastin
                 <span className="cl-spell-name">{name}{spell?.ritual ? <span className="cl-quiet cl-small"> 의식</span> : null}{duration.concentration ? <Pill tone="accent">집중</Pill> : null}</span>
                 {spell ? <span className="cl-quiet cl-small cl-spell-meta">{spell.castingTime.split(/[—,]/)[0]} · {spell.duration}</span> : null}
                 {live && spell ? (
-                  active ? <button type="button" className="cl-btn small danger" onClick={() => actions!.endEffect(effectKeyForSpell(id))}>종료</button>
+                  active ? <>{(() => { const exec = spellExec(id); const sustain = exec ? sustainOf(exec) : null; return sustain ? <button type="button" className="cl-btn small primary" title={`${sustain.note ?? "지속 중인 주문을 다시"} · 슬롯 없음`} onClick={() => actions!.castSpell(spell, { kind: "sustain" })}>↻ 다시</button> : null; })()}<button type="button" className="cl-btn small danger" onClick={() => actions!.endEffect(effectKeyForSpell(id))}>종료</button></>
                   : options.length === 1 ? <button type="button" className="cl-btn small primary" onClick={() => actions!.castSpell(spell, options[0].method)}>시전</button>
                   : <button type="button" className="cl-btn small primary" disabled={options.length === 0} title={options.length === 0 ? "쓸 수 있는 슬롯이 없습니다" : undefined} onClick={() => setCasting(casting === id ? null : id)}>시전{options.length > 1 ? " ▾" : ""}</button>
                 ) : null}

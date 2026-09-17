@@ -1,0 +1,32 @@
+{
+ "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+ "schemaVersion": "0.1-draft",
+ "moduleId": "phb-2024.spell-mechanics-patch",
+ "moduleVersion": "0.1-draft",
+ "rulesProfile": { "id": "dnd.srd-5.2.1", "version": "0.1-draft" },
+ "defaultLocale": "ko-KR",
+ "source": { "document": "Player's Handbook", "version": "2024", "license": "not-srd", "srdDerived": false },
+ "dependencies": [ { "moduleId": "phb-2024-supplement", "version": "1" } ],
+ "conflicts": [],
+ "capabilities": [],
+ "extensionPoints": [],
+ "content": [
+  {
+   "id": "phb2024.spell.witch-bolt",
+   "category": "spell",
+   "tags": [ "spell", "phb-2024", "config-patch" ],
+   "mechanics": [
+    {
+     "kind": "spell-mechanic",
+     "config": {
+      "sustain": {
+       "economy": "bonus-action",
+       "primary": { "kind": "automatic-projectiles", "damageType": "lightning", "projectileDice": { "sides": 12 }, "baseProjectiles": 1 },
+       "note": "R77 (D212): 이후 각 턴 추가 행동으로 번개 피해 1d12 자동 적중"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

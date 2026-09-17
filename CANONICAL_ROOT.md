@@ -14,7 +14,7 @@ unit_gate: npm run gate:client
 e2e_gate: npm run gate:e2e                  # scripts/run-client-e2e.mjs
 exe: npm run tauri:build                    # src-tauri/tauri.conf.json → dist-client
 current_status_pointer: docs/CURRENT.md
-current_spec: docs/design/v3/ROLL20_TABLE_SPEC.md   # 요소 전수 + 결정 기록 D1~D211, 로드맵 R1~R76
+current_spec: docs/design/v3/ROLL20_TABLE_SPEC.md   # 요소 전수 + 결정 기록 D1~D212, 로드맵 R1~R77
 handoff: docs/HANDOFF.md                    # 새 세션이 먼저 읽을 것 — 진행 방식·현재 상태·막힌 것들
 current_plan: docs/design/v3/NEW_CLIENT.md
 scenarios: docs/design/v3/SESSION_SCENARIOS.md      # SC-1~SC-62, 증거 스크린샷과 짝
@@ -30,14 +30,14 @@ working_branch: claude/practical-newton-rye61w
   `content/`뿐이다.
 - `client/rules/` — 규칙 엔진(순수). 공격·주문·행동·통달·소환·두루마리. 호스트가 이걸 돌리고 결과만 문서에 쓴다.
 - `client/session/` — 호스트 권위(`TableHost`)와 거울(`TableClient`), 프로토콜(현재 v30). 판정은 전부 호스트에서 난다.
-- `tests/client/*.test.ts` — 단위 332개. `scripts/capture-client-*.mjs` — 브라우저 E2E 17개, 증거는
+- `tests/client/*.test.ts` — 단위 336개. `scripts/capture-client-*.mjs` — 브라우저 E2E 17개, 증거는
   `docs/evidence/new-client-m1/`.
 
 ## Authority
 
 1. 소유자의 최신 대화 지시와 명시적 결정.
 2. live GitHub의 branch/PR/CI 상태(문서가 병합이나 테스트 성공을 대신하지 않음).
-3. `docs/HANDOFF.md`, `docs/CURRENT.md`와 `docs/design/v3/ROLL20_TABLE_SPEC.md`의 결정 기록(D1~D211).
+3. `docs/HANDOFF.md`, `docs/CURRENT.md`와 `docs/design/v3/ROLL20_TABLE_SPEC.md`의 결정 기록(D1~D212).
 4. SRD 5.2.1(2024) 원문. 데이터에 없는 것은 발명하지 않고, 필요하면 저작한 사실을 결정 기록에 남긴다(D113).
 5. 과거 T2·V1·Phase 문서와 `docs/design/v2/`는 증거와 재사용 참고이며 현재 NEXT가 아니다.
 
