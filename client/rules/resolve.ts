@@ -128,6 +128,8 @@ export interface AttackSpec {
    * flat rider is not "the weapon's damage dice", and an `onCrit` rule waits for a critical hit.
    */
   diceRules?: DiceRule[];
+  /** R94 (D229): saves the target makes because a chosen rider landed (기절 타격), each with the condition a failure gives. */
+  hitSaves?: Array<{ label: string; ability: string; dc: number; condition: string }>;
 }
 
 export interface DiceRule {

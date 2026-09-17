@@ -68,7 +68,7 @@ export interface ContractPayment {
 
 export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr }
-  | { kind: "condition.apply"; condition: string; target: string; when?: Expr }
+  | { kind: "condition.apply"; condition: string; target: string; when?: Expr; /** R94 (D229): resisted with this save (기절 타격). */ save?: { ability: string; dc: Expr } }
   | { kind: "healing.apply"; dice?: string; amount?: Expr; target: string; when?: Expr }
   | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr }
   /**
@@ -253,7 +253,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     const at = `${path}[${index}]`;
     if (!OPERATION_KINDS.has(kind)) { unsupported.push(`${at}: ${kind || "이름 없는 연산"}`); return; }
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: isExpr(operation.amount) ? operation.amount : { value: operation.amount ?? 0 } }); return; }
-    if (kind === "condition.apply") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}) }); return; }
     if (kind === "condition.remove") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     const expr = (raw: unknown, fallback = 0) => (isExpr(raw) ? raw : { value: raw === undefined ? fallback : raw });

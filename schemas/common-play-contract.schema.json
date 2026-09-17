@@ -1694,6 +1694,16 @@
           "type": "string",
           "minLength": 1
         },
+        "save": {
+          "description": "R94 (D229): the target resists with this saving throw; the condition lands only on a failure, until the start of the source's next turn.",
+          "type": "object",
+          "required": ["ability", "dc"],
+          "properties": {
+            "ability": { "enum": ["str", "dex", "con", "int", "wis", "cha"] },
+            "dc": { "$ref": "#/$defs/expression" }
+          },
+          "additionalProperties": false
+        },
         "target": {
           "type": "string",
           "minLength": 1

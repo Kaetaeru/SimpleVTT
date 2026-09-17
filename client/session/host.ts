@@ -1704,6 +1704,11 @@ export class TableHost {
     // R82 (D218): a smite spell is cast as a bonus action.
     if (riders.spellSmite) this.markUsed(held.inputs.attacker, "bonus");
     const card = this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
+    // R94 (D229): a rider that forces a save (기절 타격) posts it as its own card, undone with the swing.
+    for (const rule of prepared.spec.hitSaves ?? []) {
+      const save = this.riderSave(attacker, target, rule, Boolean(held.waits), held.inputs.by);
+      if (save) this.childOf(() => { if (this.spells.has(save)) this.undoCard(save, "", held.inputs.by); }, card);
+    }
     if (riders.spellSmite && attacker.entry.kind === "character") {
       const save = this.smiteSave(attacker, target, riders.spellSmite, Boolean(held.waits), held.inputs.by);
       // R86 (D221): undoing the swing takes the smite save card back with it.
@@ -1716,6 +1721,22 @@ export class TableHost {
    * R82 (D218): the save a smite spell asks of the creature it hit (분노의 강타's 지혜, 휘감는 일격's 근력), rolled against
    * the caster's spell DC and posted as its own card — the same card, conditions, effects and undo a cast save gets.
    */
+  /** R94 (D229): the save a feature rider forces, as a card: the condition lands on a failure until the start of the attacker's next turn. */
+  private riderSave(attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, rule: { label: string; ability: string; dc: number; condition: string }, waits: boolean, by: string) {
+    const live = this.resolveActor(this.refOf(target)) ?? target;
+    const combatant = this.combatantOf(live);
+    const stats = this.statsOf(live);
+    const caster = this.combatantOf(this.resolveActor(this.refOf(attacker)) ?? attacker);
+    if (!combatant || !stats || !caster) return;
+    const duration = { kind: "rounds" as const, amount: 1, anchorActorId: "$source", boundary: "start" as const };
+    const exec: SpellExec = { spellId: `feature:${rule.label}`, baseLevel: 0, castingEconomy: "action", targeting: { kind: "creature", minTargets: 1, maxTargets: 1 }, primary: { kind: "save-effect", saveAbility: rule.ability, duration }, effects: [{ conditionId: rule.condition, trigger: "failed-save", duration }] };
+    const spec = { spellId: exec.spellId, name: rule.label, level: 0, exec };
+    const casterStats = { attackBonus: 0, saveDc: rule.dc, modifier: 0, level: 1 };
+    const resolution = resolveSpell({ caster, casterStats, spec, targets: [{ combatant, stats }], dice: diceFrom(this.options.random ?? Math.random), apply: !waits });
+    const player = this.campaign.players.find((item) => item.userId === by);
+    return this.postSpell(resolution, [live], () => undefined, waits, player?.displayName ?? "", by, { spec, casterStats });
+  }
+
   private smiteSave(attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, smite: { spellId: string; slot: number }, waits: boolean, by: string) {
     const rule = onHitOf(spellExec(smite.spellId))?.save;
     if (!rule || attacker.entry.kind !== "character") return;

@@ -125,7 +125,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey;
     const dodging = key === "dex" && (target.conditions.includes("회피") || target.effects.includes("회피"));
     // R31 (D161): 마법 저항 — advantage on this save when what forced it is a spell, not a stat-block action.
-    const resistant = Boolean(target.magicResistance) && input.spec.exec.spellId.slice(0, 4) !== "npc:";
+    const resistant = Boolean(target.magicResistance) && !/^(npc|feature):/.test(input.spec.exec.spellId);
     // R61 (D196): and whatever the target's own contracts said about saving throws (전투 시전자's concentration,
     // 튼튼함's death saves). The reason rides on the row, as 회피 and 마법 저항 already do.
     const declared = advantageFor(stats, "saving-throw", { ability: key });

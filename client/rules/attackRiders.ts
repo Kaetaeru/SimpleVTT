@@ -15,6 +15,7 @@ import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
 import { ATTACK_INVOCATIONS, characterScope, evaluate, type CommonPlayContract, type Scope } from "./contract";
 import { diceRuleOf, type DiceRule } from "./resolve";
+import { CONDITION_KO } from "../compendium/spells";
 import { attackScopeFilter } from "./contractEffects";
 import { featureRuleKey } from "./activation";
 import { featureContract } from "./contractActivation";
@@ -48,9 +49,13 @@ export interface ContractRider {
   facts: Array<{ id: string; question: string }>;
   /** R60 (D195): what declaring it does to the weapon's own damage dice. */
   dice: DiceRule[];
+  /** R94 (D229): a save the target makes when this rider lands, and the condition a failure puts on it (기절 타격). */
+  saves: Array<{ ability: string; dc: number; condition: string }>;
   resourceId?: string;
   cost: number;
 }
+
+const SAVE_KO: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
 
 /** The formula a `damage.apply` names, with its dice count resolved against the character. */
 function formulaOf(operation: { dice?: string; diceCount?: unknown; amount?: unknown }, scope: Scope): string | undefined {
@@ -73,7 +78,7 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
     const moment = entry.invocation === "on-hit" ? "on-hit" : "pre-roll";
     const rider: ContractRider = {
       key, label, hint: "", moment, ...(entry.attack.scope ? { scope: entry.attack.scope } : {}),
-      oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], dice: [], cost: 0,
+      oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], dice: [], saves: [], cost: 0,
     };
     const hints: string[] = [];
     // R57 (D192): a fact this entry point declares is a checkbox, not prose; an operation gated on one carries the
@@ -93,13 +98,16 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);
         if (rule) rider.dice.push(rule);
+      } else if (operation.kind === "condition.apply" && operation.save && operation.target === "attack-target") {
+        const dc = Number(evaluate(operation.save.dc, scope));
+        if (Number.isFinite(dc)) rider.saves.push({ ability: operation.save.ability, dc, condition: operation.condition });
       } else if (operation.kind === "adjudication.request") {
         if (operation.fact?.at === moment) rider.facts.push({ id: operation.fact.id, question: operation.question });
         else hints.push(operation.question);
       }
     }
-    rider.hint = [...rider.damage.map((part) => `피해 +${part.formula}`), ...rider.dice.map((rule) => DICE_RULE_KO[rule.mode](rule.value)), ...hints, ...(rider.oncePerTurn ? ["턴당 한 번"] : [])].join(" · ");
-    if (rider.damage.length || rider.dice.length || hints.length || rider.facts.length) riders.push(rider);
+    rider.hint = [...rider.damage.map((part) => `피해 +${part.formula}`), ...rider.saves.map((save) => `${SAVE_KO[save.ability] ?? save.ability} 내성 DC ${save.dc} 실패 시 ${CONDITION_KO[save.condition] ?? save.condition}`), ...rider.dice.map((rule) => DICE_RULE_KO[rule.mode](rule.value)), ...hints, ...(rider.oncePerTurn ? ["턴당 한 번"] : [])].join(" · ");
+    if (rider.damage.length || rider.dice.length || rider.saves.length || hints.length || rider.facts.length) riders.push(rider);
   }
   return riders;
 }

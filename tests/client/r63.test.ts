@@ -253,3 +253,18 @@ test("R92: 거상 학살자 is offered only against a wounded creature, with no 
   const card = t.cards().at(-1)!;
   assert.ok(card.action.damage.some((part) => part.part.label === offer.label && part.part.formula === "1d8"), JSON.stringify(card.action.damage.map((part) => [part.part.label, part.part.formula])));
 });
+
+test("R94: 기절 타격 spends a focus point and makes the target roll its Constitution save on a card (D229)", async () => {
+  const t = await table("monk", 5);
+  const fist = t.derived.attacks[0];
+  t.dm.send({ type: "act.attack", attacker: t.refs.pc, targets: [t.refs.target], attack: { source: "weapon", attackId: fist.id }, overrides: { outcome: "hit" } });
+  await tick();
+  const offer = t.open()[0]?.prompt?.onHit?.offers.find((item) => item.key.endsWith("stunning-strike"));
+  assert.ok(offer, JSON.stringify(t.open().map((message) => message.prompt?.onHit?.offers.map((item) => item.key))));
+  t.dm.send({ type: "act.onhit", messageId: t.open()[0].id, choices: [offer.key] });
+  await tick();
+  const save = [...t.host.archive].reverse().find((message) => message.type === "spell" && message.spell)?.spell?.targets[0].save;
+  assert.deepEqual([save?.ability, save?.dc], ["con", 8 + t.derived.abilities.wis.modifier + t.derived.proficiencyBonus], JSON.stringify(save));
+  const used = Object.entries(t.sheet().runtime.resourcesUsed).find(([id]) => id.includes("focus"))?.[1];
+  assert.equal(used, 1, "one focus point");
+});
