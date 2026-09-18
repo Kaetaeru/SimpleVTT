@@ -49,11 +49,9 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const strikes: NonNullable<TableOutcome["strikes"]> = [];
   const conditionSaves: NonNullable<TableOutcome["conditionSaves"]> = [];
   const effects: NonNullable<TableOutcome["effects"]> = [];
-  const formula = (operation: { dice?: string; amount?: unknown }) => {
-    const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
-    const parts = [operation.dice, Number.isFinite(flat) && flat ? `${operation.dice ? (flat > 0 ? "+" : "-") : ""}${Math.abs(flat as number)}` : ""].filter(Boolean);
-    return parts.join("") || undefined;
-  };
+  // D300: the dice may be named by expressions instead of a literal formula (영감의 외투: 2 × the bard's own die).
+  const formula = (operation: { dice?: string; amount?: unknown; diceCount?: unknown; diceSides?: unknown }) =>
+    useFormula(operation.dice, operation.amount as never, scope, operation.diceCount as never, operation.diceSides as never);
   let stabilizes = false;
   for (const entry of contract.entryPoints) {
     if (ATTACK_INVOCATIONS.has(entry.invocation)) continue;

@@ -43,7 +43,7 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
 export const PROPERTIES = [
   "ac.bonus", "ac.unarmored-base", "ac.minimum",
   "attack-roll.bonus", "damage.bonus", "saving-throw.bonus", "ability-check.bonus", "skill.<id>.bonus",
-  "speed.walk", "speed.fly", "speed.climb", "speed.fly-as-walk", "weapon.shillelagh", "hp.maximum", "hp.heal-on-start", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
+  "speed.walk", "speed.fly", "speed.climb", "speed.fly-as-walk", "speed.swim", "speed.swim-as-walk", "weapon.shillelagh", "hp.maximum", "hp.heal-on-start", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
   "senses.darkvision", "senses.blindsight", "resistance", "condition-immunity",
   // R51 (D186): what the PHB feats needed and the vocabulary did not have.
   "damage-taken.reduce", "damage.ignore-resistance",
@@ -124,6 +124,11 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "speed.fly": application.speed = { ...application.speed, fly: number(operation, scope) }; break;
       case "speed.climb": application.speed = { ...application.speed, climbAsWalk: true }; break;
       case "speed.fly-as-walk": application.speed = { ...application.speed, flyAsWalk: true }; break;
+      // D300: a swimming speed of its own, or one equal to the walking speed (수중 친화, 원소 보행, 연어).
+      case "speed.swim": application.speed = { ...application.speed, swim: number(operation, scope) }; break;
+      case "speed.swim-as-walk": application.speed = { ...application.speed, swimAsWalk: true }; break;
+      // R60 (D195): the weapon's own damage dice — read by the rider and critical paths, never as a standing property.
+      case "damage.extra-die": case "damage.reroll-lowest": case "damage.die-minimum": break;
       // V4s (D281): the spell names the weapons it arms and the die they roll — neither is in the code.
       case "weapon.shillelagh": { const p = operation.params ?? {}; const itemIds = Array.isArray(p.items) ? p.items.map(String) : []; if (itemIds.length && operation.dice) application.shillelagh = { itemIds, dice: operation.dice }; break; }
       case "hp.maximum": application.hpMax = (application.hpMax ?? 0) + (number(operation, scope) ?? 0); break;

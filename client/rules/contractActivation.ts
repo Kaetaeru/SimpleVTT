@@ -164,6 +164,12 @@ export const questionText = (operation: { question: string; amount?: Parameters<
 export function formula(dice: string | undefined, amount: Parameters<typeof evaluate>[0], scope: Scope, diceCount?: Parameters<typeof evaluate>[0], diceSides?: Parameters<typeof evaluate>[0]): string | undefined {
   const value = amount === undefined ? undefined : evaluate(amount, scope);
   const flat = typeof value === "number" ? value : undefined;
+  // D300: a use may name only how many dice and how big they are (영감의 외투: two of the bard's inspiration die).
+  if (!dice && diceCount !== undefined && diceSides !== undefined) {
+    const many = Number(evaluate(diceCount, scope));
+    const size = Number(evaluate(diceSides, scope));
+    if (Number.isFinite(many) && Number.isFinite(size) && size > 0) dice = `${Math.max(1, Math.floor(many))}d${Math.floor(size)}`;
+  }
   if (!dice) return flat === undefined ? undefined : String(flat);
   const count = diceCount === undefined ? undefined : evaluate(diceCount, scope);
   if (typeof count === "number") dice = dice.replace(/^[0-9]*d/, `${Math.max(1, Math.floor(count))}d`);
@@ -259,8 +265,8 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
     if (operation.kind === "property.modify" && operation.property === "resource.lockout" && operation.params?.resource && operation.dice) { use.lockout = { resourceId: resourceIdOf(String(operation.params.resource)), dice: operation.dice }; found = true; continue; }
     // V4a (D263): healing and temporary hit points aimed at others are the table's, not the user's own sheet.
     if ((operation.kind === "healing.apply" || operation.kind === "temp-hp.grant") && atOthers(operation.target)) continue;
-    if (operation.kind === "healing.apply") { use.heal = formula(operation.dice, operation.amount, scope); found = true; continue; }
-    if (operation.kind === "temp-hp.grant") { use.tempHp = formula(operation.dice, operation.amount, scope); found = true; continue; }
+    if (operation.kind === "healing.apply") { use.heal = formula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides); found = true; continue; }
+    if (operation.kind === "temp-hp.grant") { use.tempHp = formula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides); found = true; continue; }
     if (operation.kind === "damage.apply") {
       // V4a (D263): damage aimed at other creatures is rolled by the table against them, not logged here.
       if (atOthers(operation.target)) continue;

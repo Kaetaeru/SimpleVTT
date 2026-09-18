@@ -1427,7 +1427,8 @@ export class TableHost {
           if (!interfere && !sameActor(attackRecord.inputs.attacker, promptMessage.prompt.reactor)) return refuse("그 공격을 한 쪽만 다시 굴립니다");
           if (!this.resolveActor(attackRecord.inputs.attacker) || !this.resolveActor(attackRecord.inputs.targets[attackRecord.inputs.targetIndex])) return refuse("공격자나 대상이 더 없습니다 (카드는 그대로 둡니다)");
           const dice = diceFrom(this.options.random ?? Math.random);
-          const plan = planRollModify(pick.interceptor.operations, pick.scope, dice);
+          // D300: a rule that imposes (dis)advantage after the fact needs the die that is already on the card.
+          const plan = planRollModify(pick.interceptor.operations, pick.scope, dice, undefined, attackRecord.resolution.d20s?.[0]);
           if (plan.d20 === undefined && !plan.delta && !plan.forceSuccess) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
           if (pick.interceptor.oncePerTurn) this.useThisTurn(reactor.entry.id, [`rescue:${pick.ruleKey}`]);
           attackRecord.restore();

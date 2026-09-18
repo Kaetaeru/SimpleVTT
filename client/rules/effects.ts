@@ -29,7 +29,7 @@ export interface EffectApplication {
   /** Every ability check and skill. */
   checks?: { value?: number; dice?: string };
   skills?: Array<{ id: string; value: number }>;
-  speed?: { add?: number; multiply?: number; fly?: number; climbAsWalk?: boolean; flyAsWalk?: boolean };
+  speed?: { add?: number; multiply?: number; fly?: number; climbAsWalk?: boolean; flyAsWalk?: boolean; /** D300: a swimming speed, or one equal to the walking speed. */ swim?: number; swimAsWalk?: boolean };
   hpMax?: number;
   spellDc?: number;
   /** Class slug the spell DC/attack bonus is limited to (Innate Sorcery: sorcerer only). */
@@ -194,7 +194,9 @@ export function effectApplication(effect: ActiveEffect, derived: DerivedCharacte
   const key = effectRuleKey(effect, catalog);
   // R38 (D178): the contract is the source of truth where the content ships one; the hand-written rule is what is
   // left of the ones nobody has written yet. A test asserts the two agree for every effect that has both.
-  const contract = catalog.contractFor(key);
+  // D300: a contract may be written under the bare rule key (`<feature id>`) or the namespaced one (`feature:<id>`);
+  // `featureContract` already tries both, and an effect started from the same feature has to look the same way.
+  const contract = catalog.contractFor(key) ?? catalog.contractFor(key.replace(/^feature:/, ""));
   if (contract) {
     // R39: a contract that only says when the effect *ends* (`effect.apply`) says nothing about what it does, so it
     // must not stand in for a hand-written rule that does. Only `property.modify` makes it the source of truth.
@@ -339,6 +341,8 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
       const speed = { ...next.speed, walk, terms };
       if (application.speed.fly) { speed.fly = Math.max(speed.fly ?? 0, application.speed.fly); notes.push(`비행 ${application.speed.fly}ft`); }
       if (application.speed.climbAsWalk) { speed.climb = walk; notes.push(`등반 ${walk}ft`); }
+      if (application.speed.swim) { speed.swim = Math.max(speed.swim ?? 0, application.speed.swim); notes.push(`수영 ${application.speed.swim}ft`); }
+      if (application.speed.swimAsWalk) { speed.swim = Math.max(speed.swim ?? 0, walk); notes.push(`수영 ${walk}ft`); }
       if (application.speed.flyAsWalk) { speed.fly = Math.max(speed.fly ?? 0, walk); notes.push(`비행 ${walk}ft`); }
       next = { ...next, speed };
     }

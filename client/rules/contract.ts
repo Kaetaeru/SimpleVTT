@@ -71,7 +71,7 @@ export interface ContractPayment {
 export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr; when?: Expr }
   | { kind: "condition.apply"; condition: string; target: string; when?: Expr; /** R94 (D229): resisted with this save (기절 타격). */ save?: { ability: string; dc: Expr }; /** V4b (D264): how long it lasts (default: until the start of the source's next turn). */ duration?: ConditionDuration; /** V4b (D264): the bearer repeats the save at the end of each of its turns. */ repeatSave?: "turn-end"; /** V4b (D264): what a successful save still leaves on the target (충격의 일격). */ successMark?: TargetMark }
-  | { kind: "healing.apply"; dice?: string; amount?: Expr; target: string; when?: Expr; /** V4a (D263): one amount shared out among the chosen creatures, none past half its maximum (생명 보존). */ pool?: "half-max" }
+  | { kind: "healing.apply"; dice?: string; /** D300: the dice an expression decides (바드의 영감 주사위로 주는 회복). */ diceCount?: Expr; diceSides?: Expr; amount?: Expr; target: string; when?: Expr; /** V4a (D263): one amount shared out among the chosen creatures, none past half its maximum (생명 보존). */ pool?: "half-max" }
   | { kind: "roll.modify"; mode: string; dice?: string; /** V4l (D274): the die size an expression decides (바드의 영감 주사위: 레벨별 d6~d12). */ diceSides?: Expr; value?: Expr; diceResourceId?: string; when?: Expr }
   /**
    * R38 (D178): the general modifier. `property` names what changes in this engine's vocabulary (`ac.bonus`,
@@ -95,7 +95,7 @@ export type ContractOperation =
    */
   | { kind: "resource.change"; resourceId: string; amount: Expr; target: string; when?: Expr; /** V4c (D265): give uses back until this many are left (지속되는 격노, 완벽한 집중). */ upTo?: boolean; /** V4j (D272): the spell slot level a reserved slot resource spends or gives back (마법의 샘의 교환). */ level?: number }
   /** R40 (D180): dice rolled and applied as healing or temporary hit points; `dice` and `amount` add up to the formula. */
-  | { kind: "temp-hp.grant"; dice?: string; amount?: Expr; target: string; when?: Expr }
+  | { kind: "temp-hp.grant"; dice?: string; /** D300: the dice an expression decides (영감의 외투: 바드의 영감 주사위 두 배). */ diceCount?: Expr; diceSides?: Expr; amount?: Expr; target: string; when?: Expr }
   /** R40 (D180): dice rolled and logged as damage a feature deals (Breath Weapon), without choosing who takes it. */
   | { kind: "damage.apply"; dice?: string; /** R52 (D187): how many of `dice` to roll, when a level table decides it (광란's 격노 피해 보너스만큼의 d6). */ diceCount?: Expr; /** V4a (D263): the die size, when an expression decides it (a marked spell's die). */ diceSides?: Expr; amount?: Expr; damageType: string; target: string; when?: Expr; /** V4a (D263): the targets save against it; a success halves it or takes it all away. */ save?: { ability: string; dc: Expr; success: "half" | "none" } }
   /** R41 (D181): the last of the vocabulary — the rest of what a contract may ask this engine to do. */
@@ -288,7 +288,11 @@ export type TriggerEvent = typeof REST_INVOCATION | typeof INITIATIVE_INVOCATION
  */
 export const SLOT_LEVELS_RESOURCE = "resource.spell-slot-levels";
 export const PACT_SLOT_RESOURCE = "resource.pact-slot";
-const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "set-die", "subtract-die", "force-success"]);
+/**
+ * D300: `reroll-keep-lower` and `reroll-keep-higher` are disadvantage and advantage imposed *after* the die has
+ * spoken — the second die is rolled and the worse (or better) of the two stands (수호의 섬광, 그림자 회피).
+ */
+const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "reroll-keep-lower", "reroll-keep-higher", "set-die", "subtract-die", "force-success"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
   const list = Array.isArray(raw) ? raw : [];
@@ -301,7 +305,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: isExpr(operation.amount) ? operation.amount : { value: operation.amount ?? 0 }, when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}), ...(parseDuration(operation.duration) ? { duration: parseDuration(operation.duration) } : {}), ...(operation.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}), ...(parseTargetMark(operation.successMark) ? { successMark: parseTargetMark(operation.successMark) } : {}) }); return; }
     if (kind === "condition.remove") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
-    if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.pool === "half-max" ? { pool: "half-max" as const } : {}) }); return; }
+    if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, ...(isExpr(operation.diceCount) ? { diceCount: operation.diceCount } : {}), ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.pool === "half-max" ? { pool: "half-max" as const } : {}) }); return; }
     const expr = (raw: unknown, fallback = 0) => (isExpr(raw) ? raw : { value: raw === undefined ? fallback : raw });
     if (kind === "hp.maximum.change") { out.push({ kind, amount: expr(operation.amount), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "life.stabilize") { out.push({ kind, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
@@ -342,7 +346,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
       const raw = operation.amount;
       const amount = isExpr(raw) ? raw : raw === undefined ? undefined : { value: raw };
       if (kind === "damage.apply") out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, diceCount: isExpr(operation.diceCount) ? operation.diceCount : operation.diceCount === undefined ? undefined : { value: operation.diceCount }, ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), ...(operation.save && typeof operation.save === "object" ? { save: { ability: String((operation.save as Record<string, unknown>).ability ?? "con"), dc: expr((operation.save as Record<string, unknown>).dc, 10), success: (operation.save as Record<string, unknown>).success === "none" ? "none" as const : "half" as const } } : {}), amount, damageType: String(operation.damageType ?? "타격"), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined });
-      else out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined });
+      else out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, ...(isExpr(operation.diceCount) ? { diceCount: operation.diceCount } : {}), ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), amount, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     if (kind === "effect.apply") {
@@ -606,7 +610,7 @@ export interface RollModifyPlan {
  * reproducible as everything else it rolls; `poolDie` answers `subtract-die`'s `diceResource` (the bard's
  * inspiration die), which this engine does not track yet and which therefore contributes nothing rather than a guess.
  */
-export function planRollModify(operations: ContractOperation[], scope: Scope, dice: { d: (sides: number) => number }, poolDie?: (resourceId: string) => number | undefined): RollModifyPlan {
+export function planRollModify(operations: ContractOperation[], scope: Scope, dice: { d: (sides: number) => number }, poolDie?: (resourceId: string) => number | undefined, /** D300: the d20 already on the card, so a rule that imposes (dis)advantage can keep the worse or better die. */ current?: number): RollModifyPlan {
   const plan: RollModifyPlan = { delta: 0, parts: [] };
   const rollDice = (formula: string) => {
     const match = /^(\d*)d(\d+)$/.exec(formula.trim());
@@ -626,6 +630,18 @@ export function planRollModify(operations: ContractOperation[], scope: Scope, di
         if (!rolled) break;
         plan.d20 = rolled.total;
         plan.parts.push(`${operation.dice ?? "1d20"} 재굴림 → ${rolled.total}`);
+        break;
+      }
+      // D300: disadvantage (or advantage) after the fact — roll again and keep the worse (or better) die. Without the
+      // die that was already rolled there is nothing to compare against, so the new one simply stands.
+      case "reroll-keep-lower":
+      case "reroll-keep-higher": {
+        const rolled = rollDice(operation.dice ?? "1d20");
+        if (!rolled) break;
+        const keep = current === undefined ? rolled.total
+          : operation.mode === "reroll-keep-lower" ? Math.min(current, rolled.total) : Math.max(current, rolled.total);
+        plan.d20 = keep;
+        plan.parts.push(`${operation.mode === "reroll-keep-lower" ? "불리점" : "이점"}: ${current === undefined ? "" : `${current} / `}${rolled.total} → ${keep}`);
         break;
       }
       case "add-die": {

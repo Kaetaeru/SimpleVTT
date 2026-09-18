@@ -471,7 +471,8 @@ export class ContentCatalog {
       const classId = entry.relationships.find((rel) => rel.kind === "parent")?.target ?? "";
       const data = authored.get(entry.id);
       // H7b (D252): a module subclass writes its choices in `subclass-definition`, as the SRD extras do.
-      const def = mechanic<Pick<SrdSubclassData, "choices" | "spellsByOption">>(entry, "subclass-definition") ?? {};
+      // H7b (D252) + D300: a module subclass writes its choices — and the spells it always prepares, by class level — here.
+      const def = mechanic<Pick<SrdSubclassData, "choices" | "spellsByOption"> & { spells?: Record<string, string[]> }>(entry, "subclass-definition") ?? {};
       const features: SubclassFeature[] = [];
       if (data) {
         for (const feature of data.features) features.push({ ...feature, descriptionSource: "srd-summary" });
@@ -484,7 +485,8 @@ export class ContentCatalog {
         }
       }
       const spells: Record<number, string[]> = {};
-      for (const [level, names] of Object.entries(data?.spells ?? {})) spells[Number(level)] = names.map((name) => this.spellByName(name)?.id ?? name);
+      // D300: the module's own list wins where it has one; either spelling of a spell (id or English name) resolves.
+      for (const [level, names] of Object.entries(def.spells ?? data?.spells ?? {})) spells[Number(level)] = (Array.isArray(names) ? names : [names]).map((name) => this.spellById(name)?.id ?? this.spellByName(name)?.id ?? name);
       views.push({ id: entry.id, classId, name: entry.name, nameEn: entry.nameEn, summary: entry.summary ?? data?.summary, description: entry.description, features: features.sort((a, b) => a.level - b.level), spells, choices: def.choices ?? data?.choices ?? [], spellsByOption: def.spellsByOption ?? data?.spellsByOption ?? {}, scope: entry.scope });
     }
     return views;

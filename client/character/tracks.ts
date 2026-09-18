@@ -228,7 +228,10 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
     // H3d (D242): a choice kept across levels runs its operations at their own level (땅 유형's resistance at 10).
     if (at && Number(p.atLevel ?? at.defaultLevel) !== at.level) continue;
     const amount = Number(evaluate(operation.value, scope)) || 1;
-    const CLASS_ONLY = new Set(["choice.spell", "choice.spells", "choice.fighting-style", "grant.cantrips", "grant.speed-bonus", "grant.martial-arts"]);
+    // D300: every operation that writes into a *class's* spell list or table belongs to a class feature; a species
+    // trait or a module entry that names one is told so instead of derailing the whole sheet.
+    const CLASS_ONLY = new Set(["choice.spell", "choice.spells", "choice.fighting-style", "grant.cantrips", "grant.speed-bonus", "grant.martial-arts",
+      "grant.spells", "grant.spellbook-picks", "grant.ritual-casting", "choice.class-option"]);
     if (!owner && (CLASS_ONLY.has(operation.property) || (operation.property === "choice.skills" && p.from === "class") || (operation.property === "grant.hp-per-level" && p.per !== "character"))) { ledger.warnings.push(`${featureName}: ${operation.property}은(는) 직업 특성에서만 씁니다`); continue; }
     const cls = owner as ClassView;
     const id = `class.${index}.${String(p.id ?? operation.property)}`;
