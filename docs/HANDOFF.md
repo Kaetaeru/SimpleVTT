@@ -85,14 +85,14 @@ npm run gate          # 위 둘을 순서대로
 
 ---
 
-## 3. 지금 상태 (2026-09-16 기준, 실측)
+## 3. 지금 상태 (2026-09-18 기준, 실측)
 
 | 항목 | 값 |
 |---|---|
 | 브랜치 | `claude/practical-newton-rye61w` (푸시 완료) |
-| 마지막 커밋 | `1ecc88ec` — M4 R62: machine keys for somebody else's feats (D197) |
-| 단위 시험 | **355개 통과** (`tests/client/*.test.ts`) |
-| E2E | **17/17 통과** (`scripts/capture-client-*.mjs`, 증거 78장) |
+| 마지막 커밋 | `2664e101 V0.9 V5k: the last eight lines say why they are the table's (D299)` |
+| 단위 시험 | **456개 통과** (`tests/client/*.test.ts`) |
+| E2E | **18/18 통과** (`scripts/capture-client-*.mjs`, V4 화면 검증 캡처 포함) |
 | 세션 프로토콜 | **v30** (`client/session/protocol.ts`) |
 | 결정 기록 | **D1~D299** |
 | 로드맵 | **R1~R70 전부 `✔`** — R63~R69는 2026-09-17 플레이 흐름 개편(`PLAY_FLOW_UX.md`), R70은 IP·포트 입장 |
