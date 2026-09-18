@@ -1040,3 +1040,20 @@ test("V5j: 반매혹 opens on an ally's failed save and rerolls it (D298)", asyn
   assert.deepEqual(ask!.prompt!.rescue!.features, ["대응의 노래"]);
   assert.ok((ask!.prompt!.rescue!.facts ?? []).length >= 2, JSON.stringify(ask!.prompt!.rescue!.facts));
 });
+
+test("V5k: every audit item that stays with the table says why, on the sheet (D299)", async () => {
+  const cat = catalog();
+  const owners: Array<[string, string]> = [
+    ["feature:bard.words-of-creation", "두 번째 대상"],
+    ["feature:sorcerer.draconic.dragon-companion", "집중"],
+    ["feature:wizard.memorize-spell", "준비 주문"],
+    ["feature:rogue.thief.fast-hands", "마법 행동"],
+    ["feature:barbarian.rage", "격노 중에는"],
+    ["feat:epic.fate", "남의 판정"],
+  ];
+  for (const [key, needle] of owners) {
+    const contract = cat.contractFor(key)!;
+    const questions = (contract?.entryPoints ?? []).flatMap((entry) => entry.operations).flatMap((operation) => (operation.kind === "adjudication.request" ? [operation.question] : []));
+    assert.ok(questions.some((question) => question.includes(needle)), `${key}: ${JSON.stringify(questions)}`);
+  }
+});

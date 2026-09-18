@@ -10,7 +10,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 - ✔ D265 효과의 턴마다 유지 조건(격노)이 코드의 콘텐츠 키 `"feature:barbarian.rage"`로 박혀 있었다(§2 위반, 검사가 놓침). — 효과 계약 `effect.upkeep`, 면제 `effect.upkeep-waived`, 검사 패턴 `contractKeys` 상한 0.
 
-- (D264: 판정 전 탑승물은 셈. 특성 사용·행동 폭증은 남음) once-per-turn은 명중 창 탑승물만 센다(`host.ts` useThisTurn). 판정 전 탑승물·특성 사용·행동 폭증은 세지 않고 시트가 "직접 세어 주세요"라고 쓴다. — [host-hook] 턴 사용 기록을 판정 전 창·사용 버튼에도.
+- ✔ D299 (특성 사용의 턴당 1회는 세지 않음 — 각 계약이 그 사실을 사유와 함께 적음) once-per-turn은 명중 창 탑승물만 센다(`host.ts` useThisTurn). 판정 전 탑승물·특성 사용·행동 폭증은 세지 않고 시트가 "직접 세어 주세요"라고 쓴다. — [host-hook] 턴 사용 기록을 판정 전 창·사용 버튼에도.
 - ✔ D264 명중 창 내성 실패 상태(`riderSave`)가 항상 "다음 내 턴 시작까지 1라운드"로 박혀 있다. 넘어짐·1분 중독·1분 무의식이 한 라운드 뒤 사라진다. — [new-grammar] `condition.apply`에 지속시간과 반복 내성.
 - ✔ D263 사용의 `healing.apply`/`temp-hp.grant`가 남 대상이어도 사용자 자신도 회복했다(`contractUse`). — 남 대상은 표로만.
 - ✔ D263 양수 `resource.change`(풀 회복)가 적용되지 않았다. — `contractOutcome.restores`.
@@ -26,7 +26,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 바바리안
 - ✔ D266 relentless-rage (11) — 0 HP 순간 가로채기 없음, 건강 내성 없음, HP를 레벨×2로 두지 않음, DC 누적이 풀로 잘못 모델링. — [new-grammar + host-hook]
-- (D265: 근력 유리·유지 조건은 계약으로, 시전 금지는 남음) rage (1) — 근력 판정·내성 유리가 문구뿐(속성 있음). 주문 시전·집중 금지, 조기 종료 조건, 연장이 문구. — [data-fix + host-hook]
+- ✔ D299 (시전 금지는 시전 창을 막는 자리가 없어 사유 있는 라벨) rage (1) — 근력 판정·내성 유리가 문구뿐(속성 있음). 주문 시전·집중 금지, 조기 종료 조건, 연장이 문구. — [data-fix + host-hook]
 - ✔ D265 persistent-rage (15) — 수동 +1 버튼. 규칙은 이니셔티브 때 전부 회복, 긴 휴식당 1회. — [data-fix]
 - ✔ D264 berserker.intimidating-presence (14) — 추가 행동·지혜 내성·공포·반복 내성·긴 휴식 1회·격노로 회복 없음. — [new-grammar]
 - ✔ D277 berserker.mindless-rage (6) — 언제든 누르는 해제 버튼. 격노 중 면역이어야. — [new-grammar] 효과 중 조건부 속성.
@@ -67,7 +67,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D263 thief.thiefs-reflexes (17) — 기습 제외는 2014 문구, 2024엔 없음. — [data-fix] 문구 제거 (D263의 기습 버튼은 2024 기습 규칙: 이니셔티브 불리).
 - ✔ D263 thief.use-magic-device (13) — 충전 d6·두루마리 지능 판정이 손 작업. — [host-hook]
 - ✔ D265 thief.supreme-sneak (9) — 조건 문구가 틀림(엄폐 뒤에서 턴 끝). — [data-fix + button]
-- (D265: 행동 메뉴에 마법 행동이 없어 안내) thief.fast-hands (9) — 마법 행동을 추가 행동으로 누락. — [data-fix]
+- ✔ D299 (행동 메뉴에 마법 행동이 없어 사유 있는 라벨) thief.fast-hands (9) — 마법 행동을 추가 행동으로 누락. — [data-fix]
 
 ## 바드
 - ✔ D266 bardic-inspiration (1) — 아군이 주사위를 받지 않음. 실패한 d20에 구조로 제시해야. — [new-grammar + host-hook]
@@ -75,7 +75,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D274 college-of-lore.peerless-skill (14) — 고정 1d12, 영감 주사위여야. — [data-fix]
 - ✔ D265 superior-inspiration (18) — 수동 +2. 이니셔티브 때 2까지. — [data-fix + new-grammar]
 - ✔ D298 countercharm (7) — 매혹·공포 내성 실패 시 반응 재굴림 계산 가능. — [host-hook]
-- words-of-creation (20) — 두 번째 대상. — [picker]
+- ✔ D299 (두 번째 대상을 고르는 자리가 없어 사유 있는 라벨) words-of-creation (20) — 두 번째 대상. — [picker]
 - ✔ D286 (확인: 2레벨·9레벨 각각 2개, 9레벨에 4개 전문화) expertise (2/9) — 9레벨 두 번째 선택 확인 필요. — [data-fix?]
 - ✔ D263 font-of-inspiration (5) — 슬롯으로 영감 회복이 손 작업. — [data-fix] D263 슬롯 결제·풀 회복으로.
 
@@ -126,7 +126,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D272 font-of-magic (2) — 슬롯↔점수 변환 없음. — [new-grammar + picker]
 - ✔ D265 innate-sorcery (1) — 효과에 속성 없음(DC +1, 주문 명중 유리), 추가 행동 결제 없음. — [data-fix]
 - ✔ D265 draconic.dragon-wings (14) — 비행 60·추가 행동·횟수 없음. — [data-fix]
-- draconic.dragon-companion (18) — 집중 없음이 문구. — [picker]
+- ✔ D299 (집중을 끄는 자리가 없어 사유 있는 라벨) draconic.dragon-companion (18) — 집중 없음이 문구. — [picker]
 - ✔ D265 metamagic.twinned-spell — 2014 비용 문구. — [data-fix]
 - ✔ D296 sorcery-incarnate / arcane-apotheosis (7/20) — 점수로 선천 마법, 메타매직 둘·무료. — [data-fix + picker]
 - ✔ D297 elemental-affinity (6) — 멀티클래스 시 능력치 오류. — [data-fix]
@@ -141,8 +141,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 
 ## 위저드
 - ✔ D265 evoker.evocation-savant (3) — 추가한 주문을 준비 선택지에서 못 고름(`spells.ts` 준비 선택지가 `picked`만). — [engine bug]
-- memorize-spell (5) — 짧은 휴식 준비 교체 없음. — [picker]
-- spell-mastery (18) — 주문서 안의 주문이 아니라 목록 전체. — [data-fix] `from: spellbook`.
+- ✔ D299 (짧은 휴식 창에 준비 교체가 없어 사유 있는 라벨) memorize-spell (5) — 짧은 휴식 준비 교체 없음. — [picker]
+- ✔ D299 (주문서 확인은 사유 있는 라벨) spell-mastery (18) — 주문서 안의 주문이 아니라 목록 전체. — [data-fix] `from: spellbook`.
 - ✔ D297 evoker.overchannel (14) — 멀티클래스 시 위저드 주문 제한 없음. — [data-fix]
 
 ## 재주·종족·주문
@@ -150,7 +150,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D269 상태를 끝내는 주문의 `removesConditions`를 클라이언트가 읽지 않았다 — 표의 해제 줄로.
 ### 재주
 - ✔ D266 epic.combat-prowess — 빗나감이 치명타로 바뀜(SRD는 명중), 턴당 1회 없음. — [data-fix + new-grammar] 명중으로 바꾸기 모드, 턴 시작 초기화.
-- epic.fate — 자신의 실패에만 2d4, 60피트 안 다른 이의 판정·감점 불가, 이니셔티브 회복 없음. — [picker + host-hook]
+- ✔ D299 (남의 판정에 끼어드는 자리가 없어 사유 있는 라벨) epic.fate — 자신의 실패에만 2d4, 60피트 안 다른 이의 판정·감점 불가, 이니셔티브 회복 없음. — [picker + host-hook]
 - ✔ D276 epic.irresistible-offense — 치명타 추가 피해가 항상 근력 점수. — [data-fix] 올린 능력치.
 - ✔ D276 epic.night-spirit — 전부 문구, 저항 범위 틀림. — [button + data-fix]
 - ✔ D276 epic.spell-recall — 1~4레벨 무슬롯 시전 없음. — [picker]
