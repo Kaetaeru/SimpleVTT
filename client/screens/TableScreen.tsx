@@ -426,9 +426,10 @@ function PromptCard({ message, time, color }: { message: ChatMessage; time: stri
           : prompt.kind === "rescue" || prompt.kind === "death-save" ? <div>{message.content}</div>
           : <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>}
         {/* D301: the same buttons as the window over the board. The overlay is easy to miss — it only lives on the
-            scene, and it steps aside for a connected player — and a prompt nobody can press is a stuck table. */}
+            scene, and it steps aside for a connected player — and a prompt nobody can press is a stuck table.
+            D305: drawn once, here; the line below used to draw them a second time for anyone. */}
         {answerable ? <PromptChoices message={message} /> : null}
-        {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded || prompt.outcome.countered || prompt.outcome.chosen?.length ? "bad" : "accent"}>{prompt.kind === "on-hit" ? (prompt.outcome.chosen?.length ? prompt.outcome.chosen.join(" · ") : "안 함") : prompt.kind === "counterspell" ? (prompt.outcome.countered ? "주문 차단" : prompt.outcome.declined ? "차단 안 함" : "차단 실패") : prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
+        {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded || prompt.outcome.countered || prompt.outcome.chosen?.length ? "bad" : "accent"}>{prompt.kind === "on-hit" ? (prompt.outcome.chosen?.length ? prompt.outcome.chosen.join(" · ") : "안 함") : prompt.kind === "counterspell" ? (prompt.outcome.countered ? "주문 차단" : prompt.outcome.declined ? "차단 안 함" : "차단 실패") : prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : null}
       </div>
     </div>
   );
