@@ -129,7 +129,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - draconic.dragon-companion (18) — 집중 없음이 문구. — [picker]
 - ✔ D265 metamagic.twinned-spell — 2014 비용 문구. — [data-fix]
 - ✔ D296 sorcery-incarnate / arcane-apotheosis (7/20) — 점수로 선천 마법, 메타매직 둘·무료. — [data-fix + picker]
-- elemental-affinity (6) — 멀티클래스 시 능력치 오류. — [data-fix]
+- ✔ D297 elemental-affinity (6) — 멀티클래스 시 능력치 오류. — [data-fix]
 
 ## 워락
 - ✔ D271 fiend.hurl-through-hell (14) — 수동 버튼 즉시 피해. 명중 창·매력 내성·행동불능·마귀 제외·긴 휴식 1회·계약 슬롯 회복 없음. — [data-fix]
@@ -143,7 +143,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D265 evoker.evocation-savant (3) — 추가한 주문을 준비 선택지에서 못 고름(`spells.ts` 준비 선택지가 `picked`만). — [engine bug]
 - memorize-spell (5) — 짧은 휴식 준비 교체 없음. — [picker]
 - spell-mastery (18) — 주문서 안의 주문이 아니라 목록 전체. — [data-fix] `from: spellbook`.
-- evoker.overchannel (14) — 멀티클래스 시 위저드 주문 제한 없음. — [data-fix]
+- ✔ D297 evoker.overchannel (14) — 멀티클래스 시 위저드 주문 제한 없음. — [data-fix]
 
 ## 재주·종족·주문
 

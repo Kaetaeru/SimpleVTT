@@ -282,6 +282,10 @@ export interface DerivedCharacter {
   studiedAttacks?: boolean;
   /** H3 (D240): abilities whose saves total at least the ability score (불굴의 힘). */
   minimumScoreRolls?: AbilityKey[];
+  /** V5i (D297): the class whose spellcasting ability an element's damage bonus uses (원소 친화). */
+  damageTypeModifierClass?: string;
+  /** V5i (D297): the class whose spells the maximizing covers (과부하: 위저드). */
+  spellDamageMaximizedClass?: string;
   /** V5h (D296): how many metamagics one cast may carry (마법 화신). */
   metamagicLimit?: number;
   /** V5h (D296): one metamagic costs nothing, once a turn (비전의 신격). */

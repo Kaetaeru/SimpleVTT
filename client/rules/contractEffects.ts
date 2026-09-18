@@ -165,7 +165,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       // highest challenge rating it may take, and the params say which creatures and which movement is allowed.
       case "form.assume": { const p = operation.params ?? {}; application.form = { creatureTypes: Array.isArray(p.creatureTypes) ? p.creatureTypes.map(String) : [], maxCr: Number(evaluate(operation.value, scope)) || 0, ...(typeof p.swimFrom === "number" ? { swimFrom: p.swimFrom } : {}), ...(typeof p.flyFrom === "number" ? { flyFrom: p.flyFrom } : {}), level: Number(evaluate(p.level as never, scope)) || 0 }; break; }
       case "spell.cantrip-potent": application.potentCantrip = true; break;
-      case "spell.damage-type.ability-modifier": application.damageTypeModifier = [...(application.damageTypeModifier ?? []), ...(operation.damageTypes ?? [])]; break;
+      case "spell.damage-type.ability-modifier": { const p = operation.params ?? {}; if (p.class) application.damageTypeModifierClass = String(p.class); } application.damageTypeModifier = [...(application.damageTypeModifier ?? []), ...(operation.damageTypes ?? [])]; break;
       // V3f (D260): opportunity attacks against this creature are made at disadvantage (기회 공격 회피).
       case "attack-roll.against-me.opportunity-disadvantage": application.opportunityDisadvantage = [...(application.opportunityDisadvantage ?? []), operation.note ?? ""]; break;
       // V3h (D262): who hit this creature attacks it at disadvantage for the rest of that turn (다중 공격 방어).
@@ -201,7 +201,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "spell.school-damage.ability-modifier": if (operation.school) application.schoolDamageModifier = [...(application.schoolDamageModifier ?? []), { school: operation.school, classSlug: text(operation, scope) ?? "" }]; break;
       case "healing.maximize": application.healingMaximized = true; break;
       // V3g (D261): damage dice of spells up to this level count as their maximum (과부하).
-      case "spell.damage.maximize": application.spellDamageMaximizedUpTo = Math.max(application.spellDamageMaximizedUpTo ?? 0, number(operation, scope) ?? 0); break;
+      case "spell.damage.maximize": { application.spellDamageMaximizedUpTo = Math.max(application.spellDamageMaximizedUpTo ?? 0, number(operation, scope) ?? 0); const p = operation.params ?? {}; if (p.class) application.spellDamageMaximizedClass = String(p.class); break; }
       case "attack-roll.against-me.no-advantage": application.elusive = true; break;
       // R61 (D196): advantage on a check or a save, narrowed to the abilities the contract named.
       case "ability-check.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], ...(operation.abilities?.length ? { abilities: operation.abilities as AbilityKey[] } : {}) }]; break;

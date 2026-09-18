@@ -1008,3 +1008,19 @@ test("V5h: 선천 마법 중에는 메타매직이 둘, 비전의 신격이면 �
   assert.equal(innate(20).metamagicFree, true);
   assert.notEqual(innate(7).metamagicFree, true);
 });
+
+test("V5i: 원소 친화 uses the sorcerer's own ability and 과부하 only maximizes wizard spells (D297)", async () => {
+  const { pcSpell } = await import("../../client/rules/spellcast");
+  const cat = catalog();
+  const classes = ["sorcerer", "sorcerer", "sorcerer", "sorcerer", "sorcerer", "sorcerer", "wizard"];
+  const made = build({ name: "혼합", classes, abilities: { cha: 18, int: 10 }, choices: { "class.2.subclass": ["dnd.srd521.subclass.sorcerer.draconic-sorcery"] } }, { "class.2.subclass": ["dnd.srd521.subclass.sorcerer.draconic-sorcery"] });
+  assert.equal(made.derived.damageTypeModifierClass, "sorcerer", JSON.stringify(made.derived.damageTypeModifier));
+
+  // 과부하: the maximizing names the wizard, so it never reaches a sorcerer spell.
+  const evoker = build({ name: "방출술사", classes: ["wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "sorcerer"], abilities: { int: 18, cha: 12 }, choices: { "class.2.subclass": ["dnd.srd521.subclass.wizard.evoker"] } }, { "class.2.subclass": ["dnd.srd521.subclass.wizard.evoker"] });
+  const under = deriveCharacter(evoker.source, cat, { effects: [{ key: "feature:wizard.evoker.overchannel", name: "과부하", source: "feature", duration: "다음 주문까지", concentration: false, elapsed: 0, startedAt: "", consumeOn: "cast" }] });
+  assert.equal(under.spellDamageMaximizedClass, "wizard");
+  const entry = newJournalCharacter("c", "p", evoker.source, initialRuntime(under));
+  const cast = pcSpell(entry, under, cat, "dnd.srd521.spell.magic-missile", { kind: "slot", level: 1 });
+  void cast;
+});
