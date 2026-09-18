@@ -58,6 +58,11 @@ node scripts/phb2024-parse-source.mjs <phb-src>/10-RULEBOOKS/phb-2024 <out>/phb-
 출력: `{ subclass|feat|spell|background|species|statblock: [{ slug, file, fm, intro, sections:[{head,text}] }] }`.
 기대 개수는 36 / 58 / 52 / 12 / 1 / 11이며, 서브클래스의 `N레벨:` 절 합이 178이다. 숫자가 다르면 소스가 바뀐 것이니 먼저 확인한다.
 
+## 3.3 문법을 모르면
+
+`docs/design/v3/MODULE_GRAMMAR.md`를 먼저 읽는다 — 계약의 뼈대, 연산 27종, `property.modify` 속성표, 획득 시점 어휘,
+인터셉터와 반응 창, 주문 실행 정의, 확인하는 법이 한 문서에 있다.
+
 ## 4. 산출물 규격
 
 파일 하나: `phb-2024.module.json` (`moduleId: "phb-2024"`, `moduleVersion: "1"`, `dependencies: []`).
