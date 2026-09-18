@@ -251,7 +251,7 @@
 - `primary.kind`: `attack-damage` `save-damage` `save-compound-damage` `save-effect` `healing` `temporary-hp` `automatic-projectiles` `multi-attack-damage` `tracked-effect` `area-damage` `maximum-hp` `dispel` `full-healing` `power-word-kill` `revive`
 - 주사위: `count/sides/flat`, 상위 슬롯은 `dicePerSlotAboveBase`·`flatPerSlotAboveBase`, 소마법은 `cantripScaling`, 시전 능력치는 `addSpellcastingModifier`
 - `effects[]`(상태), `trackedEffects[]`(지속 효과가 굴림에 주는 것), `removesConditions[]`
-- `sustain`: `economy`(`action`/`bonus-action`/`none`) · `primary` · `note` · `move` · `target: "bound"`(처음 맞힌 대상에게만) · `endWhen`(사람이 누르는 종료 버튼)
+- `sustain`: `economy`(`action`/`bonus-action`/`none`) · `primary` · `note` · `move` · `target: "bound"`(처음 겨눈 대상에게만 — 빗나가도 묶인다) · `endWhen`(사람이 누르는 종료 버튼)
 - `onHit`: 무기 명중 직후 시전하는 강타류 (`weapon`, `damage`, `inflicts`, `save`, `versus`, `mark`)
 - `summon`: 소환 템플릿(`forms[].template`, 치환값 `{level}` `{attack}` `{dc}`)
 - `creatures`, `reaction`(`attack.hit-self`/`spell.cast-seen`), `repeatSave: "turn-end"`, `variants`(시전 때 고르는 갈래), `casterHealing`, `weaponSpell`

@@ -190,6 +190,9 @@ for (const doc of parsed.spell) {
   const level = Number(doc.fm.spell_level);
   const def = entry.mechanics.find((item) => item.kind === "spell-definition")?.config;
   if (def && Number.isFinite(level) && def.level !== level) problems.push(`${id}: 레벨이 소스(${level})와 옛 모듈(${def.level})이 다르다`);
+  // The old module ended 마녀 화살 at 30 feet; the source ends it when the target leaves the spell's range (60 feet).
+  const mechanic = entry.mechanics.find((item) => item.kind === "spell-mechanic")?.config;
+  if (doc.slug === "witch-bolt" && mechanic?.sustain) { mechanic.sustain.endWhen = "대상이 주문의 사거리(60피트) 밖에 있거나 완전 엄폐를 얻음"; decisions.push("witch-bolt: 종료 조건을 사거리 60피트로"); }
   const authored = SPELL_MECHANICS[doc.slug];
   if (authored) {
     if (entry.mechanics.some((item) => item.kind === "spell-mechanic")) problems.push(`${id}: 옛 모듈에 이미 실행 정의가 있다`);

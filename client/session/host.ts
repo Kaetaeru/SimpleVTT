@@ -927,7 +927,7 @@ export class TableHost {
         const boundTo = command.method?.kind === "sustain"
           ? (caster.entry.kind === "character" ? caster.entry.runtime.effects ?? [] : caster.entry.kind === "npc" ? caster.entry.runtime.effects ?? [] : []).find((effect) => effect.key === `spell:${command.spellId}`)?.target
           : undefined;
-        if (boundTo && command.targets.some((ref) => ref.entryId !== boundTo)) return refuse("이 주문은 처음 맞힌 대상에게만 다시 씁니다");
+        if (boundTo && command.targets.some((ref) => ref.entryId !== boundTo)) return refuse("이 주문은 처음 겨눈 대상에게만 다시 씁니다");
         const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
         // V4v (D284): a bigger slot may reach more creatures (축복).

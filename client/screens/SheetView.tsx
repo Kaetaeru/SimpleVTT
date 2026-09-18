@@ -360,7 +360,7 @@ function SpellRows({ ids, catalog, derived, runtime, actions, casting, setCastin
                 {spell ? <span className="cl-quiet cl-small cl-spell-meta">{spell.castingTime.split(/[—,]/)[0]} · {spell.duration}</span> : null}
                 {live && spell ? (
                   active ? <>{(() => { const exec = spellExec(id); const sustain = exec ? sustainOf(exec) : null; return sustain ? <>
-                    <button type="button" className="cl-btn small primary" title={`${sustain.note ?? "지속 중인 주문을 다시"} · 슬롯 없음${sustain.target === "bound" ? " · 처음 맞힌 대상에게만" : ""}`} onClick={() => actions!.castSpell(spell, { kind: "sustain" })}>↻ 다시</button>
+                    <button type="button" className="cl-btn small primary" title={`${sustain.note ?? "지속 중인 주문을 다시"} · 슬롯 없음${sustain.target === "bound" ? " · 처음 겨눈 대상에게만" : ""}`} onClick={() => actions!.castSpell(spell, { kind: "sustain" })}>↻ 다시</button>
                     {/* D302: what ends the spell that the app cannot see (out of range, total cover) — a button, not a sentence. */}
                     {sustain.endWhen ? <button type="button" className="cl-btn small danger" title={sustain.endWhen} onClick={() => actions!.endEffect(effectKeyForSpell(id))}>⛔ {sustain.endWhen}</button> : null}
                   </> : null; })()}<button type="button" className="cl-btn small danger" onClick={() => actions!.endEffect(effectKeyForSpell(id))}>종료</button></>
