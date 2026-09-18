@@ -1024,3 +1024,19 @@ test("V5i: 원소 친화 uses the sorcerer's own ability and 과부하 only maxi
   const cast = pcSpell(entry, under, cat, "dnd.srd521.spell.magic-missile", { kind: "slot", level: 1 });
   void cast;
 });
+
+test("V5j: 반매혹 opens on an ally's failed save and rerolls it (D298)", async () => {
+  // A wizard's 공포 against the fighter fails; the bard beside them answers.
+  const t = await table([
+    { classes: "wizard", level: 5, abilities: { int: 18 } },
+    { classes: "fighter", level: 3, abilities: { wis: 6 } },
+    { classes: "bard", level: 7, abilities: { cha: 16 } },
+  ], [], () => 0.05);
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.fear", targets: [t.ref(1)], method: { kind: "slot", level: 3 } });
+  await tick();
+  const ask = t.host.archive.filter((message) => message.type === "prompt" && message.prompt?.kind === "rescue" && message.prompt.rescue?.interfere && !message.supersedes).at(-1);
+  assert.ok(ask, JSON.stringify(t.host.archive.map((message) => [message.type, message.prompt?.kind, message.content?.slice(0, 40)])));
+  assert.equal(ask!.prompt!.reactor!.entryId, t.ref(2).entryId, "창은 바드에게");
+  assert.deepEqual(ask!.prompt!.rescue!.features, ["대응의 노래"]);
+  assert.ok((ask!.prompt!.rescue!.facts ?? []).length >= 2, JSON.stringify(ask!.prompt!.rescue!.facts));
+});

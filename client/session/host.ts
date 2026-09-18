@@ -1450,7 +1450,10 @@ export class TableHost {
         }
         const card = this.spells.get(cardId);
         if (!card || !card.resolution.applied || !card.rows || !card.context) return refuse("적용된 주문 카드가 아닙니다");
-        const at = card.resolution.targets.findIndex((row) => row.target.id === reactor.entry.id && (!reactor.token || row.target.tokenId === reactor.token.id));
+        // V5j (D298): 반매혹 — the reactor is the bard, and the save that failed belongs to the creature named on the card.
+        const helping = promptMessage.prompt.rescue.interfere === true;
+        const failedId = helping ? promptMessage.prompt.mover?.entryId : reactor.entry.id;
+        const at = card.resolution.targets.findIndex((row) => row.target.id === failedId && (helping || !reactor.token || row.target.tokenId === reactor.token.id));
         const before = at >= 0 ? card.resolution.targets[at] : undefined;
         if (!before?.save || before.save.success || before.save.rescue) return refuse("다시 굴릴 내성이 없습니다");
         const offer = (this.options.pcRescues?.(reactor.entry, "saving-throw", "failure") ?? []).find((item) => item.feature === command.feature);
@@ -1462,7 +1465,7 @@ export class TableHost {
         const plan = planRollModify(offer.interceptor.operations, offer.scope, dice);
         if (plan.d20 === undefined && !plan.delta) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
         card.rows[at]?.();
-        const undone = this.resolveActor(promptMessage.prompt.reactor) ?? reactor;
+        const undone = this.resolveActor(helping ? { entryId: failedId ?? "" } : promptMessage.prompt.reactor) ?? reactor;
         const combatant = this.combatantOf(undone);
         const stats = this.statsOf(undone);
         if (!combatant || !stats) return refuse("능력치를 알 수 없습니다");
@@ -2513,6 +2516,32 @@ export class TableHost {
     }
   }
 
+  /**
+   * V5j (D298): the sheets in the scene whose own contract answers *somebody else's* failed roll — the contract says
+   * so by asking about the roller (`identity.same-entity`), the same way 신랄한 말 does for a success.
+   */
+  private offerHelpers(cardId: string, roller: { entry: JournalEntry; token?: Token; page?: Page }, family: RollFamily, what: string) {
+    const page = roller.page;
+    if (!this.options.pcRescues || !page) return;
+    const seen = new Set<string>([roller.entry.id]);
+    for (const token of page.tokens) {
+      if (!token.represents || seen.has(token.represents)) continue;
+      seen.add(token.represents);
+      const entry = this.journalEntries.get(token.represents);
+      if (entry?.kind !== "character") continue;
+      const offers = this.freshRescues(entry.id, this.options.pcRescues(entry, family, "failure")).filter((offer) => offer.interceptor.asksFacts?.length);
+      if (!offers.length) continue;
+      const asked = offers.flatMap((offer) => offer.interceptor.asksFacts ?? []);
+      const name = token.name ?? entry.name;
+      this.say({ type: "prompt", who: "", content: `${roller.token?.name ?? roller.entry.name}: ${what} 실패 — ${name}이(가) ${offers.map((offer) => offer.feature).join(" / ")}로 도울까요?${asked.length ? ` (${asked.map((fact) => fact.question).join(" · ")})` : ""}`, prompt: {
+        kind: "rescue",
+        mover: { name: roller.token?.name ?? roller.entry.name, entryId: roller.entry.id },
+        reactor: { name, entryId: entry.id, pageId: page.id, tokenId: token.id },
+        rescue: { cardId, features: offers.map((offer) => offer.feature), roll: what, interfere: true, ...(asked.length ? { facts: asked } : {}) },
+      } });
+    }
+  }
+
   private offerRescues(cardId: string, resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>) {
     if (!this.options.pcRescues) return;
     resolution.targets.forEach((row, index) => {
@@ -2521,6 +2550,8 @@ export class TableHost {
       const actor = targets[index];
       if (!actor || actor.entry.kind !== "character") return;
       const offers = this.freshRescues(actor.entry.id, this.options.pcRescues!(actor.entry, "saving-throw", "failure", save.d20));
+      // V5j (D298): a bystander whose contract answers somebody else's failed save (반매혹) is asked too.
+      this.offerHelpers(cardId, actor, "saving-throw", `${ABILITY_KO[save.ability]} 내성`);
       if (!offers.length) return;
       const name = actor.token?.name ?? actor.entry.name;
       const roll = `${save.d20}${save.bonus >= 0 ? "+" : "-"}${Math.abs(save.bonus)} = ${save.total} vs DC ${save.dc}`;

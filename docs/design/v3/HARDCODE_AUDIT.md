@@ -94,6 +94,7 @@
 - 턴 끝 규칙의 피해(내성 포함) · 주문 계약의 `turn-end`를 호스트가 읽음 (D291)
 - 속성 `spell.metamagic-limit`·`spell.metamagic-free` (D296)
 - `spell.damage.maximize`와 `spell.damage-type.ability-modifier`의 `class` 매개변수 (D297)
+- 남의 실패한 내성에 열리는 도움 창(`offerHelpers`, `rescue.interfere`) (D298)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

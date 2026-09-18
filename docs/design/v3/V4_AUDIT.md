@@ -74,7 +74,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D274 college-of-lore.cutting-words (3) — 사실 질의가 KNOWN_FACTS에 없어 계약이 미지원 처리, 풀 주사위 전달 안 됨, 피해 굴림에 없음. — [host-hook]
 - ✔ D274 college-of-lore.peerless-skill (14) — 고정 1d12, 영감 주사위여야. — [data-fix]
 - ✔ D265 superior-inspiration (18) — 수동 +2. 이니셔티브 때 2까지. — [data-fix + new-grammar]
-- countercharm (7) — 매혹·공포 내성 실패 시 반응 재굴림 계산 가능. — [host-hook]
+- ✔ D298 countercharm (7) — 매혹·공포 내성 실패 시 반응 재굴림 계산 가능. — [host-hook]
 - words-of-creation (20) — 두 번째 대상. — [picker]
 - ✔ D286 (확인: 2레벨·9레벨 각각 2개, 9레벨에 4개 전문화) expertise (2/9) — 9레벨 두 번째 선택 확인 필요. — [data-fix?]
 - ✔ D263 font-of-inspiration (5) — 슬롯으로 영감 회복이 손 작업. — [data-fix] D263 슬롯 결제·풀 회복으로.
