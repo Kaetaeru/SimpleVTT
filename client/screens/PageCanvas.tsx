@@ -654,12 +654,20 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
         return true;
       };
       const known = metamagicOptions(derived, catalog, characterScope(derived)).filter((option) => option.cost <= left && has(option.needs));
-      if (known.length) {
-        const answer = await requestCastMethod({ name, title: `${name} — 메타매직 (마법 점수 ${left})`, options: [{ label: "쓰지 않음", method: "" }, ...known.map((option) => ({ label: `${option.name} (${option.cost}점)${option.note ? ` · ${option.note}` : ""}`, method: option.key }))] });
+      // V5h (D296): 마법 화신 lets two ride on one cast, and 비전의 신격 makes one of them free.
+      const limit = derived.metamagicLimit ?? 1;
+      const picked: string[] = [];
+      for (let round = 0; round < limit; round += 1) {
+        const rest = known.filter((option) => !picked.includes(option.key));
+        if (!rest.length) break;
+        const free = derived.metamagicFree && round === 0 ? " · 첫 하나는 무료" : "";
+        const answer = await requestCastMethod({ name, title: `${name} — 메타매직 ${limit > 1 ? `(${round + 1}/${limit}) ` : ""}(마법 점수 ${left})${free}`, options: [{ label: "쓰지 않음", method: "" }, ...rest.map((option) => ({ label: `${option.name} (${option.cost}점)${option.note ? ` · ${option.note}` : ""}`, method: option.key }))] });
         if (answer === null) return;
         const chosenKey = typeof answer === "string" ? answer : "";
-        if (chosenKey) metamagic = [chosenKey];
+        if (!chosenKey) break;
+        picked.push(chosenKey);
       }
+      if (picked.length) metamagic = picked;
     }
     c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined, undefined, variant, metamagic);
   };

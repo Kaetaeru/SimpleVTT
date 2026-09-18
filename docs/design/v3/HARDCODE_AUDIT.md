@@ -92,6 +92,7 @@
 - 조건 참조 `actor.has-feature:<규칙 키>` (D288)
 - 명중 주문의 `mark` · 지속 중인 주문이 추가 행동 메뉴에 올리는 행동 (D290)
 - 턴 끝 규칙의 피해(내성 포함) · 주문 계약의 `turn-end`를 호스트가 읽음 (D291)
+- 속성 `spell.metamagic-limit`·`spell.metamagic-free` (D296)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

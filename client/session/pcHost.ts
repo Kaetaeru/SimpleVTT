@@ -59,7 +59,9 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
         notes: options.flatMap((option) => (option.note ? [`${option.name}: ${option.note}`] : [])),
         ...(options.some((option) => option.effect === "target-save-disadvantage") ? { saveDisadvantage: options.find((option) => option.effect === "target-save-disadvantage")!.name } : {}),
         ...(options.some((option) => option.effect === "bonus-action") ? { bonusAction: true } : {}),
-        spend: (runtime) => options.reduce<CharacterRuntime | null>((acc, option) => (acc && option.cost ? spendResource(acc, derived, option.resourceId, option.cost, option.name) : acc), runtime),
+        // V5h (D296): 비전의 신격 — the first metamagic on a cast is free while 선천 마법 runs.
+        ...(derived.metamagicFree ? { freeFirst: true } : {}),
+        spend: (runtime) => options.reduce<CharacterRuntime | null>((acc, option, index) => (acc && option.cost && !(derived.metamagicFree && index === 0) ? spendResource(acc, derived, option.resourceId, option.cost, option.name) : acc), runtime),
       };
     },
     // R35 (D174): the contract rescues a sheet could pay for, and what paying one costs it.

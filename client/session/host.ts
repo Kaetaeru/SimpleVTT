@@ -133,7 +133,7 @@ export interface TableHostOptions {
   pcStats?: (entry: JournalCharacter) => ActorStats;
   /** Spells (D102): the spec and caster stats for a spell the PC can cast, and how its cost is paid (null when it cannot). */
   /** V4r (D280): the metamagics the caster put on this cast — what they cost, what they change, what stays the table's. */
-  pcMetamagic?: (entry: JournalCharacter, keys: string[]) => { labels: string[]; notes: string[]; saveDisadvantage?: string; bonusAction?: boolean; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
+  pcMetamagic?: (entry: JournalCharacter, keys: string[]) => { labels: string[]; notes: string[]; saveDisadvantage?: string; bonusAction?: boolean; /** V5h (D296): the first one costs nothing (비전의 신격). */ freeFirst?: boolean; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
   pcSpell?: (entry: JournalCharacter, spellId: string, method?: CastMethod) => { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
   /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
   pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;

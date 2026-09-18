@@ -994,3 +994,17 @@ test("V5g: 거인 혈통 has its six powers as uses, and the traits the app cann
     assert.ok(questions.some((question) => question.startsWith("DM 판정 (")), `${key}: ${JSON.stringify(questions)}`);
   }
 });
+
+test("V5h: 선천 마법 중에는 메타매직이 둘, 비전의 신격이면 첫 하나는 공짜 (D296)", async () => {
+  const cat = catalog();
+  const innate = (level: number) => {
+    const made = build({ name: "소서러", classes: "sorcerer", level, abilities: { cha: 18 }, choices: { "class.0.metamagic": ["metamagic.quickened-spell", "metamagic.careful-spell"] } }, { "class.0.metamagic": ["metamagic.quickened-spell", "metamagic.careful-spell"] });
+    return deriveCharacter(made.source, cat, { effects: [{ key: "feature:sorcerer.innate-sorcery", name: "선천 마법", source: "feature", duration: "1분 (10라운드)", concentration: false, rounds: 10, elapsed: 0, startedAt: "" }] });
+  };
+  // 7레벨 마력의 현신: two metamagics on one spell while it runs.
+  assert.equal(innate(7).metamagicLimit, 2);
+  assert.notEqual(build({ name: "소서러", classes: "sorcerer", level: 7 }).derived.metamagicLimit, 2, "선천 마법이 꺼져 있으면 하나");
+  // 20레벨 비전의 신격: the first one costs nothing.
+  assert.equal(innate(20).metamagicFree, true);
+  assert.notEqual(innate(7).metamagicFree, true);
+});

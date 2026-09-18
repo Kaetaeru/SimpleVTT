@@ -43,6 +43,10 @@ export interface EffectApplication {
    * effect that already carries a chosen `form`, the stat block the sheet takes its numbers from.
    */
   form?: { creatureTypes: string[]; maxCr: number; swimFrom?: number; flyFrom?: number; level: number };
+  /** V5h (D296): how many metamagics one cast may carry (마법 화신: 둘). */
+  metamagicLimit?: number;
+  /** V5h (D296): one metamagic on a cast costs nothing, once a turn (비전의 신격). */
+  metamagicFree?: boolean;
   /** V4o (D277): these skills may be rolled with this ability instead of their own (원초적 지식). */
   skillAbility?: { skills: string[]; ability: AbilityKey };
   /** R43 (D183): the lowest d20 that counts as a critical hit (Improved Critical 19, Superior Critical 18). */
@@ -432,6 +436,8 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.revealDefenses?.length) { next = { ...next, revealDefenses: [...new Set([...(next.revealDefenses ?? []), ...application.revealDefenses])] }; notes.push("표식 주문 대상의 저항·면역·취약을 앎"); }
     if (application.attunementBonus) { next = { ...next, attunementBonus: (next.attunementBonus ?? 0) + application.attunementBonus }; notes.push(`조율 슬롯 +${application.attunementBonus}`); }
     if (application.checkMinimumD20) { next = { ...next, checkMinimumD20: Math.max(next.checkMinimumD20 ?? 0, application.checkMinimumD20) }; notes.push(`숙련 판정 d20 최소 ${application.checkMinimumD20}`); }
+    if (application.metamagicLimit) { next = { ...next, metamagicLimit: Math.max(next.metamagicLimit ?? 1, application.metamagicLimit) }; notes.push(`한 주문에 메타매직 ${application.metamagicLimit}개`); }
+    if (application.metamagicFree) { next = { ...next, metamagicFree: true }; notes.push("메타매직 하나는 마법 점수 없이 (턴당 한 번)"); }
     if (application.skillAbility) {
       const { skills, ability } = application.skillAbility;
       const swap = next.abilities[ability].modifier;

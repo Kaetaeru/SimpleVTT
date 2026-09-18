@@ -54,7 +54,7 @@ export const PROPERTIES = [
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
   "spell.cantrip-potent",
   // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
-  "ability-check.minimum-score", "skill.ability-swap", "spell.metamagic", "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "effect.upkeep", "effect.upkeep-waived", "hp.zero.hold", "aura.grant", "death-save.crit-range", "rider.forgo-limit", "form.assume", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
+  "ability-check.minimum-score", "skill.ability-swap", "spell.metamagic", "spell.metamagic-limit", "spell.metamagic-free", "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier", "saving-throw.minimum-score", "attack-roll.against-me.opportunity-disadvantage", "attack-roll.against-me.after-hit-disadvantage", "initiative.extra-turn", "attunement.slots", "healing.self-on-slot-heal", "marked-spell.reveal-defenses", "effect.upkeep", "effect.upkeep-waived", "hp.zero.hold", "aura.grant", "death-save.crit-range", "rider.forgo-limit", "form.assume", "death-save.advantage", "ability-check.minimum-d20", "spell.damage-type.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -190,6 +190,9 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "ability-check.minimum-d20": application.checkMinimumD20 = Math.max(application.checkMinimumD20 ?? 0, number(operation, scope) ?? 0); break;
       // V4r (D280): what a metamagic does to a cast is read by the cast window, not by the sheet.
       case "spell.metamagic": break;
+      // V5h (D296): 마법 화신 — two metamagics on one cast; 비전의 신격 — one of them costs nothing, once a turn.
+      case "spell.metamagic-limit": application.metamagicLimit = Math.max(application.metamagicLimit ?? 1, number(operation, scope) ?? 1); break;
+      case "spell.metamagic-free": application.metamagicFree = true; break;
       // V4o (D277): 원초적 지식 — these skills may be rolled with another ability while something is running.
       case "skill.ability-swap": { const p = operation.params ?? {}; const skills = Array.isArray(p.skills) ? p.skills.map(String) : []; if (skills.length && p.ability) application.skillAbility = { skills, ability: String(p.ability) as AbilityKey }; break; }
       // V4o (D277): 불굴의 힘 — a check of these abilities totals at least the score.

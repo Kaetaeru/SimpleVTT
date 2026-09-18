@@ -128,7 +128,7 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D265 draconic.dragon-wings (14) — 비행 60·추가 행동·횟수 없음. — [data-fix]
 - draconic.dragon-companion (18) — 집중 없음이 문구. — [picker]
 - ✔ D265 metamagic.twinned-spell — 2014 비용 문구. — [data-fix]
-- sorcery-incarnate / arcane-apotheosis (7/20) — 점수로 선천 마법, 메타매직 둘·무료. — [data-fix + picker]
+- ✔ D296 sorcery-incarnate / arcane-apotheosis (7/20) — 점수로 선천 마법, 메타매직 둘·무료. — [data-fix + picker]
 - elemental-affinity (6) — 멀티클래스 시 능력치 오류. — [data-fix]
 
 ## 워락
