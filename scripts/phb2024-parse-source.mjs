@@ -40,7 +40,8 @@ function documents(folder) {
 
 /** Frontmatter, the text before the first `## `, and every section after it. */
 function parse(path) {
-  const text = readFileSync(path, "utf8");
+  // A Windows checkout writes CRLF; the frontmatter and section patterns below expect LF.
+  const text = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
   const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
   const fm = {};
   let body = text;
