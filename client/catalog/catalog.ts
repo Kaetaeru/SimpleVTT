@@ -259,15 +259,24 @@ function mechanic<T = Record<string, unknown>>(entry: { mechanics: Array<{ kind:
 
 export const slugOfId = (id: string) => id.split(".").pop() ?? id;
 
-/** The paragraph block of a compiled description that starts with the given heading line (installed species traits). */
-export function sectionOf(description: string | undefined, heading: string): string | undefined {
+/**
+ * The text under a heading line of a compiled description (installed species traits). D304: a trait may run over
+ * several paragraphs (천상의 현현 and its three forms), so the paragraphs after the heading's own block belong to it
+ * until the next heading in `stops` — the other traits' names.
+ */
+export function sectionOf(description: string | undefined, heading: string, stops: readonly string[] = []): string | undefined {
   if (!description) return undefined;
   const wanted = heading.trim();
-  for (const block of description.split(/\n\s*\n/)) {
-    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
-    if (lines.length >= 2 && lines[0] === wanted) return lines.slice(1).join(" ");
+  const next = new Set(stops.map((stop) => stop.trim()).filter((stop) => stop !== wanted));
+  const blocks = description.split(/\n\s*\n/).map((block) => block.split("\n").map((line) => line.trim()).filter(Boolean));
+  const start = blocks.findIndex((lines) => lines.length >= 2 && lines[0] === wanted);
+  if (start < 0) return undefined;
+  const paragraphs = [blocks[start].slice(1).join(" ")];
+  for (const lines of blocks.slice(start + 1)) {
+    if (!lines.length || next.has(lines[0])) break;
+    paragraphs.push(lines.join("\n"));
   }
-  return undefined;
+  return paragraphs.join("\n\n");
 }
 
 const normalizeName = (name: string) => name.toLowerCase().replace(/[’']/g, "'").trim();
@@ -536,7 +545,8 @@ export class ContentCatalog {
         const [traitId, level] = raw.split("@");
         const authored = extras?.traits[traitId];
         const installedName = def.semantics?.baseFeatures?.[index]?.replace(/\s*\(.*\)\s*$/, "");
-        const installedDescription = installedName ? sectionOf(entry.description, installedName) : undefined;
+        const traitNames = (def.semantics?.baseFeatures ?? []).map((name) => name.replace(/\s*\(.*\)\s*$/, ""));
+        const installedDescription = installedName ? sectionOf(entry.description, installedName, traitNames) : undefined;
         return {
           id: `${entry.id}.trait.${traitId}`,
           name: authored?.name ?? installedName ?? traitId,

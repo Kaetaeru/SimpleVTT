@@ -131,13 +131,26 @@ D300~D302에서 이미 연 것(바로 쓴다): 서브클래스 레벨별 주문(
 
 | 단계 | 내용 | 끝났다는 기준 |
 |---|---|---|
-| **P1** | 엔진 G1·G2 + 시험 + 문서(D번호) | `npm run gate:client` 통과, 합성 모듈 시험 2개 |
-| **P2** | 배경 12 · 아시마르 1 · 재주 58 | 항목 71개가 전문 + 정의 + 계약, 문법 검사 0 |
+| **P1** ✔ (D303) | 엔진 G1·G2 + 시험 + 문서(D번호) | `npm run gate:client` 통과, 합성 모듈 시험 2개 |
+| **P2** ✔ (D304) | 배경 12 · 아시마르 1 · 재주 58 | 항목 71개가 전문 + 정의 + 계약, 문법 검사 0 — `scripts/phb2024-build-module.mjs` |
 | **P3** | 주문 52 (`spell-mechanic` 전부, 소환 템플릿 8종 이식) | 52개 전부 시전 가능, 상위 슬롯·집중·onHit·sustain 반영 |
 | **P4** | 서브클래스 36 (직업별 3개씩 12배치) + 기동 20 + 맹세 주문 | 특성 178개 전부 계약, 검사 0 |
 | **P5** | 검증·인도 | 아래 §7 전부 통과, 파일 전달 |
 
 각 배치는 CLAUDE.md §3 점검표를 돌리고, 저장소 변경(엔진·시험·문서)만 커밋한다. 모듈 파일은 커밋하지 않는다.
+
+### 빌더
+
+```bash
+node scripts/phb2024-build-module.mjs <out>/phb-parsed.json <Downloads>/phb-2024-supplement.module.json <out>/phb-2024.module.json
+```
+
+본문은 소스에서, 정의·계약은 옛 모듈에서 가져온다. 단계마다 이 스크립트에 종류를 더한다(P3 주문, P4 서브클래스). 옛 모듈에 없는 항목·특성 이름 불일치·분류 불일치는 실패로 끝난다.
+
+### P2에서 본 것 (2026-09-18)
+
+- 재주·배경·종족 글은 옛 모듈에서도 잘려 있지 않았다. 잘린 것은 서브클래스 특성뿐이다(P4에서 다시 쓴다).
+- 판정 줄(`adjudication.request`)만 있는 재주 계약 10개: boon-of-recovery, crafter, crossbow-expert, lucky, mage-slayer, mounted-combatant, protection, shield-master, tavern-brawler(비어 있음), unarmed-fighting. 그중 lucky(점수 풀 + 사후 유리/불리)·mage-slayer 등은 D300 이후 문법으로 계산할 수 있다 — 소유자 결정 대기.
 
 ## 7. 검증
 
