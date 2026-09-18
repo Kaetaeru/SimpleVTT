@@ -172,6 +172,7 @@
 | `choice.fighting-style` | `extra[]` |
 | `grant.resource` | `id, label, recovery, minLevel?, spell?/spells?/maxLevel?, atWill?` · `value`=최대치(식) |
 | `grant.spells` | `spells[], into` |
+| `grant.spell-lists` | `classes[]`(직업 slug) — 그 직업들의 목록에서도 준비한다(D305) |
 | `grant.cantrips` | (값=개수) |
 | `grant.spellbook-picks` | `id, label, school` |
 | `grant.ritual-casting` | — |

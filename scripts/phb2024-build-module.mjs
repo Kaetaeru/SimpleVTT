@@ -28,6 +28,8 @@ const decisions = [];
 /** The sections a table never plays with: the translator's review notes. */
 const SKIPPED = new Set(["검수 기록"]);
 const CONTRACT = { $schema: "https://simplevtt.local/schemas/common-play-contract.schema.json", schemaVersion: "0.2-draft" };
+const ask = (question, extra = {}) => ({ kind: "adjudication.request", question, ...extra });
+const choice = (id) => ({ id, kind: "choice", responder: "actor-owner", mode: "blocking", input: { type: "boolean" }, revalidate: "if-revision-changed", stalePolicy: "reject" });
 
 /** Markdown to the plain text a sheet shows: headings as their own line, bullets as •, no links or emphasis, tables as `a · b`. */
 function plain(markdown) {
@@ -95,6 +97,64 @@ for (const doc of parsed.species) {
   for (const effect of old.content.filter((item) => item.id.startsWith(`effect.phb2024.${doc.slug}.`))) add("species-effect", structuredClone(effect));
 }
 
+/**
+ * Feat contracts the old module left as lines for the table, where the grammar now computes the rule (CLAUDE.md §1.1).
+ * What is still the table's keeps a line with its reason. Crafter, Crossbow Expert and Mounted Combatant stay lines:
+ * there is no tool choice at gain, no loading or reach, and no mounts in the app.
+ */
+const FEAT_CONTRACTS = {
+  lucky: {
+    payments: [{ kind: "resource", resource: "resource:phb2024.feat.lucky", amount: { value: 1 }, consumeAt: "commit" }],
+    entryPoints: [{ id: "gain", invocation: "gain", operations: [{ kind: "property.modify", property: "grant.resource", operation: "add", value: { ref: "proficiency.bonus" }, params: { id: "resource.phb2024.feat.lucky", label: "행운 점수", recovery: "long-rest" } }] }],
+    interceptors: [
+      { id: "advantage", timing: "d20.outcome-determined", slot: "d20.roll", families: [], outcomes: ["failure"], interaction: choice("use"), operations: [{ kind: "roll.modify", mode: "reroll-keep-higher", dice: "1d20" }] },
+      { id: "disadvantage", timing: "d20.outcome-determined", slot: "attack-roll", families: ["attack-roll"], outcomes: ["success"], interaction: choice("use"), factQueries: [{ id: "targets-me", fact: "table.judgement", unknownPolicy: "ask", question: "이 명중 굴림의 대상이 나입니까?" }], operations: [{ kind: "roll.modify", mode: "reroll-keep-lower", dice: "1d20" }] },
+    ],
+  },
+  "boon-of-recovery": {
+    entryPoints: [
+      { id: "gain", invocation: "gain", operations: [
+        { kind: "property.modify", property: "grant.resource", operation: "add", value: { value: 10 }, params: { id: "resource.phb2024.feat.boon-of-recovery.dice", label: "활력 회복 d10", recovery: "long-rest" } },
+        { kind: "property.modify", property: "grant.resource", operation: "add", value: { value: 1 }, params: { id: "resource.phb2024.feat.boon-of-recovery.last-stand", label: "최후의 버팀", recovery: "long-rest" } },
+      ] },
+      { id: "vitality", invocation: "manual", label: "활력 회복: d10 하나", payments: [{ kind: "resource", resource: "resource:phb2024.feat.boon-of-recovery.dice", amount: { value: 1 }, consumeAt: "commit" }], operations: [{ kind: "healing.apply", target: "self", dice: "1d10" }, ask("추가 행동 한 번에 원하는 수만큼 — 주사위마다 한 번씩 누른다")] },
+      { id: "last-stand", invocation: "manual", label: "최후의 버팀", payments: [{ kind: "resource", resource: "resource:phb2024.feat.boon-of-recovery.last-stand", amount: { value: 1 }, consumeAt: "commit" }], operations: [{ kind: "healing.apply", target: "self", pool: "half-max" }, ask("HP가 0이 되려 할 때 대신 1이 된다 — 0 대신 1로 두고 누른다")] },
+    ],
+  },
+  "mage-slayer": {
+    payments: [{ kind: "resource", resource: "resource:phb2024.feat.mage-slayer", amount: { value: 1 }, consumeAt: "commit" }],
+    entryPoints: [
+      { id: "gain", invocation: "gain", operations: [{ kind: "property.modify", property: "grant.resource", operation: "add", value: { value: 1 }, params: { id: "resource.phb2024.feat.mage-slayer", label: "정신 방어", recovery: "short-rest" } }] },
+      { id: "rule", invocation: "manual", operations: [ask("집중 파괴: 집중 중인 대상에게 피해를 주면 그 집중 내성에 불리 — 대상의 집중 판정 창에서 불리를 켠다")] },
+    ],
+    interceptors: [{ id: "guarded-mind", timing: "d20.outcome-determined", slot: "d20.roll", families: ["saving-throw"], outcomes: ["failure"], interaction: choice("use"), factQueries: [{ id: "mental-save", fact: "table.judgement", unknownPolicy: "ask", question: "지능·지혜·매력 내성입니까?" }], operations: [{ kind: "roll.modify", mode: "force-success" }] }],
+  },
+  "shield-master": {
+    entryPoints: [
+      { id: "bash", invocation: "on-hit", label: "방패 후려치기: 넘어뜨리기", attack: { scope: "melee", oncePerTurn: true, requiresEffects: [] }, operations: [{ kind: "condition.apply", condition: "prone", target: "attack-target", save: { ability: "str", dc: { op: "add", args: [{ value: 8 }, { ref: "ability.str.modifier" }, { ref: "proficiency.bonus" }] } } }, ask("방패를 든 채 공격 행동의 근접 공격으로 — 넘어뜨리는 대신 5피트 밀 수도 있다(장면에서)")] },
+      { id: "rule", invocation: "manual", operations: [ask("방패로 막기: 민첩 내성에 성공해 절반 피해를 받는 효과라면 반응으로 피해를 받지 않는다 — 내성 결과 카드에서 피해를 지운다")] },
+    ],
+  },
+  protection: {
+    payments: [{ kind: "economy", bucket: "reaction", amount: { value: 1 }, consumeAt: "commit" }],
+    interceptors: [{ id: "protect", timing: "d20.outcome-determined", slot: "attack-roll", families: ["attack-roll"], outcomes: ["success"], interaction: choice("use"), factQueries: [{ id: "ally-in-reach", fact: "table.judgement", unknownPolicy: "ask", question: "방패를 들고 있고, 5피트 안의 다른 생물을 노린 공격입니까?" }], operations: [{ kind: "roll.modify", mode: "reroll-keep-lower", dice: "1d20" }] }],
+  },
+  "unarmed-fighting": {
+    entryPoints: [
+      { id: "d8", invocation: "on-hit", label: "비무장 전투: 빈손 (1d8)", attack: { scope: "unarmed", oncePerTurn: false, requiresEffects: [] }, operations: [{ kind: "damage.apply", dice: "1d8", amount: { value: -1 }, damageType: "타격", target: "attack-target" }, ask("무기나 방패를 들지 않았을 때 — 기본 피해 1을 1d8로 바꾼다")] },
+      { id: "d6", invocation: "on-hit", label: "비무장 전투 (1d6)", attack: { scope: "unarmed", oncePerTurn: false, requiresEffects: [] }, operations: [{ kind: "damage.apply", dice: "1d6", amount: { value: -1 }, damageType: "타격", target: "attack-target" }, ask("기본 피해 1을 1d6으로 바꾼다")] },
+      { id: "grapple", invocation: "manual", label: "비무장 전투: 붙잡은 생물", targeting: { from: "targets", min: 1, max: 1 }, operations: [{ kind: "damage.apply", dice: "1d4", damageType: "타격", target: "targets" }, ask("자기 턴 시작에, 내가 붙잡은 생물 하나에게")] },
+    ],
+  },
+  "tavern-brawler": {
+    entryPoints: [
+      { id: "strike", invocation: "on-hit", label: "선술집 싸움꾼: 강화된 비무장 타격", attack: { scope: "unarmed", oncePerTurn: false, requiresEffects: [] }, operations: [{ kind: "damage.apply", dice: "1d4", amount: { value: -1 }, damageType: "타격", target: "attack-target" }, ask("기본 피해 1을 1d4로 바꾼다 · 피해 주사위가 1이면 다시 굴린다")] },
+      { id: "push", invocation: "on-hit", label: "선술집 싸움꾼: 밀치기", attack: { scope: "unarmed", oncePerTurn: true, requiresEffects: [] }, operations: [ask("대상을 5피트 민다 — 장면에서 옮긴다(D109)", { fact: { id: "push-5ft", at: "on-hit" } })] },
+      { id: "rule", invocation: "manual", operations: [ask("즉석 무기에 숙련 — 앱에 즉석 무기 항목이 없어 그 공격은 표에서 숙련 보너스를 더한다")] },
+    ],
+  },
+};
+
 for (const doc of parsed.feat) {
   const id = `phb2024.feat.${doc.slug}`;
   const entry = rebuild(doc, id);
@@ -106,9 +166,39 @@ for (const doc of parsed.feat) {
   if (contract) {
     const copy = structuredClone(contract);
     copy.presentation = { ...copy.presentation, originalName: doc.fm.original_name, locales: { "ko-KR": { name: doc.fm.name, summary: "재주의 규칙 계약" } } };
+    const authored = FEAT_CONTRACTS[doc.slug];
+    if (authored) {
+      copy.mechanics = [{ kind: "common-play", config: { ...CONTRACT, id: copy.mechanics[0].config.id, ...authored } }];
+      if (def) def.execution = { status: "common-play", reason: "D305: the contract computes the rule; what is left names its reason" };
+      decisions.push(`feat ${doc.slug}: 계약을 계산 가능한 문법으로 다시 썼다`);
+    }
     add("feat-contract", copy);
   } else problems.push(`${id}: 계약 항목이 없다`);
 }
+
+// ── P3: spells ───────────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Spell executions the old module left to the default record, where the rule is one the grammar computes. */
+const SPELL_MECHANICS = {
+  friends: { baseLevel: 0, castingEconomy: "action", targeting: { kind: "creature", rangeFeet: 10, minTargets: 1, maxTargets: 1, requiresSight: true }, primary: { kind: "save-effect", saveAbility: "wis", summary: "실패하면 매혹 — 인간형이 아니거나 싸우는 중이면 자동 성공(표에서)", duration: { kind: "concentration" } }, effects: [{ conditionId: "charmed", trigger: "failed-save", duration: { kind: "concentration" } }], concentration: true },
+};
+
+for (const doc of parsed.spell) {
+  const id = `phb2024.spell.${doc.slug}`;
+  const entry = rebuild(doc, id);
+  if (!entry) continue;
+  const level = Number(doc.fm.spell_level);
+  const def = entry.mechanics.find((item) => item.kind === "spell-definition")?.config;
+  if (def && Number.isFinite(level) && def.level !== level) problems.push(`${id}: 레벨이 소스(${level})와 옛 모듈(${def.level})이 다르다`);
+  const authored = SPELL_MECHANICS[doc.slug];
+  if (authored) {
+    if (entry.mechanics.some((item) => item.kind === "spell-mechanic")) problems.push(`${id}: 옛 모듈에 이미 실행 정의가 있다`);
+    else { entry.mechanics.push({ kind: "spell-mechanic", config: authored }); decisions.push(`${doc.slug}: 주문 실행 정의를 새로 썼다`); }
+  }
+  add("spell", entry);
+}
+// The effects a spell starts (크루세이더의 망토, 원소 무기) keep their ids; their contracts are keyed by the spell.
+for (const effect of old.content.filter((item) => item.id.startsWith("effect.spell.phb2024."))) add("spell-effect", structuredClone(effect));
 
 // ── P4: subclasses ───────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -156,8 +246,6 @@ const SUPERIORITY = "resource:phb2024.battle-master.superiority";
 const spendDie = { kind: "resource.change", resource: SUPERIORITY, amount: -1, target: "self" };
 const dieDamage = { kind: "damage.apply", dice: "1d8", diceSides: SUPERIORITY_DIE, damageType: "weapon", target: "attack-target" };
 const payDie = [{ kind: "resource", resource: SUPERIORITY, amount: { value: 1 }, consumeAt: "commit" }];
-const ask = (question, extra = {}) => ({ kind: "adjudication.request", question, ...extra });
-const choice = (id) => ({ id, kind: "choice", responder: "actor-owner", mode: "blocking", input: { type: "boolean" }, revalidate: "if-revision-changed", stalePolicy: "reject" });
 
 /**
  * The twenty maneuvers, in the source's order (it lists them alphabetically by their English names, which is how

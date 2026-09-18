@@ -319,7 +319,9 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
       case "grant.spellbook-picks": { const entry = classSpellEntry(ledger, cls); entry.schoolPicks = [...(entry.schoolPicks ?? []), { id: String(p.id ?? "school-picks"), label, school: String(p.school ?? ""), count: operation.value }]; break; }
       // V3h (D262): named spells, always prepared (창조의 언어).
       case "grant.spells": { const entry = classSpellEntry(ledger, cls); for (const spellId of strings(p.spells)) { const spell = catalog.spellById(spellId); if (spell) (p.into === "cantrips" ? entry.extraCantrips : entry.alwaysPrepared).add(spell.id); else ledger.warnings.push(`${featureName}: 주문 ${spellId} 없음`); } break; }
-      case "grant.spell-lists":
+      // D305: other classes' lists this class prepares from (마법의 비밀). The case was listed but fell through to the
+      // warning, so the lists never opened.
+      case "grant.spell-lists": ledger.extraSpellLists.set(cls.id, [...new Set([...(ledger.extraSpellLists.get(cls.id) ?? []), ...strings(p.classes)])]); break;
       default: ledger.warnings.push(`${featureName}: 알 수 없는 획득 연산 ${operation.property}`);
     }
   }

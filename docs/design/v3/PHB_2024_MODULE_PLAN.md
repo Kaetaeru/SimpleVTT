@@ -72,7 +72,7 @@ node scripts/phb2024-parse-source.mjs <phb-src>/10-RULEBOOKS/phb-2024 <out>/phb-
 | 무엇 | id |
 |---|---|
 | 서브클래스 | `phb2024.subclass.<class>.<slug>` (예: `…subclass.barbarian.zealot`) |
-| 서브클래스 특성 | `phb2024.subclass.<class>.<slug>.feature.<level>.<feature-slug>` |
+| 서브클래스 특성 | `phb2024.subclass.<class>.<slug>.feature.<level>-<n>` — 소스에 영어 특성명이 없어 순번(D305) |
 | 재주 | `phb2024.feat.<slug>` |
 | 주문 | `phb2024.spell.<slug>` |
 | 배경 | `phb2024.background.<slug>` |
@@ -133,8 +133,8 @@ D300~D302에서 이미 연 것(바로 쓴다): 서브클래스 레벨별 주문(
 |---|---|---|
 | **P1** ✔ (D303) | 엔진 G1·G2 + 시험 + 문서(D번호) | `npm run gate:client` 통과, 합성 모듈 시험 2개 |
 | **P2** ✔ (D304) | 배경 12 · 아시마르 1 · 재주 58 | 항목 71개가 전문 + 정의 + 계약, 문법 검사 0 — `scripts/phb2024-build-module.mjs` |
-| **P3** | 주문 52 (`spell-mechanic` 전부, 소환 템플릿 8종 이식) | 52개 전부 시전 가능, 상위 슬롯·집중·onHit·sustain 반영 |
-| **P4** | 서브클래스 36 (직업별 3개씩 12배치) + 기동 20 + 맹세 주문 | 특성 178개 전부 계약, 검사 0 |
+| **P3** ✔ (D305) | 주문 52 (`spell-mechanic` 전부, 소환 템플릿 8종 이식) | 52개 전부 시전 가능, 상위 슬롯·집중·onHit·sustain 반영 |
+| **P4** ✔ (D305) | 서브클래스 36 (직업별 3개씩 12배치) + 기동 20 + 맹세 주문 | 특성 178개 전부 계약, 검사 0 |
 | **P5** | 검증·인도 | 아래 §7 전부 통과, 파일 전달 |
 
 각 배치는 CLAUDE.md §3 점검표를 돌리고, 저장소 변경(엔진·시험·문서)만 커밋한다. 모듈 파일은 커밋하지 않는다.

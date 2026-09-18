@@ -1835,7 +1835,7 @@ export class TableHost {
     // R57 (D192): if the creature that was hit has nothing to answer with, a bystander whose contract declares
     // `attack.hit-ally` is asked instead. The target is always asked first — it is their skin — and only one window
     // opens per swing, because the card is held once and a second holder would fight the first over it.
-    const bystander = !waits && resolution.outcome === "hit" && !fixed && !canShield && !guards.length ? this.bystanderGuard(target) : undefined;
+    const bystander = !waits && resolution.outcome === "hit" && !fixed && !canShield && !guards.length ? this.bystanderGuard(target, attacker) : undefined;
     if (canShield || guards.length || bystander) {
       const promptId = newMessageId();
       const attackerName = attacker.token?.name ?? attacker.entry.name;
@@ -2365,11 +2365,13 @@ export class TableHost {
   /**
    * R57 (D192): the first character on this page, other than the one that was hit, whose contract wants to answer an
    * attack on somebody else (가로막기 and its kin). Whether they are close enough is the fact they confirm.
+   * D305: never the attacker — a fighter with 가로막기 was asked to blunt their own swing.
    */
-  private bystanderGuard(target: { entry: JournalEntry; token?: Token; page?: Page }) {
+  private bystanderGuard(target: { entry: JournalEntry; token?: Token; page?: Page }, attacker?: { entry: JournalEntry; token?: Token }) {
     if (!target.page || !this.options.pcGuards) return undefined;
     for (const token of target.page.tokens) {
       if (token.id === target.token?.id || !token.represents) continue;
+      if (attacker && (token.id === attacker.token?.id || token.represents === attacker.entry.id)) continue;
       const entry = this.journalEntries.get(token.represents);
       if (entry?.kind !== "character") continue;
       const actor = { entry, token, page: target.page };

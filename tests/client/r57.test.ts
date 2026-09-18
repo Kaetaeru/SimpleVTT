@@ -168,3 +168,36 @@ test("R57: an ally being hit opens a window for the bystander who declared one (
   assert.ok(before - card.hpAfter < raw, `${before - card.hpAfter} taken of ${raw} rolled`);
   assert.ok([...host.archive].some((message) => message.content.includes("가로막기")), "and the log says who stepped in");
 });
+
+test("D305: the bystander's window never goes to the attacker — 가로막기 does not blunt its own swing", async () => {
+  const hub = new MemoryHub();
+  const campaign = { ...newCampaign("D305 시험", { userId: "dm", displayName: "DM" }), joinCode: "D305AA" };
+  const guardian = fighterWith([["interception", "가로막기"]], "greatsword", "수호자");
+  const cat = guardian.catalog;
+  const host = new TableHost(hub.hostEndpoint(), { campaign, hostUserId: "dm", hostSecret: "s", random: () => 0.9,
+    attributeOf: (entry, link) => (link === "hp" ? { value: entry.runtime.hp.current, max: entry.runtime.hp.maxSeen } : undefined),
+    pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, cat)), pcConcentrationKey,
+    pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, cat), attackId, riders, cat),
+    pcGuards: (entry, trigger) => pcGuards(entry, derivedOf(entry, cat), cat, trigger),
+    pcPayContract: (entry, payments, outcome) => payContract(entry.runtime, derivedOf(entry, cat), payments, outcome),
+    pcStats: (entry) => pcStats(derivedOf(entry, cat)) });
+  const dm = new TableClient(hub.connect("dm-seat"), { userId: "dm", displayName: "DM", joinCode: "D305AA", hostSecret: "s" });
+  await tick();
+  const scene = newScene(campaign.id, "복도", 0);
+  dm.send({ type: "page.put", page: scene });
+  dm.send({ type: "page.ribbon", pageId: scene.id });
+  const guardianEntry = newJournalCharacter(campaign.id, "dm", guardian.made.source, guardian.runtime);
+  const ogre = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.ogre")!);
+  for (const entry of [guardianEntry, ogre]) dm.send({ type: "journal.put", entry });
+  await tick();
+  const guardianToken = tokenForCharacter(guardianEntry);
+  const ogreToken = tokenForNpc(ogre);
+  dm.send({ type: "token.put", pageId: scene.id, token: guardianToken });
+  dm.send({ type: "token.put", pageId: scene.id, token: ogreToken });
+  await tick();
+  const sword = guardian.derived.attacks.find((attack) => attack.name.includes("대검")) ?? guardian.derived.attacks[0];
+  dm.send({ type: "act.attack", attacker: { entryId: guardianEntry.id, pageId: scene.id, tokenId: guardianToken.id }, targets: [{ entryId: ogre.id, pageId: scene.id, tokenId: ogreToken.id }], attack: { source: "weapon", attackId: sword.id }, overrides: { outcome: "hit" } });
+  await tick();
+  const guardAsks = host.archive.filter((message) => message.type === "prompt" && message.prompt?.guard?.trigger === "attack.hit-ally");
+  assert.deepEqual(guardAsks.map((message) => message.content), [], "no window asks the attacker to guard its own target");
+});
