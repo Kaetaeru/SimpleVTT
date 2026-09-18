@@ -11,7 +11,7 @@ import type {
   ProgressionCatalogJson, ProgressionLevelRowJson, RuleModuleJson, SpellPresentationJson,
 } from "./types";
 import { parseContract, type CommonPlayContract } from "../rules/contract";
-import type { ClassRules } from "../rules/classes";
+import type { ClassOptionPool, ClassRules } from "../rules/classes";
 import type { SpeciesOptionEffect, SrdSpeciesData, SrdSubclassChoice, SrdSubclassData } from "../data/srd";
 
 export interface FeatureRecord {
@@ -60,7 +60,21 @@ export interface SubclassView {
   /** H7b (D252): the choices the subclass adds, and the spells a chosen option prepares (English names). */
   choices: SrdSubclassChoice[];
   spellsByOption: NonNullable<SrdSubclassData["spellsByOption"]>;
+  /** D303: the subclass makes a class that does not cast a one-third caster. */
+  spellcasting?: SubclassSpellcasting;
+  /** D303: option lists the subclass knows in growing numbers by class level, the way a class's pools work. */
+  optionPools: ClassOptionPool[];
   scope: "builtin" | "installed";
+}
+
+/** D303: spellcasting a subclass grants — the casting ability, the class list it prepares from, counts by class level. */
+export interface SubclassSpellcasting {
+  kind: "third";
+  ability: AbilityKey;
+  /** Class id whose spell list the subclass prepares from. */
+  list: string;
+  cantrips: Record<string, number>;
+  prepared: Record<string, number>;
 }
 
 export interface SpeciesTrait extends FeatureRecord { minLevel?: number }
@@ -288,7 +302,7 @@ export class ContentCatalog {
     this.index = inputs.index;
     this.skills = inputs.index.skills;
     this.languages = { standard: inputs.index.standardLanguages, general: inputs.index.generalLanguages };
-    this.classOptions = inputs.extras.classOptions;
+    this.classOptions = this.buildClassOptions();
     this.spells = this.buildSpells();
     this.classes = this.buildClasses();
     this.subclasses = this.buildSubclasses();
@@ -457,6 +471,26 @@ export class ContentCatalog {
     return views.sort((a, b) => a.name.localeCompare(b.name, "ko"));
   }
 
+  /**
+   * D303: the option lists a choice can pick from — the builtin ones, and every list a module declares with an
+   * `option-list-definition` entry (its options are `option` entries of the same catalog, named by id).
+   */
+  private buildClassOptions(): Record<string, ClassOptionDefinition[]> {
+    const lists: Record<string, ClassOptionDefinition[]> = { ...this.inputs.extras.classOptions };
+    for (const entry of this.entries.values()) {
+      const def = mechanic<{ list?: string; options?: string[] }>(entry, "option-list-definition");
+      if (!def?.list) continue;
+      const options: ClassOptionDefinition[] = [];
+      for (const id of def.options ?? []) {
+        const option = this.entries.get(id);
+        if (option) options.push({ id, name: option.name, nameEn: option.nameEn, description: option.description ?? option.summary });
+        else this.warnings.push(`선택지 목록 "${def.list}"의 항목 "${id}"을(를) 찾을 수 없습니다.`);
+      }
+      lists[def.list] = [...(lists[def.list] ?? []).filter((item) => !options.some((option) => option.id === item.id)), ...options];
+    }
+    return lists;
+  }
+
   private buildSubclasses(): SubclassView[] {
     const views: SubclassView[] = [];
     const authored = new Map(this.inputs.extras.subclasses.map((item) => [item.id, item]));
@@ -465,14 +499,14 @@ export class ContentCatalog {
       if (this.entries.has(data.id)) continue;
       const spells: Record<number, string[]> = {};
       for (const [level, names] of Object.entries(data.spells ?? {})) spells[Number(level)] = names.map((name) => this.spellByName(name)?.id ?? name);
-      views.push({ id: data.id, classId: data.classId, name: data.name, nameEn: data.nameEn, summary: data.summary, features: data.features.map((feature) => ({ ...feature, descriptionSource: "srd-summary" as const })).sort((a, b) => a.level - b.level), spells, choices: data.choices ?? [], spellsByOption: data.spellsByOption ?? {}, scope: "builtin" });
+      views.push({ id: data.id, classId: data.classId, name: data.name, nameEn: data.nameEn, summary: data.summary, features: data.features.map((feature) => ({ ...feature, descriptionSource: "srd-summary" as const })).sort((a, b) => a.level - b.level), spells, choices: data.choices ?? [], spellsByOption: data.spellsByOption ?? {}, optionPools: [], scope: "builtin" });
     }
     for (const entry of this.byCategory("subclass")) {
       const classId = entry.relationships.find((rel) => rel.kind === "parent")?.target ?? "";
       const data = authored.get(entry.id);
       // H7b (D252): a module subclass writes its choices in `subclass-definition`, as the SRD extras do.
       // H7b (D252) + D300: a module subclass writes its choices — and the spells it always prepares, by class level — here.
-      const def = mechanic<Pick<SrdSubclassData, "choices" | "spellsByOption"> & { spells?: Record<string, string[]> }>(entry, "subclass-definition") ?? {};
+      const def = mechanic<Pick<SrdSubclassData, "choices" | "spellsByOption"> & { spells?: Record<string, string[]>; spellcasting?: SubclassSpellcasting; optionPools?: ClassOptionPool[] }>(entry, "subclass-definition") ?? {};
       const features: SubclassFeature[] = [];
       if (data) {
         for (const feature of data.features) features.push({ ...feature, descriptionSource: "srd-summary" });
@@ -487,7 +521,7 @@ export class ContentCatalog {
       const spells: Record<number, string[]> = {};
       // D300: the module's own list wins where it has one; either spelling of a spell (id or English name) resolves.
       for (const [level, names] of Object.entries(def.spells ?? data?.spells ?? {})) spells[Number(level)] = (Array.isArray(names) ? names : [names]).map((name) => this.spellById(name)?.id ?? this.spellByName(name)?.id ?? name);
-      views.push({ id: entry.id, classId, name: entry.name, nameEn: entry.nameEn, summary: entry.summary ?? data?.summary, description: entry.description, features: features.sort((a, b) => a.level - b.level), spells, choices: def.choices ?? data?.choices ?? [], spellsByOption: def.spellsByOption ?? data?.spellsByOption ?? {}, scope: entry.scope });
+      views.push({ id: entry.id, classId, name: entry.name, nameEn: entry.nameEn, summary: entry.summary ?? data?.summary, description: entry.description, features: features.sort((a, b) => a.level - b.level), spells, choices: def.choices ?? data?.choices ?? [], spellsByOption: def.spellsByOption ?? data?.spellsByOption ?? {}, ...(def.spellcasting ? { spellcasting: def.spellcasting } : {}), optionPools: def.optionPools ?? [], scope: entry.scope });
     }
     return views;
   }

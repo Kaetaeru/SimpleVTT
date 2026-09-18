@@ -1,13 +1,14 @@
 /**
  * Class spellcasting: cantrips known, prepared spells, the wizard's spellbook, always-prepared spells (class,
  * subclass, subclass options), spell levels reachable per class (each class as if single-classed, SRD Multiclassing)
- * and the slot tables (single class from the class table, multiclass from the combined caster level).
+ * and the slot tables (single class from the class table, multiclass from the combined caster level). A class that does
+ * not cast can still be a one-third caster through its subclass (D303).
  */
-import type { ClassLevelRow, ClassView } from "../catalog/catalog";
+import type { ClassLevelRow, ClassView, SubclassSpellcasting } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { COLUMN, numericColumn } from "../rules/classes";
 import { evaluate } from "../rules/contract";
-import { fullCasterSlots, multiclassCasterLevel, pactMagicSlots } from "../rules/tables";
+import { fullCasterSlots, multiclassCasterLevel, pactMagicSlots, thirdCasterSlots, type CasterKind } from "../rules/tables";
 import { spellOption, spellOptions } from "./choices";
 import type { ClassState, Ledger, SpellcastingAccumulator } from "./ledger";
 
@@ -45,18 +46,29 @@ export function isCasterClass(cls: ClassView) {
   return cls.casterKind !== "none" || Boolean(cls.spells);
 }
 
+/** D303: the spellcasting the class's subclass grants, when the class does not cast of its own. */
+export function subclassCasting(ledger: Ledger, cls: ClassView, state: ClassState): SubclassSpellcasting | undefined {
+  if (isCasterClass(cls) || !state.subclassId) return undefined;
+  return ledger.catalog.subclassById(state.subclassId)?.spellcasting;
+}
+
+/** The count a by-class-level table gives at this level: the value of the highest threshold reached. */
+const atLevel = (table: Record<string, number>, level: number) => Object.entries(table).filter(([threshold]) => Number(threshold) <= level).reduce((max, [, value]) => Math.max(max, value), 0);
+
 export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: ClassState, row: ClassLevelRow) {
-  if (!isCasterClass(cls)) return;
+  const casting = subclassCasting(ledger, cls, state);
+  if (!isCasterClass(cls) && !casting) return;
   const { catalog } = ledger;
   const entry = classSpellEntry(ledger, cls);
   const first = state.firstTrack;
   const ask = { scope: "class" as const, sourceLabel: `${cls.name} 주문`, trackIndex: first };
   const bonusCantrip = ledger.bonusCantrips.get(cls.id) ?? 0;
-  entry.cantripsMax = numericColumn(row.columns[COLUMN.cantrips]) + bonusCantrip;
-  entry.preparedMax = numericColumn(row.columns[COLUMN.prepared]);
-  const top = maxSpellLevel(cls, row);
+  if (casting) entry.ability = casting.ability;
+  entry.cantripsMax = (casting ? atLevel(casting.cantrips, state.level) : numericColumn(row.columns[COLUMN.cantrips])) + bonusCantrip;
+  entry.preparedMax = casting ? atLevel(casting.prepared, state.level) : numericColumn(row.columns[COLUMN.prepared]);
+  const top = casting ? Math.max(0, ...Object.keys(thirdCasterSlots(state.level)).map(Number)) : maxSpellLevel(cls, row);
   const levels = Array.from({ length: top }, (_, index) => index + 1);
-  const lists = [cls.id];
+  const lists = [casting?.list ?? cls.id];
   for (const slug of ledger.extraSpellLists.get(cls.id) ?? []) { const other = catalog.classBySlug(slug); if (other && !lists.includes(other.id)) lists.push(other.id); }
 
   for (const name of cls.spells?.alwaysPrepared ?? []) {
@@ -103,20 +115,21 @@ export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: Cl
 /** Spell slots of the whole character: one non-pact caster reads its own table, several combine caster levels. */
 export function deriveSpellSlots(ledger: Ledger): { slots: Record<number, number>; pact?: { count: number; level: number } } {
   const { catalog } = ledger;
-  const casters: Array<{ cls: ClassView; state: ClassState }> = [];
+  const casters: Array<{ kind: CasterKind; level: number; slots: () => Record<number, number> }> = [];
   let pact: { count: number; level: number } | undefined;
   for (const state of ledger.classes.values()) {
     const cls = catalog.classById(state.classId);
     if (!cls) continue;
     if (cls.casterKind === "pact") { pact = pactMagicSlots(state.level) ?? undefined; continue; }
-    if (cls.casterKind === "full" || cls.casterKind === "half") casters.push({ cls, state });
+    if (cls.casterKind === "full" || cls.casterKind === "half") {
+      const row = cls.progression[state.level - 1];
+      casters.push({ kind: cls.casterKind, level: state.level, slots: () => (row ? classSlotTable(cls, row) : {}) });
+    } else if (subclassCasting(ledger, cls, state)) {
+      casters.push({ kind: "third", level: state.level, slots: () => thirdCasterSlots(state.level) });
+    }
   }
   if (casters.length === 0) return { slots: {}, pact };
-  if (casters.length === 1) {
-    const { cls, state } = casters[0];
-    const row = cls.progression[state.level - 1];
-    return { slots: row ? classSlotTable(cls, row) : {}, pact };
-  }
-  const casterLevel = multiclassCasterLevel(casters.map(({ cls, state }) => ({ kind: cls.casterKind, level: state.level })));
+  if (casters.length === 1) return { slots: casters[0].slots(), pact };
+  const casterLevel = multiclassCasterLevel(casters);
   return { slots: fullCasterSlots(casterLevel), pact };
 }

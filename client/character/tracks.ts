@@ -414,8 +414,9 @@ function applyClassWide(ledger: Ledger, cls: ClassView, state: ClassState) {
     applyInvocations(ledger, cls, first, picked);
   }
 
-  // H4 (D243): option lists known in growing numbers (메타매직), from the class definition.
-  for (const pool of cls.rules.optionPools) {
+  // H4 (D243): option lists known in growing numbers (메타매직), from the class definition — and D303, from the subclass.
+  const subclass = state.subclassId ? catalog.subclassById(state.subclassId) : undefined;
+  for (const pool of [...cls.rules.optionPools, ...(subclass?.optionPools ?? [])]) {
     const count = Object.entries(pool.known).filter(([threshold]) => Number(threshold) <= level).reduce((max, [, value]) => Math.max(max, value), 0);
     if (count <= 0) continue;
     const picked = ledger.ask({ ...ask, id: `class.${first}.${pool.id}`, label: `${pool.label} (${count}개)`, count, options: classOptionList(catalog, pool.list) });

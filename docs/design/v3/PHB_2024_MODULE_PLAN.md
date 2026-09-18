@@ -101,7 +101,7 @@ node scripts/phb2024-parse-source.mjs <phb-src>/10-RULEBOOKS/phb-2024 <out>/phb-
 
 D300~D302에서 이미 연 것(바로 쓴다): 서브클래스 레벨별 주문(`subclass-definition.spells`), 수영 속도, 회복·임시 HP의 `diceCount`/`diceSides`, 사후 불리점(`reroll-keep-lower`), 반응 창 어휘(`reaction.auto-miss`, `damage-taken.reduce`의 `diceSides`), 지속 주문의 대상 고정(`sustain.target: "bound"`)과 종료 버튼(`sustain.endWhen`), 획득 시점 식이 읽는 능력 수정치.
 
-새로 필요한 것 **두 개** — P1에서 먼저 연다.
+새로 필요했던 것 **두 개** — P1에서 열었다(**D303**, 2026-09-18). 쓰는 법은 `MODULE_GRAMMAR.md` §5·§9.
 
 ### G1. 1/3 시전자 주문 시전 (`subclass-definition.spellcasting`)
 
@@ -113,6 +113,8 @@ D300~D302에서 이미 연 것(바로 쓴다): 서브클래스 레벨별 주문(
 - 시험: 합성 모듈의 3분의1 시전자가 3레벨에 1레벨 슬롯 2개·준비 3개, 7레벨에 2레벨 슬롯, 멀티클래스에서 1/3만 기여.
 
 ### G2. 모듈이 정의하는 선택지 목록 (`option-list-definition`)
+
+> D303에서 연 모양: 목록 선언은 위와 같고, 개수가 레벨마다 늘어나는 선택은 `subclass-definition.optionPools`(`{ id, list, label, known: { "3": 3, "7": 5, "10": 7, "15": 9 } }`)로 적는다. 선택지 **교체**는 문법에 없다.
 
 - 지금 `choice.class-option`은 `catalog.classOptions`(내장 SRD 데이터)만 본다 → 모듈이 목록을 못 만든다.
 - 데이터(모듈): 목록 항목은 `option` 카테고리 항목들이고, 목록 자체를 선언하는 항목이 하나 더 있다

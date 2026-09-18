@@ -90,11 +90,11 @@ npm run gate          # 위 둘을 순서대로
 | 항목 | 값 |
 |---|---|
 | 브랜치 | `claude/practical-newton-rye61w` (푸시 완료) |
-| 마지막 커밋 | `V0.9 V6c: the creature a spell caught, and the windows that answer a hit (D302)` |
-| 단위 시험 | **461개 통과** (`tests/client/*.test.ts`) |
+| 마지막 커밋 | `V0.9 V6d: a subclass that casts, and option lists a module declares (D303)` — 브랜치 `claude/phb2024-p1` |
+| 단위 시험 | **467개 통과** (`tests/client/*.test.ts`) |
 | E2E | **18/18 통과** (`scripts/capture-client-*.mjs`, V4 화면 검증 캡처 포함) |
 | 세션 프로토콜 | **v30** (`client/session/protocol.ts`) |
-| 결정 기록 | **D1~D302** |
+| 결정 기록 | **D1~D303** |
 | 로드맵 | **R1~R70 전부 `✔`** — R63~R69는 2026-09-17 플레이 흐름 개편(`PLAY_FLOW_UX.md`), R70은 IP·포트 입장 |
 | 점수판 | 연산 27/27 계산·적용, 요구 슬롯 3/4, 계약 163/223, **침묵 0** |
 | 아티팩트 | https://claude.ai/artifact/8v3AiLvUodv7fYWD7yJkPs (v57, R62 반영) |
@@ -246,8 +246,8 @@ client/
   하나씩 붙었고, 저장소의 PHB 덧대기 세 개(재주 계약 58·재주 설정 13·주문 실행 21)가 그 파일 안으로 들어갔다. 이제 보충 모듈
   **하나만** 설치하면 되고, 설치 순서 문제도 없다. 모듈 자체는 저장소에 들어오지 않는다(PHB 본문). 검사는
   `npx tsx scripts/check-module-grammar.ts <파일>` — `unsupported 0`, 모르는 속성 0이어야 한다.
-- 아직 문법에 없는 것: **서브클래스가 주는 주문 시전**(엘드리치 나이트·비전 사기꾼의 1/3 시전자 슬롯표). 그 두 특성은
-  계약에 "DM 판정"으로 사유를 적어 두었다.
+- (D303) **서브클래스가 주는 주문 시전**(1/3 시전자)과 **모듈이 선언하는 선택지 목록**이 문법에 들어갔다 — PHB 계획서 P1 완료.
+  다음은 P2(배경·아시마르·재주). 옛 보충 모듈의 엘드리치 나이트·비전 사기꾼 "DM 판정"은 새 모듈에서 `spellcasting`으로 바꾼다.
 - (2026-09-17) 시트의 특성 목록은 여전히 출처(직업/종족/재주)별이다 — 발동 방식별 묶기는 턴 패널이 대신한다(D200).
 
 - 남은 편의 기능: 트래커 줄 끌어 정렬·창 크기 조절, 저널 끌어 정렬, 안 쓰는 그림 정리 화면(`docs/CURRENT.md`).

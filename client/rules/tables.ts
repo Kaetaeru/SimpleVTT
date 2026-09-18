@@ -67,14 +67,17 @@ export function pactMagicSlots(warlockLevel: number): { count: number; level: nu
   return { count, level };
 }
 
-export type CasterKind = "full" | "half" | "pact" | "none";
+export type CasterKind = "full" | "half" | "third" | "pact" | "none";
+
+/** D303: a one-third caster's own slots — the full-caster row at a third of the class level, rounded up. */
+export const thirdCasterSlots = (classLevel: number) => fullCasterSlots(Math.ceil(classLevel / 3));
 
 /**
  * Multiclass spellcaster level (SRD 5.2.1 Multiclassing): full casters add every level, half casters (Paladin, Ranger)
- * add half rounded up per class, Pact Magic does not contribute.
+ * add half rounded up per class, one-third casters (a subclass that casts, D303) a third rounded down, Pact Magic nothing.
  */
 export function multiclassCasterLevel(tracks: Array<{ kind: CasterKind; level: number }>) {
-  return tracks.reduce((sum, track) => sum + (track.kind === "full" ? track.level : track.kind === "half" ? Math.ceil(track.level / 2) : 0), 0);
+  return tracks.reduce((sum, track) => sum + (track.kind === "full" ? track.level : track.kind === "half" ? Math.ceil(track.level / 2) : track.kind === "third" ? Math.floor(track.level / 3) : 0), 0);
 }
 
 export const SIZE_KO: Record<string, string> = { tiny: "초소형", small: "소형", medium: "중형", large: "대형", huge: "거대형", gargantuan: "초대형" };

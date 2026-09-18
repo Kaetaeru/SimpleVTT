@@ -190,7 +190,7 @@ export class Ledger {
     return entry;
   }
 
-  hasSpellcasting() { return this.spellcasting.size > 0 || [...this.classes.values()].some((state) => (this.catalog.classById(state.classId)?.casterKind ?? "none") !== "none"); }
+  hasSpellcasting() { return this.spellcasting.size > 0 || [...this.classes.values()].some((state) => (this.catalog.classById(state.classId)?.casterKind ?? "none") !== "none" || Boolean(state.subclassId && this.catalog.subclassById(state.subclassId)?.spellcasting)); }
 
   classBySlug(slug: string) { return [...this.classes.values()].find((state) => state.slug === slug); }
   classLevel(slug: string) { return this.classBySlug(slug)?.level ?? 0; }

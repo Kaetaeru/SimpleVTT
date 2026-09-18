@@ -168,7 +168,7 @@
 | `choice.languages` | `id, label` |
 | `choice.spell` | `id, label, resourceId?, recovery?, atWill?` (직업 목록에서 하나, 항상 준비) |
 | `choice.spells` | `id, label, classes[], levels[], into: "alwaysPrepared"\|"cantrips", ritual?` |
-| `choice.class-option` | `list`(내장 목록 키 — 모듈이 목록을 만드는 문법은 아직 없다, 계획서 G2) |
+| `choice.class-option` | `list`(내장 목록 키 또는 모듈이 `option-list-definition`으로 선언한 목록, D303) |
 | `choice.fighting-style` | `extra[]` |
 | `grant.resource` | `id, label, recovery, minLevel?, spell?/spells?/maxLevel?, atWill?` · `value`=최대치(식) |
 | `grant.spells` | `spells[], into` |
@@ -277,10 +277,23 @@
 |---|---|
 | `spell-definition` | `level, school, ritual, castingTimeText, rangeText, componentsText, durationText, summary, classes[]` |
 | `feat-definition` | `tier`(origin/general/fighting-style/epic-boon), `repeatable`, `minimumLevel`, `abilityPrerequisite`, `abilityIncrease`, `requires`, `grants[]`, `choices`, `execution.status`, `armorAcBonus`, `rangedWeaponAttackBonus`, `damageDieMinimum`+`weaponPropertiesAny`, `oncePerTurn`, `lightExtraAttackAbilityModifier`, `resistances[]`, `languages[]`, `speedBonus`, `hitPointsPerLevel`, `truesight`, `darkvision`, `<x>SaveProficiency`, `proficiencyChoice`, `expertiseChoice`, `allSkillProficiencies`, `saveProficiencyChoice`, `resistanceChoice`, `ignoreResistanceChoice`, `weaponMasteryChoice`, `grantCantrips[]`, `grantSpells[]`, `grantSpellChoice`, `grantSpellAbility`, `freeCastReset`, `resources[]` |
-| `subclass-definition` | `spells`(레벨→주문 id 또는 영어 이름), `choices[]`, `spellsByOption` |
+| `subclass-definition` | `spells`(레벨→주문 id 또는 영어 이름), `choices[]`, `spellsByOption`, `spellcasting`(1/3 시전자, 아래), `optionPools[]`(아래) |
+| `option-list-definition` | `list`(목록 키), `options[]`(`option` 항목 id) — 선택지 목록을 선언한다(D303) |
 | `species-definition` | `size[]`, `speed`, `darkvision`, `traits[]`(이름 있는 키), `choices`, `semantics`(`baseCantrips`, `baseFeatures`, `extraChoices`…), `effects` |
 | `background-definition` | `abilityChoices[]`, `skills[]`, `tool`, `toolChoice`, `originFeat`, `equipmentChoice` |
 | `weapon-definition` · `armor-definition` · `shield-definition` · `tool-definition` · `consumable-definition` · `pack-definition` · `starting-loadout-definition` | 장비 |
+
+**서브클래스가 주는 주문 시전 (D303)** — 스스로 시전하지 않는 직업을 1/3 시전자로 만든다:
+
+```json
+{ "spellcasting": { "kind": "third", "ability": "int", "list": "dnd.srd521.class.wizard",
+                  "cantrips": { "3": 2, "10": 3 }, "prepared": { "3": 3, "4": 4, "7": 5 } } }
+```
+
+표의 키는 직업 레벨이고 도달한 가장 높은 키의 값을 쓴다. 슬롯은 직업 레벨 3분의 1(올림)의 전 시전자 표, 멀티클래스 시전자 레벨에는 3분의 1(내림).
+
+**늘어나는 선택지 (D303)** — `optionPools: [{ "id": "maneuvers", "list": "<목록 키>", "label": "기동", "known": { "3": 3, "7": 5 } }]`.
+선택 id는 `class.<그 직업 첫 트랙>.<id>`. 목록은 `option-list-definition`으로 선언한다. 고른 항목은 특성이 되고 자기 계약(`id` = 항목 id)을 찾는다.
 
 서브클래스 항목은 `relationships: [{ "kind": "parent", "target": "<classId>" }]`와
 `progressionContributions: [{ "track": "<classId>", "threshold": 3, "grants": ["<특성 항목 id>"] }]`로 붙는다.
