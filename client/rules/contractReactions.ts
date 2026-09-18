@@ -40,6 +40,8 @@ export interface GuardOffer {
   damageTypes?: string[];
   /** R95 (D230): the damage of the attack that just landed is halved (기묘한 회피). */
   halve?: boolean;
+  /** D302: the attack misses, whatever it rolled — no AC to beat, the reaction simply takes it away (환영 자아). */
+  miss?: boolean;
   /** V4e (D267): taking it opens an attack back at the attacker, which spends the reaction (보복). */
   strikeBack?: boolean;
   /** V4h (D270): the damage it sends back at the attacker, with the save that halves it (공격 흘리기의 되돌리기). */
@@ -66,6 +68,8 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
   const offers: GuardOffer[] = [];
   const seen = new Set<string>();
   for (const feature of derived.features) {
+    // V3d (D258): a labelled use is a line of the same feature, not a second reaction — the window is offered once.
+    if (feature.id.includes("#")) continue;
     const ruleKey = featureRuleKey(feature.id);
     if (seen.has(ruleKey)) continue;
     seen.add(ruleKey);
@@ -86,6 +90,8 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
           if (Number.isFinite(value)) { offer.acBonus = (offer.acBonus ?? 0) + value; if (factId) offer.acBonusFact = factId; }
         } else if (operation.kind === "property.modify" && operation.property === "damage-taken.halve") {
           offer.halve = true;
+        } else if (operation.kind === "property.modify" && operation.property === "reaction.auto-miss") {
+          offer.miss = true;
         } else if (operation.kind === "property.modify" && operation.property === "reaction.strike-back") {
           offer.strikeBack = true;
         } else if (operation.kind === "property.modify" && operation.property === "reaction.redirect") {
@@ -94,14 +100,17 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
           if (operation.dice && Number.isFinite(dc)) offer.redirect = { formula: `${operation.dice}${Number.isFinite(flat) && flat ? `+${flat}` : ""}`, damageType: String(operation.params?.damageType ?? "역장"), save: { ability: String(operation.params?.ability ?? "dex"), dc } };
         } else if (operation.kind === "property.modify" && operation.property === "damage-taken.reduce") {
           const flat = Number(evaluate(operation.value, scope));
-          const parts = [operation.dice, Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""].filter(Boolean);
+          // D302: the die may be the size an expression decides (사이오닉 에너지 주사위: d6 → d12 by level).
+          const sides = operation.diceSides === undefined ? undefined : Number(evaluate(operation.diceSides, scope));
+          const dice = Number.isFinite(sides) && sides ? `1d${Math.floor(sides as number)}` : operation.dice;
+          const parts = [dice, Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""].filter(Boolean);
           if (parts.length) { offer.reduce = parts.join(""); if (factId) offer.reduceFact = factId; if (operation.damageTypes?.length) offer.damageTypes = operation.damageTypes; }
         } else if (operation.kind === "adjudication.request") {
           if (operation.fact?.at === "reaction") offer.facts.push({ id: operation.fact.id, question: operation.question });
           else offer.notes.push(operation.question);
         }
       }
-      if (offer.acBonus === undefined && !offer.reduce && !offer.halve && !offer.strikeBack && !offer.redirect && !offer.notes.length && !offer.facts.length) continue;
+      if (offer.acBonus === undefined && !offer.reduce && !offer.halve && !offer.miss && !offer.strikeBack && !offer.redirect && !offer.notes.length && !offer.facts.length) continue;
       const payable = offer.payments.every((payment) => payment.kind !== "resource" || !payment.resourceId || poolLeft(derived, entry.runtime, payment.resourceId) > 0);
       if (payable) offers.push(offer);
     }

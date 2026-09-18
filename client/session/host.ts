@@ -923,6 +923,11 @@ export class TableHost {
             if (this.reactionUsed(command.caster)) return refuse("이번 라운드의 반응을 이미 썼습니다");
           }
         }
+        // D302: the repeat of a bound spell may only go to the creature it caught; the sheet's own effect remembers it.
+        const boundTo = command.method?.kind === "sustain"
+          ? (caster.entry.kind === "character" ? caster.entry.runtime.effects ?? [] : caster.entry.kind === "npc" ? caster.entry.runtime.effects ?? [] : []).find((effect) => effect.key === `spell:${command.spellId}`)?.target
+          : undefined;
+        if (boundTo && command.targets.some((ref) => ref.entryId !== boundTo)) return refuse("이 주문은 처음 맞힌 대상에게만 다시 씁니다");
         const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
         // V4v (D284): a bigger slot may reach more creatures (축복).
@@ -956,7 +961,12 @@ export class TableHost {
         // The cost is paid on casting (a slot, concentration on the caster) even when the DM still has to confirm the result.
         const casterBefore = caster.entry;
         let spent: CharacterRuntime | null = null;
-        if (casterBefore.kind === "character") { const withMeta = meta ? meta.spend(casterBefore.runtime) : casterBefore.runtime; if (!withMeta) return refuse("마법 점수가 없습니다"); const next = prepared.spend(withMeta); if (!next) return refuse("슬롯이나 횟수가 없습니다"); spent = next; this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
+        if (casterBefore.kind === "character") { const withMeta = meta ? meta.spend(casterBefore.runtime) : casterBefore.runtime; if (!withMeta) return refuse("마법 점수가 없습니다"); const next = prepared.spend(withMeta); if (!next) return refuse("슬롯이나 횟수가 없습니다");
+          // D302: a spell whose repeat belongs to the creature it first caught (마녀 화살) writes that creature on the
+          // caster's own effect, so the ↻ does not ask again and cannot wander to somebody else.
+          const bound = !exec.repeat && sustainOf(exec)?.target === "bound" ? targets[0]?.entry.id : undefined;
+          spent = bound ? { ...next, effects: (next.effects ?? []).map((effect) => (effect.key === `spell:${prepared.spec.spellId}` ? { ...effect, target: bound } : effect)) } : next;
+          this.storeEntry({ ...casterBefore, runtime: { ...spent, updatedAt: this.now() }, updatedAt: this.now() }); }
         else if (resolution.concentration && !exec.repeat) { this.mark(caster, ["집중"], true); this.startNpcConcentration(caster.entry.id, prepared.spec.spellId, prepared.spec.name, prepared.spec.level); }
         const restoreNpcUse = casterBefore.kind === "npc" && prepared.npcSpend ? prepared.npcSpend() : undefined;
         // R26 (D136): undoing an old cast used to write the caster's whole pre-cast ledger back, refunding every
@@ -1538,7 +1548,7 @@ export class TableHost {
         if (!offer.strikeBack) this.markReactionUsed(promptMessage.prompt.reactor);
         const rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
-        this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}) });
+        this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}), ...(offer.miss ? { miss: true } : {}) });
         // V4h (D270): the deflected attack sent back at whoever made it.
         if (offer.redirect) { const mover = this.resolveActor(promptMessage.prompt.mover); if (mover) this.contractStrike(reactor, [mover], command.feature, { formula: offer.redirect.formula, damageType: offer.redirect.damageType, save: { ...offer.redirect.save, success: "half" } }, player.displayName, userId); }
         if (offer.strikeBack && (!offer.facts.length || offer.facts.every((item) => confirmed.has(item.id)))) this.say({ type: "prompt", who: "", content: `${promptMessage.prompt.reactor.name}: ${command.feature} — ${promptMessage.prompt.mover.name}에게 공격`, prompt: { kind: "opportunity", mover: promptMessage.prompt.mover, reactor: promptMessage.prompt.reactor } });
@@ -2370,7 +2380,7 @@ export class TableHost {
     return undefined;
   }
 
-  private releaseHeld(promptId: string, shielded: boolean, guard?: { acBonus?: number; reduce: number; label: string; halve?: boolean }) {
+  private releaseHeld(promptId: string, shielded: boolean, guard?: { acBonus?: number; reduce: number; label: string; halve?: boolean; miss?: boolean }) {
     const held = this.held.get(promptId);
     if (!held) return;
     this.held.delete(promptId);
@@ -2391,13 +2401,13 @@ export class TableHost {
     // H6b (D249): a reaction spell raised the AC through its own effect contract (방패: +5), which the target's
     // combatant already carries; the re-resolution below reads it rather than a number written here.
     const acBonus = guard?.acBonus ?? 0;
-    const note = guard ? `${guard.label}${guard.acBonus ? `: AC +${guard.acBonus}` : ""}${guard.reduce ? `: 피해 −${guard.reduce}` : ""}${guard.halve ? ": 피해 절반" : ""}` : "";
-    if (shielded || acBonus || guard?.reduce || guard?.halve) {
+    const note = guard ? `${guard.label}${guard.acBonus ? `: AC +${guard.acBonus}` : ""}${guard.reduce ? `: 피해 −${guard.reduce}` : ""}${guard.halve ? ": 피해 절반" : ""}${guard.miss ? ": 빗나감" : ""}` : "";
+    if (shielded || acBonus || guard?.reduce || guard?.halve || guard?.miss) {
       const attackerCombatant = this.combatantOf(attacker);
       const targetCombatant = this.combatantOf(target);
       if (attackerCombatant && targetCombatant) {
         if (acBonus && targetCombatant.ac < held.resolution.targetAc + acBonus) targetCombatant.ac = held.resolution.targetAc + acBonus;
-        overrides = { ...(held.overrides ?? {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), ...(guard?.halve ? { damageScale: (held.overrides?.damageScale ?? 1) * 0.5 } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
+        overrides = { ...(held.overrides ?? {}), ...(guard?.miss ? { outcome: "miss" as const } : {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), ...(guard?.halve ? { damageScale: (held.overrides?.damageScale ?? 1) * 0.5 } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
         resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed: { d20s: held.resolution.d20s, bonusDice: held.resolution.bonusDice?.map((item) => item.total), damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
       }
     }

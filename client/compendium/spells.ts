@@ -151,7 +151,17 @@ const BUILTIN_WEAPON_SPELLS = (weaponSpellJson as unknown as { spells: Record<st
 export const weaponSpellOf = (spellId: string): WeaponSpell | undefined => spellExec(spellId)?.weaponSpell ?? BUILTIN_WEAPON_SPELLS[spellId];
 
 /** R77 (D212): a concentration spell used again without a slot — its economy, and a different effect when it has one. */
-export interface SpellSustain { economy: "action" | "bonus-action" | "none"; primary?: SpellPrimary; note?: string; /** R89 (D224): the repeat happens per this many feet moved inside the area (가시 성장), not on entering. */ move?: number }
+export interface SpellSustain {
+  economy: "action" | "bonus-action" | "none";
+  primary?: SpellPrimary;
+  note?: string;
+  /** R89 (D224): the repeat happens per this many feet moved inside the area (가시 성장), not on entering. */
+  move?: number;
+  /** D302: the repeat belongs to the creature the spell first caught — no new target is asked for (마녀 화살). */
+  target?: "bound";
+  /** D302: what ends the spell that the app cannot see (out of range, total cover); shown as a button that ends it. */
+  endWhen?: string;
+}
 
 const raw = catalogJson as unknown as { definitions: Record<string, SpellExec> | SpellExec[] };
 const list: SpellExec[] = Array.isArray(raw.definitions) ? raw.definitions : Object.values(raw.definitions);
@@ -172,7 +182,9 @@ export function sustainOf(exec: SpellExec): SpellSustain | null {
   if (authored === false) return null;
   if (!authored && !(exec.concentration && DAMAGE_KINDS.has(exec.primary.kind))) return null;
   const economy = authored?.economy ?? (exec.targeting.maxTargets > 1 ? "none" : exec.castingEconomy === "bonus-action" ? "bonus-action" : "action");
-  return { economy, ...(authored?.primary ? { primary: authored.primary } : {}), ...(authored?.note ? { note: authored.note } : {}), ...(authored?.move ? { move: authored.move } : {}) };
+  return { economy, ...(authored?.primary ? { primary: authored.primary } : {}), ...(authored?.note ? { note: authored.note } : {}), ...(authored?.move ? { move: authored.move } : {}),
+    // D302: whose creature the repeat belongs to, and what ends the spell that this engine cannot see.
+    ...(authored?.target === "bound" ? { target: "bound" as const } : {}), ...(authored?.endWhen ? { endWhen: authored.endWhen } : {}) };
 }
 
 /** R77 (D212): the execution of one repeat — the sustain's effect, no new lasting effect, marked as a repeat. */

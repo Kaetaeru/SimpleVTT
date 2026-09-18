@@ -614,8 +614,15 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     const exec = base && forced?.kind === "sustain" ? sustainedExec(base) : base;
     if (!exec) return;
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
-    let targets: string[] = selfOnly ? [token.id] : [];
-    if (!selfOnly) {
+    // D302: a repeat that belongs to the creature the spell caught goes straight there — the sheet's effect remembers
+    // which one, and the board finds its token; nothing is asked, and nothing may wander to somebody else.
+    const boundEntry = forced?.kind === "sustain"
+      ? ((entry.kind === "character" ? currentRuntime().effects : entry.kind === "npc" ? entry.runtime.effects : []) ?? []).find((effect) => effect.key === `spell:${spellId}`)?.target
+      : undefined;
+    const boundToken = boundEntry ? page.tokens.find((item) => item.represents === boundEntry)?.id : undefined;
+    let targets: string[] = selfOnly ? [token.id] : boundToken ? [boundToken] : [];
+    if (boundEntry && !boundToken) { alert("이 주문이 붙잡은 대상이 이 장면에 없습니다 — 주문을 끝내세요."); return; }
+    if (!selfOnly && !boundToken) {
       // V4v (D284): a bigger slot may reach more creatures (축복) — the highest slot this sheet could spend decides
       // how many the window lets the player click; the host checks the count against the slot actually spent.
       const highestSlot = entry.kind === "character" && derived ? Math.max(exec.baseLevel, ...Object.entries(derived.spellSlots).filter(([, max]) => max > 0).map(([slot]) => Number(slot))) : exec.baseLevel;

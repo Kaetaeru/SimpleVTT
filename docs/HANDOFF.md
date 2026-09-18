@@ -90,11 +90,11 @@ npm run gate          # 위 둘을 순서대로
 | 항목 | 값 |
 |---|---|
 | 브랜치 | `claude/practical-newton-rye61w` (푸시 완료) |
-| 마지막 커밋 | `V0.9 V6b: a reaction window nobody could answer (D301)` |
-| 단위 시험 | **460개 통과** (`tests/client/*.test.ts`) |
+| 마지막 커밋 | `V0.9 V6c: the creature a spell caught, and the windows that answer a hit (D302)` |
+| 단위 시험 | **461개 통과** (`tests/client/*.test.ts`) |
 | E2E | **18/18 통과** (`scripts/capture-client-*.mjs`, V4 화면 검증 캡처 포함) |
 | 세션 프로토콜 | **v30** (`client/session/protocol.ts`) |
-| 결정 기록 | **D1~D301** |
+| 결정 기록 | **D1~D302** |
 | 로드맵 | **R1~R70 전부 `✔`** — R63~R69는 2026-09-17 플레이 흐름 개편(`PLAY_FLOW_UX.md`), R70은 IP·포트 입장 |
 | 점수판 | 연산 27/27 계산·적용, 요구 슬롯 3/4, 계약 163/223, **침묵 0** |
 | 아티팩트 | https://claude.ai/artifact/8v3AiLvUodv7fYWD7yJkPs (v57, R62 반영) |

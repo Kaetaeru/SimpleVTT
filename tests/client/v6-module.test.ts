@@ -15,6 +15,9 @@ import { featureActivation, featureRuleKey } from "../../client/rules/activation
 import { contractDurations } from "../../client/rules/contractActivation";
 import { characterScope, parseContract, planRollModify } from "../../client/rules/contract";
 import { promptAnswerer, promptIsMine } from "../../client/screens/Notify";
+import { pcGuards } from "../../client/rules/contractReactions";
+import { registerCatalogSpells, spellExec, sustainOf } from "../../client/compendium/spells";
+import { initialRuntime } from "../../client/character/runtime";
 import type { RuleModuleJson } from "../../client/catalog/types";
 
 const SUBCLASS = "test.d300.subclass.tide";
@@ -132,4 +135,74 @@ test("D301: the DM can answer a prompt whose reactor is not in their journal", (
   assert.equal(promptIsMine(message, snapshot, "dm"), true, "the DM answers anything at their own table");
   assert.equal(promptIsMine(message, snapshot, "p1"), false, "a player still needs to control the reactor");
   assert.equal(promptAnswerer(message, snapshot), null, "nobody else owns it, so the window falls to the DM");
+});
+
+/** D302: a module spell whose repeat stays on the creature it caught, and a feature that answers a hit. */
+const D302 = {
+  moduleId: "test.d302", moduleVersion: "1",
+  content: [
+    {
+      id: "test.d302.spell.tether", category: "spell",
+      presentation: { originalName: "Tether", defaultLocale: "ko-KR", locales: { "ko-KR": { name: "속박의 끈" } } },
+      mechanics: [
+        { kind: "spell-definition", config: { level: 1, school: "evocation", ritual: false, castingTimeText: "행동", rangeText: "30피트", componentsText: "V, S", durationText: "집중, 최대 1분", classes: ["wizard"] } },
+        { kind: "spell-mechanic", config: { sustain: { economy: "bonus-action", target: "bound", endWhen: "대상이 30피트 밖이거나 완전 엄폐", primary: { kind: "automatic-projectiles", damageType: "번개", projectileDice: { sides: 12 }, baseProjectiles: 1 } } } },
+      ],
+    },
+    {
+      id: "test.d302.subclass.ward", category: "subclass",
+      presentation: { originalName: "Ward", defaultLocale: "ko-KR", locales: { "ko-KR": { name: "수호의 길" } } },
+      relationships: [{ kind: "parent", target: "dnd.srd521.class.wizard" }],
+      progressionContributions: [{ track: "dnd.srd521.class.wizard", threshold: 3, grants: ["test.d302.subclass.ward.feature.3-1"] }],
+    },
+    {
+      id: "test.d302.subclass.ward.feature.3-1", category: "option",
+      presentation: { originalName: "Ward Step", defaultLocale: "ko-KR", locales: { "ko-KR": { name: "수호의 걸음" } } },
+      mechanics: [{
+        kind: "common-play",
+        config: {
+          id: "test.d302.subclass.ward.feature.3-1",
+          payments: [{ kind: "economy", bucket: "reaction", amount: { value: 1 }, consumeAt: "commit" },
+                     { kind: "resource", resource: "resource:test.d302.ward", amount: { value: 1 }, consumeAt: "commit" }],
+          entryPoints: [
+            // The pool is "your Intelligence modifier, minimum one" — an expression the gain step must be able to work out.
+            { id: "gain", invocation: "gain", operations: [{ kind: "property.modify", property: "grant.resource", operation: "add", value: { op: "max", args: [{ ref: "ability.int.modifier" }, { value: 1 }] }, params: { id: "resource.test.d302.ward", label: "수호", recovery: "long-rest" } }] },
+            { id: "use", invocation: "manual", label: "수호의 걸음", operations: [{ kind: "adjudication.request", question: "반응 창에서" }] },
+          ],
+          interceptors: [{
+            id: "ward", timing: "reaction.window", trigger: "attack.hit-self", slot: "reaction", families: [], outcomes: [],
+            interaction: { id: "use", kind: "choice", responder: "actor-owner", mode: "blocking", input: { type: "boolean" }, revalidate: "if-revision-changed", stalePolicy: "reject" },
+            operations: [{ kind: "property.modify", property: "damage-taken.reduce", operation: "add", value: { ref: "ability.int.modifier" }, diceSides: { op: "if", args: [{ op: "gte", args: [{ ref: "actor.level" }, { value: 5 }] }, { value: 8 }, { value: 6 }] }, note: "수호" },
+                         { kind: "property.modify", property: "reaction.auto-miss", operation: "set", value: { value: 1 }, note: "빗나가게 한다" }],
+          }],
+        },
+      }],
+    },
+  ],
+} as unknown as RuleModuleJson;
+
+test("D302: a bound repeat, a pool an ability modifier sizes, and a window a hit opens", () => {
+  const catalog = createCatalog([D302]);
+  registerCatalogSpells(catalog.spells.map((spell) => ({ ...spell, mechanic: catalog.entries.get(spell.id)?.mechanics.find((item) => item.kind === "spell-mechanic")?.config })));
+  const sustain = sustainOf(spellExec("test.d302.spell.tether")!)!;
+  assert.equal(sustain.economy, "bonus-action");
+  assert.equal(sustain.target, "bound", "the repeat stays on the creature the spell caught");
+  assert.equal(sustain.endWhen, "대상이 30피트 밖이거나 완전 엄폐");
+
+  const source = emptySource({
+    name: "수호", origin: { speciesId: "dnd.srd521.species.human", backgroundId: "dnd.srd521.background.soldier" },
+    abilities: { method: "manual", base: { str: 10, dex: 14, con: 14, int: 16, wis: 12, cha: 10 } },
+    tracks: Array.from({ length: 5 }, () => ({ classId: "dnd.srd521.class.wizard", hp: { kind: "fixed" as const } })),
+    choices: { "class.2.subclass": ["test.d302.subclass.ward"] }, equipment: { mode: "loadout" },
+  });
+  const filled = autofill(source, catalog, { prefer: { "class.2.subclass": ["test.d302.subclass.ward"] } });
+  const derived = deriveCharacter(filled.source, catalog);
+  // The pool exists: "Intelligence modifier, minimum one" is worked out while the sheet is built, not dropped as NaN.
+  const pool = derived.resources.find((resource) => resource.id === "resource.test.d302.ward");
+  assert.equal(pool?.max, derived.abilities.int.modifier, JSON.stringify(derived.resources.map((item) => item.id)));
+
+  const offers = pcGuards({ runtime: initialRuntime(derived) }, derived, catalog, "attack.hit-self");
+  assert.equal(offers.length, 1, JSON.stringify(offers.map((offer) => offer.feature)));
+  assert.equal(offers[0].reduce, `1d8+${derived.abilities.int.modifier}`, "the die size is the expression's");
+  assert.equal(offers[0].miss, true, "and the attack may simply miss");
 });

@@ -16,7 +16,7 @@ import {
 import { applyFeat } from "./feats";
 import { featureRuleKey } from "../rules/activation";
 import { featureContract } from "../rules/contractActivation";
-import { evaluate, GAIN_INVOCATION } from "../rules/contract";
+import { evaluate, GAIN_INVOCATION, type ExprValue } from "../rules/contract";
 import { ABILITY_KEYS } from "../catalog/types";
 import type { ClassState, Ledger } from "./ledger";
 import { resolveToolId } from "./origin";
@@ -220,7 +220,20 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
   const contract = featureContract(catalog, featureRuleKey(featureId));
   // H7a (D251): a species trait gains through the same grammar; the operations that belong to a class say so.
   const ask = owner ? { scope: "class" as const, sourceLabel, trackIndex: index } : { scope: "origin" as const, sourceLabel };
-  const scope = (ref: string) => (ref === "proficiency.bonus" ? ledger.proficiencyBonus : ref === "actor.level" ? ledger.level : undefined);
+  // D302: a pool a feature grants is often "your Wisdom modifier, minimum one". Answering only the proficiency bonus
+  // and the level meant those expressions came out NaN and the pool was silently dropped — the feature then had a
+  // button nobody could pay for. Ability modifiers and class levels are known while the sheet is built, so they answer.
+  const scope = (ref: string): ExprValue => {
+    if (ref === "proficiency.bonus") return ledger.proficiencyBonus;
+    if (ref === "actor.level") return ledger.level;
+    const ability = /^ability\.([a-z]{3})\.modifier$/.exec(ref);
+    if (ability) return ledger.abilityMod(ability[1] as AbilityKey);
+    const score = /^ability\.([a-z]{3})\.score$/.exec(ref);
+    if (score) return ledger.abilityScore(score[1] as AbilityKey);
+    const classLevel = /^actor\.class-level:(.+)$/.exec(ref);
+    if (classLevel) return [...ledger.classes.values()].find((state) => state.classId === classLevel[1])?.level ?? 0;
+    return undefined;
+  };
   const strings = (value: unknown) => (Array.isArray(value) ? value.map(String) : []);
   for (const operation of (contract?.entryPoints ?? []).filter((entry) => entry.invocation === GAIN_INVOCATION).flatMap((entry) => entry.operations)) {
     if (operation.kind !== "property.modify") continue;
