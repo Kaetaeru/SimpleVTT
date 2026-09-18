@@ -13,7 +13,7 @@ import { summonRule, summonsNothing } from "../rules/summons";
 import { useClient } from "../app/context";
 import type { ChatMessage, Macro, RollTable } from "../campaign/model";
 import { clockText } from "../campaign/model";
-import { PromptChoices } from "./Notify";
+import { PromptChoices, promptAnswerer } from "./Notify";
 import { ABILITY_KO } from "../catalog/types";
 import type { AttackResolution } from "../rules/resolve";
 import { damageTypeKo } from "../rules/resolve";
@@ -409,6 +409,12 @@ function ActCard({ message, time, color }: { message: ChatMessage; time: string;
 /** D96: "○○이(가) △△에게서 벗어납니다" — the record in chat; the choices also sit in the approval dock over the board (D99). */
 function PromptCard({ message, time, color }: { message: ChatMessage; time: string; color?: string }) {
   const prompt = message.prompt!;
+  const c = useCampaigns();
+  const snapshot = c.table.snapshot!;
+  // D301: the buttons belong in the chat card too, but a prompt a connected player owns stays theirs to press —
+  // the DM's takeover is the note over the board, which is a deliberate act rather than a stray click here.
+  const answerer = promptAnswerer(message, snapshot);
+  const answerable = !prompt.outcome && (answerer === null || answerer === c.userId);
   return (
     <div className="cl-chat-msg prompt" data-prompt-id={message.id}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}
@@ -419,6 +425,9 @@ function PromptCard({ message, time, color }: { message: ChatMessage; time: stri
           : prompt.kind === "on-hit" ? <div>⚔ <strong>{prompt.reactor.name}</strong>의 {prompt.attack?.name}이(가) {prompt.mover.name}에게 {prompt.onHit?.outcome === "crit" ? "치명타" : "명중"} — 명중 후 선택</div>
           : prompt.kind === "rescue" || prompt.kind === "death-save" ? <div>{message.content}</div>
           : <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>}
+        {/* D301: the same buttons as the window over the board. The overlay is easy to miss — it only lives on the
+            scene, and it steps aside for a connected player — and a prompt nobody can press is a stuck table. */}
+        {answerable ? <PromptChoices message={message} /> : null}
         {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded || prompt.outcome.countered || prompt.outcome.chosen?.length ? "bad" : "accent"}>{prompt.kind === "on-hit" ? (prompt.outcome.chosen?.length ? prompt.outcome.chosen.join(" · ") : "안 함") : prompt.kind === "counterspell" ? (prompt.outcome.countered ? "주문 차단" : prompt.outcome.declined ? "차단 안 함" : "차단 실패") : prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
       </div>
     </div>

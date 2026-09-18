@@ -14,6 +14,7 @@ import { emptySource } from "../../client/character/source";
 import { featureActivation, featureRuleKey } from "../../client/rules/activation";
 import { contractDurations } from "../../client/rules/contractActivation";
 import { characterScope, parseContract, planRollModify } from "../../client/rules/contract";
+import { promptAnswerer, promptIsMine } from "../../client/screens/Notify";
 import type { RuleModuleJson } from "../../client/catalog/types";
 
 const SUBCLASS = "test.d300.subclass.tide";
@@ -118,4 +119,17 @@ test("D300: disadvantage after the roll keeps the worse die, advantage the bette
     id: "test.d300.bless", interceptors: [{ id: "bless", timing: "d20.outcome-determined", slot: "saving-throw", families: [], outcomes: ["failure"], operations: [{ kind: "roll.modify", mode: "reroll-keep-higher", dice: "1d20" }] }],
   }, "test.d300.bless");
   assert.equal(planRollModify(better.interceptors[0].operations, scope, { d: () => 3 }, undefined, 11).d20, 11);
+});
+
+test("D301: the DM can answer a prompt whose reactor is not in their journal", () => {
+  // The window used to be tied to the reactor's journal entry. When the sheet behind the token was not in the DM's
+  // list, promptIsMine was false for everyone: chat showed "— 반응?" and no button existed anywhere.
+  const message = {
+    id: "m1", type: "prompt", who: "", content: "적중 — 반응?",
+    prompt: { kind: "guard", mover: { name: "드래곤" }, reactor: { name: "야만", entryId: "gone", pageId: "p1", tokenId: "t1" }, guard: { features: [{ name: "보복" }] } },
+  } as never;
+  const snapshot = { players: [{ userId: "dm", role: "gm" as const, connected: true }, { userId: "p1", role: "player" as const, connected: true }], journal: [], pages: [] } as never;
+  assert.equal(promptIsMine(message, snapshot, "dm"), true, "the DM answers anything at their own table");
+  assert.equal(promptIsMine(message, snapshot, "p1"), false, "a player still needs to control the reactor");
+  assert.equal(promptAnswerer(message, snapshot), null, "nobody else owns it, so the window falls to the DM");
 });

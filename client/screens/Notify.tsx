@@ -82,6 +82,10 @@ export function promptIsMine(message: ChatMessage, snapshot: { players: Array<{ 
   if (!prompt || prompt.outcome) return false;
   const role = snapshot.players.find((player) => player.userId === userId)?.role ?? "player";
   const viewer = { userId, role };
+  // D301: the DM answers anything at their own table. Tying this to the reactor's journal entry meant that when the
+  // sheet behind a token was not in the DM's list (a player's own character, an entry replaced mid-session), the
+  // window opened for nobody: the player did not control it either, so the prompt sat in chat with no buttons.
+  if (role === "gm") return true;
   const reactorEntry = snapshot.journal.find((entry) => entry.id === prompt.reactor.entryId);
   const reactorToken = snapshot.pages.find((page) => page.id === prompt.reactor.pageId)?.tokens.find((token) => token.id === prompt.reactor.tokenId);
   return Boolean(reactorEntry && (reactorToken ? controlsToken(reactorToken, viewer, snapshot.journal) : canEdit(reactorEntry, viewer)));
