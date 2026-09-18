@@ -500,7 +500,11 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     const exec = base && method.kind === "sustain" ? sustainedExec(base) : base;
     if (!page || !token || !exec) { saveRuntime((current) => castSpell(current, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method) ?? current); return; }
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
-    let targets = selfOnly ? [token.id] : await requestTargets(`${spell.name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`}, Shift로 여러 명)` : ""}`, { multi: exec.targeting.maxTargets > 1 });
+    // D306: the sheet's ↻ goes where the board's does — straight to the creature the spell is bound to (D302).
+    const boundEntry = method.kind === "sustain" ? (entry.runtime.effects ?? []).find((effect) => effect.key === `spell:${spell.id}`)?.target : undefined;
+    const boundToken = boundEntry ? page.tokens.find((item) => item.represents === boundEntry)?.id : undefined;
+    if (boundEntry && !boundToken) { alert("이 주문이 붙잡은 대상이 이 장면에 없습니다 — 주문을 끝내세요."); return; }
+    let targets = selfOnly ? [token.id] : boundToken ? [boundToken] : await requestTargets(`${spell.name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`}, Shift로 여러 명)` : ""}`, { multi: exec.targeting.maxTargets > 1 });
     if (!targets.length) return;
     targets = targets.slice(0, exec.targeting.maxTargets);
     let answer: Awaited<ReturnType<typeof requestAttackOptions>> | undefined;

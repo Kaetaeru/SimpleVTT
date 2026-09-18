@@ -927,14 +927,18 @@ export class TableHost {
         const boundTo = command.method?.kind === "sustain"
           ? (caster.entry.kind === "character" ? caster.entry.runtime.effects ?? [] : caster.entry.kind === "npc" ? caster.entry.runtime.effects ?? [] : []).find((effect) => effect.key === `spell:${command.spellId}`)?.target
           : undefined;
-        if (boundTo && command.targets.some((ref) => ref.entryId !== boundTo)) return refuse("이 주문은 처음 겨눈 대상에게만 다시 씁니다");
-        const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
+        // D306: with no target named, the repeat goes to the bound creature's token on the caster's page.
+        const boundToken = boundTo && !command.targets.length ? caster.page?.tokens.find((token) => token.represents === boundTo) : undefined;
+        const targetRefs = command.targets.length ? command.targets : boundToken && caster.page ? [{ entryId: boundTo, pageId: caster.page.id, tokenId: boundToken.id }] : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
         // V4v (D284): a bigger slot may reach more creatures (축복).
         const mayTake = targetCountOf(exec, prepared.spec.level);
         if (targetRefs.length > Math.max(mayTake, command.method?.kind === "sustain" ? 1 : 0)) return refuse(`대상은 최대 ${mayTake}명입니다`);
         const targets = targetRefs.map((ref) => this.resolveActor(ref)).filter((item): item is NonNullable<typeof item> => Boolean(item));
         if (targets.length !== targetRefs.length) return refuse("대상을 찾을 수 없습니다");
+        // D306: compare the creature each target resolves to — a board click names only the token, so comparing the
+        // ref's own entryId refused every repeat, the right creature included.
+        if (boundTo && targets.some((target) => target.entry.id !== boundTo)) return refuse("이 주문은 처음 겨눈 대상에게만 다시 씁니다");
         const casterCombatant = this.combatantOf(caster);
         if (!casterCombatant) return refuse("시전자의 능력치를 알 수 없습니다");
         const rows = targets.map((target) => ({ target, combatant: this.combatantOf(target), stats: this.statsOf(target) }));

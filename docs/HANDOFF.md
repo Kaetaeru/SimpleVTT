@@ -91,10 +91,10 @@ npm run gate          # 위 둘을 순서대로
 |---|---|
 | 브랜치 | `claude/practical-newton-rye61w` (푸시 완료) |
 | 마지막 커밋 | `V0.9 V6f: the PHB module's spells, subclasses and maneuvers from source (D305)` — 브랜치 `claude/phb2024-p1` |
-| 단위 시험 | **472개 통과** (`tests/client/*.test.ts`) |
+| 단위 시험 | **474개 통과** (`tests/client/*.test.ts`) |
 | E2E | **18/18 통과** — D305에서 `totm` 실패(채팅 프롬프트 버튼이 두 번 그려짐, D301 이후)를 고쳤다. `tracker`는 가끔 실패 후 재실행 통과 |
 | 세션 프로토콜 | **v30** (`client/session/protocol.ts`) |
-| 결정 기록 | **D1~D305** |
+| 결정 기록 | **D1~D306** |
 | 로드맵 | **R1~R70 전부 `✔`** — R63~R69는 2026-09-17 플레이 흐름 개편(`PLAY_FLOW_UX.md`), R70은 IP·포트 입장 |
 | 점수판 | 연산 27/27 계산·적용, 요구 슬롯 3/4, 계약 163/223, **침묵 0** |
 | 아티팩트 | https://claude.ai/artifact/8v3AiLvUodv7fYWD7yJkPs (v57, R62 반영) |
