@@ -2134,6 +2134,10 @@
             }
           },
           "additionalProperties": false
+        },
+        "when": {
+          "description": "D308: the use exists only while this expression holds against the character (`actor.chose:<choice>:<option>`). A use whose `when` fails is not on the sheet, not offered in the attack dialog, and refused at the table.",
+          "$ref": "#/$defs/expression"
         }
       },
       "additionalProperties": false

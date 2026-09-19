@@ -192,7 +192,10 @@ export function sustainedExec(exec: SpellExec): SpellExec | null {
   const sustain = sustainOf(exec);
   if (!sustain) return null;
   const { trackedEffects: _tracked, ...rest } = exec;
-  return { ...rest, primary: sustain.primary ?? exec.primary, castingEconomy: sustain.economy === "bonus-action" ? "bonus-action" : "action", repeat: { economy: sustain.economy } };
+  // D308: the repeat of an area spell (가시 성장: whoever moved through it) lands on a creature even though the cast
+  // itself named none — the cast picks a point, the repeat picks who is hurt.
+  const needsCreature = sustain.primary && sustain.primary.kind !== "tracked-effect" && exec.targeting.maxTargets < 1;
+  return { ...rest, ...(needsCreature ? { targeting: { ...exec.targeting, kind: "creature" as const, minTargets: 1, maxTargets: 1 } } : {}), primary: sustain.primary ?? exec.primary, castingEconomy: sustain.economy === "bonus-action" ? "bonus-action" : "action", repeat: { economy: sustain.economy } };
 }
 
 /** R76 (D211): spells the generated catalog does not know — an installed module's, and any spell with no mechanics at all. */

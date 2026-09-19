@@ -931,6 +931,8 @@ export class TableHost {
         const boundToken = boundTo && !command.targets.length ? caster.page?.tokens.find((token) => token.represents === boundTo) : undefined;
         const targetRefs = command.targets.length ? command.targets : boundToken && caster.page ? [{ entryId: boundTo, pageId: caster.page.id, tokenId: boundToken.id }] : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
+        // D308: a repeat that hurts somebody needs somebody (가시 성장 with nobody named threw instead of refusing).
+        if (!targetRefs.length && command.method?.kind === "sustain" && exec.primary.kind !== "tracked-effect") return refuse("다시 쓸 대상을 고르세요");
         // V4v (D284): a bigger slot may reach more creatures (축복).
         const mayTake = targetCountOf(exec, prepared.spec.level);
         if (targetRefs.length > Math.max(mayTake, command.method?.kind === "sustain" ? 1 : 0)) return refuse(`대상은 최대 ${mayTake}명입니다`);
@@ -1557,7 +1559,7 @@ export class TableHost {
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
         this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}), ...(offer.miss ? { miss: true } : {}) });
         // V4h (D270): the deflected attack sent back at whoever made it.
-        if (offer.redirect) { const mover = this.resolveActor(promptMessage.prompt.mover); if (mover) this.contractStrike(reactor, [mover], command.feature, { formula: offer.redirect.formula, damageType: offer.redirect.damageType, save: { ...offer.redirect.save, success: "half" } }, player.displayName, userId); }
+        if (offer.redirect) { const mover = this.resolveActor(promptMessage.prompt.mover); if (mover) this.contractStrike(reactor, [mover], command.feature, { formula: offer.redirect.formula, damageType: offer.redirect.damageType, ...(offer.redirect.save ? { save: { ...offer.redirect.save, success: "half" as const } } : {}) }, player.displayName, userId); }
         if (offer.strikeBack && (!offer.facts.length || offer.facts.every((item) => confirmed.has(item.id)))) this.say({ type: "prompt", who: "", content: `${promptMessage.prompt.reactor.name}: ${command.feature} — ${promptMessage.prompt.mover.name}에게 공격`, prompt: { kind: "opportunity", mover: promptMessage.prompt.mover, reactor: promptMessage.prompt.reactor } });
         return;
       }

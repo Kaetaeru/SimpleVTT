@@ -105,6 +105,17 @@
 
 옵션: `label`(여러 사용을 줄마다 나누기), `targeting: { from: "targets", min, max }`, `test: { kind: "saving-throw", roller: "target", property: "save.str.modifier", dc: <식>, perTarget: true }`.
 
+**`when`(진입점, D308)**: 그 사용이 이 캐릭터에게 있는지를 정하는 식. 틀리면 시트 줄도, 공격 창의 선택지도 없고 표는 거절한다.
+만들 때 고른 것에 따라 사용이 갈리는 특성은 **반드시** 이것으로 나눈다 — 안 그러면 모든 선택지의 사용이 다 나온다
+(초록 드래곤본이 다섯 속성 브레스를 다 뿜던 결함).
+
+```json
+{ "id": "poison", "label": "브레스 웨폰 (독)", "invocation": "manual",
+  "when": { "op": "any", "args": [{ "ref": "actor.chose:draconicAncestry:green" }] }, "operations": [ … ] }
+```
+
+인터셉터(§6)의 `when`도 같은 식을 읽는다 — 돌 거인 혈통만 받는 반응 창은 인터셉터에 `when`을 단다.
+
 경제 버킷의 확장 이름: `bonus-action.as:<공식 행동>`(그 행동을 추가 행동으로), `bonus-action.attack:<scope>`(추가 행동 공격 한 번), `free.attack:<scope>`(경제를 안 쓰는 공격).
 
 ---
@@ -133,7 +144,7 @@
 
 **식**: `{"value":3}` · `{"ref":"proficiency.bonus"}` · `{"op":"add","args":[…]}`.
 연산자: `add sub mul floor-div ceil-div min max eq ne lt lte gt gte all any not if`.
-참조: `proficiency.bonus`, `actor.level`, `ability.<x>.modifier`, `ability.<x>.score`, `save.<x>.modifier`, `actor.class-level:<classId>`, `armor.training`, `armor.dex-capped`, `equipment.shield`, `actor.pact-slots`, `actor.has-feature:<규칙 키>`, `effect.running:<효과 이름>`, `fact:<id>`.
+참조: `proficiency.bonus`, `actor.level`, `ability.<x>.modifier`, `ability.<x>.score`, `save.<x>.modifier`, `actor.class-level:<classId>`, `armor.training`, `armor.dex-capped`, `equipment.shield`, `actor.pact-slots`, `actor.has-feature:<규칙 키>`, `actor.chose:<선택 id>:<옵션 id>`(D308 — 만들기·레벨업에서 그 옵션을 골랐는가; 선택 id는 전체(`origin.species.draconicAncestry`)나 마지막 조각(`draconicAncestry`)), `effect.running:<효과 이름>`, `fact:<id>`.
 
 지속시간: `{"kind":"rounds"|"minutes"|"hours"|"permanent","amount":1,"boundary":"start"|"end","anchor":"source"|"bearer"}`.
 효과 수명(`lifetime`): `until-duration`(라운드를 센다) · `until-state` · `until-event` · `until-consumed` · `until-source-recast` · `with-parent` · `durable`.
@@ -225,7 +236,7 @@
 | `property.modify damage-taken.halve` | 피해 절반 |
 | `property.modify reaction.auto-miss` | 그 공격을 빗나가게 한다 |
 | `property.modify reaction.strike-back` | 반격 창을 연다 |
-| `property.modify reaction.redirect` (`dice`, `params.dc/damageType`) | 공격자에게 되돌려준다 |
+| `property.modify reaction.redirect` (`dice`, `params.dc/damageType`; 내성이 없으면 `params.save: "none"` — D308) | 공격자에게 되돌려준다 |
 | `adjudication.request` | 창에 뜨는 줄(또는 `fact.at: "reaction"` 체크박스) |
 
 창은 **답할 수단이 있을 때만** 열린다. 위 연산이 하나도 없으면 창이 아예 안 뜬다 — 버튼만 만들지 말고 창을 쓸 것.
@@ -311,7 +322,8 @@ npm run gate:client                                                  # 엔진을
 
 - `unsupported`: 실행기가 못 읽은 조각(연산 이름 오타, 모르는 `invocation`, `ask`가 아닌 `factQuery` …)
 - `모르는 속성`: §4에 없는 `property`
-- 테이블에서 전부 눌러 본다(D307): `node --import tsx --import ./tests/support/register-css.mjs scripts/verify-module-at-table.ts <파일> [보고서.json]` — 거절·무반응·풀 미소모를 센다.
+- 테이블에서 전부 눌러 본다(D307): `node --import tsx --import ./tests/support/register-css.mjs scripts/verify-module-at-table.ts <파일> [보고서.json]` — 거절·무반응·풀 미소모를 센다. `--builtin`(파일 없이)이면 SRD 콘텐츠 전체를 누르고, 종족 선택마다 캐릭터를 만들어 선택이 사용을 가르는지도 본다(D308).
+- 주문 글과 실행을 맞대 본다: `npx tsx scripts/audit-spells.ts [--module <파일>] [--out <보고서.json>]` — 글이 말하는 피해 주사위·유형, 내성, 명중 굴림, 집중, 상태, 상위 슬롯 증가가 실행에 있는지. 불일치가 곧 버그는 아니지만(선택 부가 효과일 수 있다) 버그는 전부 여기 나온다.
 - 그다음은 실제로 캐릭터를 만들어 본다 — 특성마다 계약이 붙었는지, 자원 풀이 생겼는지, 창이 뜨는지. 시험은 **합성 모듈**로 쓴다(저장소에 남의 콘텐츠를 넣지 않는다): `tests/client/v6-module.test.ts`가 본보기다.
 
 ## 11. 문법을 넓혀야 할 때

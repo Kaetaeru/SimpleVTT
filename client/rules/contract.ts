@@ -153,7 +153,16 @@ export interface ContractEntryPoint {
   killer?: "self" | "nearby";
   /** V3d (D258): what this use costs, in place of the contract's own payments. */
   payments?: ContractPayment[];
+  /**
+   * D308: the use exists only while this holds against the character (`actor.chose:<choice>:<option>` — the dragonborn
+   * whose ancestry is green breathes poison, not all five). A use whose `when` fails is not on the sheet, not in the
+   * attack dialog, and refused by the table.
+   */
+  when?: Expr;
 }
+
+/** D308: whether an entry point is open to this character (no `when`, or its `when` holds). */
+export const entryOpen = (entry: { when?: Expr }, scope: Scope) => !entry.when || evaluate(entry.when, scope) === true;
 
 export interface ContractInterceptor {
   id: string;
@@ -443,6 +452,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
       // V3d (D258): a labelled entry point is a use of its own (몽크의 기: 질풍 연타 …), with its own payments.
       ...(typeof entry.label === "string" ? { label: entry.label } : {}),
       ...(entry.killer === "nearby" ? { killer: "nearby" as const } : {}),
+      ...(isExpr(entry.when) ? { when: entry.when } : {}),
       ...(Array.isArray(entry.payments) ? { payments: parsePayments(entry.payments, `entryPoints[${index}].payments`, unsupported) } : {}),
       ...(targeting ? { targeting: { from: String(targeting.from ?? "targets"), min: targeting.min ?? 1, max: targeting.max ?? 1 } } : {}),
       ...(test ? { test } : {}),
@@ -550,6 +560,8 @@ export interface ScopeCharacter {
   markedSpellDice?: Record<string, number>;
   /** V4z (D288): the features this character has, for a rule that only applies to one of two chosen options. */
   features?: Array<{ id: string }>;
+  /** D308: what the player picked at creation and level-up, by choice id (`origin.species.draconicAncestry` → [`green`]). */
+  choices?: Array<{ id: string; selected: string[] }>;
 }
 
 /**
@@ -593,6 +605,10 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     // V4z (D288): `actor.has-feature:<rule key>` — true when this sheet carries that feature (향상된 축복받은 일격).
     const feature = /^actor\.has-feature:(.+)$/.exec(ref);
     if (feature) return (character.features ?? []).some((item) => item.id === feature[1] || item.id.endsWith(`.${feature[1]}`) || featureKeyOf(item.id) === feature[1]);
+    // D308: `actor.chose:<choice>:<option>` — true when that option was picked. The choice is named by its full id or
+    // by its last part (`draconicAncestry`), so content need not know which step of creation asked it.
+    const chose = /^actor\.chose:(.+):([^:]+)$/.exec(ref);
+    if (chose) return (character.choices ?? []).some(({ id, selected }) => (id === chose[1] || id.endsWith(`.${chose[1]}`)) && selected.includes(chose[2]));
     const marked = /^actor\.marked-spell-die:(.+)$/.exec(ref);
     if (marked) return character.markedSpellDice?.[marked[1]] ?? 0;
     return undefined;

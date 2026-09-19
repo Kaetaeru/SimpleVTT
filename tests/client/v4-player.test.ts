@@ -585,8 +585,8 @@ test("V4m: species traits are rules — 용감함 gives advantage only against f
   const elf = build({ name: "엘프", species: "elf", classes: "fighter", level: 3 });
   assert.equal(longRest(initialRuntime(elf.derived), elf.derived).heroicInspiration, false);
 
-  // 브레스 웨폰: one line per damage type, each a Dexterity save for half at the dragonborn's own DC.
-  const dragonborn = build({ name: "용인", species: "dragonborn", classes: "paladin", level: 5, abilities: { con: 16 } });
+  // 브레스 웨폰: the line of the ancestry's damage type (D308), a Dexterity save for half at the dragonborn's own DC.
+  const dragonborn = build({ name: "용인", species: "dragonborn", classes: "paladin", level: 5, abilities: { con: 16 } }, { "origin.species.draconicAncestry": ["red"] });
   const breath = tableOutcome(dragonborn.derived, cat, "species.breath-weapon#fire")!;
   assert.deepEqual(breath.strikes?.map((strike) => [strike.formula, strike.damageType, strike.save?.ability, strike.save?.dc, strike.save?.success]), [["2d10", "화염", "dex", 8 + 3 + dragonborn.derived.proficiencyBonus, "half"]]);
   assert.equal(dragonborn.derived.resources.find((resource) => resource.id === "resource.species.breath-weapon")?.max, dragonborn.derived.proficiencyBonus);
@@ -978,15 +978,15 @@ test("V5f: 혼란 repeats its save, and the spells the app cannot finish say why
   }
 });
 
-test("V5g: 거인 혈통 has its six powers as uses, and the traits the app cannot finish carry their reason (D295)", async () => {
+test("V5g: 거인 혈통 gives the power of the ancestry chosen, and the traits the app cannot finish carry their reason (D295, D308)", async () => {
   const cat = catalog();
-  const goliath = build({ name: "골리앗", species: "goliath", classes: "fighter", level: 5, abilities: { con: 16 } });
-  const powers = goliath.derived.features.filter((feature) => feature.name.startsWith("거인 혈통:"));
-  assert.ok(powers.length >= 6, goliath.derived.features.map((feature) => feature.name).join(", "));
-  const hill = powers.find((feature) => feature.name.includes("언덕"))!;
-  const { featureRuleKey } = await import("../../client/rules/activation");
-  const outcome = tableOutcome(goliath.derived, cat, featureRuleKey(hill.id))!;
-  assert.deepEqual(outcome.conditionSaves?.map((rule) => [rule.condition, rule.ability, rule.dc]), [["넘어짐", "str", 8 + goliath.derived.abilities.con.modifier + goliath.derived.proficiencyBonus]]);
+  // D308: the hill giant's power, and only it — a hit's choice that knocks a Large or smaller target prone, no save (2024).
+  const goliath = build({ name: "골리앗", species: "goliath", classes: "fighter", level: 5, abilities: { con: 16 } }, { "origin.species.giantAncestry": ["hill"] });
+  const riders = (goliath.derived.attackRiders ?? []).filter((rider) => rider.key.includes("giant-ancestry"));
+  assert.equal(riders.length, 1, JSON.stringify(riders.map((rider) => rider.key)));
+  assert.equal(riders[0].moment, "on-hit");
+  assert.deepEqual(riders[0].conditions, ["넘어짐"]);
+  assert.deepEqual(riders[0].saves, []);
 
   for (const key of ["species.halfling-nimbleness", "species.naturally-stealthy", "species.trance", "spell:dnd.srd521.spell.polymorph"]) {
     const contract = cat.contractFor(key.startsWith("spell:") ? key : `feature:${key}`);

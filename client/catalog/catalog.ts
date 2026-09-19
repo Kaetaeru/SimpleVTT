@@ -363,7 +363,7 @@ export class ContentCatalog {
     return use ? { ...contract, entryPoints: [use], payments: use.payments ?? contract.payments } : undefined;
   }
   /** V3d (D258): the labelled uses a contract names. */
-  contractUses(ruleKey: string) { return (this.contracts.get(ruleKey)?.entryPoints ?? []).filter((entry) => entry.label).map((entry) => ({ id: entry.id, label: entry.label! })); }
+  contractUses(ruleKey: string) { return (this.contracts.get(ruleKey)?.entryPoints ?? []).filter((entry) => entry.label).map((entry) => ({ id: entry.id, label: entry.label!, when: entry.when })); }
   name(id: string) { return this.entries.get(id)?.name ?? this.spellById(id)?.name ?? id; }
   byCategory(category: string) { return [...this.entries.values()].filter((entry) => entry.category === category); }
 

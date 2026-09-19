@@ -61,6 +61,8 @@ test("contracts: a contract's payment and the hand-written activation spend the 
     // V4d (D266): 행운의 일격 and 단련된 생존자 became rescues with their own pools.
     "feature:rogue.stroke-of-luck": build({ name: "r", classes: "rogue", level: 20 }),
     "feature:monk.disciplined-survivor": build({ name: "m", classes: "monk", level: 14 }),
+    // D308: the goliath's reactions (돌·폭풍) pay a use and the reaction; the pool is its gain contract's.
+    "feature:species.giant-ancestry-power": build({ name: "g", species: "goliath", classes: "fighter", level: 5 }, { "origin.species.giantAncestry": ["stone"] }),
     "feat:epic.fate": build({ name: "f", classes: "fighter", level: 19 }, { "class.18.epic-boon": ["dnd.srd521.feat.epic.fate"] }),
   };
   const gaps: string[] = [];

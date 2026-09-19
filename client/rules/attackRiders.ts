@@ -13,7 +13,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
-import { ATTACK_INVOCATIONS, characterScope, evaluate, parseTargetMark, type CommonPlayContract, type ConditionDuration, type Scope, type TargetMark } from "./contract";
+import { ATTACK_INVOCATIONS, characterScope, entryOpen, evaluate, parseTargetMark, type CommonPlayContract, type ConditionDuration, type Scope, type TargetMark } from "./contract";
 import { diceRuleOf, type DiceRule } from "./resolve";
 import { CONDITION_KO } from "../compendium/spells";
 import { attackScopeFilter } from "./contractEffects";
@@ -90,7 +90,7 @@ function formulaOf(operation: { dice?: string; diceCount?: unknown; diceSides?: 
 export function contractRiders(contract: CommonPlayContract, key: string, label: string, scope: Scope): ContractRider[] {
   const riders: ContractRider[] = [];
   for (const entry of contract.entryPoints) {
-    if (!ATTACK_INVOCATIONS.has(entry.invocation) || !entry.attack) continue;
+    if (!ATTACK_INVOCATIONS.has(entry.invocation) || !entry.attack || !entryOpen(entry, scope)) continue;
     const moment = entry.invocation === "on-hit" ? "on-hit" : "pre-roll";
     const rider: ContractRider = {
       key, label, hint: "", moment, ...(entry.attack.scope ? { scope: entry.attack.scope } : {}),

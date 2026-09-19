@@ -15,7 +15,7 @@ import { applyEquipment } from "./equipment";
 import { Ledger } from "./ledger";
 import { applyPassiveContracts, applyActiveEffects } from "../rules/effects";
 import { featureRuleKey, qualifyRuleKey } from "../rules/activation";
-import { characterScope } from "../rules/contract";
+import { characterScope, entryOpen } from "../rules/contract";
 import { contractDurations, contractSummary, featureContract, longRestGains } from "../rules/contractActivation";
 import { characterRiders } from "../rules/attackRiders";
 import { contractBonusActions } from "../rules/contractActivation";
@@ -58,8 +58,10 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   for (let index = derived.features.length - 1; index >= 0; index -= 1) {
     const feature = derived.features[index];
     const key = featureRuleKey(feature.id);
-    const uses = catalog.contractUses(qualifyRuleKey(key)).length ? catalog.contractUses(qualifyRuleKey(key)) : catalog.contractUses(key);
-    if (!uses.length) continue;
+    const all = catalog.contractUses(qualifyRuleKey(key)).length ? catalog.contractUses(qualifyRuleKey(key)) : catalog.contractUses(key);
+    if (!all.length) continue;
+    // D308: a use gated on something this character is not (another ancestry's breath) is not theirs.
+    const uses = all.filter((use) => entryOpen(use, characterScope(derived)));
     derived.features.splice(index + 1, 0, ...uses.map((use) => ({ ...feature, id: `${feature.id}#${use.id}`, name: use.label, nameEn: `${feature.nameEn} (${use.id})`, rules: undefined, execution: undefined })));
   }
   // R49 (D184): every feature's contract, worked out once and carried with the sheet.

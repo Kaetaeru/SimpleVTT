@@ -7,7 +7,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedCharacter } from "../character/types";
-import { ATTACK_INVOCATIONS, characterScope, evaluate, type ConditionDuration } from "./contract";
+import { ATTACK_INVOCATIONS, characterScope, entryOpen, evaluate, type ConditionDuration } from "./contract";
 import { atOthers, CHOSEN_POINTS_REF, contractOutcome, featureContract, formula as useFormula } from "./contractActivation";
 
 export interface TableOutcome {
@@ -41,6 +41,8 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const contract = featureContract(catalog, ruleKey);
   if (!contract) return null;
   const scope = characterScope(derived);
+  // D308: a use this character does not have (another ancestry's breath) does nothing at the table.
+  if (!contract.entryPoints.every((entry) => entryOpen(entry, scope))) return null;
   const outcome = contractOutcome(contract, scope);
   const applied: string[] = [];
   const selfMarks: string[] = [];

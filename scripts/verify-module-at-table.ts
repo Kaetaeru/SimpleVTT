@@ -43,10 +43,14 @@ import { MemoryHub } from "../client/session/transport";
 type Verdict = "reached" | "nothing" | "refused" | "skipped";
 interface Row { area: string; who: string; what: string; verdict: Verdict; detail: string }
 
-const [modulePath, reportPath] = process.argv.slice(2);
-if (!modulePath) { console.error("usage: … verify-module-at-table.ts <module.json> [report.json]"); process.exit(2); }
-const module = JSON.parse(readFileSync(modulePath, "utf8")) as RuleModuleJson;
-const catalog = createCatalog([module]);
+// `--builtin` plays the content the app ships (the SRD) instead of an installed module's.
+const BUILTIN = process.argv.includes("--builtin");
+const [modulePath, reportPath] = process.argv.slice(2).filter((arg) => arg !== "--builtin");
+if (!modulePath && !BUILTIN) { console.error("usage: … verify-module-at-table.ts <module.json> [report.json] | --builtin [report.json]"); process.exit(2); }
+const module = modulePath && !BUILTIN ? JSON.parse(readFileSync(modulePath, "utf8")) as RuleModuleJson : undefined;
+const reportOut = BUILTIN ? modulePath : reportPath;
+const catalog = createCatalog(module ? [module] : []);
+const SCOPE = BUILTIN ? "builtin" : "installed";
 const rows: Row[] = [];
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 let seq = 0;
@@ -196,10 +200,32 @@ async function takeHit(t: Table) {
   return prompt?.prompt?.guard?.features.map((feature) => feature.name) ?? [];
 }
 
+/**
+ * A species whose traits depend on a choice (드래곤본의 혈통, 골리앗의 거인 혈통) must offer only what that choice
+ * gives. Each option is built in turn and the species uses it offers are compared: if two different picks offer the
+ * same several uses, the uses are not reading the choice — every dragonborn could breathe every element.
+ */
+async function speciesChoices(base: (tracks: number, classId: string, choices: Record<string, string[]>, backgroundId?: string, speciesId?: string) => ReturnType<typeof emptySource>) {
+  for (const species of catalog.species.filter((item) => item.scope === SCOPE)) {
+    for (const choice of species.choices.filter((item) => Array.isArray(item.options) && item.options.length > 1)) {
+      const offered: Record<string, string[]> = {};
+      for (const option of choice.options as Array<{ id: string; name: string }>) {
+        const t = await table(base(5, "dnd.srd521.class.fighter", { [choice.id]: [option.id] }, "dnd.srd521.background.soldier", species.id));
+        const uses = usableFeatures(t.derived, (t.live(t.hero.id) as JournalCharacter).runtime, catalog).filter((use) => use.feature.id.includes(".trait.") || featureRuleKey(use.feature.id).startsWith("species."));
+        offered[option.name] = uses.map((use) => use.feature.name).sort();
+        await pressFeatures(t, `${species.name} (${option.name})`, (id) => id.includes(".trait.") || featureRuleKey(id).startsWith("species."));
+      }
+      const lists = Object.values(offered).map((list) => JSON.stringify(list));
+      const same = lists.length > 1 && new Set(lists).size === 1 && JSON.parse(lists[0]).length > 1;
+      rows.push({ area: "species-choice", who: species.name, what: choice.label, verdict: same ? "nothing" : "reached", detail: same ? `every pick offers the same ${JSON.parse(lists[0]).length} uses: ${JSON.parse(lists[0]).join(", ")}` : "uses follow the pick" });
+    }
+  }
+}
+
 const LEVEL_OF: Record<string, (level: number) => number> = { full: (level) => Math.max(1, level * 2 - 1), half: (level) => Math.max(1, level * 4 - 3), pact: (level) => Math.max(1, level * 2 - 1) };
 
 async function castSpells() {
-  for (const spell of catalog.spells.filter((item) => item.scope === "installed")) {
+  for (const spell of catalog.spells.filter((item) => item.scope === SCOPE)) {
     const exec = spellExec(spell.id);
     // Pact Magic stops at 5th-level slots, so a higher spell goes to a class that has them.
     const casters = spell.classes.map((id) => catalog.classById(id)).filter((item) => item && item.casterKind !== "none");
@@ -214,7 +240,10 @@ async function castSpells() {
     if (!method) { rows.push({ area: "spell", who: cls.name, what: spell.name, verdict: "skipped", detail: `not castable by ${cls.name} ${level}` }); continue; }
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
     const friendly = ["healing", "temporary-hp", "maximum-hp", "full-healing", "revive"].includes(exec.primary.kind) || exec.targeting.allowedRelations?.every((relation) => relation === "self" || relation === "ally");
-    const targets = selfOnly ? [] : [friendly ? t.ref("ally") : t.ref("dummy")];
+    // A spell that names no creature (a point, an object, an area the board cannot see) is cast with none, as the
+    // screen sends it once the targeting window slices to the count the spell takes.
+    const takes = exec.targeting.maxTargets;
+    const targets = selfOnly || takes === 0 ? [] : [friendly ? t.ref("ally") : t.ref("dummy")];
     const before = t.board();
     const allyBefore = shape((t.live(t.ally.id) as JournalCharacter).runtime);
     const heroBefore = JSON.stringify({ hp: (t.live(t.hero.id) as JournalCharacter).runtime.hp, effects: ((t.live(t.hero.id) as JournalCharacter).runtime.effects ?? []).map((effect) => effect.key).filter((key) => key !== `spell:${spell.id}`) });
@@ -245,11 +274,12 @@ async function castSpells() {
 }
 
 async function main() {
-  const base = (tracks: number, classId: string, choices: Record<string, string[]>, backgroundId = "dnd.srd521.background.soldier") => emptySource({ name: "주인공", origin: { speciesId: "phb2024.species.aasimar", backgroundId }, abilities: { method: "manual", base: { str: 16, dex: 14, con: 14, int: 13, wis: 13, cha: 13 } }, tracks: Array.from({ length: tracks }, () => ({ classId, hp: { kind: "fixed" as const } })), choices, equipment: { mode: "loadout" } });
+  const base = (tracks: number, classId: string, choices: Record<string, string[]>, backgroundId = "dnd.srd521.background.soldier", speciesId = BUILTIN ? "dnd.srd521.species.human" : "phb2024.species.aasimar") => emptySource({ name: "주인공", origin: { speciesId, backgroundId }, abilities: { method: "manual", base: { str: 16, dex: 14, con: 14, int: 13, wis: 13, cha: 13 } }, tracks: Array.from({ length: tracks }, () => ({ classId, hp: { kind: "fixed" as const } })), choices, equipment: { mode: "loadout" } });
 
-  for (const subclass of catalog.subclasses.filter((item) => item.scope === "installed")) {
+  for (const subclass of catalog.subclasses.filter((item) => item.scope === SCOPE)) {
     const t = await table(base(20, subclass.classId, { "class.2.subclass": [subclass.id] }));
-    const own = (id: string) => id.startsWith(subclass.id) || id.startsWith("phb2024.option.") || id.startsWith("phb2024.species.") || id.includes("aasimar");
+    // An installed subclass is judged on its own features; the SRD is judged whole — class and subclass alike.
+    const own = (id: string) => BUILTIN || id.startsWith(subclass.id) || id.startsWith("phb2024.option.") || id.startsWith("phb2024.species.") || id.includes("aasimar");
     await pressFeatures(t, subclass.name, own);
     await swingRiders(t, subclass.name, (key) => own(key.split("#")[0]));
     const windows = await takeHit(t);
@@ -258,7 +288,7 @@ async function main() {
   }
   // Feats: general ones at the 4th-level choice, epic boons at the 19th, fighting styles at the 1st, origin feats
   // through the backgrounds that give them.
-  for (const feat of catalog.feats.filter((item) => item.scope === "installed")) {
+  for (const feat of catalog.feats.filter((item) => item.scope === SCOPE)) {
     const slot = feat.tier === "epic-boon" ? "class.18.epic-boon" : feat.tier === "general" ? "class.3.asi" : feat.tier === "fighting-style" ? "class.0.fighting-style" : undefined;
     const background = feat.tier === "origin" ? catalog.backgrounds.find((item) => item.originFeat === feat.id)?.id : undefined;
     if (!slot && !background) { rows.push({ area: "feat", who: "-", what: feat.name, verdict: "skipped", detail: "no background gives it" }); continue; }
@@ -268,12 +298,13 @@ async function main() {
     await pressFeatures(t, feat.name, (id) => featureRuleKey(id).startsWith(`feat:${slug}`));
     await swingRiders(t, feat.name, (key) => key.startsWith(`feat:${slug}`));
   }
+  if (BUILTIN) await speciesChoices(base);
   await castSpells();
 
   const count = (verdict: Verdict) => rows.filter((row) => row.verdict === verdict).length;
   console.log(JSON.stringify({ uses: rows.length, reached: count("reached"), nothing: count("nothing"), refused: count("refused"), skipped: count("skipped") }));
   for (const row of rows.filter((item) => item.verdict !== "reached")) console.log(`${row.verdict.toUpperCase()} [${row.area}] ${row.who} · ${row.what} — ${row.detail}`);
-  if (reportPath) writeFileSync(reportPath, JSON.stringify(rows, null, 1));
+  if (reportOut) writeFileSync(reportOut, JSON.stringify(rows, null, 1));
 }
 
 main().then(() => process.exit(0), (error) => { console.error(error); process.exit(1); });
