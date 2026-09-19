@@ -194,3 +194,7 @@
 ```
 
 모르는 `pattern`이나 빠진 값은 경고로 알려 주고 그 규칙만 무시한다. SRD 스탯 블록의 규칙은 `content/indexes/dnd-srd-5.2.1.monster-traits.json`에 같은 형식으로 있다.
+
+## 모듈에 싣기 (D311)
+
+같은 JSON을 모듈의 `combatant` 항목에 `monster-definition` 메커닉으로 넣으면 그 모듈을 설치한 테이블의 도감에 괴물이 올라간다. 이름은 항목의 `presentation`에서, id는 항목 id에서 온다. SRD 괴물과 같은 id면 그 괴물을 대신한다.

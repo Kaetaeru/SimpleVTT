@@ -70,11 +70,24 @@ export interface MonsterView {
 }
 
 const source = monsterJson as unknown as { monsters: Array<MonsterView & { presentation?: unknown }> };
-/** Every SRD monster, without the presentation markdown (the sheet renders the structure). */
-export const MONSTERS: MonsterView[] = source.monsters.map(({ presentation: _markdown, ...monster }) => monster as MonsterView);
+const BUILTIN: MonsterView[] = source.monsters.map(({ presentation: _markdown, ...monster }) => monster as MonsterView);
+/**
+ * Every monster the table knows: the SRD's, and — D311 — every `monster-definition` in the loaded modules, which
+ * replaces an SRD block of the same id. Filled in place when the catalog is built (`registerCatalogMonsters`).
+ */
+export const MONSTERS: MonsterView[] = [...BUILTIN];
 const byId = new Map(MONSTERS.map((monster) => [monster.id, monster]));
 
 export const monsterById = (id: string) => byId.get(id);
+
+/** D311: called when the catalog is built, as `registerCatalogSpells` is for spells. */
+export function registerCatalogMonsters(monsters: readonly MonsterView[]) {
+  const replaced = new Map(monsters.map((monster) => [monster.id, monster]));
+  const builtinIds = new Set(BUILTIN.map((monster) => monster.id));
+  MONSTERS.splice(0, MONSTERS.length, ...BUILTIN.map((monster) => replaced.get(monster.id) ?? monster), ...monsters.filter((monster) => !builtinIds.has(monster.id)));
+  byId.clear();
+  for (const monster of MONSTERS) byId.set(monster.id, monster);
+}
 
 export const SIZE_KO: Record<string, string> = { tiny: "초소형", small: "소형", medium: "중형", large: "대형", huge: "거대형", gargantuan: "초대형" };
 /** Token footprint in cells by size (5e: large 2×2, huge 3×3, gargantuan 4×4). */
@@ -86,8 +99,8 @@ export function searchMonsters(query: string, options: { cr?: string; type?: str
   return out.slice(0, options.limit ?? 60);
 }
 
-export const CR_VALUES = [...new Set(MONSTERS.map((monster) => monster.crText))].sort((a, b) => crNumber(a) - crNumber(b));
-export const CREATURE_TYPES = [...new Set(MONSTERS.map((monster) => monster.creatureType))].sort();
+export const crValues = () => [...new Set(MONSTERS.map((monster) => monster.crText))].sort((a, b) => crNumber(a) - crNumber(b));
+export const creatureTypes = () => [...new Set(MONSTERS.map((monster) => monster.creatureType))].sort();
 export function crNumber(text: string) { const [n, d] = text.split("/"); return d ? Number(n) / Number(d) : Number(n); }
 
 /** Dice formula for a damage list ("2d6+3 slashing" → parts). */

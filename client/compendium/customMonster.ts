@@ -111,6 +111,14 @@ function readAction(raw: unknown, where: string, warnings: string[]): MonsterAct
 export function parseCustomMonster(input: string, random: () => number = Math.random): { monster: MonsterView; warnings: string[] } | { error: string } {
   let parsed: unknown;
   try { parsed = JSON.parse(input); } catch (error) { return { error: `JSON이 아닙니다: ${error instanceof Error ? error.message : String(error)}` }; }
+  return readCustomMonster(parsed, random);
+}
+
+/**
+ * D311: the same reader over an object already parsed — a module's `monster-definition` in the paste format goes
+ * through it, with the entry's id in place of the random one a paste gets.
+ */
+export function readCustomMonster(parsed: unknown, random: () => number = Math.random, fixedId?: string): { monster: MonsterView; warnings: string[] } | { error: string } {
   if (!isObject(parsed)) return { error: "맨 바깥은 { } 객체여야 합니다" };
   const raw = parsed;
   const name = text(raw.name).trim();
@@ -131,7 +139,7 @@ export function parseCustomMonster(input: string, random: () => number = Math.ra
   const list = (field: string) => (Array.isArray(raw[field]) ? (raw[field] as unknown[]) : []).map((item, index) => readAction(item, `${field}[${index}]`, warnings)).filter((item): item is MonsterAction => Boolean(item));
   const slug = (text(raw.nameEn) || name).toLowerCase().replace(/[^a-z0-9가-힣]+/g, "-").replace(/^-|-$/g, "") || "npc";
   const monster: MonsterView = {
-    id: `custom.monster.${slug}.${random().toString(36).slice(2, 8)}`, slug, name, nameEn: text(raw.nameEn, name),
+    id: fixedId ?? `custom.monster.${slug}.${random().toString(36).slice(2, 8)}`, slug, name, nameEn: text(raw.nameEn, name),
     size: SIZES.includes(text(raw.size)) ? text(raw.size) : "medium", creatureType: text(raw.creatureType, "humanoid"), typeText: text(raw.type, "인간형"), alignment: text(raw.alignment),
     ac: raw.ac, acText: text(raw.acText), initiativeBonus: num(raw.initiativeBonus, modifier(abilities.dex)),
     hp: raw.hp, hitDice: text(raw.hitDice), speedText: text(raw.speedText, `${speed}ft`), speed, speeds: { walk: speed, ...numbers(raw.speeds) },

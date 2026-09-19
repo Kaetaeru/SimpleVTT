@@ -9,7 +9,7 @@ import { useClient } from "../app/context";
 import { newJournalNpc } from "../campaign/journal";
 import { tokenForNpc } from "../campaign/page";
 import type { MonsterView } from "../compendium/monsters";
-import { CR_VALUES, CREATURE_TYPES, searchMonsters } from "../compendium/monsters";
+import { creatureTypes, crValues, searchMonsters } from "../compendium/monsters";
 import { Pill } from "../ui/components";
 import { npcSummary, StatBlock } from "./NpcSheet";
 import { COMPENDIUM_DRAG_TYPE, placeToken } from "./PageCanvas";
@@ -58,8 +58,8 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
       <div className="cl-compendium-head">
         <input className="cl-input" placeholder="이름으로 찾기 (한글·영문)" aria-label="컴펜디움 검색" value={query} onChange={(event) => setQuery(event.target.value)} />
         {section === "monsters" ? <div className="cl-row" style={{ gap: 4 }}>
-          <select className="cl-select" aria-label="CR" value={cr} onChange={(event) => setCr(event.target.value)} style={{ height: 28 }}><option value="">모든 CR</option>{CR_VALUES.map((value) => <option key={value} value={value}>CR {value}</option>)}</select>
-          <select className="cl-select" aria-label="유형" value={type} onChange={(event) => setType(event.target.value)} style={{ height: 28 }}><option value="">모든 유형</option>{CREATURE_TYPES.map((value) => <option key={value} value={value}>{value}</option>)}</select>
+          <select className="cl-select" aria-label="CR" value={cr} onChange={(event) => setCr(event.target.value)} style={{ height: 28 }}><option value="">모든 CR</option>{crValues().map((value) => <option key={value} value={value}>CR {value}</option>)}</select>
+          <select className="cl-select" aria-label="유형" value={type} onChange={(event) => setType(event.target.value)} style={{ height: 28 }}><option value="">모든 유형</option>{creatureTypes().map((value) => <option key={value} value={value}>{value}</option>)}</select>
         </div> : null}
       </div>
       <div className="cl-compendium-list">

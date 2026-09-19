@@ -6,6 +6,8 @@
  * modules do not carry (subclass feature tables, species choice details, feature descriptions, spell lists above
  * level 1) comes in through `SrdExtras`, JSON under content/srd-extras (H7b, D252).
  */
+import { readCustomMonster } from "../compendium/customMonster";
+import type { MonsterView } from "../compendium/monsters";
 import type {
   AbilityKey, CatalogEntry, CreationIndexJson, EntryJson, IndexClassChoiceJson, IndexClassJson, IndexSpeciesSemanticsJson,
   ProgressionCatalogJson, ProgressionLevelRowJson, RuleModuleJson, SpellPresentationJson,
@@ -302,6 +304,8 @@ export class ContentCatalog {
   readonly spells: SpellView[];
   readonly items: ItemView[];
   readonly loadouts: LoadoutView[];
+  /** D311: stat blocks the modules define (`combatant` entries with a `monster-definition`). */
+  readonly monsters: MonsterView[];
   readonly skills: Record<string, string>;
   readonly languages: { standard: Array<{ id: string; name: string; nameEn: string }>; general: Array<{ id: string; name: string; nameEn: string }> };
   readonly classOptions: Record<string, ClassOptionDefinition[]>;
@@ -330,6 +334,7 @@ export class ContentCatalog {
     this.backgrounds = this.buildBackgrounds();
     this.feats = this.buildFeats();
     this.items = this.buildItems();
+    this.monsters = this.buildMonsters();
     this.loadouts = this.buildLoadouts();
   }
 
@@ -393,6 +398,23 @@ export class ContentCatalog {
   spellsFor(classId: string, level: number) { return this.spells.filter((spell) => spell.level === level && spell.classes.includes(classId)); }
 
   // ---- builders ----
+
+  /**
+   * D311: a module's monster. `monster-definition` is either a whole stat block (`statBlock`, the shape the table
+   * keeps) or the paste format a person writes (docs/guides/CUSTOM_NPC_JSON.md), read by the same reader as a paste.
+   */
+  private buildMonsters(): MonsterView[] {
+    const monsters: MonsterView[] = [];
+    for (const entry of this.byCategory("combatant")) {
+      const def = mechanic<Record<string, unknown>>(entry, "monster-definition");
+      if (!def) continue;
+      if (def.statBlock && typeof def.statBlock === "object") { monsters.push({ ...(def.statBlock as MonsterView), id: entry.id, slug: slugOfId(entry.id), name: entry.name, nameEn: entry.nameEn }); continue; }
+      const read = readCustomMonster({ ...def, name: entry.name, nameEn: entry.nameEn }, Math.random, entry.id);
+      if ("error" in read) { this.warnings.push(`괴물 "${entry.id}": ${read.error}`); continue; }
+      monsters.push({ ...read.monster, slug: slugOfId(entry.id) });
+    }
+    return monsters;
+  }
 
   private buildSpells(): SpellView[] {
     const byId = new Map<string, SpellView>();
