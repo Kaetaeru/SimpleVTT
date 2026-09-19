@@ -69,6 +69,9 @@ export interface ContractRider {
 
 const SAVE_KO: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
 
+/** D307: in a window a hit opens, "the target" is the creature that was hit — `target` means `attack-target` there. */
+const hitTarget = (target: string) => target === "attack-target" || target === "target";
+
 /** The formula a `damage.apply` names, with its dice count resolved against the character. */
 function formulaOf(operation: { dice?: string; diceCount?: unknown; diceSides?: unknown; amount?: unknown }, scope: Scope): string | undefined {
   const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
@@ -124,11 +127,11 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);
         if (rule) rider.dice.push(rule);
-      } else if (operation.kind === "condition.apply" && !operation.save && operation.target === "attack-target") {
+      } else if (operation.kind === "condition.apply" && !operation.save && hitTarget(operation.target)) {
         // V4i (D271): no save at all — the condition simply lands (마력의 강타 knocks it prone).
         rider.conditions = [...(rider.conditions ?? []), operation.condition];
         hints.push(`명중하면 ${CONDITION_KO[operation.condition] ?? operation.condition}`);
-      } else if (operation.kind === "condition.apply" && operation.save && operation.target === "attack-target") {
+      } else if (operation.kind === "condition.apply" && operation.save && hitTarget(operation.target)) {
         const dc = Number(evaluate(operation.save.dc, scope));
         if (Number.isFinite(dc)) rider.saves.push({ ability: operation.save.ability, dc, condition: operation.condition, ...(operation.duration ? { duration: operation.duration } : {}), ...(operation.repeatSave ? { repeatSave: operation.repeatSave } : {}), ...(operation.successMark ? { successMark: operation.successMark } : {}) });
       } else if (operation.kind === "adjudication.request") {

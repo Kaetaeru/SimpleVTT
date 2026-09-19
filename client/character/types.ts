@@ -357,7 +357,7 @@ export interface DerivedCharacter {
    */
   /** V4m (D275): what a long rest hands this character by contract (인간의 수완: 영웅적 영감). */
   longRestGains?: { heroicInspiration?: boolean };
-  featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string; spellSlot?: boolean; slotLevel?: number; slotGain?: number; lockout?: { resourceId: string; dice: string } }; acts?: boolean; trigger?: string }>;
+  featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string; spellSlot?: boolean; pactSlot?: boolean; slotLevel?: number; slotGain?: number; lockout?: { resourceId: string; dice: string } }; acts?: boolean; trigger?: string }>;
   hitDice: Record<string, number>;
   choices: ChoiceRequest[];
   validation: { blocking: string[]; warnings: string[] };

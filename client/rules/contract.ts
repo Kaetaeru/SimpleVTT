@@ -10,6 +10,7 @@
  * in `unsupported` rather than skipped quietly, so "the module works" is a measured claim and the gap has a name.
  * Nothing here touches a session or a character — it takes a scope of named values and returns what should happen.
  */
+import { CONDITION_KO } from "../compendium/spells";
 
 /** A value expression: a literal, a named reference, or an operator over more expressions. */
 export type Expr = { value: unknown } | { ref: string } | { op: string; args?: Expr[]; left?: Expr; right?: Expr };
@@ -18,6 +19,11 @@ export type ExprValue = number | string | boolean | undefined;
 /** Where `{ ref: "proficiency.bonus" }` and the like get their values. */
 export type Scope = (ref: string) => ExprValue;
 
+/**
+ * D307: a contract may name a condition by its English id (`charmed`, what MODULE_GRAMMAR asks for) or by the name a
+ * sheet and a token carry (`매혹`). Every reader downstream compares names, so the id becomes the name once, here.
+ */
+const conditionName = (raw: unknown) => { const id = String(raw ?? ""); return CONDITION_KO[id] ?? id; };
 const isExpr = (value: unknown): value is Expr => typeof value === "object" && value !== null && ("value" in value || "ref" in value || "op" in value);
 const numeric = (value: ExprValue) => (typeof value === "number" ? value : typeof value === "boolean" ? Number(value) : Number.NaN);
 
@@ -303,8 +309,8 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     const at = `${path}[${index}]`;
     if (!OPERATION_KINDS.has(kind)) { unsupported.push(`${at}: ${kind || "이름 없는 연산"}`); return; }
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: isExpr(operation.amount) ? operation.amount : { value: operation.amount ?? 0 }, when: isExpr(operation.when) ? operation.when : undefined }); return; }
-    if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}), ...(parseDuration(operation.duration) ? { duration: parseDuration(operation.duration) } : {}), ...(operation.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}), ...(parseTargetMark(operation.successMark) ? { successMark: parseTargetMark(operation.successMark) } : {}) }); return; }
-    if (kind === "condition.remove") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: conditionName(operation.condition), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}), ...(parseDuration(operation.duration) ? { duration: parseDuration(operation.duration) } : {}), ...(operation.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}), ...(parseTargetMark(operation.successMark) ? { successMark: parseTargetMark(operation.successMark) } : {}) }); return; }
+    if (kind === "condition.remove") { out.push({ kind, condition: conditionName(operation.condition), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, ...(isExpr(operation.diceCount) ? { diceCount: operation.diceCount } : {}), ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.pool === "half-max" ? { pool: "half-max" as const } : {}) }); return; }
     const expr = (raw: unknown, fallback = 0) => (isExpr(raw) ? raw : { value: raw === undefined ? fallback : raw });
     if (kind === "hp.maximum.change") { out.push({ kind, amount: expr(operation.amount), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }

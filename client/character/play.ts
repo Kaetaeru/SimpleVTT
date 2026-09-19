@@ -380,6 +380,12 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
     next = { ...next, slotsUsed: { ...next.slotsUsed, [level]: (next.slotsUsed[level] ?? 0) + 1 } };
     parts.push(`${level}레벨 슬롯 소비`);
   }
+  // D307: a Pact Magic slot as the cost.
+  if (activation.pactSlot) {
+    if (!derived.pactMagic || next.pactSlotsUsed >= derived.pactMagic.count) return null;
+    next = { ...next, pactSlotsUsed: next.pactSlotsUsed + 1 };
+    parts.push("계약 슬롯 소비");
+  }
   // V4j (D272): a use that hands a slot back instead (마법 점수로 슬롯 만들기, 야생 재발).
   if (activation.slotGain) {
     const level = activation.slotGain;

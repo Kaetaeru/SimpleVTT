@@ -144,7 +144,8 @@ export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRunt
     // not just a sentence. The rest ("서브클래스: 챔피언", a passive's reminder) belongs on the sheet, not on a button.
     const contract = catalog ? featureContract(catalog, featureRuleKey(feature.id)) : undefined;
     const pressable = Boolean(activation.resourceId || activation.points || activation.roll || activation.duration || activation.heal || activation.tempHp || activation.hitDie
-      || contract?.entryPoints.some((entry) => entry.invocation === "manual" && entry.operations.some((operation) => operation.kind !== "adjudication.request")));
+      // D307: a passive (`property.modify` on a manual entry) is already on the sheet; a button for it did nothing.
+      || contract?.entryPoints.some((entry) => entry.invocation === "manual" && entry.operations.some((operation) => operation.kind !== "adjudication.request" && operation.kind !== "property.modify")));
     const economy = featureEconomy(activation.economy);
     // V4w (D285): a slot level this sheet has no slots of cannot be spent or handed back, so it is not offered.
     const slotLevel = activation.slotLevel ?? activation.slotGain;

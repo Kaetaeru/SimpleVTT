@@ -87,7 +87,8 @@
 - `resource:<id>` → 시트의 `resource.<id>`. SRD 풀 이름 예: `resource:barbarian.rage`, `resource:bard.bardic-inspiration`, `resource:cleric.channel-divinity`, `resource:paladin.channel-divinity`, `resource:monk.focus`, `resource:druid.wild-shape`, `resource:sorcerer.sorcery-points`, `resource:spell-slot`, `resource:spell-slot-levels`(레벨 합), `resource:pact-slot`.
 - `bucket`: `action` · `bonus-action` · `reaction` · `action.extra.non-magic` 같은 확장.
 - `condition: { "kind": "d20-result", "outcome": "success" | "failure" }`를 붙이면 **그 결과일 때만** 값이 나간다.
-- 표시된 사용(`label`)마다 자기 `payments`를 가질 수 있다.
+- 표시된 사용(`label`)마다 자기 `payments`를 가질 수 있다. 수동 사용이 스스로 무언가를 하면(판정 줄·패시브가 아닌 연산) 그 `resource` 결제가 버튼의 비용이다(D307). 판정 창만 쓰는 풀(행운아)은 계약 단위 결제로 두고 버튼을 만들지 않는다.
+- 슬롯을 비용으로: `resource.change` `resource:spell-slot` `amount -1` `level N`, 계약 슬롯은 `resource:pact-slot` `amount -1`. `resource:spell-slot-levels`는 휴식에서 슬롯을 **되찾는** 어휘다.
 
 ### 2.3 진입점(`entryPoints`)
 
@@ -136,7 +137,7 @@
 
 지속시간: `{"kind":"rounds"|"minutes"|"hours"|"permanent","amount":1,"boundary":"start"|"end","anchor":"source"|"bearer"}`.
 효과 수명(`lifetime`): `until-duration`(라운드를 센다) · `until-state` · `until-event` · `until-consumed` · `until-source-recast` · `with-parent` · `durable`.
-상태 이름은 영어 id(`prone`, `frightened`, `charmed`, `poisoned`, `restrained`, `stunned`, `blinded`, `deafened`, `incapacitated`, `invisible`, `paralyzed`, `petrified`, `grappled`, `unconscious`)를 쓴다. 피해 유형은 한국어(`타격 관통 참격 산성 냉기 화염 번개 사령 독 정신 광휘 천둥 역장`).
+상태 이름은 영어 id(D307: 파싱할 때 시트가 쓰는 한국어 이름으로 바뀐다 — 한국어로 적어도 된다. `prone`, `frightened`, `charmed`, `poisoned`, `restrained`, `stunned`, `blinded`, `deafened`, `incapacitated`, `invisible`, `paralyzed`, `petrified`, `grappled`, `unconscious`)를 쓴다. 피해 유형은 한국어(`타격 관통 참격 산성 냉기 화염 번개 사령 독 정신 광휘 천둥 역장`).
 
 ---
 
@@ -310,6 +311,7 @@ npm run gate:client                                                  # 엔진을
 
 - `unsupported`: 실행기가 못 읽은 조각(연산 이름 오타, 모르는 `invocation`, `ask`가 아닌 `factQuery` …)
 - `모르는 속성`: §4에 없는 `property`
+- 테이블에서 전부 눌러 본다(D307): `node --import tsx --import ./tests/support/register-css.mjs scripts/verify-module-at-table.ts <파일> [보고서.json]` — 거절·무반응·풀 미소모를 센다.
 - 그다음은 실제로 캐릭터를 만들어 본다 — 특성마다 계약이 붙었는지, 자원 풀이 생겼는지, 창이 뜨는지. 시험은 **합성 모듈**로 쓴다(저장소에 남의 콘텐츠를 넣지 않는다): `tests/client/v6-module.test.ts`가 본보기다.
 
 ## 11. 문법을 넓혀야 할 때

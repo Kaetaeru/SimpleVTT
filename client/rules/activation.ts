@@ -74,6 +74,8 @@ export interface FeatureActivation {
   economy?: string;
   /** V4a (D263): the use spends one spell slot, the lowest one left. */
   spellSlot?: boolean;
+  /** D307: the use spends one Pact Magic slot. */
+  pactSlot?: boolean;
   /** V4j (D272): the slot level the use spends, when the contract names one (마법의 샘의 교환). */
   slotLevel?: number;
   /** V4j (D272): the slot level the use gives back (마법 점수로 슬롯 만들기, 야생 재발). */
@@ -105,7 +107,7 @@ export function featureRuleKey(featureId: string) {
 
 
 /** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
-export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string; spellSlot?: boolean; slotLevel?: number; slotGain?: number; lockout?: { resourceId: string; dice: string } }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean; /** R78 (D213), R81 (D215): used when a short rest ends or initiative is rolled, not pressed. */ trigger?: string } | undefined;
+export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string; spellSlot?: boolean; pactSlot?: boolean; slotLevel?: number; slotGain?: number; lockout?: { resourceId: string; dice: string } }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean; /** R78 (D213), R81 (D215): used when a short rest ends or initiative is rolled, not pressed. */ trigger?: string } | undefined;
 
 /**
  * The activation for a feature: from its contract, else a pool named after the feature (`resource.<rule key>`).
@@ -124,7 +126,7 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
   if (fromContract?.duration || fromContract?.use || fromContract?.acts) {
     const use = fromContract.use;
     return {
-      ...(use?.points ? { points: true } : {}), ...(use?.economy ? { economy: use.economy } : {}), ...(use?.spellSlot ? { spellSlot: true } : {}), ...(use?.slotLevel ? { slotLevel: use.slotLevel } : {}), ...(use?.slotGain ? { slotGain: use.slotGain } : {}), ...(use?.lockout ? { lockout: use.lockout } : {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
+      ...(use?.points ? { points: true } : {}), ...(use?.economy ? { economy: use.economy } : {}), ...(use?.spellSlot ? { spellSlot: true } : {}), ...(use?.pactSlot ? { pactSlot: true } : {}), ...(use?.slotLevel ? { slotLevel: use.slotLevel } : {}), ...(use?.slotGain ? { slotGain: use.slotGain } : {}), ...(use?.lockout ? { lockout: use.lockout } : {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
       ...(use?.heal ? { heal: () => use.heal! } : {}), ...(use?.tempHp ? { tempHp: () => use.tempHp! } : {}),
       ...(use?.roll ? { roll: () => use.roll! } : {}), ...(use?.note ? { note: use.note } : {}),
       // R59 (D194): a use that spends a hit die rolls it and heals by the result.

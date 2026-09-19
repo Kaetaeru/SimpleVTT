@@ -315,7 +315,7 @@ for (const doc of subclassDocs) {
     const english = /^\*([A-Za-z][^*]*)\*\s*$/.exec(section.text.split("\n")[0] ?? "");
     const body = english ? section.text.split("\n").slice(1).join("\n") : section.text;
     const mechanics = structuredClone(oldFeature.mechanics ?? []);
-    for (const item of mechanics) if (item.kind === "common-play") item.config.id = featureId;
+    for (const item of mechanics) if (item.kind === "common-play") { item.config.id = featureId; spendSlotsAsSlots(item.config, featureId); }
     const entry = { id: featureId, category: "option", presentation: presentation(name, english?.[1] ?? `${doc.fm.original_name} — ${level}`, plain(body)), tags: ["subclass-feature", "phb-2024"], mechanics };
     add("subclass-feature", entry);
     grantsByLevel.set(level, [...(grantsByLevel.get(level) ?? []), featureId]);
@@ -340,6 +340,22 @@ for (const doc of subclassDocs) {
     progressionContributions: [...grantsByLevel].map(([level, grants]) => ({ track: classId, threshold: Number(level), grants })),
     mechanics,
   });
+}
+
+/**
+ * D307: "spend a slot of level N to get the use back" was written as `resource:spell-slot-levels` with a negative
+ * amount — the rest window's vocabulary for recovering slots, which a button cannot spend, so every such button was
+ * refused. It is one slot of that level: `resource:spell-slot` with `level`.
+ */
+function spendSlotsAsSlots(config, featureId) {
+  for (const entry of config.entryPoints ?? []) for (const operation of entry.operations ?? []) {
+    const amount = operation.amount?.value ?? operation.amount;
+    if (operation.kind !== "resource.change" || operation.resource !== "resource:spell-slot-levels" || !(amount < 0)) continue;
+    operation.resource = "resource:spell-slot";
+    operation.level = -amount;
+    operation.amount = { value: -1 };
+    decisions.push(`${featureId}: ${-amount}레벨 슬롯 하나를 쓰는 어휘로`);
+  }
 }
 
 /**
@@ -369,6 +385,12 @@ function featureFixes(docSlug, name, entry, definition, section) {
     const rule = config.entryPoints.find((point) => point.id === "rule");
     if (rule) rule.operations = rule.operations.filter((operation) => !/보충 자료 본문/.test(operation.question ?? ""));
     decisions.push("fighter-battle-master: 기동 20개를 선택지 목록과 계약으로, 3·7·10·15레벨에 3·5·7·9개");
+    return;
+  }
+
+  if (docSlug === "fighter-eldritch-knight" && name === "비전 타격") {
+    // The target's next save against the caster's spells is at disadvantage: the mark a hit leaves does that.
+    set({ entryPoints: [{ id: "arcane-strike", invocation: "on-hit", label: name, attack: { scope: "weapon", oncePerTurn: false, requiresEffects: [] }, operations: [{ kind: "property.modify", property: "target.mark", operation: "set", value: 1, params: { mark: { name: `${name} (다음 내성 불리)`, nextSave: "disadvantage" } } }, ask("자신이 시전한 주문에 대한 다음 내성만 — 다음 자기 턴이 끝날 때까지")] }] });
     return;
   }
 
@@ -411,6 +433,11 @@ maneuvers.forEach((maneuver, index) => {
   add("maneuver", { id: optionId, category: "option", presentation: presentation(maneuver.name, slug, plain(maneuver.text)), tags: ["maneuver", "phb-2024"], mechanics: [{ kind: "common-play", config: { ...CONTRACT, id: optionId, ...write(optionId, maneuver.name) } }] });
 });
 add("option-list", { id: "phb2024.maneuvers", category: "option", presentation: presentation("기동", "Maneuvers"), tags: ["phb-2024"], mechanics: [{ kind: "option-list-definition", config: { list: "phb2024.maneuvers", options: maneuverIds } }] });
+
+// D307: the items two feat contracts hand out (`content.grant`) were never entries, so a bag received a raw id.
+for (const [id, name, originalName] of [["phb2024.item.chef-treat", "요리사의 간식", "Chef's Treat"], ["phb2024.item.poisoner-dose", "독 한 회분", "Poison Dose"]]) {
+  add("item", { id, category: "adventuring-gear", presentation: presentation(name, originalName), tags: ["phb-2024"], mechanics: [] });
+}
 
 // Effects the subclass features start keep their ids (their contracts are keyed `feature:<effect>`), so they come along whole.
 for (const effect of old.content.filter((item) => item.id.startsWith("effect.phb2024.") && !item.id.startsWith("effect.phb2024.aasimar."))) add("subclass-effect", structuredClone(effect));

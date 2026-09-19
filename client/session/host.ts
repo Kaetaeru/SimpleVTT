@@ -1109,10 +1109,13 @@ export class TableHost {
         // V4d (D266): the effect lands on each chosen character, with the die it carries.
         for (const effect of outcome.effects ?? []) for (const target of targets) {
           const live = this.journalEntries.get(target.entry.id);
-          if (live?.kind !== "character") continue;
+          if (live?.kind !== "character" && live?.kind !== "npc") continue;
           const key = `effect:${outcome.label}:${actor.entry.id}`;
           const started: ActiveEffect = { key, name: effect.name, source: "feature", duration: effect.duration, concentration: false, ...(effect.rounds !== undefined ? { rounds: effect.rounds } : {}), elapsed: 0, startedAt: this.now(), from: actor.entry.id, ...(effect.rescueDice ? { rescue: { dice: effect.rescueDice } } : {}) };
-          this.storeEntry({ ...live, runtime: { ...live.runtime, effects: [...(live.runtime.effects ?? []).filter((item) => item.key !== key), started], updatedAt: this.now() }, updatedAt: this.now() });
+          if (live.kind === "character") this.storeEntry({ ...live, runtime: { ...live.runtime, effects: [...(live.runtime.effects ?? []).filter((item) => item.key !== key), started], updatedAt: this.now() }, updatedAt: this.now() });
+          // D307: a use aimed at a monster (적의 맹세, 깨어난 정신) put its effect on nobody — only characters were written.
+          // A monster carries timed effects too (R30), and its token shows the mark.
+          else { this.storeEntry({ ...live, runtime: { ...live.runtime, effects: [...(live.runtime.effects ?? []).filter((item) => item.key !== key), started], updatedAt: this.now() }, updatedAt: this.now() }); this.mark(target, [effect.name], true, actor.token?.id); }
           lines.push(`${target.token?.name ?? target.entry.name}: ${effect.name}${effect.rescueDice ? ` (${effect.rescueDice})` : ""}`);
         }
         // V3d (D258): the turn marks a use puts on its user.
@@ -2372,7 +2375,9 @@ export class TableHost {
    * D305: never the attacker — a fighter with 가로막기 was asked to blunt their own swing.
    */
   private bystanderGuard(target: { entry: JournalEntry; token?: Token; page?: Page }, attacker?: { entry: JournalEntry; token?: Token }) {
-    if (!target.page || !this.options.pcGuards) return undefined;
+    // D307: only for a character that was hit. A player's swing at a monster held its card for every party member's
+    // 가로막기 — protecting the enemy — and the attacker's own on-hit window (기동, 강타, 암습) never opened.
+    if (!target.page || !this.options.pcGuards || target.entry.kind !== "character") return undefined;
     for (const token of target.page.tokens) {
       if (token.id === target.token?.id || !token.represents) continue;
       if (attacker && (token.id === attacker.token?.id || token.represents === attacker.entry.id)) continue;

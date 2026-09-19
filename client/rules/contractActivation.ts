@@ -133,6 +133,8 @@ export interface ContractUse {
   economy?: string;
   /** V4a (D263): the use costs one spell slot, the lowest one left. */
   spellSlot?: boolean;
+  /** D307: the use spends one Pact Magic slot (계약 슬롯으로 사용권 회복). */
+  pactSlot?: boolean;
   /** V4j (D272): the slot level the use spends, when the contract names one instead of taking the lowest (마법의 샘). */
   slotLevel?: number;
   /** V4j (D272): the slot level the use gives back (마법 점수로 슬롯 만들기, 야생 재발). */
@@ -242,7 +244,10 @@ export function metamagicOptions(derived: { features: Array<{ id: string; name: 
 export function contractUse(contract: CommonPlayContract, scope: Scope, label: string): ContractUse | undefined {
   const use: ContractUse = {};
   let found = false;
-  const economy = contract.payments.find((payment) => payment.kind === "economy")?.bucket;
+  // D307: the button's own payments are the contract's, or those its unlabelled manual entry declares (a labelled
+  // use is its own button and brings its own, see `ContentCatalog.contractFor`).
+  const payments = [...contract.payments, ...contract.entryPoints.filter((entry) => entry.invocation === "manual" && !entry.label).flatMap((entry) => entry.payments ?? [])];
+  const economy = payments.find((payment) => payment.kind === "economy")?.bucket;
   if (economy) use.economy = economy;
   for (const operation of operationsOf(contract)) {
     if (!live(operation, scope)) continue;
@@ -255,6 +260,8 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
         if (operation.resourceId === HIT_DIE_RESOURCE) { use.hitDie = true; found = true; continue; }
         // V4j (D272): a contract may name the level it burns (마법의 샘 turns that slot into sorcery points).
         if (operation.resourceId === SPELL_SLOT_RESOURCE) { use.spellSlot = true; if (operation.level) use.slotLevel = operation.level; found = true; continue; }
+        // D307: a Pact Magic slot is not a pool the sheet lists; it was read as one, and the button was refused.
+        if (operation.resourceId === PACT_SLOT_RESOURCE) { use.pactSlot = true; found = true; continue; }
         use.resourceId = operation.resourceId; if (spent > 1) use.cost = spent; found = true;
       }
       // V4j (D272): a use that hands a spell slot back (마법의 샘의 교환, 야생 재발); a pool it fills back up is
@@ -279,6 +286,13 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
   // reads "추가 행동" out of it to know which features cost a bonus action.
   const questions = operationsOf(contract).filter((operation): operation is Extract<ContractOperation, { kind: "adjudication.request" }> => operation.kind === "adjudication.request" && live(operation, scope)).map((operation) => questionText(operation, scope));
   if (questions.length) { use.note = questions.join(" · "); found = true; }
+  // D307: a button whose cost is written as a payment (`payments: [{ kind: "resource" … }]`, the way a labelled use
+  // says what it costs) spends it. Only `resource.change` operations were read as a cost, so 81 uses of the PHB module
+  // never spent their pool. A payment is the button's only when the button does something itself — a contract whose
+  // pool pays for a window (행운아, 정신 방어) keeps its payment for that window.
+  const acts = contract.entryPoints.some((entry) => entry.invocation === "manual" && entry.operations.some((operation) => operation.kind !== "adjudication.request" && operation.kind !== "property.modify"));
+  const pay = payments.find((payment) => payment.kind === "resource" && payment.resourceId && !payment.onlyOn && payment.consumeAt === "commit");
+  if (acts && pay && !use.resourceId && !use.spellSlot && !use.pactSlot && !use.hitDie && !use.points) { use.resourceId = pay.resourceId; if (pay.amount > 1) use.cost = pay.amount; found = true; }
   return found ? use : undefined;
 }
 
@@ -317,7 +331,7 @@ export function contractOutcome(contract: CommonPlayContract, scope: Scope): Con
       case "life.death-save": out.deathSave = true; break;
       case "movement.stand": out.stand = true; break;
       case "content.grant": out.grants.push(operation.contentId); break;
-      case "resource.change": if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + number(operation.amount); else if (operation.resourceId === PACT_SLOT_RESOURCE) out.pactSlots = (out.pactSlots ?? 0) + number(operation.amount); else if (operation.resourceId !== HIT_DIE_RESOURCE && operation.resourceId !== SPELL_SLOT_RESOURCE && number(operation.amount) > 0) out.restores = [...(out.restores ?? []), { resourceId: operation.resourceId, amount: number(operation.amount) }]; break;
+      case "resource.change": if (operation.resourceId === SLOT_LEVELS_RESOURCE) out.slotLevels = (out.slotLevels ?? 0) + number(operation.amount); else if (operation.resourceId === PACT_SLOT_RESOURCE) { if (number(operation.amount) > 0) out.pactSlots = (out.pactSlots ?? 0) + number(operation.amount); } else if (operation.resourceId !== HIT_DIE_RESOURCE && operation.resourceId !== SPELL_SLOT_RESOURCE && number(operation.amount) > 0) out.restores = [...(out.restores ?? []), { resourceId: operation.resourceId, amount: number(operation.amount) }]; break;
       case "resource.recharge": out.recharges.push({ resourceId: operation.resourceId, die: operation.die, succeedsOn: operation.succeedsOn }); break;
       case "movement.relocate": out.notes.push(operation.note ?? `${operation.mode}${operation.distance ? ` ${number(operation.distance)}피트` : ""}`); break;
       case "movement.grant": out.notes.push(operation.note ?? `이동 ${number(operation.distance)}피트`); break;

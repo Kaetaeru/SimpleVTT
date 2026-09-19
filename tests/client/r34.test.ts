@@ -97,7 +97,7 @@ test("contracts: expressions are evaluated against the character (D171)", () => 
   assert.equal(shove.test!.choose, "highest");
   assert.deepEqual(shove.test!.properties, ["save.str.modifier", "save.dex.modifier"]);
   // The 넘어짐 only lands when the save fails; the same contract with a successful save does nothing.
-  assert.deepEqual(runEntryPoint(contract("combat.unarmed-strike.shove-prone"), "use", characterScope(fighter, { "test.outcome": "failure" }))!.effects, [{ kind: "condition", condition: "prone", target: "target" }]);
+  assert.deepEqual(runEntryPoint(contract("combat.unarmed-strike.shove-prone"), "use", characterScope(fighter, { "test.outcome": "failure" }))!.effects, [{ kind: "condition", condition: "넘어짐", target: "target" }]);
   assert.deepEqual(runEntryPoint(contract("combat.unarmed-strike.shove-prone"), "use", characterScope(fighter, { "test.outcome": "success" }))!.effects, []);
   // 불굴 adds the fighter's own class level, read out of the character rather than written into the code.
   const indomitable = contract("fighter.indomitable").interceptors[0];

@@ -11,6 +11,7 @@ import { ABILITY_SCORE_MAX } from "../rules/tables";
 import { abilityOptions, allToolOptions, damageTypeOptions, skillOptions, spellOptions, toolName, weaponMasteryOptions } from "./choices";
 import { featDieMinimum, featExecutionStatus, featNotes, resetKo } from "./featRules";
 import type { Ledger } from "./ledger";
+import { applyGainContract } from "./tracks";
 
 export interface FeatInstance {
   /** Unique key of this feat grant (`background`, `species.originFeat`, `class.4.asi`, `invocation.2`). */
@@ -227,5 +228,8 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
   for (const type of resistances ?? []) ledger.resistances.add(type);
   const languages = config.languages as string[] | undefined;
   for (const id of languages ?? []) ledger.languages.set(id, catalog.languages.standard.concat(catalog.languages.general).find((language) => language.id === id)?.name ?? id);
+  // D307: what the feat's own contract does when it is taken (행운아's points, 회복의 은총's dice) — the gain grammar a
+  // class feature and a species trait already run. Feats never ran it, so a pool written there did not exist.
+  applyGainContract(ledger, undefined, instance.trackIndex ?? 0, feat.id, feat.name, `${instance.sourceLabel} · ${feat.name}`);
   void ABILITY_KO;
 }

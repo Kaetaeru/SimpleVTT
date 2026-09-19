@@ -158,7 +158,7 @@ test("V3e: 교활한 일격 takes its dice from 암습 taken with it; 안정된 
   const trip = "rogue.cunning-strike#trip";
   const both = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: ["rogue.sneak-attack", trip], facts: ["sneak-advantage"] }, catalog())!.spec;
   assert.equal(both.riders?.find((part) => part.label === "암습")?.formula, "2d6", "3d6 less the die 넘어뜨리기 took");
-  assert.ok(both.hitSaves?.some((save) => save.condition === "prone" && save.ability === "dex"), JSON.stringify(both.hitSaves));
+  assert.ok(both.hitSaves?.some((save) => save.condition === "넘어짐" && save.ability === "dex"), JSON.stringify(both.hitSaves));
   const alone = pcAttackSpec(entry, rogue.derived, blade.id, { contracts: [trip] }, catalog())!.spec;
   assert.ok(!alone.hitSaves?.length, "without 암습 there are no dice to give up, so no effect");
   assert.deepEqual(rogue.derived.bonusActions?.filter((item) => item.source === "교활한 행동").map((item) => item.kind), ["dash", "disengage", "hide"]);

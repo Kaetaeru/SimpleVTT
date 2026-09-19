@@ -200,4 +200,17 @@ test("D305: the bystander's window never goes to the attacker — 가로막기 d
   await tick();
   const guardAsks = host.archive.filter((message) => message.type === "prompt" && message.prompt?.guard?.trigger === "attack.hit-ally");
   assert.deepEqual(guardAsks.map((message) => message.content), [], "no window asks the attacker to guard its own target");
+
+  // D307: nor a party member watching — a monster that was hit is nobody's ally to guard. That window held the card and
+  // hid the attacker's own on-hit choices (기동, 강타, 암습).
+  const friend = fighterWith([["interception", "가로막기"]], "greatsword", "동료");
+  const friendEntry = newJournalCharacter(campaign.id, "dm", friend.made.source, friend.runtime);
+  dm.send({ type: "journal.put", entry: friendEntry });
+  await tick();
+  dm.send({ type: "token.put", pageId: scene.id, token: tokenForCharacter(friendEntry) });
+  await tick();
+  dm.send({ type: "act.attack", attacker: { entryId: guardianEntry.id, pageId: scene.id, tokenId: guardianToken.id }, targets: [{ entryId: ogre.id, pageId: scene.id, tokenId: ogreToken.id }], attack: { source: "weapon", attackId: sword.id }, overrides: { outcome: "hit" } });
+  await tick();
+  const bystanders = host.archive.filter((message) => message.type === "prompt" && message.prompt?.guard?.trigger === "attack.hit-ally");
+  assert.deepEqual(bystanders.map((message) => message.content), [], "a monster hit by the party opens no 가로막기 window");
 });
