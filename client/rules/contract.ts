@@ -576,7 +576,7 @@ const featureKeyOf = (id: string) => {
   const feat = /\.feat\.(.+)$/.exec(id);
   if (feat) return `feat:${feat[1]}`;
   const cls = /^[a-z-]+\.\d+\.(.+)$/.exec(id);
-  if (cls) return cls[1];
+  if (cls) return featureKeyOf(cls[1]);
   const sub = /^dnd\.[a-z0-9]+\.feature\.(.+)$/.exec(id);
   if (sub) return sub[1];
   const trait = /\.trait\.([^.]+)$/.exec(id);

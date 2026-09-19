@@ -586,10 +586,13 @@ export class ContentCatalog {
   private buildSpecies(): SpeciesView[] {
     const views: SpeciesView[] = [];
     for (const entry of this.byCategory("species")) {
-      const def = mechanic<{ size?: string[]; speed?: number; darkvision?: number; traits?: string[]; choices?: Record<string, unknown>; semantics?: IndexSpeciesSemanticsJson; effects?: SrdSpeciesData["effects"] }>(entry, "species-definition") ?? {};
+      // D313: a trait may be written whole (`{ key, name, nameEn, description, minLevel }`), and the choices as full
+      // choice objects (labels, option names and summaries) — what the SRD's extras carried, now in the module.
+      const def = mechanic<{ size?: string[]; speed?: number; darkvision?: number; traits?: Array<string | { key: string; name: string; nameEn?: string; description?: string; minLevel?: number }>; choices?: Record<string, unknown> | SpeciesChoice[]; semantics?: IndexSpeciesSemanticsJson; effects?: SrdSpeciesData["effects"] }>(entry, "species-definition") ?? {};
       const extras = this.inputs.extras.species[entry.id];
       const semantics = this.inputs.index.species[entry.id] ?? def.semantics ?? {};
       const traits: SpeciesTrait[] = (def.traits ?? []).map((raw, index) => {
+        if (typeof raw === "object") return { id: `${entry.id}.trait.${raw.key}`, name: raw.name, nameEn: raw.nameEn ?? raw.key, ...(raw.description ? { description: raw.description, descriptionSource: "module" as const } : {}), ...(raw.minLevel ? { minLevel: raw.minLevel } : {}) };
         const [traitId, level] = raw.split("@");
         const authored = extras?.traits[traitId];
         const installedName = def.semantics?.baseFeatures?.[index]?.replace(/\s*\(.*\)\s*$/, "");
@@ -604,7 +607,7 @@ export class ContentCatalog {
           ...(level ? { minLevel: Number(level) } : {}),
         };
       });
-      const choices: SpeciesChoice[] = extras?.choices ? extras.choices : this.genericSpeciesChoices(def.choices ?? {}, semantics);
+      const choices: SpeciesChoice[] = extras?.choices ? extras.choices : Array.isArray(def.choices) ? def.choices : this.genericSpeciesChoices(def.choices ?? {}, semantics);
       views.push({ id: entry.id, name: entry.name, nameEn: entry.nameEn, summary: entry.summary, description: entry.description ?? extras?.description, sizes: def.size ?? ["medium"], speed: def.speed ?? 30, darkvision: def.darkvision, traits, choices, semantics, effects: def.effects ?? extras?.effects ?? {}, scope: entry.scope });
     }
     return views.sort((a, b) => a.name.localeCompare(b.name, "ko"));

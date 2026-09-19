@@ -1,0 +1,2127 @@
+{
+ "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+ "schemaVersion": "0.1-draft",
+ "moduleVersion": "1",
+ "rulesProfile": {
+  "id": "dnd.srd-5.2.1",
+  "version": "0.1-draft"
+ },
+ "defaultLocale": "ko-KR",
+ "source": {
+  "document": "System Reference Document",
+  "version": "5.2.1",
+  "license": "CC-BY-4.0",
+  "srdDerived": true
+ },
+ "localizationSource": {
+  "defaultLocale": "ko-KR",
+  "repository": "Kaetaeru/D-D-2024-",
+  "srdPathRoot": "10-RULEBOOKS/srd-5.2.1/"
+ },
+ "dependencies": [],
+ "conflicts": [],
+ "capabilities": [],
+ "extensionPoints": [],
+ "moduleId": "dnd.srd-5.2.1.origins",
+ "content": [
+  {
+   "id": "dnd.srd521.background.acolyte",
+   "category": "background",
+   "tags": [
+    "background",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Acolyte",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "신앙 수행자",
+      "description": "신앙 수행자\n신앙 수행자는 사원이나 종교 공동체에서 봉사하며 의식, 경전과 신앙의 가르침을 익힌 인물이다.\n\n배경 특성\n항목 · 내용\n능력치 · 지능, 지혜, 매력\n기원 재주 · 마법 입문자(클레릭)\n기술 숙련 · 통찰, 종교\n도구 숙련 · 서예가 도구\n\n능력치 증가\n다음 중 하나를 선택한다.\n\n• 지능·지혜·매력 중 하나를 2 올리고 다른 하나를 1 올린다.\n• 지능·지혜·매력을 각각 1 올린다.\n\n이 증가로 능력치를 20보다 높일 수 없다.\n\n시작 장비\n다음 중 하나를 선택한다.\n\n• 장비 A: 서예가 도구, 기도서, 성표, 양피지 10장, 로브, 8 GP\n• 장비 B: 50 GP\n\n관련 규칙\n• 마법 입문자(클레릭): 재주 구역에서 연결\n• 서예가 도구와 성표: 장비 구역에서 연결\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Acolyte"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "background-definition",
+     "config": {
+      "abilityChoices": [
+       "int",
+       "wis",
+       "cha"
+      ],
+      "abilityIncreaseModes": [
+       "2+1",
+       "1+1+1"
+      ],
+      "skills": [
+       "insight",
+       "religion"
+      ],
+      "tool": "calligrapher-supplies",
+      "originFeat": "dnd.srd521.feat.magic-initiate-cleric",
+      "equipmentChoice": true
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.background.criminal",
+   "category": "background",
+   "tags": [
+    "background",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Criminal",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "범죄자",
+      "description": "범죄자\n범죄자는 법의 바깥에서 살아가며 은밀한 이동, 자물쇠와 함정, 재빠른 판단을 익힌 인물이다.\n\n배경 특성\n항목 · 내용\n능력치 · 민첩, 건강, 지능\n기원 재주 · 경계\n기술 숙련 · 손재주, 은신\n도구 숙련 · 도둑 도구\n\n능력치 증가\n다음 중 하나를 선택한다.\n\n• 민첩·건강·지능 중 하나를 2 올리고 다른 하나를 1 올린다.\n• 민첩·건강·지능을 각각 1 올린다.\n\n이 증가로 능력치를 20보다 높일 수 없다.\n\n시작 장비\n다음 중 하나를 선택한다.\n\n• 장비 A: 단검 2개, 도둑 도구, 쇠지렛대, 주머니 2개, 여행자 옷, 16 GP\n• 장비 B: 50 GP\n\n관련 규칙\n• 경계: 재주 구역에서 연결\n• 도둑 도구: 장비 구역에서 연결\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Criminal"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "background-definition",
+     "config": {
+      "abilityChoices": [
+       "dex",
+       "con",
+       "int"
+      ],
+      "abilityIncreaseModes": [
+       "2+1",
+       "1+1+1"
+      ],
+      "skills": [
+       "sleight-of-hand",
+       "stealth"
+      ],
+      "tool": "thieves-tools",
+      "originFeat": "dnd.srd521.feat.alert",
+      "equipmentChoice": true
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.background.sage",
+   "category": "background",
+   "tags": [
+    "background",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sage",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "현자",
+      "description": "현자\n현자는 서적과 기록을 연구하고 역사, 마법과 다중우주의 지식을 탐구해 온 학자다.\n\n배경 특성\n항목 · 내용\n능력치 · 건강, 지능, 지혜\n기원 재주 · 마법 입문자(위저드)\n기술 숙련 · 비전, 역사\n도구 숙련 · 서예가 도구\n\n능력치 증가\n다음 중 하나를 선택한다.\n\n• 건강·지능·지혜 중 하나를 2 올리고 다른 하나를 1 올린다.\n• 건강·지능·지혜를 각각 1 올린다.\n\n이 증가로 능력치를 20보다 높일 수 없다.\n\n시작 장비\n다음 중 하나를 선택한다.\n\n• 장비 A: 육척봉, 서예가 도구, 역사서, 양피지 8장, 로브, 8 GP\n• 장비 B: 50 GP\n\n관련 규칙\n• 마법 입문자(위저드): 재주 구역에서 연결\n• 서예가 도구: 장비 구역에서 연결\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Sage"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "background-definition",
+     "config": {
+      "abilityChoices": [
+       "con",
+       "int",
+       "wis"
+      ],
+      "abilityIncreaseModes": [
+       "2+1",
+       "1+1+1"
+      ],
+      "skills": [
+       "arcana",
+       "history"
+      ],
+      "tool": "calligrapher-supplies",
+      "originFeat": "dnd.srd521.feat.magic-initiate-wizard",
+      "equipmentChoice": true
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.background.soldier",
+   "category": "background",
+   "tags": [
+    "background",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Soldier",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "군인",
+      "description": "군인\n군인은 군대, 용병단이나 민병대에서 전투 훈련과 규율을 익힌 인물이다.\n\n배경 특성\n항목 · 내용\n능력치 · 근력, 민첩, 건강\n기원 재주 · 야만적 공격자\n기술 숙련 · 운동, 위협\n도구 숙련 · 원하는 게임 도구 하나\n\n능력치 증가\n다음 중 하나를 선택한다.\n\n• 근력·민첩·건강 중 하나를 2 올리고 다른 하나를 1 올린다.\n• 근력·민첩·건강을 각각 1 올린다.\n\n이 증가로 능력치를 20보다 높일 수 없다.\n\n시작 장비\n다음 중 하나를 선택한다.\n\n• 장비 A: 창, 단궁, 화살 20개, 화살통, 선택한 게임 도구, 치료사 도구, 여행자 옷, 14 GP\n• 장비 B: 50 GP\n\n관련 규칙\n• 야만적 공격자: 재주 구역에서 연결\n• 게임 도구와 치료사 도구: 장비 구역에서 연결\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Soldier"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "background-definition",
+     "config": {
+      "abilityChoices": [
+       "str",
+       "dex",
+       "con"
+      ],
+      "abilityIncreaseModes": [
+       "2+1",
+       "1+1+1"
+      ],
+      "skills": [
+       "athletics",
+       "intimidation"
+      ],
+      "toolChoice": "gaming-set",
+      "originFeat": "dnd.srd521.feat.savage-attacker",
+      "equipmentChoice": true
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.ability-score-improvement",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "general",
+    "repeatable"
+   ],
+   "presentation": {
+    "originalName": "Ability Score Improvement",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "능력치 향상",
+      "description": "선행 조건: 4레벨 이상\n\n반복 가능\n\n다음 중 하나를 선택한다.\n\n• 능력치 하나를 2 올린다.\n• 서로 다른 능력치 두 개를 각각 1 올린다.\n\n이 재주로 능력치를 20보다 높일 수 없다."
+     },
+     "en": {
+      "name": "Ability Score Improvement"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "tier": "general",
+      "minimumLevel": 4,
+      "repeatable": true,
+      "choices": [
+       "+2-one-ability",
+       "+1-two-abilities"
+      ],
+      "maximum": 20,
+      "execution": {
+       "status": "selection",
+       "reason": "ability increases execute at level-up"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.alert",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "origin"
+   ],
+   "presentation": {
+    "originalName": "Alert",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "경계",
+      "description": "우선권 숙련\n우선권 굴림에 숙련 보너스를 더할 수 있다.\n\n우선권 교환\n우선권을 굴린 직후 같은 전투에 있는 자발적인 아군 한 명과 자신의 우선권 수치를 서로 바꿀 수 있다. 자신이나 아군이 행동불능 상태라면 교환할 수 없다."
+     },
+     "en": {
+      "name": "Alert"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "tier": "origin",
+      "grants": [
+       "initiative-proficiency",
+       "initiative-swap"
+      ],
+      "execution": {
+       "status": "derived",
+       "reason": "the proficiency bonus is added to initiative by the derivation; swapping places in the order stays a table call"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.epic.combat-prowess",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "epic-boon"
+   ],
+   "presentation": {
+    "originalName": "Boon of Combat Prowess",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투 기량의 은총",
+      "description": "선행 조건: 19레벨 이상\n\n능력치 증가\n원하는 능력치 하나를 1 올린다. 최대 30이다.\n\n비할 데 없는 조준\n명중 굴림에 실패하면 대신 적중시킬 수 있다. 사용하면 다음 자신의 턴이 시작될 때까지 다시 사용할 수 없다."
+     },
+     "en": {
+      "name": "Boon of Combat Prowess"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "minimumLevel": 19,
+      "abilityIncrease": {
+       "amount": 1,
+       "maximum": 30
+      },
+      "grants": [
+       "peerless-aim"
+      ],
+      "execution": {
+       "status": "common-play",
+       "reason": "R51 (D186): the `set-die` roll mode turns a miss into a natural 20"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.epic.dimensional-travel",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "epic-boon"
+   ],
+   "presentation": {
+    "originalName": "Boon of Dimensional Travel",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "차원 여행의 은총",
+      "description": "선행 조건: 19레벨 이상\n\n능력치 증가\n원하는 능력치 하나를 1 올린다. 최대 30이다.\n\n순간 이동 발걸음\n공격 행동이나 마법 행동을 한 직후 자신이 볼 수 있는 빈 공간으로 최대 30피트 순간이동할 수 있다."
+     },
+     "en": {
+      "name": "Boon of Dimensional Travel"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "minimumLevel": 19,
+      "abilityIncrease": {
+       "amount": 1,
+       "maximum": 30
+      },
+      "grants": [
+       "teleport-after-action"
+      ],
+      "execution": {
+       "status": "descriptive",
+       "reason": "teleporting after the Attack or Magic action needs a post-action trigger seam"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.epic.fate",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "epic-boon"
+   ],
+   "presentation": {
+    "originalName": "Boon of Fate",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "운명의 은총",
+      "description": "선행 조건: 19레벨 이상\n\n능력치 증가\n원하는 능력치 하나를 1 올린다. 최대 30이다.\n\n운명 개선\n자신 또는 60피트 이내의 다른 크리처가 d20 판정에 성공하거나 실패하면 2d4를 굴려 그 결과를 굴림의 보너스 또는 페널티로 적용할 수 있다. 적용 결과로 성공과 실패가 바뀔 수 있다.\n\n사용하면 우선권을 굴리거나 짧은 휴식 또는 긴 휴식을 끝낼 때까지 다시 사용할 수 없다."
+     },
+     "en": {
+      "name": "Boon of Fate"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "minimumLevel": 19,
+      "abilityIncrease": {
+       "amount": 1,
+       "maximum": 30
+      },
+      "grants": [
+       "improve-fate-2d4"
+      ],
+      "execution": {
+       "status": "common-play",
+       "reason": "R51 (D186): feat-granted pool + a 2d4 add-die interceptor on a failed roll"
+      },
+      "resources": [
+       {
+        "id": "resource.feat.fate",
+        "label": "운명의 은총",
+        "max": 1,
+        "reset": "short-or-long-rest"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.epic.irresistible-offense",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "epic-boon"
+   ],
+   "presentation": {
+    "originalName": "Boon of Irresistible Offense",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "저항할 수 없는 공격의 은총",
+      "description": "선행 조건: 19레벨 이상\n\n능력치 증가\n근력 또는 민첩을 1 올린다. 최대 30이다.\n\n방어 돌파\n자신이 주는 피해는 피해 저항을 무시한다.\n\n압도적인 일격\n명중 굴림의 d20에서 자연 20이 나오면 이 재주로 올린 능력치와 같은 추가 피해를 줄 수 있다. 추가 피해 유형은 공격이 준 피해 유형 중 하나다."
+     },
+     "en": {
+      "name": "Boon of Irresistible Offense"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "minimumLevel": 19,
+      "abilityIncrease": {
+       "any": [
+        "str",
+        "dex"
+       ],
+       "amount": 1,
+       "maximum": 30
+      },
+      "grants": [
+       "ignore-damage-resistance",
+       "overwhelming-strike"
+      ],
+      "execution": {
+       "status": "common-play",
+       "reason": "R51 (D186): `damage.ignore-resistance`; the natural-20 rider is still the table's"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.epic.night-spirit",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "epic-boon"
+   ],
+   "presentation": {
+    "originalName": "Boon of the Night Spirit",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "밤의 영혼의 은총",
+      "description": "선행 조건: 19레벨 이상\n\n능력치 증가\n민첩, 지능, 지혜 또는 매력 중 하나를 1 올린다. 최대 30이다.\n\n그림자와 합일\n희미한 빛이나 어둠 안에 있을 때 추가 행동으로 투명 상태가 될 수 있다. 행동, 추가 행동 또는 반응 행동을 한 직후 투명 상태가 끝난다.\n\n그림자 형상\n희미한 빛이나 어둠 안에 있는 동안 정신과 광휘를 제외한 모든 피해에 저항을 가진다."
+     },
+     "en": {
+      "name": "Boon of the Night Spirit"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "minimumLevel": 19,
+      "abilityIncrease": {
+       "any": [
+        "dex",
+        "int",
+        "wis",
+        "cha"
+       ],
+       "amount": 1,
+       "maximum": 30
+      },
+      "grants": [
+       "merge-with-shadows",
+       "shadowy-form"
+      ],
+      "execution": {
+       "status": "common-play",
+       "reason": "R51 (D186): the contract prints its clauses on the sheet; they stay the table's to judge"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.epic.spell-recall",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "epic-boon",
+    "spellcasting"
+   ],
+   "presentation": {
+    "originalName": "Boon of Spell Recall",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "주문 회상의 은총",
+      "description": "선행 조건: 19레벨 이상, 주문 시전 특성\n\n능력치 증가\n지능, 지혜 또는 매력 중 하나를 1 올린다. 최대 30이다.\n\n무료 시전\n1-4레벨 주문 슬롯으로 주문을 시전할 때 1d4를 굴린다. 결과가 사용한 슬롯 레벨과 같으면 주문 슬롯이 소모되지 않는다."
+     },
+     "en": {
+      "name": "Boon of Spell Recall"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "minimumLevel": 19,
+      "requires": "spellcasting-feature",
+      "abilityIncrease": {
+       "any": [
+        "int",
+        "wis",
+        "cha"
+       ],
+       "amount": 1,
+       "maximum": 30
+      },
+      "grants": [
+       "free-casting-slot-recall"
+      ],
+      "execution": {
+       "status": "common-play",
+       "reason": "V4n (D276): the pool pays for any prepared spell of 4th level or lower, from the sheet's own cast options"
+      },
+      "resources": [
+       {
+        "id": "resource.feat.spell-recall",
+        "label": "주문 회상의 은총 (4레벨 이하 무료 시전)",
+        "max": 1,
+        "reset": "long-rest",
+        "freeCastMaxLevel": 4
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.epic.truesight",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "epic-boon"
+   ],
+   "presentation": {
+    "originalName": "Boon of Truesight",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "진시야의 은총",
+      "description": "선행 조건: 19레벨 이상\n\n능력치 증가\n지능, 지혜 또는 매력 중 하나를 1 올린다. 최대 30이다.\n\n진시야\n60피트 진시야를 얻는다."
+     },
+     "en": {
+      "name": "Boon of Truesight"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "minimumLevel": 19,
+      "abilityIncrease": {
+       "any": [
+        "int",
+        "wis",
+        "cha"
+       ],
+       "amount": 1,
+       "maximum": 30
+      },
+      "truesight": 60,
+      "execution": {
+       "status": "derived",
+       "reason": "the truesight range is read into the derived senses"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.fighting-style.archery",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "fighting-style"
+   ],
+   "presentation": {
+    "originalName": "Archery",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "궁술",
+      "description": "원거리 무기를 사용하는 명중 굴림에 +2 보너스를 얻는다."
+     },
+     "en": {
+      "name": "Archery"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "requires": "fighting-style-feature",
+      "rangedWeaponAttackBonus": 2,
+      "execution": {
+       "status": "derived",
+       "reason": "rangedWeaponAttackBonus is read into the ranged attack bonus by the derivation"
+      }
+     }
+    },
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "dnd.srd521.feat.fighting-style.archery",
+      "interceptors": [
+       {
+        "id": "ranged-weapon-attack-bonus",
+        "timing": "d20.outcome-determined",
+        "operation": "recalculate",
+        "slot": "d20.roll",
+        "families": [
+         "attack-roll"
+        ],
+        "factQueries": [
+         {
+          "id": "ranged",
+          "fact": "attack.weapon.ranged",
+          "subject": "intercepted.actor",
+          "authority": "host",
+          "visibility": "public",
+          "unknownPolicy": "treat-false"
+         }
+        ],
+        "when": {
+         "op": "eq",
+         "left": {
+          "ref": "ranged"
+         },
+         "right": {
+          "value": true
+         }
+        },
+        "operations": [
+         {
+          "kind": "roll.modify",
+          "mode": "add-flat",
+          "value": {
+           "value": 2
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.fighting-style.defense",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "fighting-style"
+   ],
+   "presentation": {
+    "originalName": "Defense",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "방어",
+      "description": "경장·평장·중장 방어구를 입고 있는 동안 AC에 +1 보너스를 얻는다."
+     },
+     "en": {
+      "name": "Defense"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "requires": "fighting-style-feature",
+      "armorAcBonus": 1,
+      "execution": {
+       "status": "derived",
+       "reason": "armorAcBonus is read into the derived AC while armor is worn"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.fighting-style.great-weapon-fighting",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "fighting-style"
+   ],
+   "presentation": {
+    "originalName": "Great Weapon Fighting",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 무기 전투",
+      "description": "양손으로 들고 있는 근접 무기로 공격해 피해를 굴릴 때, 피해 주사위에서 나온 1이나 2를 3으로 취급할 수 있다.\n\n무기는 양손 또는 다용도 속성이 있어야 이 혜택을 받을 수 있다."
+     },
+     "en": {
+      "name": "Great Weapon Fighting"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "requires": "fighting-style-feature",
+      "damageDieMinimum": 3,
+      "weaponPropertiesAny": [
+       "two-handed",
+       "versatile"
+      ],
+      "execution": {
+       "status": "derived",
+       "reason": "damageDieMinimum and weaponPropertiesAny ride with the weapon's damage part; the resolver floors each die"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.fighting-style.two-weapon-fighting",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "fighting-style"
+   ],
+   "presentation": {
+    "originalName": "Two-Weapon Fighting",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "쌍수 전투",
+      "description": "경량 속성으로 추가 공격을 할 때, 음수가 아니라면 그 공격의 피해에 능력 수정치를 더할 수 있다."
+     },
+     "en": {
+      "name": "Two-Weapon Fighting"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "requires": "fighting-style-feature",
+      "lightExtraAttackAbilityModifier": "nonnegative",
+      "execution": {
+       "status": "pre-roll",
+       "reason": "the off-hand swing is a rider on the pre-roll dialog; lightExtraAttackAbilityModifier keeps the ability modifier on its damage"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.grappler",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "general"
+   ],
+   "presentation": {
+    "originalName": "Grappler",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "붙잡기 전문가",
+      "description": "선행 조건: 4레벨 이상, 근력 또는 민첩 13 이상\n\n능력치 증가\n근력 또는 민첩을 1 올린다. 최대 20이다.\n\n타격과 붙잡기\n자신의 턴에 공격 행동의 일부로 비무장 타격으로 크리처에게 적중하면 턴에 한 번, 비무장 타격의 피해와 붙잡기 선택지를 모두 적용할 수 있다.\n\n공격 이점\n자신이 붙잡고 있는 크리처를 향한 명중 굴림에 이점을 얻는다.\n\n빠른 레슬러\n자신과 같은 크기 이하의 붙잡은 크리처를 이동시킬 때 추가 이동 비용을 사용하지 않는다."
+     },
+     "en": {
+      "name": "Grappler"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "tier": "general",
+      "minimumLevel": 4,
+      "abilityPrerequisite": {
+       "any": [
+        "str",
+        "dex"
+       ],
+       "minimum": 13
+      },
+      "abilityIncrease": {
+       "any": [
+        "str",
+        "dex"
+       ],
+       "amount": 1,
+       "maximum": 20
+      },
+      "grants": [
+       "punch-and-grab",
+       "grappled-target-advantage",
+       "fast-wrestler"
+      ],
+      "execution": {
+       "status": "common-play",
+       "reason": "R51 (D186): the contract prints its clauses on the sheet; they stay the table's to judge"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.magic-initiate",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "origin",
+    "repeatable",
+    "spellcasting"
+   ],
+   "presentation": {
+    "originalName": "Magic Initiate",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "마법 입문자",
+      "description": "반복 가능: 선택할 때마다 클레릭, 드루이드 또는 위저드 중 이전에 이 재주로 선택하지 않은 주문 목록을 고른다.\n\n소마법\n선택한 목록에서 소마법 두 개를 배운다.\n\n1레벨 주문\n선택한 목록에서 1레벨 주문 하나를 선택한다. 항상 준비하며 주문 슬롯 없이 한 번 시전할 수 있다. 긴 휴식이 끝나면 무료 사용을 회복한다. 적절한 주문 슬롯으로도 시전할 수 있다.\n\n주문 시전 능력\n이 재주의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n레벨을 얻을 때 이 재주로 선택한 주문 하나를 같은 목록의 같은 레벨 주문으로 교체할 수 있다."
+     },
+     "en": {
+      "name": "Magic Initiate"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "tier": "origin",
+      "repeatable": true,
+      "choices": {
+       "spellList": [
+        "cleric",
+        "druid",
+        "wizard"
+       ],
+       "cantrips": 2,
+       "level1Spells": 1,
+       "spellcastingAbility": [
+        "int",
+        "wis",
+        "cha"
+       ]
+      },
+      "freeCastReset": "long-rest",
+      "execution": {
+       "status": "selection",
+       "reason": "spell choices execute at creation/level-up; the free cast per Long Rest needs a slot-free casting payment (spell path, X1-04)"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.savage-attacker",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "origin"
+   ],
+   "presentation": {
+    "originalName": "Savage Attacker",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "야만적 공격자",
+      "description": "턴에 한 번 무기로 대상에게 적중했을 때 그 무기의 피해 주사위를 두 번 굴리고 두 결과 중 하나를 사용할 수 있다."
+     },
+     "en": {
+      "name": "Savage Attacker"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "tier": "origin",
+      "oncePerTurn": "reroll-weapon-damage-use-either",
+      "execution": {
+       "status": "pre-roll",
+       "reason": "oncePerTurn is a rider on the pre-roll dialog; the resolver rolls the weapon dice twice and keeps the better set"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.feat.skilled",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "origin",
+    "repeatable"
+   ],
+   "presentation": {
+    "originalName": "Skilled",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "숙련됨",
+      "description": "반복 가능\n\n기술과 도구를 원하는 조합으로 세 개 선택해 숙련을 얻는다."
+     },
+     "en": {
+      "name": "Skilled"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "tier": "origin",
+      "repeatable": true,
+      "proficiencyChoice": {
+       "count": 3,
+       "kinds": [
+        "skill",
+        "tool"
+       ]
+      },
+      "execution": {
+       "status": "selection",
+       "reason": "proficiency choices execute at creation/level-up"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.dragonborn",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dragonborn",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "드래곤본",
+      "description": "드래곤본\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 중형\n이동 속도 · 30피트\n\n용의 혈통\n캐릭터를 만들 때 다음 표에서 용의 조상 하나를 선택한다. 선택은 숨결 무기의 피해 유형과 형태, 피해 저항을 정한다.\n\n용 · 피해 유형 · 숨결 형태 · 내성\n검정 · 산성 · 5 × 30피트 선 · 민첩\n파랑 · 번개 · 5 × 30피트 선 · 민첩\n황동 · 화염 · 5 × 30피트 선 · 민첩\n청동 · 번개 · 5 × 30피트 선 · 민첩\n구리 · 산성 · 5 × 30피트 선 · 민첩\n금 · 화염 · 15피트 원뿔 · 민첩\n초록 · 독 · 15피트 원뿔 · 건강\n빨강 · 화염 · 15피트 원뿔 · 민첩\n은 · 냉기 · 15피트 원뿔 · 건강\n하양 · 냉기 · 15피트 원뿔 · 건강\n\n숨결 무기\n자신의 턴에 공격 행동을 할 때 공격 하나를 숨결로 대체할 수 있다. 숨결 범위 안의 각 크리처는 용의 혈통 표에 표시된 내성 굴림을 한다.\n\n숨결 DC = 8 + 건강 수정치 + 숙련 보너스\n\n• 실패: 숨결 피해 전부\n• 성공: 절반 피해, 내림\n\n캐릭터 레벨 · 피해\n1 · 1d10\n5 · 2d10\n11 · 3d10\n17 · 4d10\n\n숙련 보너스와 같은 횟수만큼 사용할 수 있으며 긴 휴식이 끝나면 모두 회복한다.\n\n피해 저항\n용의 혈통에서 정한 피해 유형에 저항을 가진다.\n\n암시야\n60피트 암시야를 가진다.\n\n5레벨: 용의 비행\n추가 행동으로 등에 용의 숨결과 같은 에너지로 이루어진 유령 같은 날개를 펼친다. 날개는 다음 중 하나가 일어날 때까지 10분 동안 지속된다.\n\n• 행동 없이 날개를 거둔다.\n• 행동불능 상태가 된다.\n• 죽는다.\n\n지속 중 이동 속도와 같은 비행 이동 속도를 얻는다.\n\n사용하면 긴 휴식이 끝날 때까지 다시 사용할 수 없다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Dragonborn"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "medium"
+      ],
+      "speed": 30,
+      "darkvision": 60,
+      "traits": [
+       {
+        "key": "breath-weapon",
+        "name": "숨결 무기",
+        "nameEn": "Breath Weapon",
+        "description": "자신의 턴에 공격 행동을 할 때 공격 하나를 숨결로 대체할 수 있다. 숨결 범위 안의 각 크리처는 용의 혈통 표에 표시된 내성 굴림을 한다.\n\n숨결 DC = 8 + 건강 수정치 + 숙련 보너스\n\n• 실패: 숨결 피해 전부\n• 성공: 절반 피해, 내림\n\n캐릭터 레벨 · 피해\n1 · 1d10\n5 · 2d10\n11 · 3d10\n17 · 4d10\n\n숙련 보너스와 같은 횟수만큼 사용할 수 있으며 긴 휴식이 끝나면 모두 회복한다."
+       },
+       {
+        "key": "damage-resistance",
+        "name": "피해 저항",
+        "nameEn": "Damage Resistance",
+        "description": "용의 혈통에서 정한 피해 유형에 저항을 가진다."
+       },
+       {
+        "key": "draconic-flight",
+        "name": "용의 비행",
+        "nameEn": "Draconic Flight",
+        "description": "추가 행동으로 등에 용의 숨결과 같은 에너지로 이루어진 유령 같은 날개를 펼친다. 날개는 다음 중 하나가 일어날 때까지 10분 동안 지속된다.\n\n• 행동 없이 날개를 거둔다.\n• 행동불능 상태가 된다.\n• 죽는다.\n\n지속 중 이동 속도와 같은 비행 이동 속도를 얻는다.\n\n사용하면 긴 휴식이 끝날 때까지 다시 사용할 수 없다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다.",
+        "minLevel": 5
+       }
+      ],
+      "choices": [
+       {
+        "id": "species.draconicAncestry",
+        "label": "용의 혈통",
+        "description": "브레스 무기와 저항의 피해 유형을 정합니다.",
+        "count": 1,
+        "options": [
+         {
+          "id": "black",
+          "name": "흑룡",
+          "nameEn": "Black",
+          "summary": "산성 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "blue",
+          "name": "청룡",
+          "nameEn": "Blue",
+          "summary": "번개 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "brass",
+          "name": "황동룡",
+          "nameEn": "Brass",
+          "summary": "화염 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "bronze",
+          "name": "청동룡",
+          "nameEn": "Bronze",
+          "summary": "번개 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "copper",
+          "name": "구리룡",
+          "nameEn": "Copper",
+          "summary": "산성 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "gold",
+          "name": "금룡",
+          "nameEn": "Gold",
+          "summary": "화염 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "green",
+          "name": "녹룡",
+          "nameEn": "Green",
+          "summary": "독 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "red",
+          "name": "적룡",
+          "nameEn": "Red",
+          "summary": "화염 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "silver",
+          "name": "은룡",
+          "nameEn": "Silver",
+          "summary": "냉기 피해 · 브레스 무기와 저항"
+         },
+         {
+          "id": "white",
+          "name": "백룡",
+          "nameEn": "White",
+          "summary": "냉기 피해 · 브레스 무기와 저항"
+         }
+        ]
+       }
+      ],
+      "effects": {
+       "species.draconicAncestry": {
+        "black": {
+         "resistances": [
+          "acid"
+         ],
+         "features": [
+          {
+           "name": "흑룡의 혈통",
+           "nameEn": "Black Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 산성입니다."
+          }
+         ]
+        },
+        "blue": {
+         "resistances": [
+          "lightning"
+         ],
+         "features": [
+          {
+           "name": "청룡의 혈통",
+           "nameEn": "Blue Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 번개입니다."
+          }
+         ]
+        },
+        "brass": {
+         "resistances": [
+          "fire"
+         ],
+         "features": [
+          {
+           "name": "황동룡의 혈통",
+           "nameEn": "Brass Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 화염입니다."
+          }
+         ]
+        },
+        "bronze": {
+         "resistances": [
+          "lightning"
+         ],
+         "features": [
+          {
+           "name": "청동룡의 혈통",
+           "nameEn": "Bronze Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 번개입니다."
+          }
+         ]
+        },
+        "copper": {
+         "resistances": [
+          "acid"
+         ],
+         "features": [
+          {
+           "name": "구리룡의 혈통",
+           "nameEn": "Copper Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 산성입니다."
+          }
+         ]
+        },
+        "gold": {
+         "resistances": [
+          "fire"
+         ],
+         "features": [
+          {
+           "name": "금룡의 혈통",
+           "nameEn": "Gold Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 화염입니다."
+          }
+         ]
+        },
+        "green": {
+         "resistances": [
+          "poison"
+         ],
+         "features": [
+          {
+           "name": "녹룡의 혈통",
+           "nameEn": "Green Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 독입니다."
+          }
+         ]
+        },
+        "red": {
+         "resistances": [
+          "fire"
+         ],
+         "features": [
+          {
+           "name": "적룡의 혈통",
+           "nameEn": "Red Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 화염입니다."
+          }
+         ]
+        },
+        "silver": {
+         "resistances": [
+          "cold"
+         ],
+         "features": [
+          {
+           "name": "은룡의 혈통",
+           "nameEn": "Silver Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 냉기입니다."
+          }
+         ]
+        },
+        "white": {
+         "resistances": [
+          "cold"
+         ],
+         "features": [
+          {
+           "name": "백룡의 혈통",
+           "nameEn": "White Ancestry",
+           "description": "브레스 무기와 피해 저항의 피해 유형이 냉기입니다."
+          }
+         ]
+        }
+       }
+      },
+      "semantics": {}
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.dwarf",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dwarf",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "드워프",
+      "description": "드워프\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 중형\n이동 속도 · 30피트\n\n암시야\n120피트 암시야를 가진다.\n\n드워프의 회복력\n독 피해에 저항을 가진다. 또한 중독 상태를 피하거나 끝내기 위한 내성 굴림에 이점을 얻는다.\n\n드워프의 강인함\n히트 포인트 최대치가 1 증가한다. 캐릭터 레벨을 얻을 때마다 최대치가 다시 1 증가한다.\n\n석재 감각\n추가 행동으로 10분 동안 60피트 진동감지를 얻는다. 이 감각을 사용하려면 자연석이나 가공된 돌 표면 위에 있거나 그 표면을 접촉하고 있어야 한다.\n\n숙련 보너스와 같은 횟수만큼 사용할 수 있으며 긴 휴식이 끝나면 모두 회복한다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Dwarf"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "medium"
+      ],
+      "speed": 30,
+      "darkvision": 120,
+      "traits": [
+       {
+        "key": "poison-resistance",
+        "name": "드워프의 회복력",
+        "nameEn": "Poison Resistance",
+        "description": "독 피해에 저항을 가진다. 또한 중독 상태를 피하거나 끝내기 위한 내성 굴림에 이점을 얻는다."
+       },
+       {
+        "key": "dwarven-toughness",
+        "name": "드워프의 강인함",
+        "nameEn": "Dwarven Toughness",
+        "description": "히트 포인트 최대치가 1 증가한다. 캐릭터 레벨을 얻을 때마다 최대치가 다시 1 증가한다."
+       },
+       {
+        "key": "stonecunning",
+        "name": "석재 감각",
+        "nameEn": "Stonecunning",
+        "description": "추가 행동으로 10분 동안 60피트 진동감지를 얻는다. 이 감각을 사용하려면 자연석이나 가공된 돌 표면 위에 있거나 그 표면을 접촉하고 있어야 한다.\n\n숙련 보너스와 같은 횟수만큼 사용할 수 있으며 긴 휴식이 끝나면 모두 회복한다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [],
+      "effects": {},
+      "semantics": {}
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.elf",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Elf",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "엘프",
+      "description": "엘프\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 중형\n이동 속도 · 30피트\n\n암시야\n60피트 암시야를 가진다. 드로우 혈통을 선택하면 120피트로 증가한다.\n\n요정 혈통\n매혹 상태를 피하거나 끝내기 위한 내성 굴림에 이점을 얻는다.\n\n예리한 감각\n다음 기술 중 하나에 숙련을 얻는다.\n\n• 통찰\n• 지각\n• 생존\n\n무아경\n잠을 잘 필요가 없고 마법으로 잠들지 않는다. 4시간 동안 무아경에 들면 긴 휴식을 끝낼 수 있으며, 다른 크리처가 8시간 휴식에서 얻는 것과 같은 혜택을 얻는다.\n\n무아경 중에는 의식이 유지된다.\n\n엘프 혈통\n다음 혈통 중 하나를 선택한다. 혈통 주문의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n혈통으로 얻는 1레벨 이상 주문은 주문 슬롯 없이 각각 한 번 시전할 수 있으며 긴 휴식이 끝나면 사용권을 회복한다. 적절한 주문 슬롯이 있다면 슬롯으로도 시전할 수 있다.\n\n드로우\n• 암시야 범위가 120피트가 된다.\n• 1레벨: 춤추는 빛 소마법\n• 3레벨: 요정 불꽃\n• 5레벨: 어둠\n\n하이 엘프\n• 1레벨: 요술 소마법\n• 긴 휴식이 끝날 때 요술을 다른 위저드 소마법으로 교체할 수 있다.\n• 3레벨: 마법 감지\n• 5레벨: 안개 걸음\n\n우드 엘프\n• 이동 속도가 35피트가 된다.\n• 1레벨: 드루이드 기예 소마법\n• 3레벨: 활보\n• 5레벨: 흔적 없는 이동\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Elf"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "medium"
+      ],
+      "speed": 30,
+      "darkvision": 60,
+      "traits": [
+       {
+        "key": "fey-ancestry",
+        "name": "요정 혈통",
+        "nameEn": "Fey Ancestry",
+        "description": "매혹 상태를 피하거나 끝내기 위한 내성 굴림에 이점을 얻는다."
+       },
+       {
+        "key": "trance",
+        "name": "무아경",
+        "nameEn": "Trance",
+        "description": "잠을 잘 필요가 없고 마법으로 잠들지 않는다. 4시간 동안 무아경에 들면 긴 휴식을 끝낼 수 있으며, 다른 크리처가 8시간 휴식에서 얻는 것과 같은 혜택을 얻는다.\n\n무아경 중에는 의식이 유지된다."
+       },
+       {
+        "key": "lineage-spells",
+        "name": "엘프 혈통",
+        "nameEn": "Elven Lineage",
+        "description": "다음 혈통 중 하나를 선택한다. 혈통 주문의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n혈통으로 얻는 1레벨 이상 주문은 주문 슬롯 없이 각각 한 번 시전할 수 있으며 긴 휴식이 끝나면 사용권을 회복한다. 적절한 주문 슬롯이 있다면 슬롯으로도 시전할 수 있다.\n\n드로우\n• 암시야 범위가 120피트가 된다.\n• 1레벨: 춤추는 빛 소마법\n• 3레벨: 요정 불꽃\n• 5레벨: 어둠\n\n하이 엘프\n• 1레벨: 요술 소마법\n• 긴 휴식이 끝날 때 요술을 다른 위저드 소마법으로 교체할 수 있다.\n• 3레벨: 마법 감지\n• 5레벨: 안개 걸음\n\n우드 엘프\n• 이동 속도가 35피트가 된다.\n• 1레벨: 드루이드 기예 소마법\n• 3레벨: 활보\n• 5레벨: 흔적 없는 이동\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [
+       {
+        "id": "species.lineage",
+        "label": "혈통",
+        "description": "드로우, 하이 엘프, 우드 엘프.",
+        "count": 1,
+        "options": [
+         {
+          "id": "drow",
+          "name": "드로우",
+          "nameEn": "Drow",
+          "summary": "암시야 120피트 · Dancing Lights · 3레벨 Faerie Fire · 5레벨 Darkness"
+         },
+         {
+          "id": "high-elf",
+          "name": "하이 엘프",
+          "nameEn": "High Elf",
+          "summary": "Prestidigitation(긴 휴식마다 다른 위저드 소마법으로 교체 가능) · 3레벨 Detect Magic · 5레벨 Misty Step"
+         },
+         {
+          "id": "wood-elf",
+          "name": "우드 엘프",
+          "nameEn": "Wood Elf",
+          "summary": "이동 속도 35피트 · Druidcraft · 3레벨 Longstrider · 5레벨 Pass without Trace"
+         }
+        ]
+       },
+       {
+        "id": "species.keenSenses",
+        "label": "예리한 감각",
+        "description": "통찰·지각·생존 중 하나에 숙련을 얻습니다.",
+        "count": 1,
+        "options": [
+         {
+          "id": "insight",
+          "name": "통찰",
+          "nameEn": "Insight"
+         },
+         {
+          "id": "perception",
+          "name": "지각",
+          "nameEn": "Perception"
+         },
+         {
+          "id": "survival",
+          "name": "생존",
+          "nameEn": "Survival"
+         }
+        ]
+       },
+       {
+        "id": "species.spellcastingAbility",
+        "label": "혈통 주문 능력치",
+        "description": "혈통 주문의 시전 능력치입니다.",
+        "count": 1,
+        "options": "spellcasting-ability"
+       }
+      ],
+      "effects": {
+       "species.lineage": {
+        "drow": {
+         "darkvision": 120,
+         "cantrips": [
+          "Dancing Lights"
+         ],
+         "spellsByLevel": {
+          "3": [
+           "Faerie Fire"
+          ],
+          "5": [
+           "Darkness"
+          ]
+         }
+        },
+        "high-elf": {
+         "cantrips": [
+          "Prestidigitation"
+         ],
+         "spellsByLevel": {
+          "3": [
+           "Detect Magic"
+          ],
+          "5": [
+           "Misty Step"
+          ]
+         }
+        },
+        "wood-elf": {
+         "speed": 35,
+         "cantrips": [
+          "Druidcraft"
+         ],
+         "spellsByLevel": {
+          "3": [
+           "Longstrider"
+          ],
+          "5": [
+           "Pass without Trace"
+          ]
+         }
+        }
+       }
+      },
+      "semantics": {
+       "byChoice": {
+        "species.lineage": {
+         "drow": {
+          "cantrips": [
+           "Dancing Lights"
+          ],
+          "features": [
+           "드로우 혈통 · 암시야 120피트"
+          ]
+         },
+         "high-elf": {
+          "cantrips": [
+           "Prestidigitation"
+          ],
+          "features": [
+           "하이 엘프 혈통"
+          ]
+         },
+         "wood-elf": {
+          "cantrips": [
+           "Druidcraft"
+          ],
+          "speed": 35,
+          "features": [
+           "우드 엘프 혈통 · 이동 35피트"
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.gnome",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Gnome",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "노움",
+      "description": "노움\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 소형\n이동 속도 · 30피트\n\n암시야\n60피트 암시야를 가진다.\n\n노움의 영리함\n지능, 지혜와 매력 내성 굴림에 이점을 얻는다.\n\n노움 혈통\n숲 노움 또는 바위 노움 중 하나를 선택한다. 혈통 주문의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n숲 노움\n• 소마법: 소환술을 사용해 만든 환영을 다루는 작은 환영 소마법을 안다.\n• 동물과 대화: 동물과 대화 주문을 항상 준비한다. 주문 슬롯 없이 숙련 보너스와 같은 횟수만큼 시전할 수 있으며 긴 휴식이 끝나면 모두 회복한다. 적절한 주문 슬롯으로도 시전할 수 있다.\n\n바위 노움\n• 소마법: 수선과 요술 소마법을 안다.\n• 태엽 장치: 요술을 시전할 때 일반 효과 대신 초소형 태엽 장치 하나를 만들 수 있다. 장치는 8시간 동안 지속한다. 동시에 세 개까지만 유지할 수 있으며 네 번째를 만들면 가장 오래된 장치가 사라진다.\n\n장치는 다음 중 하나다.\n\n장난감\n태엽 동물, 몬스터나 사람 모양이다. 바닥에 놓으면 자신의 각 턴에 무작위 방향으로 5피트 이동하며 모습에 어울리는 소리를 낸다.\n\n불붙이개\n작은 불꽃을 만든다. 마법 행동으로 양초, 횃불 또는 모닥불에 불을 붙일 수 있다.\n\n음악 상자\n상자를 열면 적당한 음량으로 노래 한 곡을 연주한다. 노래가 끝나거나 상자를 닫으면 멈춘다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Gnome"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "small"
+      ],
+      "speed": 30,
+      "darkvision": 60,
+      "traits": [
+       {
+        "key": "gnomish-cunning",
+        "name": "노움의 영리함",
+        "nameEn": "Gnomish Cunning",
+        "description": "지능, 지혜와 매력 내성 굴림에 이점을 얻는다."
+       },
+       {
+        "key": "lineage-traits",
+        "name": "노움 혈통",
+        "nameEn": "Gnomish Lineage",
+        "description": "숲 노움 또는 바위 노움 중 하나를 선택한다. 혈통 주문의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n숲 노움\n• 소마법: 소환술을 사용해 만든 환영을 다루는 작은 환영 소마법을 안다.\n• 동물과 대화: 동물과 대화 주문을 항상 준비한다. 주문 슬롯 없이 숙련 보너스와 같은 횟수만큼 시전할 수 있으며 긴 휴식이 끝나면 모두 회복한다. 적절한 주문 슬롯으로도 시전할 수 있다.\n\n바위 노움\n• 소마법: 수선과 요술 소마법을 안다.\n• 태엽 장치: 요술을 시전할 때 일반 효과 대신 초소형 태엽 장치 하나를 만들 수 있다. 장치는 8시간 동안 지속한다. 동시에 세 개까지만 유지할 수 있으며 네 번째를 만들면 가장 오래된 장치가 사라진다.\n\n장치는 다음 중 하나다.\n\n장난감\n태엽 동물, 몬스터나 사람 모양이다. 바닥에 놓으면 자신의 각 턴에 무작위 방향으로 5피트 이동하며 모습에 어울리는 소리를 낸다.\n\n불붙이개\n작은 불꽃을 만든다. 마법 행동으로 양초, 횃불 또는 모닥불에 불을 붙일 수 있다.\n\n음악 상자\n상자를 열면 적당한 음량으로 노래 한 곡을 연주한다. 노래가 끝나거나 상자를 닫으면 멈춘다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [
+       {
+        "id": "species.lineage",
+        "label": "혈통",
+        "description": "숲 노움 또는 바위 노움.",
+        "count": 1,
+        "options": [
+         {
+          "id": "forest-gnome",
+          "name": "숲 노움",
+          "nameEn": "Forest Gnome",
+          "summary": "Minor Illusion · Speak with Animals 항상 준비(긴 휴식마다 숙련 보너스만큼 무료)"
+         },
+         {
+          "id": "rock-gnome",
+          "name": "바위 노움",
+          "nameEn": "Rock Gnome",
+          "summary": "Mending · Prestidigitation · 태엽 장치(10분에 걸쳐 작은 장치 제작, 최대 3개)"
+         }
+        ]
+       },
+       {
+        "id": "species.spellcastingAbility",
+        "label": "혈통 주문 능력치",
+        "description": "혈통 주문의 시전 능력치입니다.",
+        "count": 1,
+        "options": "spellcasting-ability"
+       }
+      ],
+      "effects": {
+       "species.lineage": {
+        "forest-gnome": {
+         "cantrips": [
+          "Minor Illusion"
+         ],
+         "spellsByLevel": {
+          "1": [
+           "Speak with Animals"
+          ]
+         }
+        },
+        "rock-gnome": {
+         "cantrips": [
+          "Mending",
+          "Prestidigitation"
+         ],
+         "features": [
+          {
+           "name": "태엽 장치",
+           "nameEn": "Tinker",
+           "description": "Prestidigitation으로 10분에 걸쳐 작은 태엽 장치(음악 상자, 불꽃 장치 등)를 만듭니다. 최대 3개까지 유지되며 8시간 뒤 사라집니다."
+          }
+         ]
+        }
+       }
+      },
+      "semantics": {
+       "spellUses": "proficiency-bonus",
+       "byChoice": {
+        "species.lineage": {
+         "forest-gnome": {
+          "cantrips": [
+           "Minor Illusion"
+          ],
+          "prepared": [
+           "Speak with Animals"
+          ],
+          "features": [
+           "숲 노움 혈통 · 동물과 대화"
+          ]
+         },
+         "rock-gnome": {
+          "cantrips": [
+           "Mending",
+           "Prestidigitation"
+          ],
+          "features": [
+           "바위 노움 혈통 · 태엽 장치"
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.goliath",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Goliath",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "골리앗",
+      "description": "골리앗\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 중형\n이동 속도 · 35피트\n\n거인의 혈통\n다음 거인 혈통 중 하나를 선택한다. 선택한 특성은 숙련 보너스와 같은 횟수만큼 사용할 수 있으며 긴 휴식이 끝나면 모두 회복한다.\n\n구름의 이동\n추가 행동으로 자신이 볼 수 있는 빈 공간으로 최대 30피트 순간이동한다.\n\n불의 연소\n명중 굴림으로 대상에게 적중해 피해를 주면 1d10 화염 추가 피해를 줄 수 있다.\n\n서리의 냉기\n명중 굴림으로 대상에게 적중해 피해를 주면 1d6 냉기 추가 피해를 주고, 다음 자신의 턴이 시작될 때까지 대상의 이동 속도를 10피트 감소시킬 수 있다.\n\n언덕의 넘어뜨리기\n대형 이하의 크리처에게 명중 굴림으로 적중해 피해를 주면 그 크리처를 엎드림 상태로 만들 수 있다.\n\n돌의 인내\n피해를 받을 때 반응 행동으로 피해를 1d12 + 건강 수정치만큼 줄인다.\n\n폭풍의 천둥\n60피트 이내의 크리처에게 피해를 받으면 반응 행동으로 그 크리처에게 1d8 천둥 피해를 준다.\n\n5레벨: 거대화\n추가 행동으로 공간이 허용한다면 10분 동안 대형이 된다. 다음 중 하나가 일어나면 일찍 끝난다.\n\n• 행동 없이 끝내기로 한다.\n• 행동불능 상태가 된다.\n• 죽는다.\n\n대형인 동안 다음 혜택을 얻는다.\n\n• 근력 판정에 이점을 얻는다.\n• 이동 속도가 10피트 증가한다.\n\n사용하면 긴 휴식이 끝날 때까지 다시 사용할 수 없다.\n\n강력한 체격\n붙잡힘 상태를 끝내기 위한 내성 굴림에 이점을 얻는다. 또한 운반 한도와 밀기·끌기·들기 한도를 계산할 때 한 단계 큰 크리처로 취급된다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Goliath"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "medium"
+      ],
+      "speed": 35,
+      "traits": [
+       {
+        "key": "giant-ancestry-power",
+        "name": "거인의 혈통",
+        "nameEn": "Giant Ancestry",
+        "description": "다음 거인 혈통 중 하나를 선택한다. 선택한 특성은 숙련 보너스와 같은 횟수만큼 사용할 수 있으며 긴 휴식이 끝나면 모두 회복한다.\n\n구름의 이동\n추가 행동으로 자신이 볼 수 있는 빈 공간으로 최대 30피트 순간이동한다.\n\n불의 연소\n명중 굴림으로 대상에게 적중해 피해를 주면 1d10 화염 추가 피해를 줄 수 있다.\n\n서리의 냉기\n명중 굴림으로 대상에게 적중해 피해를 주면 1d6 냉기 추가 피해를 주고, 다음 자신의 턴이 시작될 때까지 대상의 이동 속도를 10피트 감소시킬 수 있다.\n\n언덕의 넘어뜨리기\n대형 이하의 크리처에게 명중 굴림으로 적중해 피해를 주면 그 크리처를 엎드림 상태로 만들 수 있다.\n\n돌의 인내\n피해를 받을 때 반응 행동으로 피해를 1d12 + 건강 수정치만큼 줄인다.\n\n폭풍의 천둥\n60피트 이내의 크리처에게 피해를 받으면 반응 행동으로 그 크리처에게 1d8 천둥 피해를 준다."
+       },
+       {
+        "key": "large-form",
+        "name": "거대화",
+        "nameEn": "Large Form",
+        "description": "추가 행동으로 공간이 허용한다면 10분 동안 대형이 된다. 다음 중 하나가 일어나면 일찍 끝난다.\n\n• 행동 없이 끝내기로 한다.\n• 행동불능 상태가 된다.\n• 죽는다.\n\n대형인 동안 다음 혜택을 얻는다.\n\n• 근력 판정에 이점을 얻는다.\n• 이동 속도가 10피트 증가한다.\n\n사용하면 긴 휴식이 끝날 때까지 다시 사용할 수 없다.",
+        "minLevel": 5
+       },
+       {
+        "key": "powerful-build",
+        "name": "강력한 체격",
+        "nameEn": "Powerful Build",
+        "description": "붙잡힘 상태를 끝내기 위한 내성 굴림에 이점을 얻는다. 또한 운반 한도와 밀기·끌기·들기 한도를 계산할 때 한 단계 큰 크리처로 취급된다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [
+       {
+        "id": "species.giantAncestry",
+        "label": "거인 혈통",
+        "description": "혈통의 초자연적 능력을 고릅니다.",
+        "count": 1,
+        "options": [
+         {
+          "id": "cloud",
+          "name": "구름 거인",
+          "nameEn": "Cloud",
+          "summary": "추가 행동으로 30피트 안의 볼 수 있는 빈 공간으로 순간이동(구름의 도약)"
+         },
+         {
+          "id": "fire",
+          "name": "불 거인",
+          "nameEn": "Fire",
+          "summary": "공격 명중 시 1d10 화염 피해 추가(불의 타격)"
+         },
+         {
+          "id": "frost",
+          "name": "서리 거인",
+          "nameEn": "Frost",
+          "summary": "공격 명중 시 1d6 냉기 피해와 다음 턴 시작까지 이동 속도 10피트 감소(서리의 타격)"
+         },
+         {
+          "id": "hill",
+          "name": "언덕 거인",
+          "nameEn": "Hill",
+          "summary": "공격 명중 시 대형 이하 대상을 넘어뜨림(언덕의 무너뜨림)"
+         },
+         {
+          "id": "stone",
+          "name": "돌 거인",
+          "nameEn": "Stone",
+          "summary": "피해를 받을 때 반응으로 1d12 + 건강 수정치만큼 피해 감소(돌의 인내)"
+         },
+         {
+          "id": "storm",
+          "name": "폭풍 거인",
+          "nameEn": "Storm",
+          "summary": "60피트 안에서 피해를 받으면 반응으로 가해자에게 1d8 천둥 피해(폭풍의 천둥)"
+         }
+        ]
+       }
+      ],
+      "effects": {
+       "species.giantAncestry": {
+        "cloud": {
+         "features": [
+          {
+           "name": "구름 거인의 힘",
+           "nameEn": "Cloud Giant Power",
+           "description": "추가 행동으로 30피트 안의 볼 수 있는 빈 공간으로 순간이동(구름의 도약). 긴 휴식마다 숙련 보너스만큼 씁니다."
+          }
+         ]
+        },
+        "fire": {
+         "features": [
+          {
+           "name": "불 거인의 힘",
+           "nameEn": "Fire Giant Power",
+           "description": "공격 명중 시 1d10 화염 피해 추가(불의 타격). 긴 휴식마다 숙련 보너스만큼 씁니다."
+          }
+         ]
+        },
+        "frost": {
+         "features": [
+          {
+           "name": "서리 거인의 힘",
+           "nameEn": "Frost Giant Power",
+           "description": "공격 명중 시 1d6 냉기 피해와 다음 턴 시작까지 이동 속도 10피트 감소(서리의 타격). 긴 휴식마다 숙련 보너스만큼 씁니다."
+          }
+         ]
+        },
+        "hill": {
+         "features": [
+          {
+           "name": "언덕 거인의 힘",
+           "nameEn": "Hill Giant Power",
+           "description": "공격 명중 시 대형 이하 대상을 넘어뜨림(언덕의 무너뜨림). 긴 휴식마다 숙련 보너스만큼 씁니다."
+          }
+         ]
+        },
+        "stone": {
+         "features": [
+          {
+           "name": "돌 거인의 힘",
+           "nameEn": "Stone Giant Power",
+           "description": "피해를 받을 때 반응으로 1d12 + 건강 수정치만큼 피해 감소(돌의 인내). 긴 휴식마다 숙련 보너스만큼 씁니다."
+          }
+         ]
+        },
+        "storm": {
+         "features": [
+          {
+           "name": "폭풍 거인의 힘",
+           "nameEn": "Storm Giant Power",
+           "description": "60피트 안에서 피해를 받으면 반응으로 가해자에게 1d8 천둥 피해(폭풍의 천둥). 긴 휴식마다 숙련 보너스만큼 씁니다."
+          }
+         ]
+        }
+       }
+      },
+      "semantics": {}
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.halfling",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Halfling",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "하플링",
+      "description": "하플링\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 소형\n이동 속도 · 30피트\n\n용감함\n공포 상태를 피하거나 끝내기 위한 내성 굴림에 이점을 얻는다.\n\n하플링의 민첩함\n자신보다 크기가 큰 크리처의 공간을 통과할 수 있다. 그 공간은 일반적인 크리처 공간 규칙에 따라 험난한 지형일 수 있다.\n\n행운\nd20 판정의 d20에서 자연 1이 나오면 주사위를 다시 굴릴 수 있으며 새 결과를 반드시 사용해야 한다.\n\n타고난 은신\n자신보다 한 단계 이상 큰 크리처 하나에 의해서만 가려진 상태에서도 숨기 행동을 할 수 있다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Halfling"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "small"
+      ],
+      "speed": 30,
+      "traits": [
+       {
+        "key": "brave",
+        "name": "용감함",
+        "nameEn": "Brave",
+        "description": "공포 상태를 피하거나 끝내기 위한 내성 굴림에 이점을 얻는다."
+       },
+       {
+        "key": "halfling-nimbleness",
+        "name": "하플링의 민첩함",
+        "nameEn": "Halfling Nimbleness",
+        "description": "자신보다 크기가 큰 크리처의 공간을 통과할 수 있다. 그 공간은 일반적인 크리처 공간 규칙에 따라 험난한 지형일 수 있다."
+       },
+       {
+        "key": "luck",
+        "name": "행운",
+        "nameEn": "Luck",
+        "description": "d20 판정의 d20에서 자연 1이 나오면 주사위를 다시 굴릴 수 있으며 새 결과를 반드시 사용해야 한다."
+       },
+       {
+        "key": "naturally-stealthy",
+        "name": "타고난 은신",
+        "nameEn": "Naturally Stealthy",
+        "description": "자신보다 한 단계 이상 큰 크리처 하나에 의해서만 가려진 상태에서도 숨기 행동을 할 수 있다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [],
+      "effects": {},
+      "semantics": {}
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.human",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Human",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "인간",
+      "description": "인간\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 소형 또는 중형. 캐릭터를 만들 때 선택한다.\n이동 속도 · 30피트\n\n기지\n긴 휴식을 끝낼 때 영웅적 영감을 얻는다.\n\n다재다능함\n선택한 기술 하나에 숙련을 얻는다.\n\n융통성\n선택한 기원 재주 하나를 얻는다. 숙련됨 재주가 권장된다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Human"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "small",
+       "medium"
+      ],
+      "speed": 30,
+      "traits": [
+       {
+        "key": "resourceful",
+        "name": "기지",
+        "nameEn": "Resourceful",
+        "description": "긴 휴식을 끝낼 때 영웅적 영감을 얻는다."
+       },
+       {
+        "key": "skillful",
+        "name": "다재다능함",
+        "nameEn": "Skillful",
+        "description": "선택한 기술 하나에 숙련을 얻는다."
+       },
+       {
+        "key": "versatile",
+        "name": "융통성",
+        "nameEn": "Versatile",
+        "description": "선택한 기원 재주 하나를 얻는다. 숙련됨 재주가 권장된다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [
+       {
+        "id": "species.skillProficiency",
+        "label": "숙련됨 — 기술",
+        "description": "원하는 기술 하나.",
+        "count": 1,
+        "options": "any-skill"
+       },
+       {
+        "id": "species.originFeat",
+        "label": "다재다능 — 기원 재주",
+        "description": "원하는 기원 재주 하나.",
+        "count": 1,
+        "options": "any-origin-feat"
+       }
+      ],
+      "effects": {},
+      "semantics": {}
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.orc",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Orc",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "오크",
+      "description": "오크\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 중형\n이동 속도 · 30피트\n\n아드레날린 돌진\n추가 행동으로 질주 행동을 한다. 질주를 한 직후 숙련 보너스와 같은 임시 히트 포인트를 얻는다.\n\n숙련 보너스와 같은 횟수만큼 사용할 수 있으며 짧은 휴식이나 긴 휴식이 끝나면 모두 회복한다.\n\n암시야\n120피트 암시야를 가진다.\n\n끈질긴 인내\n히트 포인트가 0이 되었지만 즉사하지 않았다면 대신 히트 포인트 1이 된다.\n\n사용하면 긴 휴식이 끝날 때까지 다시 사용할 수 없다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Orc"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "medium"
+      ],
+      "speed": 30,
+      "darkvision": 120,
+      "traits": [
+       {
+        "key": "adrenaline-rush",
+        "name": "아드레날린 돌진",
+        "nameEn": "Adrenaline Rush",
+        "description": "추가 행동으로 질주 행동을 한다. 질주를 한 직후 숙련 보너스와 같은 임시 히트 포인트를 얻는다.\n\n숙련 보너스와 같은 횟수만큼 사용할 수 있으며 짧은 휴식이나 긴 휴식이 끝나면 모두 회복한다."
+       },
+       {
+        "key": "relentless-endurance",
+        "name": "끈질긴 인내",
+        "nameEn": "Relentless Endurance",
+        "description": "히트 포인트가 0이 되었지만 즉사하지 않았다면 대신 히트 포인트 1이 된다.\n\n사용하면 긴 휴식이 끝날 때까지 다시 사용할 수 없다.\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [],
+      "effects": {},
+      "semantics": {}
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.species.tiefling",
+   "category": "species",
+   "tags": [
+    "species",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Tiefling",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "티플링",
+      "description": "티플링\n항목 · 내용\n크리처 유형 · 인간형\n크기 · 소형 또는 중형. 캐릭터를 만들 때 선택한다.\n이동 속도 · 30피트\n\n암시야\n60피트 암시야를 가진다.\n\n이계의 존재감\n기적술 소마법을 안다. 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n악마의 유산\n다음 유산 중 하나를 선택한다. 유산 주문의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n유산으로 얻는 1레벨 이상 주문은 주문 슬롯 없이 각각 한 번 시전할 수 있으며 긴 휴식이 끝나면 사용권을 회복한다. 적절한 주문 슬롯이 있다면 슬롯으로도 시전할 수 있다.\n\n심연의 유산\n• 독 피해에 저항을 가진다.\n• 1레벨: 독 분사 소마법\n• 3레벨: 질병 광선\n• 5레벨: 인간형 포박\n\n지하세계의 유산\n• 사령 피해에 저항을 가진다.\n• 1레벨: 오한의 손길 소마법\n• 3레벨: 거짓 생명\n• 5레벨: 약화 광선\n\n지옥의 유산\n• 화염 피해에 저항을 가진다.\n• 1레벨: 화염 화살 소마법\n• 3레벨: 지옥의 질책\n• 5레벨: 어둠\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+     },
+     "en": {
+      "name": "Tiefling"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "species-definition",
+     "config": {
+      "size": [
+       "small",
+       "medium"
+      ],
+      "speed": 30,
+      "darkvision": 60,
+      "traits": [
+       {
+        "key": "otherworldly-presence",
+        "name": "이계의 존재감",
+        "nameEn": "Otherworldly Presence",
+        "description": "기적술 소마법을 안다. 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다."
+       },
+       {
+        "key": "fiendish-legacy",
+        "name": "악마의 유산",
+        "nameEn": "Fiendish Legacy",
+        "description": "다음 유산 중 하나를 선택한다. 유산 주문의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택한다.\n\n유산으로 얻는 1레벨 이상 주문은 주문 슬롯 없이 각각 한 번 시전할 수 있으며 긴 휴식이 끝나면 사용권을 회복한다. 적절한 주문 슬롯이 있다면 슬롯으로도 시전할 수 있다.\n\n심연의 유산\n• 독 피해에 저항을 가진다.\n• 1레벨: 독 분사 소마법\n• 3레벨: 질병 광선\n• 5레벨: 인간형 포박\n\n지하세계의 유산\n• 사령 피해에 저항을 가진다.\n• 1레벨: 오한의 손길 소마법\n• 3레벨: 거짓 생명\n• 5레벨: 약화 광선\n\n지옥의 유산\n• 화염 피해에 저항을 가진다.\n• 1레벨: 화염 화살 소마법\n• 3레벨: 지옥의 질책\n• 5레벨: 어둠\n\n---\n\n이 문서는 SRD 5.2.1의 한국어 번역이다. 저작자 표시와 라이선스는 ATTRIBUTION.md를 확인한다."
+       }
+      ],
+      "choices": [
+       {
+        "id": "species.legacy",
+        "label": "유산",
+        "description": "심연·지하세계·지옥.",
+        "count": 1,
+        "options": [
+         {
+          "id": "abyssal",
+          "name": "심연의 유산",
+          "nameEn": "Abyssal",
+          "summary": "독 저항 · Poison Spray · 3레벨 Ray of Sickness · 5레벨 Hold Person"
+         },
+         {
+          "id": "chthonic",
+          "name": "지하세계의 유산",
+          "nameEn": "Chthonic",
+          "summary": "괴저 저항 · Chill Touch · 3레벨 False Life · 5레벨 Ray of Enfeeblement"
+         },
+         {
+          "id": "infernal",
+          "name": "지옥의 유산",
+          "nameEn": "Infernal",
+          "summary": "화염 저항 · Fire Bolt · 3레벨 Hellish Rebuke · 5레벨 Darkness"
+         }
+        ]
+       },
+       {
+        "id": "species.spellcastingAbility",
+        "label": "유산 주문 능력치",
+        "description": "이계의 존재감과 유산 주문의 시전 능력치입니다.",
+        "count": 1,
+        "options": "spellcasting-ability"
+       }
+      ],
+      "effects": {
+       "species.legacy": {
+        "abyssal": {
+         "resistances": [
+          "poison"
+         ],
+         "cantrips": [
+          "Poison Spray"
+         ],
+         "spellsByLevel": {
+          "3": [
+           "Ray of Sickness"
+          ],
+          "5": [
+           "Hold Person"
+          ]
+         }
+        },
+        "chthonic": {
+         "resistances": [
+          "necrotic"
+         ],
+         "cantrips": [
+          "Chill Touch"
+         ],
+         "spellsByLevel": {
+          "3": [
+           "False Life"
+          ],
+          "5": [
+           "Ray of Enfeeblement"
+          ]
+         }
+        },
+        "infernal": {
+         "resistances": [
+          "fire"
+         ],
+         "cantrips": [
+          "Fire Bolt"
+         ],
+         "spellsByLevel": {
+          "3": [
+           "Hellish Rebuke"
+          ],
+          "5": [
+           "Darkness"
+          ]
+         }
+        }
+       }
+      },
+      "semantics": {
+       "baseCantrips": [
+        "Thaumaturgy"
+       ],
+       "extraChoices": [
+        {
+         "id": "species.otherworldlySpellcastingAbility",
+         "label": "이계의 존재감 주문 능력",
+         "description": "기적술 소마법의 주문 시전 능력으로 지능, 지혜 또는 매력 중 하나를 선택합니다.",
+         "count": 1,
+         "options": [
+          {
+           "id": "int",
+           "name": "지능",
+           "nameEn": "INT",
+           "summary": "기적술 주문 시전 능력"
+          },
+          {
+           "id": "wis",
+           "name": "지혜",
+           "nameEn": "WIS",
+           "summary": "기적술 주문 시전 능력"
+          },
+          {
+           "id": "cha",
+           "name": "매력",
+           "nameEn": "CHA",
+           "summary": "기적술 주문 시전 능력"
+          }
+         ]
+        }
+       ],
+       "byChoice": {
+        "species.legacy": {
+         "abyssal": {
+          "cantrips": [
+           "Poison Spray"
+          ],
+          "features": [
+           "심연의 유산 · 독 저항"
+          ]
+         },
+         "chthonic": {
+          "cantrips": [
+           "Chill Touch"
+          ],
+          "features": [
+           "지하세계의 유산 · 사령 저항"
+          ]
+         },
+         "infernal": {
+          "cantrips": [
+           "Fire Bolt"
+          ],
+          "features": [
+           "지옥의 유산 · 화염 저항"
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

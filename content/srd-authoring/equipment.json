@@ -1,0 +1,3961 @@
+{
+ "dnd.srd521.item.gear.acid": {
+  "id": "dnd.srd521.item.gear.acid",
+  "category": "item",
+  "presentation": {
+   "originalName": "Acid",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "산"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "priceGp": 25,
+     "weightLb": 1,
+     "range": 20,
+     "saveAbility": "dex",
+     "saveDcFormula": "8 + dex.mod + proficiency",
+     "damage": "2d6",
+     "damageType": "acid"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.alchemists-fire": {
+  "id": "dnd.srd521.item.gear.alchemists-fire",
+  "category": "item",
+  "presentation": {
+   "originalName": "Alchemist's Fire",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "연금술사의 불"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "priceGp": 50,
+     "weightLb": 1,
+     "range": 20,
+     "saveAbility": "dex",
+     "saveDcFormula": "8 + dex.mod + proficiency",
+     "damage": "1d4",
+     "damageType": "fire",
+     "applies": "burning"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.antitoxin": {
+  "id": "dnd.srd521.item.gear.antitoxin",
+  "category": "item",
+  "presentation": {
+   "originalName": "Antitoxin",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "해독제"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "priceGp": 50,
+     "economy": "bonus-action",
+     "duration": "1h",
+     "effect": "advantage-vs-poisoned"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.holy-water": {
+  "id": "dnd.srd521.item.gear.holy-water",
+  "category": "item",
+  "presentation": {
+   "originalName": "Holy Water",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "성수"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "priceGp": 25,
+     "weightLb": 1,
+     "range": 20,
+     "saveAbility": "dex",
+     "saveDcFormula": "8 + dex.mod + proficiency",
+     "damage": "2d8",
+     "damageType": "radiant",
+     "targetTypes": [
+      "fiend",
+      "undead"
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.basic-poison": {
+  "id": "dnd.srd521.item.gear.basic-poison",
+  "category": "item",
+  "presentation": {
+   "originalName": "Basic Poison",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "기본 독"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "priceGp": 100,
+     "economy": "bonus-action",
+     "duration": "1m",
+     "damage": "1d4",
+     "damageType": "poison",
+     "appliesTo": "weapon-or-3-ammunition"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.potion-of-healing": {
+  "id": "dnd.srd521.item.gear.potion-of-healing",
+  "category": "item",
+  "presentation": {
+   "originalName": "Potion of Healing",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "치유 물약"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "priceGp": 50,
+     "weightLb": 0.5,
+     "economy": "bonus-action",
+     "healing": "2d4+2"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.potion-of-greater-healing": {
+  "id": "dnd.srd521.item.gear.potion-of-greater-healing",
+  "category": "item",
+  "presentation": {
+   "originalName": "Potion of Greater Healing",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "상급 치유 물약"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "weightLb": 0.5,
+     "economy": "bonus-action",
+     "healing": "4d4+4"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.potion-of-superior-healing": {
+  "id": "dnd.srd521.item.gear.potion-of-superior-healing",
+  "category": "item",
+  "presentation": {
+   "originalName": "Potion of Superior Healing",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "최상급 치유 물약"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "weightLb": 0.5,
+     "economy": "bonus-action",
+     "healing": "8d4+8"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.potion-of-supreme-healing": {
+  "id": "dnd.srd521.item.gear.potion-of-supreme-healing",
+  "category": "item",
+  "presentation": {
+   "originalName": "Potion of Supreme Healing",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "궁극 치유 물약"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {
+     "weightLb": 0.5,
+     "economy": "bonus-action",
+     "healing": "10d4+20"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.ammunition.arrows": {
+  "id": "dnd.srd521.item.ammunition.arrows",
+  "category": "ammunition",
+  "presentation": {
+   "originalName": "Arrows (20)",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "화살 20개"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "ammunition-definition",
+    "config": {
+     "quantity": 20,
+     "priceGp": 1,
+     "weightLb": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.ammunition.bolts": {
+  "id": "dnd.srd521.item.ammunition.bolts",
+  "category": "ammunition",
+  "presentation": {
+   "originalName": "Bolts (20)",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "쇠뇌살 20개"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "ammunition-definition",
+    "config": {
+     "quantity": 20,
+     "priceGp": 1,
+     "weightLb": 1.5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.ammunition.sling-bullets": {
+  "id": "dnd.srd521.item.ammunition.sling-bullets",
+  "category": "ammunition",
+  "presentation": {
+   "originalName": "Sling Bullets (20)",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "투석탄 20개"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "ammunition-definition",
+    "config": {
+     "quantity": 20,
+     "priceGp": 0.04,
+     "weightLb": 1.5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.ammunition.needles": {
+  "id": "dnd.srd521.item.ammunition.needles",
+  "category": "ammunition",
+  "presentation": {
+   "originalName": "Needles (50)",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "바늘 50개"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "ammunition-definition",
+    "config": {
+     "quantity": 50,
+     "priceGp": 1,
+     "weightLb": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.arcane-crystal": {
+  "id": "dnd.srd521.item.focus.arcane-crystal",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Arcane Focus, Crystal",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "수정 비전 매개체"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "arcane",
+     "priceGp": 10,
+     "weightLb": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.arcane-orb": {
+  "id": "dnd.srd521.item.focus.arcane-orb",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Arcane Focus, Orb",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "구체 비전 매개체"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "arcane",
+     "priceGp": 20,
+     "weightLb": 3
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.arcane-rod": {
+  "id": "dnd.srd521.item.focus.arcane-rod",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Arcane Focus, Rod",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "막대 비전 매개체"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "arcane",
+     "priceGp": 10,
+     "weightLb": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.arcane-staff": {
+  "id": "dnd.srd521.item.focus.arcane-staff",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Arcane Focus, Staff",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "지팡이 비전 매개체"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "arcane",
+     "priceGp": 5,
+     "weightLb": 4,
+     "alsoItemId": "dnd.srd521.item.weapon.quarterstaff"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.arcane-wand": {
+  "id": "dnd.srd521.item.focus.arcane-wand",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Arcane Focus, Wand",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "완드 비전 매개체"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "arcane",
+     "priceGp": 10,
+     "weightLb": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.druidic-mistletoe": {
+  "id": "dnd.srd521.item.focus.druidic-mistletoe",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Druidic Focus, Sprig of Mistletoe",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "겨우살이 가지 드루이드 매개체"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "druidic",
+     "priceGp": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.druidic-staff": {
+  "id": "dnd.srd521.item.focus.druidic-staff",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Druidic Focus, Wooden Staff",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "나무 지팡이 드루이드 매개체"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "druidic",
+     "priceGp": 5,
+     "weightLb": 4,
+     "alsoItemId": "dnd.srd521.item.weapon.quarterstaff"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.druidic-yew-wand": {
+  "id": "dnd.srd521.item.focus.druidic-yew-wand",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Druidic Focus, Yew Wand",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "주목 완드"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "druidic",
+     "priceGp": 10,
+     "weightLb": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.holy-amulet": {
+  "id": "dnd.srd521.item.focus.holy-amulet",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Holy Symbol, Amulet",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "성표 부적"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "divine",
+     "priceGp": 5,
+     "weightLb": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.holy-emblem": {
+  "id": "dnd.srd521.item.focus.holy-emblem",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Holy Symbol, Emblem",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "성표 문장"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "divine",
+     "priceGp": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.focus.holy-reliquary": {
+  "id": "dnd.srd521.item.focus.holy-reliquary",
+  "category": "focus",
+  "presentation": {
+   "originalName": "Holy Symbol, Reliquary",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "성유물함"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "divine",
+     "priceGp": 5,
+     "weightLb": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.component-pouch": {
+  "id": "dnd.srd521.item.gear.component-pouch",
+  "category": "item",
+  "presentation": {
+   "originalName": "Component Pouch",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "구성요소 주머니"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "focus-definition",
+    "config": {
+     "tradition": "material",
+     "priceGp": 25,
+     "weightLb": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.padded": {
+  "id": "dnd.srd521.item.armor.padded",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Padded Armor",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "누비 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "light",
+     "ac": {
+      "base": 11,
+      "dex": "full"
+     },
+     "stealthDisadvantage": true
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.leather": {
+  "id": "dnd.srd521.item.armor.leather",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Leather Armor",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "가죽 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "light",
+     "ac": {
+      "base": 11,
+      "dex": "full"
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.studded-leather": {
+  "id": "dnd.srd521.item.armor.studded-leather",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Studded Leather Armor",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "징 박힌 가죽 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "light",
+     "ac": {
+      "base": 12,
+      "dex": "full"
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.hide": {
+  "id": "dnd.srd521.item.armor.hide",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Hide Armor",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "생가죽 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "medium",
+     "ac": {
+      "base": 12,
+      "dexMax": 2
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.chain-shirt": {
+  "id": "dnd.srd521.item.armor.chain-shirt",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Chain Shirt",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "사슬 셔츠"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "medium",
+     "ac": {
+      "base": 13,
+      "dexMax": 2
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.scale-mail": {
+  "id": "dnd.srd521.item.armor.scale-mail",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Scale Mail",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "비늘 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "medium",
+     "ac": {
+      "base": 14,
+      "dexMax": 2
+     },
+     "stealthDisadvantage": true
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.breastplate": {
+  "id": "dnd.srd521.item.armor.breastplate",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Breastplate",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "흉갑"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "medium",
+     "ac": {
+      "base": 14,
+      "dexMax": 2
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.half-plate": {
+  "id": "dnd.srd521.item.armor.half-plate",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Half Plate Armor",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "반판금 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "medium",
+     "ac": {
+      "base": 15,
+      "dexMax": 2
+     },
+     "stealthDisadvantage": true
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.ring-mail": {
+  "id": "dnd.srd521.item.armor.ring-mail",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Ring Mail",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "고리 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "heavy",
+     "ac": {
+      "base": 14
+     },
+     "stealthDisadvantage": true
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.chain-mail": {
+  "id": "dnd.srd521.item.armor.chain-mail",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Chain Mail",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "사슬 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "heavy",
+     "ac": {
+      "base": 16
+     },
+     "strengthRequirement": 13,
+     "stealthDisadvantage": true
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.splint": {
+  "id": "dnd.srd521.item.armor.splint",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Splint Armor",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "철편 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "heavy",
+     "ac": {
+      "base": 17
+     },
+     "strengthRequirement": 15,
+     "stealthDisadvantage": true
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.armor.plate": {
+  "id": "dnd.srd521.item.armor.plate",
+  "category": "armor",
+  "presentation": {
+   "originalName": "Plate Armor",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "판금 갑옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "armor-definition",
+    "config": {
+     "training": "heavy",
+     "ac": {
+      "base": 18
+     },
+     "strengthRequirement": 15,
+     "stealthDisadvantage": true
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.shield": {
+  "id": "dnd.srd521.item.shield",
+  "category": "shield",
+  "presentation": {
+   "originalName": "Shield",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "방패"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "shield-definition",
+    "config": {
+     "training": "shield",
+     "acBonus": 2,
+     "equipEconomy": "utilize"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.book": {
+  "id": "dnd.srd521.item.gear.book",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Book",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "책"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "weightLb": 5,
+     "priceGp": 25,
+     "variants": [
+      "prayer-book",
+      "history-book",
+      "occult-lore-book"
+     ],
+     "variantNames": {
+      "prayer-book": "기도서",
+      "history-book": "역사서",
+      "occult-lore-book": "비술서"
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.spellbook": {
+  "id": "dnd.srd521.item.gear.spellbook",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Spellbook",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "주문서"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "role": "wizard-spellbook"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.battleaxe": {
+  "id": "dnd.srd521.item.weapon.battleaxe",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Battleaxe",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "전투도끼"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "slashing",
+     "properties": [
+      "versatile:1d10"
+     ],
+     "mastery": "topple"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.flail": {
+  "id": "dnd.srd521.item.weapon.flail",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Flail",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "도리깨"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "bludgeoning",
+     "properties": [],
+     "mastery": "sap"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.glaive": {
+  "id": "dnd.srd521.item.weapon.glaive",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Glaive",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "글레이브"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d10",
+     "damageType": "slashing",
+     "properties": [
+      "heavy",
+      "reach",
+      "two-handed"
+     ],
+     "mastery": "graze"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.greataxe": {
+  "id": "dnd.srd521.item.weapon.greataxe",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Greataxe",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "대형 도끼"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d12",
+     "damageType": "slashing",
+     "properties": [
+      "heavy",
+      "two-handed"
+     ],
+     "mastery": "cleave"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.greatsword": {
+  "id": "dnd.srd521.item.weapon.greatsword",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Greatsword",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "대검"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "2d6",
+     "damageType": "slashing",
+     "properties": [
+      "heavy",
+      "two-handed"
+     ],
+     "mastery": "graze"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.halberd": {
+  "id": "dnd.srd521.item.weapon.halberd",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Halberd",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "미늘창"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d10",
+     "damageType": "slashing",
+     "properties": [
+      "heavy",
+      "reach",
+      "two-handed"
+     ],
+     "mastery": "cleave"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.lance": {
+  "id": "dnd.srd521.item.weapon.lance",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Lance",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "기병창"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d10",
+     "damageType": "piercing",
+     "properties": [
+      "heavy",
+      "reach",
+      "two-handed-unless-mounted"
+     ],
+     "mastery": "topple"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.longsword": {
+  "id": "dnd.srd521.item.weapon.longsword",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Longsword",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "장검"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "slashing",
+     "properties": [
+      "versatile:1d10"
+     ],
+     "mastery": "sap"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.maul": {
+  "id": "dnd.srd521.item.weapon.maul",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Maul",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "대형 망치"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "2d6",
+     "damageType": "bludgeoning",
+     "properties": [
+      "heavy",
+      "two-handed"
+     ],
+     "mastery": "topple"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.morningstar": {
+  "id": "dnd.srd521.item.weapon.morningstar",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Morningstar",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "모닝스타"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "piercing",
+     "properties": [],
+     "mastery": "sap"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.pike": {
+  "id": "dnd.srd521.item.weapon.pike",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Pike",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "장창"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d10",
+     "damageType": "piercing",
+     "properties": [
+      "heavy",
+      "reach",
+      "two-handed"
+     ],
+     "mastery": "push"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.rapier": {
+  "id": "dnd.srd521.item.weapon.rapier",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Rapier",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "레이피어"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "piercing",
+     "properties": [
+      "finesse"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.scimitar": {
+  "id": "dnd.srd521.item.weapon.scimitar",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Scimitar",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "시미터"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d6",
+     "damageType": "slashing",
+     "properties": [
+      "finesse",
+      "light"
+     ],
+     "mastery": "nick"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.shortsword": {
+  "id": "dnd.srd521.item.weapon.shortsword",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Shortsword",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "소검"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d6",
+     "damageType": "piercing",
+     "properties": [
+      "finesse",
+      "light"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.trident": {
+  "id": "dnd.srd521.item.weapon.trident",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Trident",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "삼지창"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "piercing",
+     "properties": [
+      "thrown:20/60",
+      "versatile:1d10"
+     ],
+     "mastery": "topple"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.warhammer": {
+  "id": "dnd.srd521.item.weapon.warhammer",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Warhammer",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "전투망치"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "bludgeoning",
+     "properties": [
+      "versatile:1d10"
+     ],
+     "mastery": "push"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.warpick": {
+  "id": "dnd.srd521.item.weapon.warpick",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "War Pick",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "전투곡괭이"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "piercing",
+     "properties": [
+      "versatile:1d10"
+     ],
+     "mastery": "sap"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.whip": {
+  "id": "dnd.srd521.item.weapon.whip",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Whip",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "채찍"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "melee",
+     "damage": "1d4",
+     "damageType": "slashing",
+     "properties": [
+      "finesse",
+      "reach"
+     ],
+     "mastery": "slow"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.blowgun": {
+  "id": "dnd.srd521.item.weapon.blowgun",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Blowgun",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "바람총"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "ranged",
+     "damage": "1",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:25/100",
+      "loading"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.hand-crossbow": {
+  "id": "dnd.srd521.item.weapon.hand-crossbow",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Hand Crossbow",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "손쇠뇌"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "ranged",
+     "damage": "1d6",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:30/120",
+      "light",
+      "loading"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.heavy-crossbow": {
+  "id": "dnd.srd521.item.weapon.heavy-crossbow",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Heavy Crossbow",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "중쇠뇌"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "ranged",
+     "damage": "1d10",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:100/400",
+      "heavy",
+      "loading",
+      "two-handed"
+     ],
+     "mastery": "push"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.longbow": {
+  "id": "dnd.srd521.item.weapon.longbow",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Longbow",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "장궁"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "ranged",
+     "damage": "1d8",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:150/600",
+      "heavy",
+      "two-handed"
+     ],
+     "mastery": "slow"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.musket": {
+  "id": "dnd.srd521.item.weapon.musket",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Musket",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "머스킷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "ranged",
+     "damage": "1d12",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:40/120",
+      "loading",
+      "two-handed"
+     ],
+     "mastery": "slow"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.pistol": {
+  "id": "dnd.srd521.item.weapon.pistol",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Pistol",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "권총"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "martial",
+     "mode": "ranged",
+     "damage": "1d10",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:30/90",
+      "loading"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.pack.burglar": {
+  "id": "dnd.srd521.item.pack.burglar",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Burglar's Pack",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "도둑 꾸러미"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "pack-definition",
+    "config": {
+     "weightLb": 42,
+     "priceGp": 16
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.pack.diplomat": {
+  "id": "dnd.srd521.item.pack.diplomat",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Diplomat's Pack",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "외교관 꾸러미"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "pack-definition",
+    "config": {
+     "weightLb": 39,
+     "priceGp": 39
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.pack.dungeoneer": {
+  "id": "dnd.srd521.item.pack.dungeoneer",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Dungeoneer's Pack",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "던전 탐험가 꾸러미"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "pack-definition",
+    "config": {
+     "weightLb": 55,
+     "priceGp": 12
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.pack.entertainer": {
+  "id": "dnd.srd521.item.pack.entertainer",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Entertainer's Pack",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "공연자 꾸러미"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "pack-definition",
+    "config": {
+     "weightLb": 58.5,
+     "priceGp": 40
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.pack.explorer": {
+  "id": "dnd.srd521.item.pack.explorer",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Explorer's Pack",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "탐험가 꾸러미"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "pack-definition",
+    "config": {
+     "weightLb": 55,
+     "priceGp": 10
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.pack.priest": {
+  "id": "dnd.srd521.item.pack.priest",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Priest's Pack",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "사제 꾸러미"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "pack-definition",
+    "config": {
+     "weightLb": 29,
+     "priceGp": 33
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.pack.scholar": {
+  "id": "dnd.srd521.item.pack.scholar",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Scholar's Pack",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "학자 꾸러미"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "pack-definition",
+    "config": {
+     "weightLb": 22,
+     "priceGp": 40
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.rations": {
+  "id": "dnd.srd521.item.gear.rations",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Rations (1 day)",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "식량 (1일분)"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "consumable-definition",
+    "config": {}
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.club": {
+  "id": "dnd.srd521.item.weapon.club",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Club",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "몽둥이"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d4",
+     "damageType": "bludgeoning",
+     "properties": [
+      "light"
+     ],
+     "mastery": "slow"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.dagger": {
+  "id": "dnd.srd521.item.weapon.dagger",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Dagger",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "단검"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d4",
+     "damageType": "piercing",
+     "properties": [
+      "finesse",
+      "light",
+      "thrown:20/60"
+     ],
+     "mastery": "nick"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.greatclub": {
+  "id": "dnd.srd521.item.weapon.greatclub",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Greatclub",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "대형 몽둥이"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d8",
+     "damageType": "bludgeoning",
+     "properties": [
+      "two-handed"
+     ],
+     "mastery": "push"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.handaxe": {
+  "id": "dnd.srd521.item.weapon.handaxe",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Handaxe",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "손도끼"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d6",
+     "damageType": "slashing",
+     "properties": [
+      "light",
+      "thrown:20/60"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.javelin": {
+  "id": "dnd.srd521.item.weapon.javelin",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Javelin",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "투창"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d6",
+     "damageType": "piercing",
+     "properties": [
+      "thrown:30/120"
+     ],
+     "mastery": "slow"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.light-hammer": {
+  "id": "dnd.srd521.item.weapon.light-hammer",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Light Hammer",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "가벼운 망치"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d4",
+     "damageType": "bludgeoning",
+     "properties": [
+      "light",
+      "thrown:20/60"
+     ],
+     "mastery": "nick"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.mace": {
+  "id": "dnd.srd521.item.weapon.mace",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Mace",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "철퇴"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d6",
+     "damageType": "bludgeoning",
+     "properties": [],
+     "mastery": "sap"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.quarterstaff": {
+  "id": "dnd.srd521.item.weapon.quarterstaff",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Quarterstaff",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "육척봉"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d6",
+     "damageType": "bludgeoning",
+     "properties": [
+      "versatile:1d8"
+     ],
+     "mastery": "topple"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.sickle": {
+  "id": "dnd.srd521.item.weapon.sickle",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Sickle",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "낫"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d4",
+     "damageType": "slashing",
+     "properties": [
+      "light"
+     ],
+     "mastery": "nick"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.spear": {
+  "id": "dnd.srd521.item.weapon.spear",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Spear",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "창"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "melee",
+     "damage": "1d6",
+     "damageType": "piercing",
+     "properties": [
+      "thrown:20/60",
+      "versatile:1d8"
+     ],
+     "mastery": "sap"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.dart": {
+  "id": "dnd.srd521.item.weapon.dart",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Dart",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "다트"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "ranged",
+     "damage": "1d4",
+     "damageType": "piercing",
+     "properties": [
+      "finesse",
+      "thrown:20/60"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.light-crossbow": {
+  "id": "dnd.srd521.item.weapon.light-crossbow",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Light Crossbow",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "경쇠뇌"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "ranged",
+     "damage": "1d8",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:80/320",
+      "loading",
+      "two-handed"
+     ],
+     "mastery": "slow"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.shortbow": {
+  "id": "dnd.srd521.item.weapon.shortbow",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Shortbow",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "단궁"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "ranged",
+     "damage": "1d6",
+     "damageType": "piercing",
+     "properties": [
+      "ammunition:80/320",
+      "two-handed"
+     ],
+     "mastery": "vex"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.weapon.sling": {
+  "id": "dnd.srd521.item.weapon.sling",
+  "category": "weapon",
+  "presentation": {
+   "originalName": "Sling",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "투석구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "weapon-definition",
+    "config": {
+     "training": "simple",
+     "mode": "ranged",
+     "damage": "1d4",
+     "damageType": "bludgeoning",
+     "properties": [
+      "ammunition:30/120"
+     ],
+     "mastery": "slow"
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.quiver": {
+  "id": "dnd.srd521.item.gear.quiver",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Quiver",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "화살통"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "weightLb": 1,
+     "priceGp": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.robe": {
+  "id": "dnd.srd521.item.gear.robe",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Robe",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "로브"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "weightLb": 4,
+     "priceGp": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.traveler-clothes": {
+  "id": "dnd.srd521.item.gear.traveler-clothes",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Traveler's Clothes",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "여행자 옷"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "weightLb": 4,
+     "priceGp": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.parchment": {
+  "id": "dnd.srd521.item.gear.parchment",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Parchment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "양피지"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "priceGp": 0.1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.crowbar": {
+  "id": "dnd.srd521.item.gear.crowbar",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Crowbar",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "쇠지렛대"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "weightLb": 5,
+     "priceGp": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.pouch": {
+  "id": "dnd.srd521.item.gear.pouch",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Pouch",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "주머니"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "weightLb": 1,
+     "priceGp": 0.5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.gear.healers-kit": {
+  "id": "dnd.srd521.item.gear.healers-kit",
+  "category": "adventuring-gear",
+  "presentation": {
+   "originalName": "Healer's Kit",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "치유사 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "item-definition",
+    "config": {
+     "weightLb": 3,
+     "priceGp": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.alchemists-supplies": {
+  "id": "dnd.srd521.item.tool.alchemists-supplies",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Alchemist's Supplies",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "연금술사 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "int",
+     "priceGp": 50,
+     "weightLb": 8
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.brewers-supplies": {
+  "id": "dnd.srd521.item.tool.brewers-supplies",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Brewer's Supplies",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "양조 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "int",
+     "priceGp": 20,
+     "weightLb": 9
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.calligraphers-supplies": {
+  "id": "dnd.srd521.item.tool.calligraphers-supplies",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Calligrapher's Supplies",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "서예 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 10,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.carpenters-tools": {
+  "id": "dnd.srd521.item.tool.carpenters-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Carpenter's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "목수 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "str",
+     "priceGp": 8,
+     "weightLb": 6
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.cartographers-tools": {
+  "id": "dnd.srd521.item.tool.cartographers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Cartographer's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "지도 제작자 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "wis",
+     "priceGp": 15,
+     "weightLb": 6
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.cobblers-tools": {
+  "id": "dnd.srd521.item.tool.cobblers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Cobbler's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "제화공 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 5,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.cooks-utensils": {
+  "id": "dnd.srd521.item.tool.cooks-utensils",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Cook's Utensils",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "요리 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "wis",
+     "priceGp": 1,
+     "weightLb": 8
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.glassblowers-tools": {
+  "id": "dnd.srd521.item.tool.glassblowers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Glassblower's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "유리세공사 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "int",
+     "priceGp": 30,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.jewelers-tools": {
+  "id": "dnd.srd521.item.tool.jewelers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Jeweler's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "보석세공사 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "int",
+     "priceGp": 25,
+     "weightLb": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.leatherworkers-tools": {
+  "id": "dnd.srd521.item.tool.leatherworkers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Leatherworker's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "가죽세공사 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 5,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.masons-tools": {
+  "id": "dnd.srd521.item.tool.masons-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Mason's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "석공 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "str",
+     "priceGp": 10,
+     "weightLb": 8
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.painters-supplies": {
+  "id": "dnd.srd521.item.tool.painters-supplies",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Painter's Supplies",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "화가 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "wis",
+     "priceGp": 10,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.potters-tools": {
+  "id": "dnd.srd521.item.tool.potters-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Potter's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "도공 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "int",
+     "priceGp": 10,
+     "weightLb": 3
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.smiths-tools": {
+  "id": "dnd.srd521.item.tool.smiths-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Smith's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "대장장이 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "str",
+     "priceGp": 20,
+     "weightLb": 8
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.tinkers-tools": {
+  "id": "dnd.srd521.item.tool.tinkers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Tinker's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "땜장이 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 50,
+     "weightLb": 10
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.weavers-tools": {
+  "id": "dnd.srd521.item.tool.weavers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Weaver's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "직조 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 1,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.woodcarvers-tools": {
+  "id": "dnd.srd521.item.tool.woodcarvers-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Woodcarver's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "목각 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 1,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.disguise-kit": {
+  "id": "dnd.srd521.item.tool.disguise-kit",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Disguise Kit",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "변장 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "cha",
+     "priceGp": 25,
+     "weightLb": 3
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.forgery-kit": {
+  "id": "dnd.srd521.item.tool.forgery-kit",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Forgery Kit",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "위조 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 15,
+     "weightLb": 5
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.gaming-set": {
+  "id": "dnd.srd521.item.tool.gaming-set",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Gaming Set",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "게임 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "wis",
+     "variants": [
+      "dice",
+      "dragonchess",
+      "playing-cards",
+      "three-dragon-ante"
+     ],
+     "variantGroup": "gaming-set",
+     "variantLabel": "alone",
+     "variantNames": {
+      "dice": "주사위 세트",
+      "dragonchess": "드래곤체스 세트",
+      "playing-cards": "카드 세트",
+      "three-dragon-ante": "삼룡 앤티 세트"
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.herbalism-kit": {
+  "id": "dnd.srd521.item.tool.herbalism-kit",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Herbalism Kit",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "약초학 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "int",
+     "priceGp": 5,
+     "weightLb": 3
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.musical-instrument": {
+  "id": "dnd.srd521.item.tool.musical-instrument",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Musical Instrument",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "악기"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "cha",
+     "variants": [
+      "bagpipes",
+      "drum",
+      "dulcimer",
+      "flute",
+      "horn",
+      "lute",
+      "lyre",
+      "pan-flute",
+      "shawm",
+      "viol"
+     ],
+     "variantGroup": "instrument",
+     "variantLabel": "alone",
+     "variantNames": {
+      "bagpipes": "백파이프",
+      "drum": "북",
+      "dulcimer": "덜시머",
+      "flute": "플루트",
+      "horn": "호른",
+      "lute": "류트",
+      "lyre": "리라",
+      "pan-flute": "팬플루트",
+      "shawm": "숌",
+      "viol": "비올"
+     }
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.navigators-tools": {
+  "id": "dnd.srd521.item.tool.navigators-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Navigator's Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "항해사 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "wis",
+     "priceGp": 25,
+     "weightLb": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.poisoners-kit": {
+  "id": "dnd.srd521.item.tool.poisoners-kit",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Poisoner's Kit",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "독 제작자 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "int",
+     "priceGp": 50,
+     "weightLb": 2
+    }
+   }
+  ]
+ },
+ "dnd.srd521.item.tool.thieves-tools": {
+  "id": "dnd.srd521.item.tool.thieves-tools",
+  "category": "tool",
+  "presentation": {
+   "originalName": "Thieves' Tools",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "도둑 도구"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "tool-definition",
+    "config": {
+     "ability": "dex",
+     "priceGp": 25,
+     "weightLb": 1
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.rogue": {
+  "id": "dnd.srd521.loadout.class.rogue",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Rogue Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "로그 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.rogue",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.leather",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.dagger",
+         "quantity": 2
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.shortsword",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.shortbow",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.ammunition.arrows",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.quiver",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.tool.thieves-tools",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.burglar",
+         "quantity": 1
+        }
+       ],
+       "gp": 8
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 100
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.sorcerer": {
+  "id": "dnd.srd521.loadout.class.sorcerer",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Sorcerer Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "소서러 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.sorcerer",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.weapon.spear",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.dagger",
+         "quantity": 2
+        },
+        {
+         "itemId": "dnd.srd521.item.focus.arcane-crystal",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.dungeoneer",
+         "quantity": 1
+        }
+       ],
+       "gp": 28
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 50
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.barbarian": {
+  "id": "dnd.srd521.loadout.class.barbarian",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Barbarian Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "바바리안 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.barbarian",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.weapon.greataxe",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.handaxe",
+         "quantity": 4
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.explorer",
+         "quantity": 1
+        }
+       ],
+       "gp": 15
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 75
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.bard": {
+  "id": "dnd.srd521.loadout.class.bard",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Bard Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "바드 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.bard",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.leather",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.dagger",
+         "quantity": 2
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.entertainer",
+         "quantity": 1
+        }
+       ],
+       "choices": [
+        {
+         "kind": "tool-variant",
+         "itemIds": [
+          "dnd.srd521.item.tool.musical-instrument"
+         ],
+         "quantity": 1
+        }
+       ],
+       "gp": 19
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 90
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.cleric": {
+  "id": "dnd.srd521.loadout.class.cleric",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Cleric Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "클레릭 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.cleric",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.chain-shirt",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.shield",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.mace",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.priest",
+         "quantity": 1
+        }
+       ],
+       "choices": [
+        {
+         "kind": "choose-one",
+         "itemIds": [
+          "dnd.srd521.item.focus.holy-amulet",
+          "dnd.srd521.item.focus.holy-emblem",
+          "dnd.srd521.item.focus.holy-reliquary"
+         ]
+        }
+       ],
+       "gp": 7
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 110
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.druid": {
+  "id": "dnd.srd521.loadout.class.druid",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Druid Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "드루이드 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.druid",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.leather",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.shield",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.sickle",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.explorer",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.tool.herbalism-kit",
+         "quantity": 1
+        }
+       ],
+       "choices": [
+        {
+         "kind": "choose-one",
+         "itemIds": [
+          "dnd.srd521.item.focus.druidic-mistletoe",
+          "dnd.srd521.item.focus.druidic-staff",
+          "dnd.srd521.item.focus.druidic-yew-wand"
+         ]
+        }
+       ],
+       "gp": 9
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 50
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.fighter": {
+  "id": "dnd.srd521.loadout.class.fighter",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Fighter Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "파이터 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.fighter",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.chain-mail",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.greatsword",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.flail",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.javelin",
+         "quantity": 8
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.dungeoneer",
+         "quantity": 1
+        }
+       ],
+       "gp": 4
+      },
+      {
+       "id": "B",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.studded-leather",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.scimitar",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.shortsword",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.longbow",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.ammunition.arrows",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.quiver",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.dungeoneer",
+         "quantity": 1
+        }
+       ],
+       "gp": 11
+      },
+      {
+       "id": "C",
+       "startingGoldGp": 155
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.monk": {
+  "id": "dnd.srd521.loadout.class.monk",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Monk Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "몽크 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.monk",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.weapon.spear",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.dagger",
+         "quantity": 5
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.explorer",
+         "quantity": 1
+        }
+       ],
+       "choices": [
+        {
+         "kind": "catalog-filter",
+         "categories": [
+          "artisan-tool",
+          "musical-instrument"
+         ],
+         "quantity": 1
+        }
+       ],
+       "gp": 11
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 50
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.paladin": {
+  "id": "dnd.srd521.loadout.class.paladin",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Paladin Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "팔라딘 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.paladin",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.chain-mail",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.shield",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.longsword",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.javelin",
+         "quantity": 6
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.priest",
+         "quantity": 1
+        }
+       ],
+       "choices": [
+        {
+         "kind": "choose-one",
+         "itemIds": [
+          "dnd.srd521.item.focus.holy-amulet",
+          "dnd.srd521.item.focus.holy-emblem",
+          "dnd.srd521.item.focus.holy-reliquary"
+         ]
+        }
+       ],
+       "gp": 9
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 150
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.ranger": {
+  "id": "dnd.srd521.loadout.class.ranger",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Ranger Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "레인저 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.ranger",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.studded-leather",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.scimitar",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.shortsword",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.longbow",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.ammunition.arrows",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.quiver",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.focus.druidic-mistletoe",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.explorer",
+         "quantity": 1
+        }
+       ],
+       "gp": 7
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 150
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.background.acolyte": {
+  "id": "dnd.srd521.loadout.background.acolyte",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Acolyte Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "신앙 수행자 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.background.acolyte",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.tool.calligraphers-supplies",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.book",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.parchment",
+         "quantity": 10
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.robe",
+         "quantity": 1
+        }
+       ],
+       "itemVariants": {
+        "dnd.srd521.item.gear.book": "prayer-book"
+       },
+       "choices": [
+        {
+         "kind": "choose-one",
+         "itemIds": [
+          "dnd.srd521.item.focus.holy-amulet",
+          "dnd.srd521.item.focus.holy-emblem",
+          "dnd.srd521.item.focus.holy-reliquary"
+         ]
+        }
+       ],
+       "gp": 8
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 50
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.background.criminal": {
+  "id": "dnd.srd521.loadout.background.criminal",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Criminal Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "범죄자 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.background.criminal",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.weapon.dagger",
+         "quantity": 2
+        },
+        {
+         "itemId": "dnd.srd521.item.tool.thieves-tools",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.crowbar",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.pouch",
+         "quantity": 2
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.traveler-clothes",
+         "quantity": 1
+        }
+       ],
+       "gp": 16
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 50
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.background.sage": {
+  "id": "dnd.srd521.loadout.background.sage",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Sage Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "현자 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.background.sage",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.weapon.quarterstaff",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.tool.calligraphers-supplies",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.book",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.parchment",
+         "quantity": 8
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.robe",
+         "quantity": 1
+        }
+       ],
+       "itemVariants": {
+        "dnd.srd521.item.gear.book": "history-book"
+       },
+       "gp": 8
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 50
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.background.soldier": {
+  "id": "dnd.srd521.loadout.background.soldier",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Soldier Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "군인 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.background.soldier",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.weapon.spear",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.shortbow",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.ammunition.arrows",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.quiver",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.tool.gaming-set",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.healers-kit",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.traveler-clothes",
+         "quantity": 1
+        }
+       ],
+       "gp": 14
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 50
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.warlock": {
+  "id": "dnd.srd521.loadout.class.warlock",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Warlock Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "워락 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.warlock",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.armor.leather",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.sickle",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.weapon.dagger",
+         "quantity": 2
+        },
+        {
+         "itemId": "dnd.srd521.item.focus.arcane-orb",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.book",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.scholar",
+         "quantity": 1
+        }
+       ],
+       "itemVariants": {
+        "dnd.srd521.item.gear.book": "occult-lore-book"
+       },
+       "gp": 15
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 100
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "dnd.srd521.loadout.class.wizard": {
+  "id": "dnd.srd521.loadout.class.wizard",
+  "category": "starting-loadout",
+  "presentation": {
+   "originalName": "Wizard Starting Equipment",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "위저드 시작 장비"
+    }
+   }
+  },
+  "mechanics": [
+   {
+    "kind": "starting-loadout-definition",
+    "config": {
+     "ownerContentId": "dnd.srd521.class.wizard",
+     "options": [
+      {
+       "id": "A",
+       "items": [
+        {
+         "itemId": "dnd.srd521.item.weapon.dagger",
+         "quantity": 2
+        },
+        {
+         "itemId": "dnd.srd521.item.focus.arcane-staff",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.robe",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.gear.spellbook",
+         "quantity": 1
+        },
+        {
+         "itemId": "dnd.srd521.item.pack.scholar",
+         "quantity": 1
+        }
+       ],
+       "gp": 5
+      },
+      {
+       "id": "B",
+       "startingGoldGp": 55
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

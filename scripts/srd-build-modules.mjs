@@ -83,7 +83,121 @@ function spells() {
   return { moduleId: "dnd.srd-5.2.1.spells", content: entries.sort((a, b) => a.id.localeCompare(b.id)) };
 }
 
-const built = [spells()];
+/** A document by its path under the SRD root. */
+const doc = (file) => parsed.docs.find((item) => item.file === file);
+/** A document's whole text: its tree, headings as their own lines. */
+const docText = (item) => plain([item.intro, ...item.tree.map((node) => `${node.head}\n${nodeText(node)}`)].filter(Boolean).join("\n\n"));
+/** The `##`-or-deeper node whose heading, without a "N레벨: " prefix, is this one. */
+function findHeading(nodes, heading) {
+  for (const node of nodes) {
+    // Without the level prefix (`4·8·12·16레벨: `) and a cost suffix (` — 비용 1d6`, ` — 1점`).
+    if (node.head.replace(/^[\d·,\s]+레벨:\s*/, "").replace(/\s+—\s+.*$/, "") === heading) return node;
+    const deeper = findHeading(node.children, heading);
+    if (deeper) return deeper;
+  }
+  return undefined;
+}
+
+/** Species, backgrounds and feats: text from the source, definitions from `origins.json`. */
+function origins() {
+  const decided = decisions("origins.json");
+  const content = [];
+  for (const [id, decision] of Object.entries(decided.species)) {
+    const file = `character-origins/species/${id.split(".").pop()}.md`;
+    const source = doc(file);
+    if (!source) { problems.push(`${id}: 원문 ${file} 없음`); continue; }
+    const traits = decision.traits.map((trait) => {
+      const node = findHeading(source.tree, trait.heading);
+      if (!node) problems.push(`${id}: 특성 "${trait.heading}"을(를) 원문에서 찾지 못함 (content/srd-authoring/origins.json의 heading)`);
+      return { key: trait.key, name: trait.heading, nameEn: trait.nameEn, ...(node ? { description: plain(nodeText(node)) } : {}), ...(trait.minLevel ? { minLevel: trait.minLevel } : {}) };
+    });
+    content.push({ id, category: "species", tags: ["species", "srd-5.2.1"], presentation: presentation(source.tree[0].head, source.fm.original_name, { description: docText(source) }),
+      mechanics: [{ kind: "species-definition", config: { size: decision.size, speed: decision.speed, ...(decision.darkvision ? { darkvision: decision.darkvision } : {}), traits, choices: decision.choices, effects: decision.effects, semantics: decision.semantics } }] });
+  }
+  for (const [id, decision] of Object.entries(decided.backgrounds)) {
+    const file = `character-origins/backgrounds/${id.split(".").pop()}.md`;
+    const source = doc(file);
+    if (!source) { problems.push(`${id}: 원문 ${file} 없음`); continue; }
+    content.push({ id, category: "background", tags: ["background", "srd-5.2.1"], presentation: presentation(source.tree[0].head, source.fm.original_name, { description: docText(source) }), mechanics: [{ kind: "background-definition", config: decision.definition }] });
+  }
+  const feats = doc("feats/README.md");
+  for (const [id, decision] of Object.entries(decided.feats)) {
+    const node = findHeading(feats.tree, decision.heading);
+    if (!node) { problems.push(`${id}: 재주 "${decision.heading}"을(를) 원문에서 찾지 못함`); continue; }
+    content.push({ id, category: "feat", tags: decision.tags, presentation: presentation(decision.heading, decision.nameEn, { description: plain(nodeText(node)) }), mechanics: decision.mechanics });
+  }
+  return { moduleId: "dnd.srd-5.2.1.origins", content: content.sort((a, b) => a.id.localeCompare(b.id)) };
+}
+
+/**
+ * Classes, subclasses, class features and class options: text from `classes/<class>.md`, definitions from
+ * `classes.json`. A feature whose heading the source does not have keeps the old sentence and is listed, so the list of
+ * texts still to map is visible rather than silently filled.
+ */
+const textMissing = [];
+function classes() {
+  const decided = decisions("classes.json");
+  const rules = decisions("rules.json");
+  const content = [];
+  const classDoc = (classId) => doc(`classes/${classId.split(".").pop()}.md`);
+  const feature = (id, decision, docOf) => {
+    // `sourceHeading`: where the translation keeps this text when it names it differently (행동 폭증 2회 → 행동 폭증).
+    const node = docOf ? findHeading(docOf.tree, decision.sourceHeading ?? decision.heading) : undefined;
+    if (!node) textMissing.push(`${id}: "${decision.heading}"`);
+    const description = node ? plain(nodeText(node)) : decision.fallback;
+    // A contract the old SRD kept on the same entry id stays on it.
+    return { id, category: "option", tags: ["srd-5.2.1"], presentation: presentation(decision.heading, decision.nameEn, description ? { description } : {}), mechanics: rules[id]?.mechanics ?? [] };
+  };
+  for (const [id, def] of Object.entries(decided.classes)) {
+    const source = classDoc(id);
+    if (!source) { problems.push(`${id}: 원문 classes/${id.split(".").pop()}.md 없음`); continue; }
+    const top = source.tree[0];
+    content.push({ id, category: "class", tags: ["class", "srd-5.2.1"], presentation: presentation(top.head, source.fm.original_name, { description: plain(nodeText(top)) }), mechanics: [{ kind: "class-definition", config: def }] });
+  }
+  for (const [id, decision] of Object.entries(decided.features)) content.push(feature(id, decision, classDoc(decision.classId)));
+  for (const [id, decision] of Object.entries(decided.subclasses)) {
+    const source = classDoc(decision.classId);
+    const node = source?.tree.find((item) => item.head.replace(/^서브클래스:\s*/, "") === (decision.sourceHeading ?? decision.heading));
+    if (!node) textMissing.push(`${id}: 서브클래스 "${decision.heading}"`);
+    const byLevel = new Map();
+    for (const item of decision.features) byLevel.set(item.level, [...(byLevel.get(item.level) ?? []), item.id]);
+    content.push({
+      id, category: "subclass", tags: ["subclass", "srd-5.2.1"],
+      presentation: presentation(decision.heading, decision.nameEn, { ...(decision.summary ? { summary: decision.summary } : {}), ...(node ? { description: plain(node.text) } : {}) }),
+      relationships: [{ kind: "parent", target: decision.classId }],
+      progressionContributions: [...byLevel].sort((a, b) => a[0] - b[0]).map(([threshold, grants]) => ({ track: decision.classId, threshold, grants })),
+      mechanics: [{ kind: "subclass-definition", config: decision.definition }, ...decision.mechanics],
+    });
+  }
+  for (const [list, options] of Object.entries(decided.optionLists)) {
+    const source = doc(`classes/${list.split(".")[0]}.md`);
+    content.push({ id: `dnd.srd521.option-list.${list}`, category: "option", tags: ["srd-5.2.1"], presentation: presentation(list, list), mechanics: [{ kind: "option-list-definition", config: { list, options } }] });
+    for (const item of options) content.push(feature(item.id, decided.options[item.id], source));
+  }
+  return { moduleId: "dnd.srd-5.2.1.classes", content: content.sort((a, b) => a.id.localeCompare(b.id)) };
+}
+
+/** Monsters: the stat block from `monsters.json`, the prose from `monsters/statblocks/<slug>.md`. */
+function monsters() {
+  const decided = decisions("monsters.json");
+  const content = [];
+  for (const [id, decision] of Object.entries(decided)) {
+    const source = doc(`monsters/statblocks/${id.split(".").pop()}.md`);
+    if (!source) problems.push(`${id}: 원문 monsters/statblocks/${id.split(".").pop()}.md 없음`);
+    content.push({ id, category: "combatant", tags: ["monster", "srd-5.2.1"], presentation: presentation(decision.name, decision.nameEn, source ? { description: docText(source) } : {}), mechanics: [{ kind: "monster-definition", config: { statBlock: decision.statBlock } }] });
+  }
+  return { moduleId: "dnd.srd-5.2.1.monsters", content: content.sort((a, b) => a.id.localeCompare(b.id)) };
+}
+
+/** Areas whose decisions are module entries already (contracts, equipment): re-emitted as they are, in id order. */
+function verbatim(file, moduleId, taken = new Set()) {
+  return { moduleId, content: Object.values(decisions(file)).filter((entry) => !taken.has(entry.id)).sort((a, b) => a.id.localeCompare(b.id)) };
+}
+
+const classModule = classes();
+// An entry the classes module writes (a feature whose contract sat on the same id) is not written twice.
+const built = [spells(), origins(), classModule, monsters(), verbatim("rules.json", "dnd.srd-5.2.1.rules", new Set(classModule.content.map((entry) => entry.id))), verbatim("equipment.json", "dnd.srd-5.2.1.equipment")];
+if (textMissing.length) console.warn(`원문에서 글을 찾지 못한 항목 ${textMissing.length}개 (옛 글을 씀):\n${textMissing.join("\n")}`);
 if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 mkdirSync(outDir, { recursive: true });
 for (const module of built) {

@@ -1,0 +1,7514 @@
+{
+ "classes": {
+  "dnd.srd521.class.druid": {
+   "hitDie": 8,
+   "primaryAbilities": [
+    "wis"
+   ],
+   "savingThrowProficiencies": [
+    "int",
+    "wis"
+   ],
+   "skillChoiceCount": 2,
+   "spellcasting": "full",
+   "armorTraining": [
+    "light",
+    "shield"
+   ],
+   "weaponTraining": [
+    "simple"
+   ],
+   "toolProficiencies": [
+    "herbalism-kit"
+   ],
+   "multiclass": {
+    "armor": [
+     "light",
+     "shield"
+    ],
+    "weapons": [],
+    "prerequisites": {
+     "all": [
+      "wis"
+     ]
+    }
+   },
+   "spellcastingAbility": "wis",
+   "resources": [
+    {
+     "id": "resource.druid.wild-shape",
+     "label": "야생 변신",
+     "column": "야생 변신",
+     "recovery": "short-rest:1",
+     "minLevel": 2,
+     "spell": "Find Familiar"
+    },
+    {
+     "id": "resource.druid.wild-resurgence",
+     "label": "야생의 부활 (슬롯 회복)",
+     "recovery": "long-rest",
+     "minLevel": 5,
+     "max": {
+      "value": 1
+     }
+    }
+   ],
+   "spellcastingFeature": "druid.spellcasting",
+   "casterKind": "full",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "arcana",
+     "animal-handling",
+     "insight",
+     "medicine",
+     "nature",
+     "perception",
+     "religion",
+     "survival"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.primal-order",
+     "kind": "fixed-options",
+     "count": 1,
+     "label": "원초적 역할",
+     "description": "마법사 또는 수호자를 선택합니다.",
+     "options": [
+      {
+       "id": "magician",
+       "name": "마법사",
+       "nameEn": "Magician",
+       "summary": "드루이드 소마법 하나를 추가로 알고 비전/자연 판정에 지혜 보너스를 얻습니다."
+      },
+      {
+       "id": "warden",
+       "name": "수호자",
+       "nameEn": "Warden",
+       "summary": "군용 무기 숙련과 평장 방어구 훈련을 얻습니다."
+      }
+     ]
+    }
+   ],
+   "spells": {
+    "cantrips": 2,
+    "prepared": 4,
+    "alwaysPrepared": [
+     "Speak with Animals"
+    ],
+    "bonusCantripChoice": {
+     "choiceId": "class.primal-order",
+     "value": "magician"
+    }
+   },
+   "multiclassGrants": [
+    "d8 히트 다이스",
+    "경장 방어구와 방패 훈련",
+    "드루이드 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "야생 변신": null,
+      "소마법": "2",
+      "준비 주문": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.druid.spellcasting",
+      "dnd.srd521.feature.druid.druidic",
+      "dnd.srd521.feature.druid.primal-order"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "야생 변신": "2",
+      "소마법": "2",
+      "준비 주문": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.druid.wild-shape",
+      "dnd.srd521.feature.druid.wild-companion"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "야생 변신": "2",
+      "소마법": "2",
+      "준비 주문": "6"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "야생 변신": "2",
+      "소마법": "3",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "야생 변신": "2",
+      "소마법": "3",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.druid.wild-resurgence"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "3",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "3",
+      "준비 주문": "11"
+     },
+     "features": [
+      "dnd.srd521.feature.druid.elemental-fury"
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "3",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "3",
+      "준비 주문": "14"
+     },
+     "features": []
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "4",
+      "준비 주문": "15"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "4",
+      "준비 주문": "16"
+     },
+     "features": []
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "4",
+      "준비 주문": "16"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "4",
+      "준비 주문": "17"
+     },
+     "features": []
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "4",
+      "준비 주문": "17"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "4",
+      "준비 주문": "18"
+     },
+     "features": [
+      "dnd.srd521.feature.druid.improved-elemental-fury"
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "야생 변신": "3",
+      "소마법": "4",
+      "준비 주문": "18"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "야생 변신": "4",
+      "소마법": "4",
+      "준비 주문": "19"
+     },
+     "features": []
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "야생 변신": "4",
+      "소마법": "4",
+      "준비 주문": "20"
+     },
+     "features": [
+      "dnd.srd521.feature.druid.beast-spells"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "야생 변신": "4",
+      "소마법": "4",
+      "준비 주문": "21"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "야생 변신": "4",
+      "소마법": "4",
+      "준비 주문": "22"
+     },
+     "features": [
+      "dnd.srd521.feature.druid.archdruid"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.ranger": {
+   "hitDie": 10,
+   "primaryAbilities": [
+    "dex",
+    "wis"
+   ],
+   "savingThrowProficiencies": [
+    "str",
+    "dex"
+   ],
+   "skillChoiceCount": 3,
+   "spellcasting": "half",
+   "armorTraining": [
+    "light",
+    "medium",
+    "shield"
+   ],
+   "weaponTraining": [
+    "simple",
+    "martial"
+   ],
+   "multiclass": {
+    "armor": [
+     "light",
+     "medium",
+     "shield"
+    ],
+    "weapons": [
+     "simple",
+     "martial"
+    ],
+    "skills": 1,
+    "prerequisites": {
+     "all": [
+      "dex",
+      "wis"
+     ]
+    }
+   },
+   "spellcastingAbility": "wis",
+   "resources": [
+    {
+     "id": "resource.ranger.favored-enemy",
+     "label": "주적 (사냥꾼의 표식 무료 시전)",
+     "column": "주적",
+     "recovery": "long-rest",
+     "minLevel": 1,
+     "spell": "Hunter's Mark"
+    },
+    {
+     "id": "resource.ranger.tireless",
+     "label": "지치지 않음",
+     "recovery": "long-rest",
+     "minLevel": 10,
+     "max": {
+      "op": "max",
+      "args": [
+       {
+        "value": 1
+       },
+       {
+        "ref": "ability.wis.modifier"
+       }
+      ]
+     }
+    },
+    {
+     "id": "resource.ranger.natures-veil",
+     "label": "자연의 장막",
+     "recovery": "long-rest",
+     "minLevel": 14,
+     "max": {
+      "op": "max",
+      "args": [
+       {
+        "value": 1
+       },
+       {
+        "ref": "ability.wis.modifier"
+       }
+      ]
+     }
+    }
+   ],
+   "spellcastingFeature": "ranger.spellcasting",
+   "casterKind": "half",
+   "skillOptions": {
+    "count": 3,
+    "options": [
+     "animal-handling",
+     "athletics",
+     "insight",
+     "investigation",
+     "nature",
+     "perception",
+     "stealth",
+     "survival"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.weapon-mastery",
+     "kind": "weapon-mastery",
+     "count": 2,
+     "weaponFilter": "all-simple-or-martial",
+     "label": "무기 통달",
+     "description": "숙련된 무기 두 종류의 통달 속성을 선택합니다."
+    }
+   ],
+   "spells": {
+    "prepared": 2,
+    "alwaysPrepared": [
+     "Hunter's Mark"
+    ]
+   },
+   "multiclassGrants": [
+    "d10 히트 다이스",
+    "군용 무기 숙련",
+    "레인저 기술 목록에서 기술 숙련 1개",
+    "경장·평장 방어구와 방패 훈련",
+    "레인저 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "2",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "2",
+      "준비 주문": "2"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.spellcasting",
+      "dnd.srd521.feature.ranger.favored-enemy",
+      "dnd.srd521.feature.ranger.weapon-mastery"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "2",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "2",
+      "준비 주문": "3"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.deft-explorer",
+      "dnd.srd521.feature.ranger.fighting-style"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "3",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "2",
+      "준비 주문": "4"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "3",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "2",
+      "준비 주문": "5"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "2",
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "3",
+      "준비 주문": "6"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.extra-attack"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "2",
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "3",
+      "준비 주문": "6"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.roving"
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "3",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": null,
+      "4": null,
+      "5": null,
+      "주적": "3",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "2",
+      "4": null,
+      "5": null,
+      "주적": "4",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.expertise"
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "2",
+      "4": null,
+      "5": null,
+      "주적": "4",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.tireless"
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": null,
+      "5": null,
+      "주적": "4",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": null,
+      "5": null,
+      "주적": "4",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "1",
+      "5": null,
+      "주적": "5",
+      "준비 주문": "11"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.relentless-hunter"
+     ]
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "1",
+      "5": null,
+      "주적": "5",
+      "준비 주문": "11"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.natures-veil"
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "2",
+      "5": null,
+      "주적": "5",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "2",
+      "5": null,
+      "주적": "5",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "1",
+      "주적": "6",
+      "준비 주문": "14"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.precise-hunter"
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "1",
+      "주적": "6",
+      "준비 주문": "14"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.feral-senses"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "주적": "6",
+      "준비 주문": "15"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "주적": "6",
+      "준비 주문": "15"
+     },
+     "features": [
+      "dnd.srd521.feature.ranger.foe-slayer"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.rogue": {
+   "hitDie": 8,
+   "primaryAbilities": [
+    "dex"
+   ],
+   "savingThrowProficiencies": [
+    "dex",
+    "int"
+   ],
+   "skillChoiceCount": 4,
+   "armorTraining": [
+    "light"
+   ],
+   "weaponTraining": [
+    "simple",
+    "martial-finesse-or-light"
+   ],
+   "toolProficiencies": [
+    "thieves-tools"
+   ],
+   "multiclass": {
+    "armor": [
+     "light"
+    ],
+    "weapons": [],
+    "skills": 1,
+    "tools": [
+     "thieves-tools"
+    ],
+    "prerequisites": {
+     "all": [
+      "dex"
+     ]
+    }
+   },
+   "resources": [
+    {
+     "id": "resource.rogue.stroke-of-luck",
+     "label": "행운의 일격",
+     "recovery": "short-rest",
+     "minLevel": 20,
+     "max": {
+      "value": 1
+     }
+    }
+   ],
+   "casterKind": "none",
+   "skillOptions": {
+    "count": 4,
+    "options": [
+     "acrobatics",
+     "athletics",
+     "deception",
+     "insight",
+     "intimidation",
+     "investigation",
+     "perception",
+     "persuasion",
+     "sleight-of-hand",
+     "stealth"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.expertise",
+     "kind": "selected-skill-expertise",
+     "count": 2,
+     "label": "전문화",
+     "description": "자신이 숙련된 기술 두 개에 전문화를 얻습니다."
+    },
+    {
+     "id": "class.extra-language",
+     "kind": "language",
+     "count": 1,
+     "languagePool": "general",
+     "label": "추가 언어",
+     "description": "도둑 은어 외에 원하는 언어 하나를 선택합니다."
+    },
+    {
+     "id": "class.weapon-mastery",
+     "kind": "weapon-mastery",
+     "count": 2,
+     "weaponFilter": "rogue-proficient",
+     "label": "무기 통달",
+     "description": "숙련된 무기 두 종류의 통달 속성을 선택합니다."
+    }
+   ],
+   "multiclassGrants": [
+    "d8 히트 다이스",
+    "로그 기술 목록에서 기술 숙련 1개",
+    "도둑 도구 숙련",
+    "경장 방어구 훈련",
+    "로그 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "암습": "1d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.expertise",
+      "dnd.srd521.feature.rogue.sneak-attack",
+      "dnd.srd521.feature.rogue.thieves-cant",
+      "dnd.srd521.feature.rogue.weapon-mastery"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "암습": "1d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.cunning-action"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "암습": "2d6"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      },
+      "dnd.srd521.feature.rogue.steady-aim"
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "암습": "2d6"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "암습": "3d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.cunning-strike",
+      "dnd.srd521.feature.rogue.uncanny-dodge"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "암습": "3d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.expertise-2"
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "암습": "4d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.evasion",
+      "dnd.srd521.feature.rogue.reliable-talent"
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "암습": "4d6"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "암습": "5d6"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "암습": "5d6"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "암습": "6d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.improved-cunning-strike"
+     ]
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "암습": "6d6"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "암습": "7d6"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "암습": "7d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.devious-strikes"
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "암습": "8d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.slippery-mind"
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "암습": "8d6"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "암습": "9d6"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "암습": "9d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.elusive"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "암습": "10d6"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "암습": "10d6"
+     },
+     "features": [
+      "dnd.srd521.feature.rogue.stroke-of-luck"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.monk": {
+   "hitDie": 8,
+   "primaryAbilities": [
+    "dex",
+    "wis"
+   ],
+   "savingThrowProficiencies": [
+    "str",
+    "dex"
+   ],
+   "skillChoiceCount": 2,
+   "armorTraining": [],
+   "weaponTraining": [
+    "simple",
+    "martial-light"
+   ],
+   "multiclass": {
+    "armor": [],
+    "weapons": [
+     "simple",
+     "martial-light"
+    ],
+    "prerequisites": {
+     "all": [
+      "dex",
+      "wis"
+     ]
+    }
+   },
+   "resources": [
+    {
+     "id": "resource.monk.focus",
+     "label": "기 점수",
+     "column": "기 점수",
+     "recovery": "short-rest",
+     "minLevel": 2
+    },
+    {
+     "id": "resource.monk.uncanny-metabolism",
+     "label": "경이로운 신진대사",
+     "recovery": "long-rest",
+     "minLevel": 2,
+     "max": {
+      "value": 1
+     }
+    }
+   ],
+   "casterKind": "none",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "acrobatics",
+     "athletics",
+     "history",
+     "insight",
+     "religion",
+     "stealth"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.monk-tool",
+     "kind": "artisan-or-instrument",
+     "count": 1,
+     "label": "도구 숙련",
+     "description": "장인 도구 하나 또는 악기 하나를 선택합니다."
+    }
+   ],
+   "multiclassGrants": [
+    "d8 히트 다이스",
+    "몽크 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "무예 주사위": "d6",
+      "기 점수": null,
+      "비무장 이동": null
+     },
+     "features": [
+      "dnd.srd521.feature.monk.martial-arts",
+      "dnd.srd521.feature.monk.unarmored-defense"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "무예 주사위": "d6",
+      "기 점수": "2",
+      "비무장 이동": "+10피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.focus",
+      "dnd.srd521.feature.monk.unarmored-movement",
+      "dnd.srd521.feature.monk.uncanny-metabolism"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "무예 주사위": "d6",
+      "기 점수": "3",
+      "비무장 이동": "+10피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.deflect-attacks",
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "무예 주사위": "d6",
+      "기 점수": "4",
+      "비무장 이동": "+10피트"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      },
+      "dnd.srd521.feature.monk.slow-fall"
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "무예 주사위": "d8",
+      "기 점수": "5",
+      "비무장 이동": "+10피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.extra-attack",
+      "dnd.srd521.feature.monk.stunning-strike"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "무예 주사위": "d8",
+      "기 점수": "6",
+      "비무장 이동": "+15피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.empowered-strikes",
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "무예 주사위": "d8",
+      "기 점수": "7",
+      "비무장 이동": "+15피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.evasion"
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "무예 주사위": "d8",
+      "기 점수": "8",
+      "비무장 이동": "+15피트"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "무예 주사위": "d8",
+      "기 점수": "9",
+      "비무장 이동": "+15피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.acrobatic-movement"
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "무예 주사위": "d8",
+      "기 점수": "10",
+      "비무장 이동": "+20피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.heightened-focus",
+      "dnd.srd521.feature.monk.self-restoration"
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "무예 주사위": "d10",
+      "기 점수": "11",
+      "비무장 이동": "+20피트"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "무예 주사위": "d10",
+      "기 점수": "12",
+      "비무장 이동": "+20피트"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "무예 주사위": "d10",
+      "기 점수": "13",
+      "비무장 이동": "+20피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.deflect-energy"
+     ]
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "무예 주사위": "d10",
+      "기 점수": "14",
+      "비무장 이동": "+25피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.disciplined-survivor"
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "무예 주사위": "d10",
+      "기 점수": "15",
+      "비무장 이동": "+25피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.perfect-focus"
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "무예 주사위": "d10",
+      "기 점수": "16",
+      "비무장 이동": "+25피트"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "무예 주사위": "d12",
+      "기 점수": "17",
+      "비무장 이동": "+25피트"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "무예 주사위": "d12",
+      "기 점수": "18",
+      "비무장 이동": "+30피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.superior-defense"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "무예 주사위": "d12",
+      "기 점수": "19",
+      "비무장 이동": "+30피트"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "무예 주사위": "d12",
+      "기 점수": "20",
+      "비무장 이동": "+30피트"
+     },
+     "features": [
+      "dnd.srd521.feature.monk.body-and-mind"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.bard": {
+   "hitDie": 8,
+   "primaryAbilities": [
+    "cha"
+   ],
+   "savingThrowProficiencies": [
+    "dex",
+    "cha"
+   ],
+   "skillChoiceCount": 3,
+   "spellcasting": "full",
+   "armorTraining": [
+    "light"
+   ],
+   "weaponTraining": [
+    "simple"
+   ],
+   "multiclass": {
+    "armor": [
+     "light"
+    ],
+    "weapons": [],
+    "skills": 1,
+    "instruments": 1,
+    "prerequisites": {
+     "all": [
+      "cha"
+     ]
+    }
+   },
+   "spellcastingAbility": "cha",
+   "resources": [
+    {
+     "id": "resource.bard.bardic-inspiration",
+     "label": "바드의 영감",
+     "recovery": "long-rest",
+     "recoveryFrom": {
+      "level": 5,
+      "recovery": "short-rest"
+     },
+     "minLevel": 1,
+     "max": {
+      "op": "max",
+      "args": [
+       {
+        "value": 1
+       },
+       {
+        "ref": "ability.cha.modifier"
+       }
+      ]
+     }
+    }
+   ],
+   "spellcastingFeature": "bard.spellcasting",
+   "casterKind": "full",
+   "skillOptions": {
+    "count": 3,
+    "options": "any"
+   },
+   "level1Choices": [
+    {
+     "id": "class.instrument-proficiencies",
+     "kind": "instrument-proficiency",
+     "count": 3,
+     "label": "악기 숙련",
+     "description": "악기 세 종류를 선택해 숙련을 얻습니다."
+    }
+   ],
+   "spells": {
+    "cantrips": 2,
+    "prepared": 4
+   },
+   "multiclassGrants": [
+    "d8 히트 다이스",
+    "원하는 기술 숙련 1개",
+    "원하는 악기 숙련 1개",
+    "경장 방어구 훈련",
+    "바드 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "영감 주사위": "d6",
+      "소마법": "2",
+      "준비 주문": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.bardic-inspiration",
+      "dnd.srd521.feature.bard.spellcasting"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "영감 주사위": "d6",
+      "소마법": "2",
+      "준비 주문": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.expertise",
+      "dnd.srd521.feature.bard.jack-of-all-trades"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "영감 주사위": "d6",
+      "소마법": "2",
+      "준비 주문": "6"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "영감 주사위": "d6",
+      "소마법": "3",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "영감 주사위": "d8",
+      "소마법": "3",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.font-of-inspiration"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "영감 주사위": "d8",
+      "소마법": "3",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "영감 주사위": "d8",
+      "소마법": "3",
+      "준비 주문": "11"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.countercharm"
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "영감 주사위": "d8",
+      "소마법": "3",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "영감 주사위": "d8",
+      "소마법": "3",
+      "준비 주문": "14"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.expertise"
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "영감 주사위": "d10",
+      "소마법": "4",
+      "준비 주문": "15"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.magical-secrets"
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "영감 주사위": "d10",
+      "소마법": "4",
+      "준비 주문": "16"
+     },
+     "features": []
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "영감 주사위": "d10",
+      "소마법": "4",
+      "준비 주문": "16"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "영감 주사위": "d10",
+      "소마법": "4",
+      "준비 주문": "17"
+     },
+     "features": []
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "영감 주사위": "d10",
+      "소마법": "4",
+      "준비 주문": "17"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "영감 주사위": "d12",
+      "소마법": "4",
+      "준비 주문": "18"
+     },
+     "features": []
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "영감 주사위": "d12",
+      "소마법": "4",
+      "준비 주문": "18"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "영감 주사위": "d12",
+      "소마법": "4",
+      "준비 주문": "19"
+     },
+     "features": []
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "영감 주사위": "d12",
+      "소마법": "4",
+      "준비 주문": "20"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.superior-inspiration"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "영감 주사위": "d12",
+      "소마법": "4",
+      "준비 주문": "21"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "영감 주사위": "d12",
+      "소마법": "4",
+      "준비 주문": "22"
+     },
+     "features": [
+      "dnd.srd521.feature.bard.words-of-creation"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.barbarian": {
+   "hitDie": 12,
+   "primaryAbilities": [
+    "str"
+   ],
+   "savingThrowProficiencies": [
+    "str",
+    "con"
+   ],
+   "skillChoiceCount": 2,
+   "armorTraining": [
+    "light",
+    "medium",
+    "shield"
+   ],
+   "weaponTraining": [
+    "simple",
+    "martial"
+   ],
+   "multiclass": {
+    "armor": [
+     "shield"
+    ],
+    "weapons": [
+     "simple",
+     "martial"
+    ],
+    "prerequisites": {
+     "all": [
+      "str"
+     ]
+    }
+   },
+   "resources": [
+    {
+     "id": "resource.barbarian.rage",
+     "label": "격노",
+     "column": "격노",
+     "recovery": "short-rest:1",
+     "minLevel": 1
+    },
+    {
+     "id": "resource.barbarian.relentless-rage",
+     "label": "불굴의 격노 DC",
+     "recovery": "short-rest",
+     "minLevel": 11,
+     "max": {
+      "value": 10
+     }
+    }
+   ],
+   "casterKind": "none",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "animal-handling",
+     "athletics",
+     "intimidation",
+     "nature",
+     "perception",
+     "survival"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.weapon-mastery",
+     "kind": "weapon-mastery",
+     "count": 2,
+     "weaponFilter": "simple-or-martial-melee",
+     "label": "무기 통달",
+     "description": "단순 또는 군용 근접 무기 두 종류의 통달 속성을 선택합니다."
+    }
+   ],
+   "multiclassGrants": [
+    "d12 히트 다이스",
+    "군용 무기 숙련",
+    "방패 훈련",
+    "바바리안 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "격노": "2",
+      "격노 피해": "+2",
+      "무기 통달": "2"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.rage",
+      "dnd.srd521.feature.barbarian.unarmored-defense",
+      "dnd.srd521.feature.barbarian.weapon-mastery"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "격노": "2",
+      "격노 피해": "+2",
+      "무기 통달": "2"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.danger-sense",
+      "dnd.srd521.feature.barbarian.reckless-attack"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "격노": "3",
+      "격노 피해": "+2",
+      "무기 통달": "2"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      },
+      "dnd.srd521.feature.barbarian.primal-knowledge"
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "격노": "3",
+      "격노 피해": "+2",
+      "무기 통달": "3"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "격노": "3",
+      "격노 피해": "+2",
+      "무기 통달": "3"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.extra-attack",
+      "dnd.srd521.feature.barbarian.fast-movement"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "격노": "4",
+      "격노 피해": "+2",
+      "무기 통달": "3"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "격노": "4",
+      "격노 피해": "+2",
+      "무기 통달": "3"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.feral-instinct",
+      "dnd.srd521.feature.barbarian.instinctive-pounce"
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "격노": "4",
+      "격노 피해": "+2",
+      "무기 통달": "3"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "격노": "4",
+      "격노 피해": "+3",
+      "무기 통달": "3"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.brutal-strike"
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "격노": "4",
+      "격노 피해": "+3",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "격노": "4",
+      "격노 피해": "+3",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.relentless-rage"
+     ]
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "격노": "5",
+      "격노 피해": "+3",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "격노": "5",
+      "격노 피해": "+3",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.improved-brutal-strike"
+     ]
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "격노": "5",
+      "격노 피해": "+3",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "격노": "5",
+      "격노 피해": "+3",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.persistent-rage"
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "격노": "5",
+      "격노 피해": "+4",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "격노": "6",
+      "격노 피해": "+4",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.improved-brutal-strike-2"
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "격노": "6",
+      "격노 피해": "+4",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.indomitable-might"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "격노": "6",
+      "격노 피해": "+4",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "격노": "6",
+      "격노 피해": "+4",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.barbarian.primal-champion"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.sorcerer": {
+   "hitDie": 6,
+   "primaryAbilities": [
+    "cha"
+   ],
+   "savingThrowProficiencies": [
+    "con",
+    "cha"
+   ],
+   "skillChoiceCount": 2,
+   "spellcasting": "full",
+   "armorTraining": [],
+   "weaponTraining": [
+    "simple"
+   ],
+   "multiclass": {
+    "armor": [],
+    "weapons": [],
+    "prerequisites": {
+     "all": [
+      "cha"
+     ]
+    }
+   },
+   "spellcastingAbility": "cha",
+   "optionPools": [
+    {
+     "id": "metamagic",
+     "list": "sorcerer.metamagic",
+     "label": "메타매직",
+     "source": "metamagic",
+     "known": {
+      "2": 2,
+      "10": 3,
+      "17": 4
+     }
+    }
+   ],
+   "resources": [
+    {
+     "id": "resource.sorcerer.sorcery-points",
+     "label": "마법 점수",
+     "column": "마법 점수",
+     "recovery": "long-rest",
+     "minLevel": 2
+    },
+    {
+     "id": "resource.sorcerer.sorcerous-restoration",
+     "label": "마력 회복",
+     "recovery": "long-rest",
+     "minLevel": 5,
+     "max": {
+      "value": 1
+     }
+    },
+    {
+     "id": "resource.sorcerer.innate-sorcery",
+     "label": "선천 마법",
+     "recovery": "long-rest",
+     "minLevel": 1,
+     "max": {
+      "value": 2
+     }
+    }
+   ],
+   "spellcastingFeature": "sorcerer.spellcasting",
+   "casterKind": "full",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "arcana",
+     "deception",
+     "insight",
+     "intimidation",
+     "persuasion",
+     "religion"
+    ]
+   },
+   "level1Choices": [],
+   "spells": {
+    "cantrips": 4,
+    "prepared": 2
+   },
+   "multiclassGrants": [
+    "d6 히트 다이스",
+    "소서러 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "2",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": null,
+      "소마법": "4",
+      "준비 주문": "2"
+     },
+     "features": [
+      "dnd.srd521.feature.sorcerer.spellcasting",
+      "dnd.srd521.feature.sorcerer.innate-sorcery"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "3",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "2",
+      "소마법": "4",
+      "준비 주문": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.sorcerer.font-of-magic",
+      "dnd.srd521.feature.sorcerer.metamagic"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "4",
+      "2": "2",
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "3",
+      "소마법": "4",
+      "준비 주문": "6"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "4",
+      "소마법": "5",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "2",
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "5",
+      "소마법": "5",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.sorcerer.sorcerous-restoration"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "6",
+      "소마법": "5",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "1",
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "7",
+      "소마법": "5",
+      "준비 주문": "11"
+     },
+     "features": [
+      "dnd.srd521.feature.sorcerer.sorcery-incarnate"
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "2",
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "8",
+      "소마법": "5",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "1",
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "9",
+      "소마법": "5",
+      "준비 주문": "14"
+     },
+     "features": []
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "10",
+      "소마법": "6",
+      "준비 주문": "15"
+     },
+     "features": [
+      "dnd.srd521.feature.sorcerer.metamagic"
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "11",
+      "소마법": "6",
+      "준비 주문": "16"
+     },
+     "features": []
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": null,
+      "8": null,
+      "9": null,
+      "마법 점수": "12",
+      "소마법": "6",
+      "준비 주문": "16"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": null,
+      "9": null,
+      "마법 점수": "13",
+      "소마법": "6",
+      "준비 주문": "17"
+     },
+     "features": []
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": null,
+      "9": null,
+      "마법 점수": "14",
+      "소마법": "6",
+      "준비 주문": "17"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": null,
+      "마법 점수": "15",
+      "소마법": "6",
+      "준비 주문": "18"
+     },
+     "features": []
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": null,
+      "마법 점수": "16",
+      "소마법": "6",
+      "준비 주문": "18"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": "1",
+      "마법 점수": "17",
+      "소마법": "6",
+      "준비 주문": "19"
+     },
+     "features": [
+      "dnd.srd521.feature.sorcerer.metamagic"
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "3",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": "1",
+      "마법 점수": "18",
+      "소마법": "6",
+      "준비 주문": "20"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "3",
+      "6": "2",
+      "7": "1",
+      "8": "1",
+      "9": "1",
+      "마법 점수": "19",
+      "소마법": "6",
+      "준비 주문": "21"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "3",
+      "6": "2",
+      "7": "2",
+      "8": "1",
+      "9": "1",
+      "마법 점수": "20",
+      "소마법": "6",
+      "준비 주문": "22"
+     },
+     "features": [
+      "dnd.srd521.feature.sorcerer.arcane-apotheosis"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.warlock": {
+   "hitDie": 8,
+   "primaryAbilities": [
+    "cha"
+   ],
+   "savingThrowProficiencies": [
+    "wis",
+    "cha"
+   ],
+   "skillChoiceCount": 2,
+   "spellcasting": "pact",
+   "armorTraining": [
+    "light"
+   ],
+   "weaponTraining": [
+    "simple"
+   ],
+   "multiclass": {
+    "armor": [
+     "light"
+    ],
+    "weapons": [
+     "simple"
+    ],
+    "prerequisites": {
+     "all": [
+      "cha"
+     ]
+    }
+   },
+   "spellcastingAbility": "cha",
+   "resources": [
+    {
+     "id": "resource.warlock.magical-cunning",
+     "label": "마법적 책략",
+     "recovery": "long-rest",
+     "minLevel": 2,
+     "max": {
+      "value": 1
+     }
+    },
+    {
+     "id": "resource.warlock.contact-patron",
+     "label": "후원자와 접촉 (이계 접촉 무료 시전)",
+     "recovery": "long-rest",
+     "minLevel": 9,
+     "spell": "Contact Other Plane",
+     "max": {
+      "value": 1
+     }
+    },
+    {
+     "id": "resource.warlock.fiend.dark-ones-own-luck",
+     "label": "어둠의 존재의 행운",
+     "subclassId": "dnd.srd521.subclass.warlock.fiend-patron",
+     "recovery": "long-rest",
+     "minLevel": 6,
+     "max": {
+      "op": "max",
+      "args": [
+       {
+        "value": 1
+       },
+       {
+        "ref": "ability.cha.modifier"
+       }
+      ]
+     }
+    }
+   ],
+   "spellcastingFeature": "warlock.pact-magic",
+   "optionPools": [
+    {
+     "id": "invocations",
+     "list": "warlock.invocations",
+     "label": "섬뜩한 기원술",
+     "source": "invocation",
+     "column": "기원술",
+     "featureName": "option"
+    }
+   ],
+   "casterKind": "pact",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "arcana",
+     "deception",
+     "history",
+     "intimidation",
+     "investigation",
+     "nature",
+     "religion"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.eldritch-invocation",
+     "kind": "fixed-options",
+     "count": 1,
+     "label": "섬뜩한 기원술",
+     "description": "1레벨에 선행 조건을 만족하는 기원술 하나를 선택합니다.",
+     "options": [
+      {
+       "id": "armor-of-shadows",
+       "name": "그림자 갑옷",
+       "nameEn": "Armor of Shadows",
+       "summary": "자신에게 주문 슬롯 없이 마법 갑옷을 시전할 수 있습니다."
+      },
+      {
+       "id": "eldritch-mind",
+       "name": "섬뜩한 정신",
+       "nameEn": "Eldritch Mind",
+       "summary": "집중 유지 건강 내성 굴림에 이점을 얻습니다."
+      },
+      {
+       "id": "pact-of-the-blade",
+       "name": "칼날의 계약",
+       "nameEn": "Pact of the Blade",
+       "summary": "계약 무기를 소환하거나 마법 무기와 계약을 맺습니다."
+      },
+      {
+       "id": "pact-of-the-chain",
+       "name": "사슬의 계약",
+       "nameEn": "Pact of the Chain",
+       "summary": "소환수 찾기를 항상 준비하고 특별한 소환수 형태를 사용할 수 있습니다."
+      },
+      {
+       "id": "pact-of-the-tome",
+       "name": "고서의 계약",
+       "nameEn": "Pact of the Tome",
+       "summary": "그림자의 서를 소환해 소마법과 의식 주문을 선택할 수 있습니다."
+      }
+     ]
+    }
+   ],
+   "spells": {
+    "cantrips": 2,
+    "prepared": 2
+   },
+   "multiclassGrants": [
+    "d8 히트 다이스",
+    "경장 방어구 훈련",
+    "워락 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "기원술": "1",
+      "소마법": "2",
+      "준비 주문": "2",
+      "계약 슬롯": "1",
+      "슬롯 레벨": "1"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.eldritch-invocations",
+      "dnd.srd521.feature.warlock.pact-magic"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "기원술": "3",
+      "소마법": "2",
+      "준비 주문": "3",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "1"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.magical-cunning"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "기원술": "3",
+      "소마법": "2",
+      "준비 주문": "4",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "2"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "워락 서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "기원술": "3",
+      "소마법": "3",
+      "준비 주문": "5",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "2"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "기원술": "5",
+      "소마법": "3",
+      "준비 주문": "6",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "3"
+     },
+     "features": []
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "기원술": "5",
+      "소마법": "3",
+      "준비 주문": "7",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "3"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "기원술": "6",
+      "소마법": "3",
+      "준비 주문": "8",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "4"
+     },
+     "features": []
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "기원술": "6",
+      "소마법": "3",
+      "준비 주문": "9",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "4"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "기원술": "7",
+      "소마법": "3",
+      "준비 주문": "10",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.contact-patron"
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "기원술": "7",
+      "소마법": "4",
+      "준비 주문": "10",
+      "계약 슬롯": "2",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "기원술": "7",
+      "소마법": "4",
+      "준비 주문": "11",
+      "계약 슬롯": "3",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.mystic-arcanum-6"
+     ]
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "기원술": "8",
+      "소마법": "4",
+      "준비 주문": "11",
+      "계약 슬롯": "3",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "기원술": "8",
+      "소마법": "4",
+      "준비 주문": "12",
+      "계약 슬롯": "3",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.mystic-arcanum-7"
+     ]
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "기원술": "8",
+      "소마법": "4",
+      "준비 주문": "12",
+      "계약 슬롯": "3",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "기원술": "9",
+      "소마법": "4",
+      "준비 주문": "13",
+      "계약 슬롯": "3",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.mystic-arcanum-8"
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "기원술": "9",
+      "소마법": "4",
+      "준비 주문": "13",
+      "계약 슬롯": "3",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "기원술": "9",
+      "소마법": "4",
+      "준비 주문": "14",
+      "계약 슬롯": "4",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.mystic-arcanum-9"
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "기원술": "10",
+      "소마법": "4",
+      "준비 주문": "14",
+      "계약 슬롯": "4",
+      "슬롯 레벨": "5"
+     },
+     "features": []
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "기원술": "10",
+      "소마법": "4",
+      "준비 주문": "15",
+      "계약 슬롯": "4",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "기원술": "10",
+      "소마법": "4",
+      "준비 주문": "15",
+      "계약 슬롯": "4",
+      "슬롯 레벨": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.warlock.eldritch-master"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.wizard": {
+   "hitDie": 6,
+   "primaryAbilities": [
+    "int"
+   ],
+   "savingThrowProficiencies": [
+    "int",
+    "wis"
+   ],
+   "skillChoiceCount": 2,
+   "spellcasting": "full",
+   "armorTraining": [],
+   "weaponTraining": [
+    "simple"
+   ],
+   "multiclass": {
+    "armor": [],
+    "weapons": [],
+    "prerequisites": {
+     "all": [
+      "int"
+     ]
+    }
+   },
+   "spellcastingAbility": "int",
+   "resources": [
+    {
+     "id": "resource.wizard.arcane-recovery",
+     "label": "비전 회복",
+     "recovery": "long-rest",
+     "minLevel": 1,
+     "max": {
+      "value": 1
+     }
+    }
+   ],
+   "spellcastingFeature": "wizard.spellcasting",
+   "casterKind": "full",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "arcana",
+     "history",
+     "insight",
+     "investigation",
+     "medicine",
+     "nature",
+     "religion"
+    ]
+   },
+   "level1Choices": [],
+   "spells": {
+    "cantrips": 3,
+    "spellbook": 6,
+    "spellbookPerLevel": 2,
+    "preparedFromSpellbook": 4
+   },
+   "multiclassGrants": [
+    "d6 히트 다이스",
+    "위저드 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "2",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "3",
+      "준비 주문": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.wizard.spellcasting",
+      "dnd.srd521.feature.wizard.ritual-adept",
+      "dnd.srd521.feature.wizard.arcane-recovery"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "3",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "3",
+      "준비 주문": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.wizard.scholar"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "4",
+      "2": "2",
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "3",
+      "준비 주문": "6"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "위저드 서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": null,
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "4",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "2",
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "4",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.wizard.memorize-spell"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": null,
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "4",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "1",
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "4",
+      "준비 주문": "11"
+     },
+     "features": []
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "2",
+      "5": null,
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "4",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "1",
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "4",
+      "준비 주문": "14"
+     },
+     "features": []
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": null,
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "5",
+      "준비 주문": "15"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "5",
+      "준비 주문": "16"
+     },
+     "features": []
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": null,
+      "8": null,
+      "9": null,
+      "소마법": "5",
+      "준비 주문": "16"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": null,
+      "9": null,
+      "소마법": "5",
+      "준비 주문": "17"
+     },
+     "features": []
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": null,
+      "9": null,
+      "소마법": "5",
+      "준비 주문": "18"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": null,
+      "소마법": "5",
+      "준비 주문": "19"
+     },
+     "features": []
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": null,
+      "소마법": "5",
+      "준비 주문": "21"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": "1",
+      "소마법": "5",
+      "준비 주문": "22"
+     },
+     "features": []
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "3",
+      "6": "1",
+      "7": "1",
+      "8": "1",
+      "9": "1",
+      "소마법": "5",
+      "준비 주문": "23"
+     },
+     "features": [
+      "dnd.srd521.feature.wizard.spell-mastery"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "3",
+      "6": "2",
+      "7": "1",
+      "8": "1",
+      "9": "1",
+      "소마법": "5",
+      "준비 주문": "24"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "3",
+      "6": "2",
+      "7": "2",
+      "8": "1",
+      "9": "1",
+      "소마법": "5",
+      "준비 주문": "25"
+     },
+     "features": [
+      "dnd.srd521.feature.wizard.signature-spells"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.cleric": {
+   "hitDie": 8,
+   "primaryAbilities": [
+    "wis"
+   ],
+   "savingThrowProficiencies": [
+    "wis",
+    "cha"
+   ],
+   "skillChoiceCount": 2,
+   "spellcasting": "full",
+   "armorTraining": [
+    "light",
+    "medium",
+    "shield"
+   ],
+   "weaponTraining": [
+    "simple"
+   ],
+   "multiclass": {
+    "armor": [
+     "light",
+     "medium",
+     "shield"
+    ],
+    "weapons": [],
+    "prerequisites": {
+     "all": [
+      "wis"
+     ]
+    }
+   },
+   "spellcastingAbility": "wis",
+   "resources": [
+    {
+     "id": "resource.cleric.channel-divinity",
+     "label": "신성 변환",
+     "column": "신성 변환",
+     "recovery": "short-rest:1",
+     "minLevel": 2
+    },
+    {
+     "id": "resource.cleric.divine-intervention",
+     "label": "신성 개입",
+     "recovery": "long-rest",
+     "minLevel": 10,
+     "max": {
+      "value": 1
+     },
+     "freeCastMaxLevel": 5
+    }
+   ],
+   "spellcastingFeature": "cleric.spellcasting",
+   "casterKind": "full",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "history",
+     "insight",
+     "medicine",
+     "persuasion",
+     "religion"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.divine-order",
+     "kind": "fixed-options",
+     "count": 1,
+     "label": "신성한 역할",
+     "description": "수호자 또는 기적술사를 선택합니다.",
+     "options": [
+      {
+       "id": "protector",
+       "name": "수호자",
+       "nameEn": "Protector",
+       "summary": "군용 무기 숙련과 중장 방어구 훈련을 얻습니다."
+      },
+      {
+       "id": "thaumaturge",
+       "name": "기적술사",
+       "nameEn": "Thaumaturge",
+       "summary": "클레릭 소마법 하나를 추가로 알고 비전/종교 판정에 지혜 보너스를 얻습니다."
+      }
+     ]
+    }
+   ],
+   "spells": {
+    "cantrips": 3,
+    "prepared": 4,
+    "bonusCantripChoice": {
+     "choiceId": "class.divine-order",
+     "value": "thaumaturge"
+    }
+   },
+   "multiclassGrants": [
+    "d8 히트 다이스",
+    "경장·평장 방어구와 방패 훈련",
+    "클레릭 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "신성 변환": null,
+      "소마법": "3",
+      "준비 주문": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.cleric.spellcasting",
+      "dnd.srd521.feature.cleric.divine-order"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "신성 변환": "2",
+      "소마법": "3",
+      "준비 주문": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.cleric.channel-divinity"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "신성 변환": "2",
+      "소마법": "3",
+      "준비 주문": "6"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "신성 변환": "2",
+      "소마법": "4",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "신성 변환": "2",
+      "소마법": "4",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.cleric.sear-undead"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "4",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "4",
+      "준비 주문": "11"
+     },
+     "features": [
+      "dnd.srd521.feature.cleric.blessed-strikes"
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "4",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "4",
+      "준비 주문": "14"
+     },
+     "features": []
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "15"
+     },
+     "features": [
+      "dnd.srd521.feature.cleric.divine-intervention"
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "16"
+     },
+     "features": []
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "16"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "17"
+     },
+     "features": []
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "17"
+     },
+     "features": [
+      "dnd.srd521.feature.cleric.improved-blessed-strikes"
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "18"
+     },
+     "features": []
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "18"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "신성 변환": "3",
+      "소마법": "5",
+      "준비 주문": "19"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "신성 변환": "4",
+      "소마법": "5",
+      "준비 주문": "20"
+     },
+     "features": []
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "신성 변환": "4",
+      "소마법": "5",
+      "준비 주문": "21"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "신성 변환": "4",
+      "소마법": "5",
+      "준비 주문": "22"
+     },
+     "features": [
+      "dnd.srd521.feature.cleric.greater-divine-intervention"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.fighter": {
+   "hitDie": 10,
+   "primaryAbilities": [
+    "str",
+    "dex"
+   ],
+   "savingThrowProficiencies": [
+    "str",
+    "con"
+   ],
+   "skillChoiceCount": 2,
+   "armorTraining": [
+    "light",
+    "medium",
+    "heavy",
+    "shield"
+   ],
+   "weaponTraining": [
+    "simple",
+    "martial"
+   ],
+   "multiclass": {
+    "armor": [
+     "light",
+     "medium",
+     "shield"
+    ],
+    "weapons": [
+     "simple",
+     "martial"
+    ],
+    "prerequisites": {
+     "any": [
+      "str",
+      "dex"
+     ]
+    }
+   },
+   "resources": [
+    {
+     "id": "resource.fighter.second-wind",
+     "label": "재기의 바람",
+     "column": "재기의 바람",
+     "recovery": "short-rest:1",
+     "minLevel": 1
+    },
+    {
+     "id": "resource.fighter.action-surge",
+     "label": "행동 폭증",
+     "recovery": "short-rest",
+     "minLevel": 2,
+     "max": {
+      "op": "if",
+      "args": [
+       {
+        "op": "gte",
+        "left": {
+         "ref": "class.level"
+        },
+        "right": {
+         "value": 17
+        }
+       },
+       {
+        "value": 2
+       },
+       {
+        "value": 1
+       }
+      ]
+     }
+    },
+    {
+     "id": "resource.fighter.indomitable",
+     "label": "불굴",
+     "recovery": "long-rest",
+     "minLevel": 9,
+     "max": {
+      "op": "if",
+      "args": [
+       {
+        "op": "gte",
+        "left": {
+         "ref": "class.level"
+        },
+        "right": {
+         "value": 17
+        }
+       },
+       {
+        "value": 3
+       },
+       {
+        "op": "if",
+        "args": [
+         {
+          "op": "gte",
+          "left": {
+           "ref": "class.level"
+          },
+          "right": {
+           "value": 13
+          }
+         },
+         {
+          "value": 2
+         },
+         {
+          "value": 1
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "casterKind": "none",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "acrobatics",
+     "animal-handling",
+     "athletics",
+     "history",
+     "insight",
+     "intimidation",
+     "perception",
+     "persuasion",
+     "survival"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.fighting-style",
+     "kind": "fighting-style",
+     "count": 1,
+     "label": "전투 방식",
+     "description": "전투 방식 재주 하나를 선택합니다."
+    },
+    {
+     "id": "class.weapon-mastery",
+     "kind": "weapon-mastery",
+     "count": 3,
+     "weaponFilter": "all-simple-or-martial",
+     "label": "무기 통달",
+     "description": "단순 또는 군용 무기 세 종류의 통달 속성을 선택합니다."
+    }
+   ],
+   "multiclassGrants": [
+    "d10 히트 다이스",
+    "군용 무기 숙련",
+    "경장·평장 방어구와 방패 훈련",
+    "파이터 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "재기의 바람": "2",
+      "무기 통달": "3"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.fighting-style",
+      "dnd.srd521.feature.fighter.second-wind",
+      "dnd.srd521.feature.fighter.weapon-mastery"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "재기의 바람": "2",
+      "무기 통달": "3"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.action-surge",
+      "dnd.srd521.feature.fighter.tactical-mind"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "재기의 바람": "2",
+      "무기 통달": "3"
+     },
+     "features": [
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "재기의 바람": "3",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "재기의 바람": "3",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.extra-attack",
+      "dnd.srd521.feature.fighter.tactical-shift"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "재기의 바람": "3",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "재기의 바람": "3",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "재기의 바람": "3",
+      "무기 통달": "4"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "재기의 바람": "3",
+      "무기 통달": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.indomitable",
+      "dnd.srd521.feature.fighter.tactical-master"
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "5"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.extra-attack-2"
+     ]
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "5"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "5"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.indomitable-2",
+      "dnd.srd521.feature.fighter.studied-attacks"
+     ]
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "5"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "5"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "6"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "6"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.action-surge-2",
+      "dnd.srd521.feature.fighter.indomitable-3"
+     ]
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "6"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "6"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "재기의 바람": "4",
+      "무기 통달": "6"
+     },
+     "features": [
+      "dnd.srd521.feature.fighter.extra-attack-3"
+     ]
+    }
+   ]
+  },
+  "dnd.srd521.class.paladin": {
+   "hitDie": 10,
+   "primaryAbilities": [
+    "str",
+    "cha"
+   ],
+   "savingThrowProficiencies": [
+    "wis",
+    "cha"
+   ],
+   "skillChoiceCount": 2,
+   "spellcasting": "half",
+   "armorTraining": [
+    "light",
+    "medium",
+    "heavy",
+    "shield"
+   ],
+   "weaponTraining": [
+    "simple",
+    "martial"
+   ],
+   "multiclass": {
+    "armor": [
+     "light",
+     "medium",
+     "shield"
+    ],
+    "weapons": [
+     "simple",
+     "martial"
+    ],
+    "prerequisites": {
+     "all": [
+      "str",
+      "cha"
+     ]
+    }
+   },
+   "spellcastingAbility": "cha",
+   "resources": [
+    {
+     "id": "resource.paladin.lay-on-hands",
+     "label": "안수",
+     "recovery": "long-rest",
+     "minLevel": 1,
+     "max": {
+      "op": "mul",
+      "args": [
+       {
+        "ref": "class.level"
+       },
+       {
+        "value": 5
+       }
+      ]
+     }
+    },
+    {
+     "id": "resource.paladin.channel-divinity",
+     "label": "신성 변환",
+     "column": "신성 변환",
+     "recovery": "short-rest:1",
+     "minLevel": 3
+    },
+    {
+     "id": "resource.paladin.smite",
+     "label": "팔라딘의 강타 (신성한 강타 무료 시전)",
+     "recovery": "long-rest",
+     "minLevel": 2,
+     "spell": "Divine Smite",
+     "max": {
+      "value": 1
+     }
+    },
+    {
+     "id": "resource.paladin.faithful-steed",
+     "label": "충직한 군마 (군마 찾기 무료 시전)",
+     "recovery": "long-rest",
+     "minLevel": 5,
+     "spell": "Find Steed",
+     "max": {
+      "value": 1
+     }
+    }
+   ],
+   "spellcastingFeature": "paladin.spellcasting",
+   "casterKind": "half",
+   "skillOptions": {
+    "count": 2,
+    "options": [
+     "athletics",
+     "insight",
+     "intimidation",
+     "medicine",
+     "persuasion",
+     "religion"
+    ]
+   },
+   "level1Choices": [
+    {
+     "id": "class.weapon-mastery",
+     "kind": "weapon-mastery",
+     "count": 2,
+     "weaponFilter": "all-simple-or-martial",
+     "label": "무기 통달",
+     "description": "숙련된 무기 두 종류의 통달 속성을 선택합니다."
+    }
+   ],
+   "spells": {
+    "prepared": 2
+   },
+   "multiclassGrants": [
+    "d10 히트 다이스",
+    "군용 무기 숙련",
+    "경장·평장 방어구와 방패 훈련",
+    "팔라딘 1레벨 특성"
+   ],
+   "levels": [
+    {
+     "level": 1,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "2",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": null,
+      "준비 주문": "2"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.lay-on-hands",
+      "dnd.srd521.feature.paladin.spellcasting",
+      "dnd.srd521.feature.paladin.weapon-mastery"
+     ]
+    },
+    {
+     "level": 2,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "2",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": null,
+      "준비 주문": "3"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.fighting-style",
+      "dnd.srd521.feature.paladin.smite"
+     ]
+    },
+    {
+     "level": 3,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "3",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "4"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.channel-divinity",
+      {
+       "role": "subclass",
+       "name": "서브클래스"
+      }
+     ]
+    },
+    {
+     "level": 4,
+     "proficiencyBonus": 2,
+     "columns": {
+      "1": "3",
+      "2": null,
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "5"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 5,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "2",
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "6"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.extra-attack",
+      "dnd.srd521.feature.paladin.faithful-steed"
+     ]
+    },
+    {
+     "level": 6,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "2",
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "6"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.aura-of-protection"
+     ]
+    },
+    {
+     "level": 7,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 8,
+     "proficiencyBonus": 3,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": null,
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "7"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 9,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "2",
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.abjure-foes"
+     ]
+    },
+    {
+     "level": 10,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "2",
+      "4": null,
+      "5": null,
+      "신성 변환": "2",
+      "준비 주문": "9"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.aura-of-courage"
+     ]
+    },
+    {
+     "level": 11,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": null,
+      "5": null,
+      "신성 변환": "3",
+      "준비 주문": "10"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.radiant-strikes"
+     ]
+    },
+    {
+     "level": 12,
+     "proficiencyBonus": 4,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": null,
+      "5": null,
+      "신성 변환": "3",
+      "준비 주문": "10"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 13,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "1",
+      "5": null,
+      "신성 변환": "3",
+      "준비 주문": "11"
+     },
+     "features": []
+    },
+    {
+     "level": 14,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "1",
+      "5": null,
+      "신성 변환": "3",
+      "준비 주문": "11"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.restoring-touch"
+     ]
+    },
+    {
+     "level": 15,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "2",
+      "5": null,
+      "신성 변환": "3",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    },
+    {
+     "level": 16,
+     "proficiencyBonus": 5,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "2",
+      "5": null,
+      "신성 변환": "3",
+      "준비 주문": "12"
+     },
+     "features": [
+      {
+       "role": "asi",
+       "name": "능력치 향상"
+      }
+     ]
+    },
+    {
+     "level": 17,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "1",
+      "신성 변환": "3",
+      "준비 주문": "14"
+     },
+     "features": []
+    },
+    {
+     "level": 18,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "1",
+      "신성 변환": "3",
+      "준비 주문": "14"
+     },
+     "features": [
+      "dnd.srd521.feature.paladin.aura-expansion"
+     ]
+    },
+    {
+     "level": 19,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "신성 변환": "3",
+      "준비 주문": "15"
+     },
+     "features": [
+      {
+       "role": "epic-boon",
+       "name": "에픽 은총"
+      }
+     ]
+    },
+    {
+     "level": 20,
+     "proficiencyBonus": 6,
+     "columns": {
+      "1": "4",
+      "2": "3",
+      "3": "3",
+      "4": "3",
+      "5": "2",
+      "신성 변환": "3",
+      "준비 주문": "15"
+     },
+     "features": [
+      {
+       "role": "subclass-feature",
+       "name": "서브클래스 특성"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "features": {
+  "dnd.srd521.feature.druid.spellcasting": {
+   "heading": "주문 시전",
+   "nameEn": "Spellcasting",
+   "classId": "dnd.srd521.class.druid",
+   "level": 1,
+   "fallback": "드루이드 주문 목록 전체에서 준비 주문을 고르고 지혜로 시전합니다. 드루이드 매개체를 씁니다. 긴 휴식을 마칠 때 준비 주문을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.druid.druidic": {
+   "heading": "드루이드어",
+   "nameEn": "Druidic",
+   "classId": "dnd.srd521.class.druid",
+   "level": 1,
+   "fallback": "드루이드의 비밀 언어를 알고 Speak with Animals를 항상 준비합니다."
+  },
+  "dnd.srd521.feature.druid.primal-order": {
+   "heading": "원초적 역할",
+   "nameEn": "Primal Order",
+   "classId": "dnd.srd521.class.druid",
+   "level": 1,
+   "fallback": "마법사(드루이드 소마법 하나 추가, 비전·자연 판정에 지혜 수정치(최소 1) 추가) 또는 수호자(군용 무기 숙련과 평갑 훈련) 중 하나를 고릅니다."
+  },
+  "dnd.srd521.feature.druid.wild-shape": {
+   "heading": "야생 변신",
+   "nameEn": "Wild Shape",
+   "classId": "dnd.srd521.class.druid",
+   "level": 2,
+   "fallback": "추가 행동으로 알고 있는 야수 형태로 변신합니다(2레벨 CR 1/4·비행·수영 불가, 4레벨 CR 1/2·수영 가능, 8레벨 CR 1·비행 가능). 변신은 드루이드 레벨의 절반 시간 동안 지속되고 드루이드 레벨만큼 임시 HP를 얻습니다. 긴 휴식마다 2회(6레벨 3회, 17레벨 4회), 짧은 휴식을 마치면 1회를 회복합니다."
+  },
+  "dnd.srd521.feature.druid.wild-companion": {
+   "heading": "야생 동료",
+   "nameEn": "Wild Companion",
+   "classId": "dnd.srd521.class.druid",
+   "level": 2,
+   "fallback": "야생 변신 1회를 소비해 Find Familiar를 주문 슬롯이나 물질 구성요소 없이 시전합니다. 그 사역마는 요정으로, 긴 휴식을 마치면 사라집니다."
+  },
+  "dnd.srd521.feature.druid.wild-resurgence": {
+   "heading": "야생의 부활",
+   "nameEn": "Wild Resurgence",
+   "classId": "dnd.srd521.class.druid",
+   "level": 5,
+   "fallback": "턴당 한 번 주문 슬롯 하나를 소비해 야생 변신 1회를 회복할 수 있습니다. 또한 긴 휴식마다 1회, 야생 변신 1회를 소비해 1레벨 주문 슬롯 하나를 회복할 수 있습니다."
+  },
+  "dnd.srd521.feature.druid.elemental-fury": {
+   "heading": "원소의 격노",
+   "nameEn": "Elemental Fury",
+   "classId": "dnd.srd521.class.druid",
+   "level": 7,
+   "fallback": "강력한 주문 시전(드루이드 소마법 피해에 지혜 수정치 추가) 또는 원초의 일격(턴당 한 번 무기 공격이나 야생 변신 공격 명중 시 1d8 냉기·화염·번개·천둥 피해 추가) 중 하나를 고릅니다."
+  },
+  "dnd.srd521.feature.druid.improved-elemental-fury": {
+   "heading": "향상된 원소의 격노",
+   "nameEn": "Improved Elemental Fury",
+   "classId": "dnd.srd521.class.druid",
+   "level": 15,
+   "fallback": "원초의 일격의 추가 피해가 2d8이 되거나, 강력한 주문 시전으로 사거리 10피트 이상인 소마법의 사거리가 300피트 늘어납니다."
+  },
+  "dnd.srd521.feature.druid.beast-spells": {
+   "heading": "야수 주문",
+   "nameEn": "Beast Spells",
+   "classId": "dnd.srd521.class.druid",
+   "level": 18,
+   "fallback": "야생 변신 중에도 주문을 시전할 수 있습니다(물질 구성요소가 있는 주문은 제외)."
+  },
+  "dnd.srd521.feature.druid.archdruid": {
+   "heading": "대드루이드",
+   "nameEn": "Archdruid",
+   "classId": "dnd.srd521.class.druid",
+   "level": 20,
+   "fallback": "이니셔티브를 굴릴 때 야생 변신 사용 횟수가 없으면 1회를 회복합니다. 야생 변신 1회를 소비해 1레벨 주문 슬롯 하나 대신 소비 횟수 절반 레벨의 슬롯을 회복하는 자연 마법사를 긴 휴식마다 1회 쓸 수 있고, 더 이상 노화하지 않습니다."
+  },
+  "dnd.srd521.feature.ranger.spellcasting": {
+   "heading": "주문 시전",
+   "nameEn": "Spellcasting",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 1,
+   "fallback": "레인저 주문 목록 전체에서 준비 주문을 고르고 지혜로 시전합니다. 드루이드 매개체를 씁니다. 긴 휴식을 마칠 때 준비 주문을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.favored-enemy": {
+   "heading": "주적",
+   "nameEn": "Favored Enemy",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 1,
+   "fallback": "Hunter's Mark를 항상 준비하고, 긴 휴식마다 2회(5레벨 3, 9레벨 4, 13레벨 5, 17레벨 6) 슬롯 없이 시전할 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.weapon-mastery": {
+   "heading": "무기 통달",
+   "nameEn": "Weapon Mastery",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 1,
+   "fallback": "숙련한 무기 두 종류를 골라 그 통달 속성을 쓸 수 있습니다. 긴 휴식을 마칠 때마다 선택을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.deft-explorer": {
+   "heading": "노련한 탐험가",
+   "nameEn": "Deft Explorer",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 2,
+   "fallback": "숙련한 기술 하나에 전문화를 얻고, 언어 두 개를 더 배웁니다."
+  },
+  "dnd.srd521.feature.ranger.fighting-style": {
+   "heading": "전투 방식",
+   "nameEn": "Fighting Style",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 2,
+   "fallback": "전투 방식 재주 하나를 얻거나, 그 대신 드루이드 전사(드루이드 소마법 두 개를 항상 준비)를 고릅니다."
+  },
+  "dnd.srd521.feature.ranger.extra-attack": {
+   "heading": "추가 공격",
+   "nameEn": "Extra Attack",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 5,
+   "fallback": "자기 턴에 공격 행동을 할 때 한 번이 아니라 두 번 공격할 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.roving": {
+   "heading": "방랑자",
+   "nameEn": "Roving",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 6,
+   "fallback": "중갑을 입지 않았을 때 이동 속도가 10피트 증가하고, 이동 속도와 같은 등반 속도와 수영 속도를 얻습니다."
+  },
+  "dnd.srd521.feature.ranger.expertise": {
+   "heading": "전문화",
+   "nameEn": "Expertise",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 9,
+   "fallback": "숙련한 기술 두 개에 전문화를 얻습니다."
+  },
+  "dnd.srd521.feature.ranger.tireless": {
+   "heading": "지치지 않음",
+   "nameEn": "Tireless",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 10,
+   "fallback": "행동으로 1d8 + 지혜 수정치(최소 1)만큼 임시 HP를 얻습니다. 긴 휴식마다 지혜 수정치(최소 1)회. 짧은 휴식을 마치면 탈진 단계가 1 줄어듭니다."
+  },
+  "dnd.srd521.feature.ranger.relentless-hunter": {
+   "heading": "끈질긴 사냥꾼",
+   "nameEn": "Relentless Hunter",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 13,
+   "fallback": "피해를 받아도 Hunter's Mark의 집중이 깨지지 않습니다."
+  },
+  "dnd.srd521.feature.ranger.natures-veil": {
+   "heading": "자연의 장막",
+   "nameEn": "Nature's Veil",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 14,
+   "fallback": "추가 행동으로 다음 턴 시작까지 투명 상태가 됩니다. 긴 휴식마다 지혜 수정치(최소 1)회."
+  },
+  "dnd.srd521.feature.ranger.precise-hunter": {
+   "heading": "정밀한 사냥꾼",
+   "nameEn": "Precise Hunter",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 17,
+   "fallback": "Hunter's Mark로 표시한 생물을 향한 공격 굴림에 유리를 받습니다."
+  },
+  "dnd.srd521.feature.ranger.feral-senses": {
+   "heading": "야성의 감각",
+   "nameEn": "Feral Senses",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 18,
+   "fallback": "30피트 범위의 맹시를 얻습니다."
+  },
+  "dnd.srd521.feature.ranger.foe-slayer": {
+   "heading": "적 학살자",
+   "nameEn": "Foe Slayer",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 20,
+   "fallback": "Hunter's Mark의 추가 피해 주사위가 d6이 아니라 d10이 됩니다."
+  },
+  "dnd.srd521.feature.rogue.expertise": {
+   "heading": "전문화",
+   "nameEn": "Expertise",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 1,
+   "fallback": "숙련한 기술 두 개에 전문화를 얻습니다. 6레벨에 두 개를 더 얻습니다."
+  },
+  "dnd.srd521.feature.rogue.sneak-attack": {
+   "heading": "암습",
+   "nameEn": "Sneak Attack",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 1,
+   "fallback": "턴당 한 번, 정밀 무기(민첩 속성)나 원거리 무기 공격이 명중했을 때 공격 굴림에 유리가 있었거나 대상 5피트 안에 행동불능이 아닌 아군이 있으면 추가 피해 Nd6(1레벨 1d6, 홀수 레벨마다 +1d6, 19레벨 10d6)를 줍니다."
+  },
+  "dnd.srd521.feature.rogue.thieves-cant": {
+   "heading": "도둑 은어",
+   "nameEn": "Thieves' Cant",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 1,
+   "fallback": "도둑 은어와 원하는 언어 하나를 더 배웁니다."
+  },
+  "dnd.srd521.feature.rogue.weapon-mastery": {
+   "heading": "무기 통달",
+   "nameEn": "Weapon Mastery",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 1,
+   "fallback": "숙련한 무기 두 종류를 골라 그 통달 속성을 쓸 수 있습니다. 긴 휴식을 마칠 때마다 선택을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.rogue.cunning-action": {
+   "heading": "교활한 행동",
+   "nameEn": "Cunning Action",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 2,
+   "fallback": "추가 행동으로 질주, 이탈, 숨기 행동을 할 수 있습니다."
+  },
+  "dnd.srd521.feature.rogue.steady-aim": {
+   "heading": "안정된 조준",
+   "nameEn": "Steady Aim",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 3,
+   "fallback": "이번 턴에 이동하지 않았다면 추가 행동으로 이번 턴의 다음 공격 굴림에 유리를 얻습니다. 그 턴에는 더 이동할 수 없습니다."
+  },
+  "dnd.srd521.feature.rogue.cunning-strike": {
+   "heading": "교활한 일격",
+   "nameEn": "Cunning Strike",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 5,
+   "fallback": "암습을 줄 때 주사위를 포기하고 효과를 붙입니다: 독(1d6, 건강 내성 실패 시 1분 중독), 넘어뜨리기(1d6, 민첩 내성 실패 시 넘어짐), 후퇴(1d6, 공격 뒤 이동 속도 절반 이동, 기회 공격 없음)."
+  },
+  "dnd.srd521.feature.rogue.uncanny-dodge": {
+   "heading": "기묘한 회피",
+   "nameEn": "Uncanny Dodge",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 5,
+   "fallback": "볼 수 있는 공격자의 공격에 맞았을 때 반응으로 그 피해를 절반으로 줄입니다."
+  },
+  "dnd.srd521.feature.rogue.expertise-2": {
+   "heading": "전문화",
+   "nameEn": "Expertise (6)",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 6,
+   "fallback": "숙련한 기술 두 개에 전문화를 더 얻습니다."
+  },
+  "dnd.srd521.feature.rogue.evasion": {
+   "heading": "회피 기동",
+   "nameEn": "Evasion",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 7,
+   "fallback": "민첩 내성으로 절반 피해를 받는 효과에서 내성에 성공하면 피해를 받지 않고, 실패해도 절반만 받습니다. 행동불능 상태에서는 쓸 수 없습니다."
+  },
+  "dnd.srd521.feature.rogue.reliable-talent": {
+   "heading": "믿음직한 재능",
+   "nameEn": "Reliable Talent",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 7,
+   "fallback": "숙련 보너스를 더하는 능력 판정에서 d20이 9 이하가 나오면 10으로 칩니다."
+  },
+  "dnd.srd521.feature.rogue.improved-cunning-strike": {
+   "heading": "향상된 교활한 일격",
+   "nameEn": "Improved Cunning Strike",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 11,
+   "fallback": "교활한 일격의 효과를 한 번의 암습에 두 개까지 붙일 수 있습니다(주사위는 각각 포기)."
+  },
+  "dnd.srd521.feature.rogue.devious-strikes": {
+   "heading": "교묘한 일격",
+   "nameEn": "Devious Strikes",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 14,
+   "fallback": "교활한 일격에 효과가 늘어납니다: 눈멀게 하기(2d6, 건강 내성 실패 시 다음 턴 종료까지 실명), 기절시키기(3d6, 건강 내성 실패 시 다음 턴 종료까지 기절), 쓰러뜨리기(5d6, 건강 내성 실패 시 1분간 무의식)."
+  },
+  "dnd.srd521.feature.rogue.slippery-mind": {
+   "heading": "미끄러운 정신",
+   "nameEn": "Slippery Mind",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 15,
+   "fallback": "지혜 내성과 매력 내성에 숙련을 얻습니다."
+  },
+  "dnd.srd521.feature.rogue.elusive": {
+   "heading": "붙잡을 수 없음",
+   "nameEn": "Elusive",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 18,
+   "fallback": "행동불능 상태가 아니면 자신을 향한 공격 굴림은 유리를 받을 수 없습니다."
+  },
+  "dnd.srd521.feature.rogue.stroke-of-luck": {
+   "heading": "행운의 일격",
+   "nameEn": "Stroke of Luck",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 20,
+   "fallback": "d20 판정에 실패했을 때 그 결과를 20으로 바꿉니다. 짧은 휴식이나 긴 휴식마다 1회."
+  },
+  "dnd.srd521.feature.monk.martial-arts": {
+   "heading": "무예",
+   "nameEn": "Martial Arts",
+   "classId": "dnd.srd521.class.monk",
+   "level": 1,
+   "fallback": "맨손 타격과 몽크 무기(단순 근접 무기, 경량 속성이 있는 군용 근접 무기)에 근력 대신 민첩을 쓸 수 있고, 피해 주사위를 무예 주사위(d6, 5레벨 d8, 11레벨 d10, 17레벨 d12)로 바꿀 수 있습니다. 공격 행동으로 맨손 타격이나 몽크 무기를 썼으면 추가 행동으로 맨손 타격을 한 번 더 하며, 맨손 타격의 붙잡기·밀치기에 민첩을 쓸 수 있습니다."
+  },
+  "dnd.srd521.feature.monk.unarmored-defense": {
+   "heading": "비무장 방어",
+   "nameEn": "Unarmored Defense",
+   "classId": "dnd.srd521.class.monk",
+   "level": 1,
+   "fallback": "갑옷을 입지 않고 방패도 들지 않았을 때 AC는 10 + 민첩 수정치 + 지혜 수정치입니다."
+  },
+  "dnd.srd521.feature.monk.focus": {
+   "heading": "몽크의 기",
+   "nameEn": "Monk's Focus",
+   "classId": "dnd.srd521.class.monk",
+   "level": 2,
+   "fallback": "기 점수를 몽크 레벨만큼 갖고 짧은 휴식이나 긴 휴식에 모두 회복합니다. 폭풍 같은 공격(1점, 추가 행동으로 맨손 타격 두 번), 인내의 방어(1점, 추가 행동으로 회피), 바람의 걸음(1점, 추가 행동으로 이탈 또는 질주, 점프 거리 두 배)에 씁니다."
+  },
+  "dnd.srd521.feature.monk.unarmored-movement": {
+   "heading": "비무장 이동",
+   "nameEn": "Unarmored Movement",
+   "classId": "dnd.srd521.class.monk",
+   "level": 2,
+   "fallback": "갑옷과 방패가 없을 때 이동 속도가 10피트 증가합니다(6레벨 15, 10레벨 20, 14레벨 25, 18레벨 30). 9레벨부터는 수직면과 액체 위를 넘어지지 않고 이동할 수 있습니다."
+  },
+  "dnd.srd521.feature.monk.uncanny-metabolism": {
+   "heading": "경이로운 신진대사",
+   "nameEn": "Uncanny Metabolism",
+   "classId": "dnd.srd521.class.monk",
+   "level": 2,
+   "fallback": "이니셔티브를 굴릴 때 기 점수를 모두 회복하고 무예 주사위 + 몽크 레벨만큼 HP를 회복할 수 있습니다. 긴 휴식마다 1회입니다."
+  },
+  "dnd.srd521.feature.monk.deflect-attacks": {
+   "heading": "공격 흘리기",
+   "nameEn": "Deflect Attacks",
+   "classId": "dnd.srd521.class.monk",
+   "level": 3,
+   "fallback": "타격·관통·참격 피해를 주는 공격에 맞았을 때 반응으로 피해를 1d10 + 민첩 수정치 + 몽크 레벨만큼 줄입니다. 피해가 0이 되면 기 점수 1점을 소비해 5피트 안(원거리 공격이면 60피트 안)의 생물에게 민첩 내성을 요구하고 실패 시 무예 주사위 두 개 + 민첩 수정치의 피해를 되돌려 줍니다."
+  },
+  "dnd.srd521.feature.monk.slow-fall": {
+   "heading": "낙하 완화",
+   "nameEn": "Slow Fall",
+   "classId": "dnd.srd521.class.monk",
+   "level": 4,
+   "fallback": "낙하할 때 반응으로 낙하 피해를 몽크 레벨의 5배만큼 줄입니다."
+  },
+  "dnd.srd521.feature.monk.extra-attack": {
+   "heading": "추가 공격",
+   "nameEn": "Extra Attack",
+   "classId": "dnd.srd521.class.monk",
+   "level": 5,
+   "fallback": "자기 턴에 공격 행동을 할 때 한 번이 아니라 두 번 공격할 수 있습니다."
+  },
+  "dnd.srd521.feature.monk.stunning-strike": {
+   "heading": "충격의 일격",
+   "nameEn": "Stunning Strike",
+   "classId": "dnd.srd521.class.monk",
+   "level": 5,
+   "fallback": "턴당 한 번, 맨손 타격이나 몽크 무기가 명중했을 때 기 점수 1점을 소비합니다. 대상은 건강 내성에 실패하면 다음 턴 시작까지 기절하고, 성공하면 다음 턴 시작까지 이동 속도가 절반이 되며 그 대상을 향한 다음 공격 굴림에 유리를 받습니다."
+  },
+  "dnd.srd521.feature.monk.empowered-strikes": {
+   "heading": "강화된 타격",
+   "nameEn": "Empowered Strikes",
+   "classId": "dnd.srd521.class.monk",
+   "level": 6,
+   "fallback": "맨손 타격이 원래 피해 유형 대신 역장 피해를 줄 수 있습니다."
+  },
+  "dnd.srd521.feature.monk.evasion": {
+   "heading": "회피 기동",
+   "nameEn": "Evasion",
+   "classId": "dnd.srd521.class.monk",
+   "level": 7,
+   "fallback": "민첩 내성으로 절반 피해를 받는 효과에서 내성에 성공하면 피해를 받지 않고, 실패해도 절반만 받습니다. 행동불능 상태에서는 쓸 수 없습니다."
+  },
+  "dnd.srd521.feature.monk.acrobatic-movement": {
+   "heading": "곡예 이동",
+   "nameEn": "Acrobatic Movement",
+   "classId": "dnd.srd521.class.monk",
+   "level": 9,
+   "fallback": "갑옷과 방패가 없으면 턴 중에 수직면과 액체 위를 넘어지지 않고 이동할 수 있습니다."
+  },
+  "dnd.srd521.feature.monk.heightened-focus": {
+   "heading": "고양된 기",
+   "nameEn": "Heightened Focus",
+   "classId": "dnd.srd521.class.monk",
+   "level": 10,
+   "fallback": "폭풍 같은 공격은 맨손 타격을 세 번 하고, 인내의 방어는 무예 주사위 두 개만큼 임시 HP를 주며, 바람의 걸음은 접촉한 자발적 생물 하나를 이동 속도 절반까지 함께 옮깁니다."
+  },
+  "dnd.srd521.feature.monk.self-restoration": {
+   "heading": "자기 회복",
+   "nameEn": "Self-Restoration",
+   "classId": "dnd.srd521.class.monk",
+   "level": 10,
+   "fallback": "매 턴 종료 시 매혹·공포·중독 상태 하나를 끝낼 수 있습니다. 또한 음식과 물을 먹지 않아도 탈진하지 않습니다."
+  },
+  "dnd.srd521.feature.monk.deflect-energy": {
+   "heading": "에너지 흘리기",
+   "nameEn": "Deflect Energy",
+   "classId": "dnd.srd521.class.monk",
+   "level": 13,
+   "fallback": "공격 흘리기를 모든 피해 유형에 쓸 수 있고, 되돌려 주는 피해 유형은 원래 공격의 유형입니다."
+  },
+  "dnd.srd521.feature.monk.disciplined-survivor": {
+   "heading": "단련된 생존자",
+   "nameEn": "Disciplined Survivor",
+   "classId": "dnd.srd521.class.monk",
+   "level": 14,
+   "fallback": "모든 내성 굴림에 숙련을 얻습니다. 내성에 실패하면 기 점수 1점을 소비해 다시 굴릴 수 있습니다."
+  },
+  "dnd.srd521.feature.monk.perfect-focus": {
+   "heading": "완전한 기",
+   "nameEn": "Perfect Focus",
+   "classId": "dnd.srd521.class.monk",
+   "level": 15,
+   "fallback": "이니셔티브를 굴릴 때 경이로운 신진대사를 쓰지 않았고 기 점수가 4 미만이면 4로 회복합니다."
+  },
+  "dnd.srd521.feature.monk.superior-defense": {
+   "heading": "우월한 방어",
+   "nameEn": "Superior Defense",
+   "classId": "dnd.srd521.class.monk",
+   "level": 18,
+   "fallback": "턴 시작 시 기 점수 3점을 소비해 1분 동안 역장을 제외한 모든 피해에 저항을 얻습니다(행동불능이 되면 끝남)."
+  },
+  "dnd.srd521.feature.monk.body-and-mind": {
+   "heading": "심신일체",
+   "nameEn": "Body and Mind",
+   "classId": "dnd.srd521.class.monk",
+   "level": 20,
+   "fallback": "민첩과 지혜가 각각 4 증가하고 그 상한이 25가 됩니다."
+  },
+  "dnd.srd521.feature.bard.bardic-inspiration": {
+   "heading": "바드의 영감",
+   "nameEn": "Bardic Inspiration",
+   "classId": "dnd.srd521.class.bard",
+   "level": 1,
+   "fallback": "추가 행동으로 60피트 안의 자신이 아닌 생물 하나에게 영감 주사위(d6, 5레벨 d8, 10레벨 d10, 15레벨 d12)를 줍니다. 대상은 1시간 안에 d20 판정에 실패한 직후 주사위를 굴려 결과에 더할 수 있습니다. 긴 휴식마다 매력 수정치(최소 1)만큼 쓸 수 있습니다."
+  },
+  "dnd.srd521.feature.bard.spellcasting": {
+   "heading": "주문 시전",
+   "nameEn": "Spellcasting",
+   "classId": "dnd.srd521.class.bard",
+   "level": 1,
+   "fallback": "바드 주문 목록에서 소마법과 준비 주문을 고르고 매력으로 시전합니다. 악기를 주문 매개체로 씁니다. 레벨을 얻을 때마다 준비 주문 하나를 다른 바드 주문으로 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.bard.expertise": {
+   "heading": "전문화",
+   "nameEn": "Expertise",
+   "classId": "dnd.srd521.class.bard",
+   "level": 2,
+   "fallback": "숙련한 기술 두 개에 전문화를 얻어 그 기술 판정에 숙련 보너스를 두 배로 더합니다. 9레벨에 두 개를 더 얻습니다."
+  },
+  "dnd.srd521.feature.bard.jack-of-all-trades": {
+   "heading": "만능재주",
+   "nameEn": "Jack of All Trades",
+   "classId": "dnd.srd521.class.bard",
+   "level": 2,
+   "fallback": "숙련 보너스를 더하지 않는 능력 판정에 숙련 보너스의 절반(내림)을 더합니다."
+  },
+  "dnd.srd521.feature.bard.font-of-inspiration": {
+   "heading": "영감의 샘",
+   "nameEn": "Font of Inspiration",
+   "classId": "dnd.srd521.class.bard",
+   "level": 5,
+   "fallback": "짧은 휴식을 마쳐도 바드의 영감 사용 횟수를 모두 회복합니다. 또한 추가 행동 없이 주문 슬롯 하나를 소비해 영감 1회를 회복할 수 있습니다."
+  },
+  "dnd.srd521.feature.bard.countercharm": {
+   "heading": "대응의 노래",
+   "nameEn": "Countercharm",
+   "classId": "dnd.srd521.class.bard",
+   "level": 7,
+   "fallback": "30피트 안에서 자신이나 다른 생물이 매혹 또는 공포 상태를 주는 효과의 내성 굴림에 실패하면 반응으로 그 굴림을 다시 하게 할 수 있습니다."
+  },
+  "dnd.srd521.feature.bard.magical-secrets": {
+   "heading": "마법의 비밀",
+   "nameEn": "Magical Secrets",
+   "classId": "dnd.srd521.class.bard",
+   "level": 10,
+   "fallback": "준비 주문을 고를 때 바드 목록뿐 아니라 클레릭·드루이드·위저드 주문 목록에서도 고를 수 있습니다."
+  },
+  "dnd.srd521.feature.bard.superior-inspiration": {
+   "heading": "우월한 영감",
+   "nameEn": "Superior Inspiration",
+   "classId": "dnd.srd521.class.bard",
+   "level": 18,
+   "fallback": "이니셔티브를 굴릴 때 바드의 영감 사용 횟수가 2 미만이면 2로 회복합니다."
+  },
+  "dnd.srd521.feature.bard.words-of-creation": {
+   "heading": "창조의 언어",
+   "nameEn": "Words of Creation",
+   "classId": "dnd.srd521.class.bard",
+   "level": 20,
+   "fallback": "Power Word Heal과 Power Word Kill을 항상 준비합니다. 이 주문들을 시전할 때 첫 대상 10피트 안의 생물 하나를 추가 대상으로 삼을 수 있습니다."
+  },
+  "dnd.srd521.feature.barbarian.rage": {
+   "heading": "격노",
+   "nameEn": "Rage",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 1,
+   "fallback": "추가 행동으로 격노에 들어갑니다(중갑을 입고 있으면 불가). 격노 중에는 타격·관통·참격 피해에 저항을 얻고, 근력 판정과 근력 내성 굴림에 유리를 받으며, 근력을 쓰는 근접·투척 무기 공격과 맨손 타격의 피해에 격노 피해 보너스(+2, 9레벨 +3, 16레벨 +4)를 더합니다. 격노 중에는 주문을 시전하거나 집중할 수 없습니다. 격노는 10분 동안 지속되지만, 매 턴 종료 시 그 턴에 적을 공격했거나 피해를 입었거나 추가 행동으로 격노를 유지하지 않으면 끝납니다. 행동불능이 되거나 중갑을 입어도 끝납니다. 긴 휴식마다 표의 횟수(2, 3레벨 3, 6레벨 4, 12레벨 5, 17레벨 6)만큼 쓸 수 있고, 짧은 휴식을 마치면 1회를 회복합니다."
+  },
+  "dnd.srd521.feature.barbarian.unarmored-defense": {
+   "heading": "비무장 방어",
+   "nameEn": "Unarmored Defense",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 1,
+   "fallback": "갑옷을 입지 않았을 때 AC는 10 + 민첩 수정치 + 건강 수정치입니다. 방패는 들어도 이 이득을 유지합니다."
+  },
+  "dnd.srd521.feature.barbarian.weapon-mastery": {
+   "heading": "무기 통달",
+   "nameEn": "Weapon Mastery",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 1,
+   "fallback": "단순 또는 군용 근접 무기 두 종류(10레벨 세 종류, 16레벨 네 종류)를 골라 그 통달 속성을 쓸 수 있습니다. 긴 휴식을 마칠 때마다 선택을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.barbarian.danger-sense": {
+   "heading": "위험 감지",
+   "nameEn": "Danger Sense",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 2,
+   "fallback": "행동불능 상태가 아니면 민첩 내성 굴림에 유리를 받습니다."
+  },
+  "dnd.srd521.feature.barbarian.reckless-attack": {
+   "heading": "무모한 공격",
+   "nameEn": "Reckless Attack",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 2,
+   "fallback": "턴의 첫 공격 굴림을 할 때 무모하게 공격할 수 있습니다. 그 턴 동안 근력을 쓰는 근접 공격 굴림에 유리를 받지만, 다음 턴 시작까지 자신을 향한 공격 굴림도 유리를 받습니다."
+  },
+  "dnd.srd521.feature.barbarian.primal-knowledge": {
+   "heading": "원초적 지식",
+   "nameEn": "Primal Knowledge",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 3,
+   "fallback": "바바리안 기술 목록에서 기술 숙련 하나를 더 얻습니다. 또한 격노 중에는 곡예·위협·지각·은신·생존 판정을 민첩·매력·지혜 대신 근력으로 할 수 있습니다."
+  },
+  "dnd.srd521.feature.barbarian.extra-attack": {
+   "heading": "추가 공격",
+   "nameEn": "Extra Attack",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 5,
+   "fallback": "자기 턴에 공격 행동을 할 때 한 번이 아니라 두 번 공격할 수 있습니다."
+  },
+  "dnd.srd521.feature.barbarian.fast-movement": {
+   "heading": "빠른 이동",
+   "nameEn": "Fast Movement",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 5,
+   "fallback": "중갑을 입지 않았을 때 이동 속도가 10피트 증가합니다."
+  },
+  "dnd.srd521.feature.barbarian.feral-instinct": {
+   "heading": "야성의 본능",
+   "nameEn": "Feral Instinct",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 7,
+   "fallback": "이니셔티브 굴림에 유리를 받습니다."
+  },
+  "dnd.srd521.feature.barbarian.instinctive-pounce": {
+   "heading": "본능적 돌진",
+   "nameEn": "Instinctive Pounce",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 7,
+   "fallback": "격노에 들어가는 추가 행동의 일부로 이동 속도의 절반까지 이동할 수 있습니다."
+  },
+  "dnd.srd521.feature.barbarian.brutal-strike": {
+   "heading": "잔혹한 일격",
+   "nameEn": "Brutal Strike",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 9,
+   "fallback": "무모한 공격을 쓸 때 유리를 포기하고 잔혹한 일격을 할 수 있습니다. 명중하면 추가로 1d10 피해를 주고 효과 하나를 고릅니다: 강타(대상을 15피트 밀어내고 자신도 따라갈 수 있음) 또는 절뚝거리는 일격(대상의 이동 속도 15피트 감소). 턴당 한 번 쓸 수 있습니다."
+  },
+  "dnd.srd521.feature.barbarian.relentless-rage": {
+   "heading": "불굴의 격노",
+   "nameEn": "Relentless Rage",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 11,
+   "fallback": "격노 중 HP가 0이 되어도 즉사하지 않았다면 DC 10 건강 내성 굴림을 합니다. 성공하면 바바리안 레벨의 두 배 HP로 회복합니다. 이후 사용마다 DC가 5씩 오르고, 짧은 휴식이나 긴 휴식을 마치면 DC가 10으로 돌아갑니다."
+  },
+  "dnd.srd521.feature.barbarian.improved-brutal-strike": {
+   "heading": "향상된 잔혹한 일격",
+   "nameEn": "Improved Brutal Strike",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 13,
+   "fallback": "잔혹한 일격의 효과 선택지가 늘어납니다: 휘청이는 일격(대상은 다음 턴 시작까지 내성 굴림에 불리를 받고 기회 공격을 할 수 없음)과 무너뜨리는 일격(대상을 향한 다음 공격 굴림에 +5)."
+  },
+  "dnd.srd521.feature.barbarian.persistent-rage": {
+   "heading": "지속되는 격노",
+   "nameEn": "Persistent Rage",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 15,
+   "fallback": "이니셔티브를 굴릴 때 격노 사용 횟수가 없으면 1회를 회복합니다. 또한 격노는 행동불능이 되거나 중갑을 입지 않는 한 10분 동안 조기에 끝나지 않습니다."
+  },
+  "dnd.srd521.feature.barbarian.improved-brutal-strike-2": {
+   "heading": "향상된 잔혹한 일격",
+   "nameEn": "Improved Brutal Strike (17)",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 17,
+   "fallback": "잔혹한 일격의 추가 피해가 2d10이 되고, 효과를 하나가 아니라 두 개 골라 적용할 수 있습니다."
+  },
+  "dnd.srd521.feature.barbarian.indomitable-might": {
+   "heading": "불굴의 힘",
+   "nameEn": "Indomitable Might",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 18,
+   "fallback": "근력 판정이나 근력 내성 굴림의 결과가 근력 점수보다 낮으면 근력 점수를 결과로 씁니다."
+  },
+  "dnd.srd521.feature.barbarian.primal-champion": {
+   "heading": "원초의 투사",
+   "nameEn": "Primal Champion",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 20,
+   "fallback": "근력과 건강이 각각 4 증가하고 그 상한이 24가 됩니다."
+  },
+  "dnd.srd521.feature.sorcerer.spellcasting": {
+   "heading": "주문 시전",
+   "nameEn": "Spellcasting",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 1,
+   "fallback": "소서러 주문 목록에서 소마법과 준비 주문을 고르고 매력으로 시전합니다. 비전 매개체를 씁니다. 레벨을 얻을 때마다 준비 주문 하나를 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.sorcerer.innate-sorcery": {
+   "heading": "선천 마법",
+   "nameEn": "Innate Sorcery",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 1,
+   "fallback": "추가 행동으로 1분 동안 소서러 주문의 내성 DC가 1 오르고 소서러 주문의 공격 굴림에 유리를 받습니다. 긴 휴식마다 2회."
+  },
+  "dnd.srd521.feature.sorcerer.font-of-magic": {
+   "heading": "마력의 샘",
+   "nameEn": "Font of Magic",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 2,
+   "fallback": "마법 점수를 소서러 레벨만큼 갖고 긴 휴식에 회복합니다. 추가 행동으로 점수를 주문 슬롯(1레벨 2점, 2레벨 3점, 3레벨 5점, 4레벨 6점, 5레벨 7점)으로 바꾸거나, 슬롯을 소비해 그 레벨만큼 점수를 얻습니다."
+  },
+  "dnd.srd521.feature.sorcerer.metamagic": {
+   "heading": "메타매직",
+   "nameEn": "Metamagic",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 2,
+   "fallback": "메타매직 선택지 두 개를 배웁니다(10레벨과 17레벨에 하나씩 추가). 레벨을 얻을 때 하나를 바꿀 수 있습니다. 한 주문에는 한 종류만 쓸 수 있습니다(따로 허용하는 것 제외)."
+  },
+  "dnd.srd521.feature.sorcerer.sorcerous-restoration": {
+   "heading": "마력 회복",
+   "nameEn": "Sorcerous Restoration",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 5,
+   "fallback": "짧은 휴식을 마칠 때 소서러 레벨의 절반(내림)만큼 마법 점수를 회복합니다. 긴 휴식마다 1회."
+  },
+  "dnd.srd521.feature.sorcerer.sorcery-incarnate": {
+   "heading": "마력의 현신",
+   "nameEn": "Sorcery Incarnate",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 7,
+   "fallback": "선천 마법 사용 횟수가 없으면 마법 점수 2점으로 선천 마법을 켤 수 있습니다. 선천 마법 중에는 한 주문에 메타매직을 두 종류까지 쓸 수 있습니다."
+  },
+  "dnd.srd521.feature.sorcerer.arcane-apotheosis": {
+   "heading": "비전의 신격화",
+   "nameEn": "Arcane Apotheosis",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 20,
+   "fallback": "선천 마법 중에는 턴마다 한 번, 메타매직 하나를 마법 점수 없이 쓸 수 있습니다."
+  },
+  "dnd.srd521.feature.warlock.eldritch-invocations": {
+   "heading": "섬뜩한 기원술",
+   "nameEn": "Eldritch Invocations",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 1,
+   "fallback": "기원술 하나를 배웁니다(2레벨 3, 5레벨 5, 7레벨 6, 9레벨 7, 12레벨 8, 15레벨 9, 18레벨 10). 레벨을 얻을 때 기원술 하나를 다른 것으로 바꿀 수 있습니다. 각 기원술의 레벨 조건과 선행 조건을 만족해야 합니다."
+  },
+  "dnd.srd521.feature.warlock.pact-magic": {
+   "heading": "계약 마법",
+   "nameEn": "Pact Magic",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 1,
+   "fallback": "워락 주문 목록에서 소마법과 준비 주문을 고르고 매력으로 시전합니다. 계약 마법 슬롯은 모두 같은 레벨이며(1레벨, 3레벨 2, 5레벨 3, 7레벨 4, 9레벨 5) 짧은 휴식이나 긴 휴식에 모두 회복합니다. 비전 매개체를 씁니다."
+  },
+  "dnd.srd521.feature.warlock.magical-cunning": {
+   "heading": "마법적 책략",
+   "nameEn": "Magical Cunning",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 2,
+   "fallback": "1분간 신비한 의식을 치러 소비한 계약 마법 슬롯의 절반(올림)을 회복합니다. 긴 휴식마다 1회."
+  },
+  "dnd.srd521.feature.warlock.contact-patron": {
+   "heading": "후원자와 접촉",
+   "nameEn": "Contact Patron",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 9,
+   "fallback": "Contact Other Plane을 항상 준비합니다. 후원자에게 연결할 때는 슬롯 없이 시전할 수 있고 내성 굴림에 자동 성공합니다. 긴 휴식마다 1회."
+  },
+  "dnd.srd521.feature.warlock.mystic-arcanum-6": {
+   "heading": "신비한 비전(6레벨)",
+   "nameEn": "Mystic Arcanum (6th level)",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 11,
+   "fallback": "워락 주문 목록의 6레벨 주문 하나를 골라 항상 준비합니다. 긴 휴식마다 1회 슬롯 없이 시전할 수 있습니다. 레벨을 얻을 때 다른 6레벨 주문으로 바꿀 수 있습니다.",
+   "sourceHeading": "신비한 비전"
+  },
+  "dnd.srd521.feature.warlock.mystic-arcanum-7": {
+   "heading": "신비한 비전(7레벨)",
+   "nameEn": "Mystic Arcanum (7th level)",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 13,
+   "fallback": "워락 주문 목록의 7레벨 주문 하나를 골라 항상 준비하고 긴 휴식마다 1회 슬롯 없이 시전합니다.",
+   "sourceHeading": "신비한 비전"
+  },
+  "dnd.srd521.feature.warlock.mystic-arcanum-8": {
+   "heading": "신비한 비전(8레벨)",
+   "nameEn": "Mystic Arcanum (8th level)",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 15,
+   "fallback": "워락 주문 목록의 8레벨 주문 하나를 골라 항상 준비하고 긴 휴식마다 1회 슬롯 없이 시전합니다.",
+   "sourceHeading": "신비한 비전"
+  },
+  "dnd.srd521.feature.warlock.mystic-arcanum-9": {
+   "heading": "신비한 비전(9레벨)",
+   "nameEn": "Mystic Arcanum (9th level)",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 17,
+   "fallback": "워락 주문 목록의 9레벨 주문 하나를 골라 항상 준비하고 긴 휴식마다 1회 슬롯 없이 시전합니다.",
+   "sourceHeading": "신비한 비전"
+  },
+  "dnd.srd521.feature.warlock.eldritch-master": {
+   "heading": "섬뜩한 대가",
+   "nameEn": "Eldritch Master",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 20,
+   "fallback": "마법적 책략을 쓸 때 계약 마법 슬롯을 모두 회복합니다."
+  },
+  "dnd.srd521.feature.wizard.spellcasting": {
+   "heading": "주문 시전",
+   "nameEn": "Spellcasting",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 1,
+   "fallback": "주문서에 1레벨 위저드 주문 여섯 개를 적고 시작합니다. 지능으로 시전하며, 긴 휴식을 마칠 때 주문서에서 준비 주문을 고릅니다. 레벨을 얻을 때마다 주문서에 위저드 주문 두 개를 더 적고, 모험 중 찾은 주문을 옮겨 적을 수 있습니다. 비전 매개체를 씁니다."
+  },
+  "dnd.srd521.feature.wizard.ritual-adept": {
+   "heading": "의식 숙련",
+   "nameEn": "Ritual Adept",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 1,
+   "fallback": "주문서에 있는 의식 주문은 준비하지 않아도 의식으로 시전할 수 있습니다."
+  },
+  "dnd.srd521.feature.wizard.arcane-recovery": {
+   "heading": "비전 회복",
+   "nameEn": "Arcane Recovery",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 1,
+   "fallback": "짧은 휴식을 마칠 때 소비한 주문 슬롯을 합계 레벨이 위저드 레벨의 절반(올림) 이하가 되도록 회복합니다(6레벨 이상 슬롯 제외). 긴 휴식마다 1회."
+  },
+  "dnd.srd521.feature.wizard.scholar": {
+   "heading": "학자",
+   "nameEn": "Scholar",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 2,
+   "fallback": "비전·역사·조사·의학·자연·종교 중 숙련한 기술 하나에 전문화를 얻습니다."
+  },
+  "dnd.srd521.feature.wizard.memorize-spell": {
+   "heading": "주문 암기",
+   "nameEn": "Memorize Spell",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 5,
+   "fallback": "짧은 휴식을 마칠 때 주문서를 참고해 준비 주문 하나를 다른 1레벨 이상 위저드 주문으로 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.wizard.spell-mastery": {
+   "heading": "주문 숙련",
+   "nameEn": "Spell Mastery",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 18,
+   "fallback": "주문서의 1레벨 주문 하나와 2레벨 주문 하나를 골릅니다. 그 주문들을 항상 준비하고, 가장 낮은 레벨로 슬롯 없이 시전할 수 있습니다. 긴 휴식을 마칠 때 다른 주문으로 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.wizard.signature-spells": {
+   "heading": "대표 주문",
+   "nameEn": "Signature Spells",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 20,
+   "fallback": "주문서의 3레벨 주문 두 개를 대표 주문으로 정해 항상 준비합니다. 각각 3레벨로 슬롯 없이 1회 시전할 수 있고, 짧은 휴식이나 긴 휴식에 회복합니다."
+  },
+  "dnd.srd521.feature.cleric.spellcasting": {
+   "heading": "주문 시전",
+   "nameEn": "Spellcasting",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 1,
+   "fallback": "클레릭 주문 목록 전체에서 준비 주문을 고르고 지혜로 시전합니다. 성표를 주문 매개체로 씁니다. 긴 휴식을 마칠 때 준비 주문을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.cleric.divine-order": {
+   "heading": "신성한 역할",
+   "nameEn": "Divine Order",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 1,
+   "fallback": "수호자(군용 무기 숙련과 중갑 훈련) 또는 기적술사(클레릭 소마법 하나 추가, 비전·종교 판정에 지혜 수정치(최소 1) 추가) 중 하나를 고릅니다."
+  },
+  "dnd.srd521.feature.cleric.channel-divinity": {
+   "heading": "신성 변환",
+   "nameEn": "Channel Divinity",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 2,
+   "fallback": "신성한 힘을 끌어 씁니다: 신성한 불꽃(60피트 안의 생물을 1d8(7레벨 2d8, 13레벨 3d8, 18레벨 4d8) + 지혜 수정치만큼 치유하거나 건강 내성 실패 시 광휘/괴저 피해)과 언데드 퇴치(30피트 안의 언데드는 지혜 내성 실패 시 1분간 공포·행동불능). 긴 휴식마다 2회(6레벨 3회, 18레벨 4회), 짧은 휴식을 마치면 1회를 회복합니다."
+  },
+  "dnd.srd521.feature.cleric.sear-undead": {
+   "heading": "언데드 소각",
+   "nameEn": "Sear Undead",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 5,
+   "fallback": "언데드 퇴치를 쓸 때 내성에 실패한 언데드마다 지혜 수정치(최소 1)만큼의 d8 광휘 피해를 줍니다."
+  },
+  "dnd.srd521.feature.cleric.blessed-strikes": {
+   "heading": "축복받은 일격",
+   "nameEn": "Blessed Strikes",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 7,
+   "fallback": "신성한 일격(턴당 한 번 무기 공격 명중 시 1d8 광휘 또는 괴저 피해 추가) 또는 강력한 주문 시전(클레릭 소마법 피해에 지혜 수정치 추가) 중 하나를 고릅니다."
+  },
+  "dnd.srd521.feature.cleric.divine-intervention": {
+   "heading": "신성 개입",
+   "nameEn": "Divine Intervention",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 10,
+   "fallback": "행동으로 5레벨 이하 클레릭 주문 하나를 주문 슬롯이나 물질 구성요소 없이 시전합니다(시전 시간이 행동인 주문만). 긴 휴식마다 1회입니다."
+  },
+  "dnd.srd521.feature.cleric.improved-blessed-strikes": {
+   "heading": "향상된 축복받은 일격",
+   "nameEn": "Improved Blessed Strikes",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 14,
+   "fallback": "신성한 일격의 추가 피해가 2d8이 되거나, 강력한 주문 시전으로 소마법 피해를 줄 때 60피트 안의 아군 하나에게 지혜 수정치의 두 배만큼 임시 HP를 줄 수 있습니다."
+  },
+  "dnd.srd521.feature.cleric.greater-divine-intervention": {
+   "heading": "더 강한 신성 개입",
+   "nameEn": "Greater Divine Intervention",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 20,
+   "fallback": "신성 개입으로 Wish를 시전할 수 있습니다. 그렇게 하면 2d4번의 긴 휴식을 마칠 때까지 신성 개입을 다시 쓸 수 없습니다."
+  },
+  "dnd.srd521.feature.fighter.fighting-style": {
+   "heading": "전투 방식",
+   "nameEn": "Fighting Style",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 1,
+   "fallback": "전투 방식 재주 하나를 얻습니다."
+  },
+  "dnd.srd521.feature.fighter.second-wind": {
+   "heading": "재기의 바람",
+   "nameEn": "Second Wind",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 1,
+   "fallback": "추가 행동으로 1d10 + 파이터 레벨만큼 HP를 회복합니다. 2회(4레벨 3회, 10레벨 4회) 쓸 수 있고, 짧은 휴식을 마치면 1회, 긴 휴식을 마치면 모두 회복합니다."
+  },
+  "dnd.srd521.feature.fighter.weapon-mastery": {
+   "heading": "무기 통달",
+   "nameEn": "Weapon Mastery",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 1,
+   "fallback": "숙련한 무기 세 종류(4레벨 넷, 10레벨 다섯, 16레벨 여섯)를 골라 그 통달 속성을 쓸 수 있습니다. 긴 휴식을 마칠 때마다 선택을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.fighter.action-surge": {
+   "heading": "행동 폭증 1회",
+   "nameEn": "Action Surge",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 2,
+   "fallback": "자기 턴에 행동 하나를 추가로 합니다(마법 행동 제외). 짧은 휴식이나 긴 휴식마다 1회, 17레벨부터 2회(한 턴에는 한 번만).",
+   "sourceHeading": "행동 폭증"
+  },
+  "dnd.srd521.feature.fighter.tactical-mind": {
+   "heading": "전술적 사고",
+   "nameEn": "Tactical Mind",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 2,
+   "fallback": "능력 판정에 실패했을 때 재기의 바람 1회를 소비해 1d10을 더할 수 있습니다. 그래도 실패하면 소비하지 않은 것으로 칩니다."
+  },
+  "dnd.srd521.feature.fighter.extra-attack": {
+   "heading": "추가 공격",
+   "nameEn": "Extra Attack",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 5,
+   "fallback": "자기 턴에 공격 행동을 할 때 한 번이 아니라 두 번 공격할 수 있습니다."
+  },
+  "dnd.srd521.feature.fighter.tactical-shift": {
+   "heading": "전술적 이동",
+   "nameEn": "Tactical Shift",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 5,
+   "fallback": "재기의 바람을 쓰면 기회 공격을 유발하지 않고 이동 속도의 절반까지 이동할 수 있습니다."
+  },
+  "dnd.srd521.feature.fighter.indomitable": {
+   "heading": "불굴 1회",
+   "nameEn": "Indomitable",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 9,
+   "fallback": "내성 굴림에 실패하면 다시 굴리고, 새 굴림에 파이터 레벨을 더합니다. 긴 휴식마다 1회(13레벨 2회, 17레벨 3회).",
+   "sourceHeading": "불굴"
+  },
+  "dnd.srd521.feature.fighter.tactical-master": {
+   "heading": "전술 통달",
+   "nameEn": "Tactical Master",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 9,
+   "fallback": "통달 속성이 있는 무기로 공격할 때 그 속성을 밀치기·약화·둔화 중 하나로 바꿔 쓸 수 있습니다."
+  },
+  "dnd.srd521.feature.fighter.extra-attack-2": {
+   "heading": "추가 공격 2회",
+   "nameEn": "Two Extra Attacks",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 11,
+   "fallback": "공격 행동을 할 때 세 번 공격할 수 있습니다.",
+   "sourceHeading": "추가 공격"
+  },
+  "dnd.srd521.feature.fighter.indomitable-2": {
+   "heading": "불굴 2회",
+   "nameEn": "Indomitable (two uses)",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 13,
+   "fallback": "불굴을 긴 휴식마다 2회 쓸 수 있습니다.",
+   "sourceHeading": "불굴"
+  },
+  "dnd.srd521.feature.fighter.studied-attacks": {
+   "heading": "분석한 공격",
+   "nameEn": "Studied Attacks",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 13,
+   "fallback": "공격 굴림이 빗나가면 다음 턴이 끝나기 전 그 대상을 향한 다음 공격 굴림에 유리를 받습니다."
+  },
+  "dnd.srd521.feature.fighter.action-surge-2": {
+   "heading": "행동 폭증 2회",
+   "nameEn": "Action Surge (two uses)",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 17,
+   "fallback": "행동 폭증을 휴식마다 2회 쓸 수 있습니다(한 턴에는 한 번만).",
+   "sourceHeading": "행동 폭증"
+  },
+  "dnd.srd521.feature.fighter.indomitable-3": {
+   "heading": "불굴 3회",
+   "nameEn": "Indomitable (three uses)",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 17,
+   "fallback": "불굴을 긴 휴식마다 3회 쓸 수 있습니다.",
+   "sourceHeading": "불굴"
+  },
+  "dnd.srd521.feature.fighter.extra-attack-3": {
+   "heading": "추가 공격 3회",
+   "nameEn": "Three Extra Attacks",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 20,
+   "fallback": "공격 행동을 할 때 네 번 공격할 수 있습니다.",
+   "sourceHeading": "추가 공격"
+  },
+  "dnd.srd521.feature.paladin.lay-on-hands": {
+   "heading": "안수",
+   "nameEn": "Lay On Hands",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 1,
+   "fallback": "팔라딘 레벨의 5배만큼의 치유 점수 풀을 갖고 긴 휴식에 회복합니다. 추가 행동으로 접촉한 생물의 HP를 풀에서 쓴 만큼 회복시키거나, 5점을 써서 중독 상태 하나를 끝냅니다."
+  },
+  "dnd.srd521.feature.paladin.spellcasting": {
+   "heading": "주문 시전",
+   "nameEn": "Spellcasting",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 1,
+   "fallback": "팔라딘 주문 목록 전체에서 준비 주문을 고르고 매력으로 시전합니다. 성표를 주문 매개체로 씁니다. 긴 휴식을 마칠 때 준비 주문을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.weapon-mastery": {
+   "heading": "무기 통달",
+   "nameEn": "Weapon Mastery",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 1,
+   "fallback": "숙련한 무기 두 종류를 골라 그 통달 속성을 쓸 수 있습니다. 긴 휴식을 마칠 때마다 선택을 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.fighting-style": {
+   "heading": "전투 방식",
+   "nameEn": "Fighting Style",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 2,
+   "fallback": "전투 방식 재주 하나를 얻거나, 그 대신 축복받은 전사(클레릭 소마법 두 개를 항상 준비)를 고릅니다."
+  },
+  "dnd.srd521.feature.paladin.smite": {
+   "heading": "팔라딘의 강타",
+   "nameEn": "Paladin's Smite",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 2,
+   "fallback": "Divine Smite를 항상 준비합니다. 긴 휴식마다 1회, 이 주문을 슬롯 없이 시전할 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.channel-divinity": {
+   "heading": "신성 변환",
+   "nameEn": "Channel Divinity",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 3,
+   "fallback": "신성 감지(추가 행동으로 10분간 60피트 안의 천상체·악마·언데드 감지)와 서브클래스가 주는 선택지에 씁니다. 긴 휴식마다 2회(11레벨 3회), 짧은 휴식을 마치면 1회를 회복합니다."
+  },
+  "dnd.srd521.feature.paladin.extra-attack": {
+   "heading": "추가 공격",
+   "nameEn": "Extra Attack",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 5,
+   "fallback": "자기 턴에 공격 행동을 할 때 한 번이 아니라 두 번 공격할 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.faithful-steed": {
+   "heading": "충직한 군마",
+   "nameEn": "Faithful Steed",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 5,
+   "fallback": "Find Steed를 항상 준비하고, 긴 휴식마다 1회 슬롯 없이 시전할 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.aura-of-protection": {
+   "heading": "보호의 오라",
+   "nameEn": "Aura of Protection",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 6,
+   "fallback": "10피트 반경의 오라 안에서 자신과 아군은 내성 굴림에 매력 수정치(최소 1)를 더합니다. 행동불능이면 오라가 사라집니다."
+  },
+  "dnd.srd521.feature.paladin.abjure-foes": {
+   "heading": "적 추방",
+   "nameEn": "Abjure Foes",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 9,
+   "fallback": "행동으로 신성 변환 1회를 소비해 60피트 안의 생물을 매력 수정치(최소 1)명까지 지정합니다. 각 대상은 지혜 내성에 실패하면 1분간 공포 상태가 되고 그동안 이동 또는 행동·추가 행동 중 하나만 할 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.aura-of-courage": {
+   "heading": "용기의 오라",
+   "nameEn": "Aura of Courage",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 10,
+   "fallback": "오라 안의 자신과 아군은 공포 상태에 면역입니다."
+  },
+  "dnd.srd521.feature.paladin.radiant-strikes": {
+   "heading": "광휘의 일격",
+   "nameEn": "Radiant Strikes",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 11,
+   "fallback": "근접 무기나 맨손 타격이 명중하면 1d8 광휘 피해를 추가로 줍니다."
+  },
+  "dnd.srd521.feature.paladin.restoring-touch": {
+   "heading": "회복의 손길",
+   "nameEn": "Restoring Touch",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 14,
+   "fallback": "안수를 쓸 때 5점씩 소비해 실명·매혹·귀먹음·공포·마비·기절 상태를 하나씩 끝낼 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.aura-expansion": {
+   "heading": "오라 확장",
+   "nameEn": "Aura Expansion",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 18,
+   "fallback": "보호의 오라의 반경이 30피트가 됩니다."
+  },
+  "dnd.srd521.feature.cleric.life-domain.disciple-of-life": {
+   "heading": "생명의 제자",
+   "nameEn": "Disciple of Life",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 3,
+   "fallback": "슬롯을 소비해 치유 주문을 시전하면 회복량이 2 + 주문 레벨만큼 늘어납니다."
+  },
+  "dnd.srd521.feature.cleric.life-domain.spells": {
+   "heading": "생명 권역 주문",
+   "nameEn": "Life Domain Spells",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 3,
+   "fallback": "권역 주문을 항상 준비합니다: 3레벨 Aid·Bless·Cure Wounds·Lesser Restoration, 5레벨 Mass Healing Word·Revivify, 7레벨 Aura of Life·Death Ward, 9레벨 Greater Restoration·Mass Cure Wounds."
+  },
+  "dnd.srd521.feature.cleric.life-domain.preserve-life": {
+   "heading": "생명 보존",
+   "nameEn": "Preserve Life",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 3,
+   "fallback": "행동으로 신성 변환 1회를 소비해 클레릭 레벨의 5배만큼의 HP를 30피트 안의 생물들에게 나눠 회복시킵니다. 한 생물은 최대 HP의 절반까지만 회복합니다."
+  },
+  "dnd.srd521.feature.cleric.life-domain.blessed-healer": {
+   "heading": "축복받은 치유자",
+   "nameEn": "Blessed Healer",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 6,
+   "fallback": "슬롯을 소비한 치유 주문으로 자신이 아닌 생물을 치유하면 자신도 2 + 주문 레벨만큼 회복합니다."
+  },
+  "dnd.srd521.feature.cleric.life-domain.supreme-healing": {
+   "heading": "최고의 치유",
+   "nameEn": "Supreme Healing",
+   "classId": "dnd.srd521.class.cleric",
+   "level": 17,
+   "fallback": "주문으로 HP를 회복시킬 때 주사위를 굴리지 않고 최대값을 씁니다."
+  },
+  "dnd.srd521.feature.druid.circle-of-the-land.spells": {
+   "heading": "대지의 회합 주문",
+   "nameEn": "Circle of the Land Spells",
+   "classId": "dnd.srd521.class.druid",
+   "level": 3,
+   "fallback": "긴 휴식을 마칠 때 대지 유형(건조·극지·온대·열대)을 고르면 그 유형의 회합 주문을 항상 준비합니다."
+  },
+  "dnd.srd521.feature.druid.circle-of-the-land.lands-aid": {
+   "heading": "대지의 도움",
+   "nameEn": "Land's Aid",
+   "classId": "dnd.srd521.class.druid",
+   "level": 3,
+   "fallback": "행동으로 야생 변신 1회를 소비해 60피트 안의 한 지점을 중심으로 10피트 구체를 만듭니다. 안의 생물은 건강 내성에 실패하면 2d6 괴저 피해를 받고, 안의 생물 하나는 2d6 HP를 회복합니다. 10레벨에 3d6, 14레벨에 4d6이 됩니다."
+  },
+  "dnd.srd521.feature.druid.circle-of-the-land.natural-recovery": {
+   "heading": "자연의 회복",
+   "nameEn": "Natural Recovery",
+   "classId": "dnd.srd521.class.druid",
+   "level": 6,
+   "fallback": "긴 휴식마다 1회, 회합 주문 하나를 슬롯 없이 시전할 수 있습니다. 또한 짧은 휴식을 마칠 때 소비한 슬롯을 합계 레벨이 드루이드 레벨의 절반(올림) 이하가 되도록 회복합니다(6레벨 이상 제외). 긴 휴식마다 1회."
+  },
+  "dnd.srd521.feature.druid.circle-of-the-land.natures-ward": {
+   "heading": "자연의 수호",
+   "nameEn": "Nature's Ward",
+   "classId": "dnd.srd521.class.druid",
+   "level": 10,
+   "fallback": "중독 상태에 면역이며, 고른 대지 유형에 따라 피해 저항을 얻습니다: 건조 화염, 극지 냉기, 온대 번개, 열대 독."
+  },
+  "dnd.srd521.feature.druid.circle-of-the-land.natures-sanctuary": {
+   "heading": "자연의 성역",
+   "nameEn": "Nature's Sanctuary",
+   "classId": "dnd.srd521.class.druid",
+   "level": 14,
+   "fallback": "행동으로 야생 변신 1회를 소비해 120피트 안에 15피트 정육면체의 영적 자연 지대를 1분간 만듭니다. 안의 자신과 아군은 절반 엄폐를 얻고 자연의 수호의 저항을 공유합니다. 추가 행동으로 지대를 60피트 옮길 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.hunter.hunters-lore": {
+   "heading": "사냥꾼의 지식",
+   "nameEn": "Hunter's Lore",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 3,
+   "fallback": "Hunter's Mark로 표시한 생물의 면역·저항·취약을 알 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.hunter.hunters-prey": {
+   "heading": "사냥꾼의 먹잇감",
+   "nameEn": "Hunter's Prey",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 3,
+   "fallback": "거상 학살자(턴당 한 번, HP가 최대보다 낮은 생물을 무기로 명중 시 1d8 추가 피해) 또는 무리 격파자(턴당 한 번, 무기 공격 뒤 첫 대상 5피트 안의 다른 생물을 같은 무기로 한 번 더 공격) 중 하나를 고릅니다. 짧은 휴식이나 긴 휴식을 마칠 때 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.hunter.defensive-tactics": {
+   "heading": "방어 전술",
+   "nameEn": "Defensive Tactics",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 7,
+   "fallback": "기회 공격 회피(자신을 향한 기회 공격 굴림에 불리) 또는 다중 공격 방어(피해를 받은 뒤 같은 생물의 그 턴 공격에 AC +4) 중 하나를 고릅니다. 짧은 휴식이나 긴 휴식을 마칠 때 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.hunter.superior-hunters-prey": {
+   "heading": "우월한 사냥꾼의 먹잇감",
+   "nameEn": "Superior Hunter's Prey",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 11,
+   "fallback": "턴당 한 번, Hunter's Mark의 추가 피해를 줄 때 표시한 대상 30피트 안에서 볼 수 있는 다른 생물 하나에게도 같은 피해를 줄 수 있습니다."
+  },
+  "dnd.srd521.feature.ranger.hunter.superior-hunters-defense": {
+   "heading": "우월한 사냥꾼의 방어",
+   "nameEn": "Superior Hunter's Defense",
+   "classId": "dnd.srd521.class.ranger",
+   "level": 15,
+   "fallback": "피해를 받았을 때 반응으로 그 피해 유형(그리고 다음 턴 시작까지 같은 유형)에 저항을 얻습니다."
+  },
+  "dnd.srd521.feature.rogue.thief.fast-hands": {
+   "heading": "빠른 손",
+   "nameEn": "Fast Hands",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 3,
+   "fallback": "교활한 행동의 추가 행동으로 손재주 판정, 도둑 도구 사용, 물건 사용 행동을 할 수 있습니다."
+  },
+  "dnd.srd521.feature.rogue.thief.second-story-work": {
+   "heading": "2층 작업",
+   "nameEn": "Second-Story Work",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 3,
+   "fallback": "이동 속도와 같은 등반 속도를 얻고, 도움닫기 점프 거리가 민첩 수정치만큼 늘어납니다."
+  },
+  "dnd.srd521.feature.rogue.thief.supreme-sneak": {
+   "heading": "최고의 은신",
+   "nameEn": "Supreme Sneak",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 9,
+   "fallback": "교활한 일격에 은신 공격(1d6 소비)이 추가됩니다: 숨은 상태에서 공격해도 그 턴 이동 속도의 절반 이하로만 움직이면 다음 턴이 끝날 때까지 투명 상태가 유지됩니다."
+  },
+  "dnd.srd521.feature.rogue.thief.use-magic-device": {
+   "heading": "마법 물건 사용",
+   "nameEn": "Use Magic Device",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 13,
+   "fallback": "조율 슬롯이 하나 늘어나고, 마법 물건의 충전을 소비할 때 d6에서 6이 나오면 소비하지 않으며, 어느 클래스 목록의 주문 두루마리라도 지능(비전) 판정으로 시전을 시도할 수 있습니다.",
+   "sourceHeading": "마법 장치 사용"
+  },
+  "dnd.srd521.feature.rogue.thief.thiefs-reflexes": {
+   "heading": "도둑의 반사신경",
+   "nameEn": "Thief's Reflexes",
+   "classId": "dnd.srd521.class.rogue",
+   "level": 17,
+   "fallback": "전투의 첫 라운드에 두 번의 턴을 갖습니다. 첫 턴은 원래 이니셔티브, 두 번째 턴은 이니셔티브 −10입니다.",
+   "sourceHeading": "도둑의 반사 신경"
+  },
+  "dnd.srd521.feature.sorcerer.draconic.draconic-resilience": {
+   "heading": "용의 회복력",
+   "nameEn": "Draconic Resilience",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 3,
+   "fallback": "최대 HP가 3 늘고 이후 소서러 레벨을 얻을 때마다 1씩 더 늡니다. 갑옷을 입지 않았을 때 AC는 10 + 민첩 수정치 + 매력 수정치입니다."
+  },
+  "dnd.srd521.feature.sorcerer.draconic.draconic-spells": {
+   "heading": "용의 주문",
+   "nameEn": "Draconic Spells",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 3,
+   "fallback": "용의 주문을 항상 준비합니다: 3레벨 Alter Self·Chromatic Orb·Command·Dragon's Breath, 5레벨 Fear·Fly, 7레벨 Arcane Eye·Charm Monster, 9레벨 Legend Lore·Summon Dragon."
+  },
+  "dnd.srd521.feature.sorcerer.draconic.elemental-affinity": {
+   "heading": "원소의 친화력",
+   "nameEn": "Elemental Affinity",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 6,
+   "fallback": "산성·냉기·화염·번개·독 중 하나를 골라 그 피해에 저항을 얻고, 그 유형의 피해를 주는 주문을 시전할 때 피해 굴림 하나에 매력 수정치를 더합니다.",
+   "sourceHeading": "원소 친화"
+  },
+  "dnd.srd521.feature.sorcerer.draconic.dragon-wings": {
+   "heading": "용의 날개",
+   "nameEn": "Dragon Wings",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 14,
+   "fallback": "추가 행동으로 1시간 동안 60피트 비행 속도를 주는 날개를 펼칩니다. 긴 휴식마다 1회, 또는 마법 점수 3점을 소비해 다시 씁니다."
+  },
+  "dnd.srd521.feature.sorcerer.draconic.dragon-companion": {
+   "heading": "용 동료",
+   "nameEn": "Dragon Companion",
+   "classId": "dnd.srd521.class.sorcerer",
+   "level": 18,
+   "fallback": "Summon Dragon을 슬롯 없이 시전할 수 있고(긴 휴식마다 1회), 이 주문에 집중하지 않아도 되며 1분간 지속됩니다."
+  },
+  "dnd.srd521.feature.wizard.evoker.evocation-savant": {
+   "heading": "방출술 전문가",
+   "nameEn": "Evocation Savant",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 3,
+   "fallback": "1레벨 이상 방출술 위저드 주문 두 개를 골라 주문서에 무료로 적습니다. 이후 위저드 레벨을 얻을 때마다 방출술 주문 하나를 무료로 더 적을 수 있습니다.",
+   "sourceHeading": "방출학파 학자"
+  },
+  "dnd.srd521.feature.wizard.evoker.potent-cantrip": {
+   "heading": "강력한 소마법",
+   "nameEn": "Potent Cantrip",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 3,
+   "fallback": "피해를 주는 소마법에 대상이 내성에 성공하거나 공격이 빗나가도 피해의 절반을 줍니다(추가 효과는 없음)."
+  },
+  "dnd.srd521.feature.wizard.evoker.sculpt-spells": {
+   "heading": "주문 조형",
+   "nameEn": "Sculpt Spells",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 6,
+   "fallback": "방출술 주문을 시전할 때 1 + 주문 레벨명까지의 생물을 골라 그들이 내성에 자동 성공하고 피해를 받지 않게 합니다."
+  },
+  "dnd.srd521.feature.wizard.evoker.empowered-evocation": {
+   "heading": "강화된 방출술",
+   "nameEn": "Empowered Evocation",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 10,
+   "fallback": "방출술 위저드 주문의 피해 굴림 하나에 지능 수정치를 더합니다.",
+   "sourceHeading": "강화된 방출"
+  },
+  "dnd.srd521.feature.wizard.evoker.overchannel": {
+   "heading": "과부하",
+   "nameEn": "Overchannel",
+   "classId": "dnd.srd521.class.wizard",
+   "level": 14,
+   "fallback": "1~5레벨 위저드 주문을 시전할 때 피해를 최대값으로 낼 수 있습니다. 긴 휴식 뒤 첫 사용은 무해하지만, 이후 사용마다 주문 레벨당 2d12 괴저 피해를 받고 다음 긴 휴식 전까지 사용할 때마다 d12가 하나씩 늘어납니다."
+  },
+  "dnd.srd521.feature.barbarian.berserker.frenzy": {
+   "heading": "광란",
+   "nameEn": "Frenzy",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 3,
+   "fallback": "격노 중 무모한 공격을 쓰면, 그 턴에 처음 명중한 근력 근접 공격에 격노 피해 보너스만큼의 d6을 추가 피해로 줍니다."
+  },
+  "dnd.srd521.feature.barbarian.berserker.mindless-rage": {
+   "heading": "무심한 격노",
+   "nameEn": "Mindless Rage",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 6,
+   "fallback": "격노 중에는 매혹과 공포 상태에 면역이며, 격노에 들어갈 때 걸려 있던 매혹·공포는 격노가 끝날 때까지 정지됩니다."
+  },
+  "dnd.srd521.feature.barbarian.berserker.retaliation": {
+   "heading": "보복",
+   "nameEn": "Retaliation",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 10,
+   "fallback": "5피트 안의 생물이 자신에게 피해를 입히면 반응으로 그 생물에게 근접 공격을 한 번 합니다."
+  },
+  "dnd.srd521.feature.barbarian.berserker.intimidating-presence": {
+   "heading": "위압적인 존재감",
+   "nameEn": "Intimidating Presence",
+   "classId": "dnd.srd521.class.barbarian",
+   "level": 14,
+   "fallback": "추가 행동으로 30피트 안의 생물들에게 지혜 내성(DC 8 + 숙련 보너스 + 근력 수정치)을 요구합니다. 실패하면 1분 동안 자신에게 공포 상태가 됩니다. 긴 휴식마다 1회, 또는 격노 1회를 소비해 다시 씁니다."
+  },
+  "dnd.srd521.feature.monk.open-hand.open-hand-technique": {
+   "heading": "열린 손 기술",
+   "nameEn": "Open Hand Technique",
+   "classId": "dnd.srd521.class.monk",
+   "level": 3,
+   "fallback": "폭풍 같은 공격의 맨손 타격이 명중할 때마다 효과 하나를 고릅니다: 흔들기(다음 턴 시작까지 반응 불가), 밀어내기(근력 내성 실패 시 15피트 밀어냄), 넘어뜨리기(민첩 내성 실패 시 넘어짐).",
+   "sourceHeading": "열린 손 기법"
+  },
+  "dnd.srd521.feature.monk.open-hand.wholeness-of-body": {
+   "heading": "심신의 완전함",
+   "nameEn": "Wholeness of Body",
+   "classId": "dnd.srd521.class.monk",
+   "level": 6,
+   "fallback": "추가 행동으로 무예 주사위 + 지혜 수정치(최소 1)만큼 HP를 회복합니다. 긴 휴식마다 지혜 수정치(최소 1)회.",
+   "sourceHeading": "신체 완성"
+  },
+  "dnd.srd521.feature.monk.open-hand.fleet-step": {
+   "heading": "빠른 걸음",
+   "nameEn": "Fleet Step",
+   "classId": "dnd.srd521.class.monk",
+   "level": 11,
+   "fallback": "바람의 걸음이 아닌 추가 행동을 하면 그 직후 바람의 걸음을 기 점수 없이 함께 쓸 수 있습니다.",
+   "sourceHeading": "날랜 발걸음"
+  },
+  "dnd.srd521.feature.monk.open-hand.quivering-palm": {
+   "heading": "진동하는 손바닥",
+   "nameEn": "Quivering Palm",
+   "classId": "dnd.srd521.class.monk",
+   "level": 17,
+   "fallback": "맨손 타격이 명중했을 때 기 점수 4점을 소비해 대상의 몸에 진동을 심습니다. 이후 행동으로 진동을 터뜨리면 대상은 건강 내성에 실패하면 10d12 역장 피해를, 성공하면 절반을 받습니다. 진동은 몽크 레벨만큼의 일수 동안 유지됩니다.",
+   "sourceHeading": "진동장"
+  },
+  "dnd.srd521.feature.paladin.oath-of-devotion.spells": {
+   "heading": "헌신의 맹세 주문",
+   "nameEn": "Oath of Devotion Spells",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 3,
+   "fallback": "맹세 주문을 항상 준비합니다: 3레벨 Protection from Evil and Good·Shield of Faith, 5레벨 Aid·Zone of Truth, 9레벨 Beacon of Hope·Dispel Magic, 13레벨 Freedom of Movement·Guardian of Faith, 17레벨 Commune·Flame Strike."
+  },
+  "dnd.srd521.feature.paladin.oath-of-devotion.sacred-weapon": {
+   "heading": "신성한 무기",
+   "nameEn": "Sacred Weapon",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 3,
+   "fallback": "추가 행동으로 신성 변환 1회를 소비해 10분 동안 무기 하나를 축복합니다. 그 무기의 공격 굴림에 매력 수정치(최소 1)를 더하고, 무기는 20피트 밝은 빛을 냅니다. 무기 공격에 광휘 피해를 쓸 수 있습니다."
+  },
+  "dnd.srd521.feature.paladin.oath-of-devotion.aura-of-devotion": {
+   "heading": "헌신의 오라",
+   "nameEn": "Aura of Devotion",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 7,
+   "fallback": "보호의 오라 안의 자신과 아군은 매혹 상태에 면역입니다."
+  },
+  "dnd.srd521.feature.paladin.oath-of-devotion.smite-of-protection": {
+   "heading": "보호의 강타",
+   "nameEn": "Smite of Protection",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 15,
+   "fallback": "Divine Smite를 시전하면 다음 턴 시작까지 보호의 오라 안의 자신과 아군이 절반 엄폐를 얻습니다."
+  },
+  "dnd.srd521.feature.paladin.oath-of-devotion.holy-nimbus": {
+   "heading": "성스러운 후광",
+   "nameEn": "Holy Nimbus",
+   "classId": "dnd.srd521.class.paladin",
+   "level": 20,
+   "fallback": "추가 행동으로 10분 동안 30피트 밝은 빛을 내며, 자기 턴 시작마다 오라 안의 적에게 매력 수정치 + 숙련 보너스만큼 광휘 피해를 주고, 악마와 언데드의 주문에 대한 내성 굴림에 유리를 받습니다. 긴 휴식마다 1회, 또는 5레벨 슬롯을 소비해 다시 씁니다."
+  },
+  "dnd.srd521.feature.warlock.fiend.dark-ones-blessing": {
+   "heading": "어둠의 존재의 축복",
+   "nameEn": "Dark One's Blessing",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 3,
+   "fallback": "적대적 생물의 HP를 0으로 만들면 매력 수정치 + 워락 레벨만큼 임시 HP를 얻습니다. 5피트 안에서 다른 이가 적을 쓰러뜨려도 얻습니다."
+  },
+  "dnd.srd521.feature.warlock.fiend.fiend-spells": {
+   "heading": "마귀 주문",
+   "nameEn": "Fiend Spells",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 3,
+   "fallback": "마귀 주문을 항상 준비합니다: 3레벨 Burning Hands·Command·Scorching Ray·Suggestion, 5레벨 Fireball·Stinking Cloud, 7레벨 Fire Shield·Wall of Fire, 9레벨 Geas·Insect Plague.",
+   "sourceHeading": "악마 주문"
+  },
+  "dnd.srd521.feature.warlock.fiend.dark-ones-own-luck": {
+   "heading": "어둠의 존재의 행운",
+   "nameEn": "Dark One's Own Luck",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 6,
+   "fallback": "능력 판정이나 내성 굴림을 한 뒤 d10을 굴려 더할 수 있습니다. 긴 휴식마다 매력 수정치(최소 1)회."
+  },
+  "dnd.srd521.feature.warlock.fiend.fiendish-resilience": {
+   "heading": "마귀의 회복력",
+   "nameEn": "Fiendish Resilience",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 10,
+   "fallback": "짧은 휴식이나 긴 휴식을 마칠 때 피해 유형 하나를 골라 다음 휴식까지 그 피해에 저항을 얻습니다(마법 무기나 은 무기 제외).",
+   "sourceHeading": "악마적 회복력"
+  },
+  "dnd.srd521.feature.warlock.fiend.hurl-through-hell": {
+   "heading": "지옥으로 내던지기",
+   "nameEn": "Hurl Through Hell",
+   "classId": "dnd.srd521.class.warlock",
+   "level": 14,
+   "fallback": "공격 굴림로 명중한 생물을 하계로 순간이동시킵니다. 대상은 다음 턴 종료 시 돌아오며 마귀가 아니면 8d10 정신 피해를 받습니다. 긴 휴식마다 1회, 또는 계약 마법 슬롯을 소비해 다시 씁니다."
+  },
+  "dnd.srd521.feature.bard.college-of-lore.bonus-proficiencies": {
+   "heading": "추가 숙련",
+   "nameEn": "Bonus Proficiencies",
+   "classId": "dnd.srd521.class.bard",
+   "level": 3,
+   "fallback": "원하는 기술 세 개에 숙련을 얻습니다."
+  },
+  "dnd.srd521.feature.bard.college-of-lore.cutting-words": {
+   "heading": "신랄한 말",
+   "nameEn": "Cutting Words",
+   "classId": "dnd.srd521.class.bard",
+   "level": 3,
+   "fallback": "60피트 안에서 볼 수 있는 생물이 피해 굴림을 하거나 능력 판정·공격 굴림에 성공했을 때 반응으로 바드의 영감 1회를 소비해 영감 주사위를 굴린 값만큼 그 굴림에서 뺍니다.",
+   "sourceHeading": "날카로운 말"
+  },
+  "dnd.srd521.feature.bard.college-of-lore.magical-discoveries": {
+   "heading": "마법 발견",
+   "nameEn": "Magical Discoveries",
+   "classId": "dnd.srd521.class.bard",
+   "level": 6,
+   "fallback": "클레릭·드루이드·위저드 주문 목록에서 주문 두 개를 골라 항상 준비합니다. 바드 레벨을 얻을 때 하나를 바꿀 수 있습니다."
+  },
+  "dnd.srd521.feature.bard.college-of-lore.peerless-skill": {
+   "heading": "탁월한 기술",
+   "nameEn": "Peerless Skill",
+   "classId": "dnd.srd521.class.bard",
+   "level": 14,
+   "fallback": "능력 판정이나 공격 굴림에 실패했을 때 바드의 영감 1회를 소비해 영감 주사위를 더할 수 있습니다. 그래도 실패하면 소비하지 않은 것으로 칩니다.",
+   "sourceHeading": "비할 데 없는 기량"
+  },
+  "dnd.srd521.feature.fighter.champion.improved-critical": {
+   "heading": "향상된 치명타",
+   "nameEn": "Improved Critical",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 3,
+   "fallback": "공격 굴림에서 d20이 19나 20이면 치명타입니다."
+  },
+  "dnd.srd521.feature.fighter.champion.remarkable-athlete": {
+   "heading": "비범한 운동선수",
+   "nameEn": "Remarkable Athlete",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 3,
+   "fallback": "이니셔티브 굴림과 근력(운동) 판정에 유리를 받습니다. 치명타를 내면 기회 공격을 유발하지 않고 이동 속도의 절반까지 이동할 수 있습니다."
+  },
+  "dnd.srd521.feature.fighter.champion.additional-fighting-style": {
+   "heading": "추가 전투 방식",
+   "nameEn": "Additional Fighting Style",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 7,
+   "fallback": "아직 갖지 않은 전투 방식 재주 하나를 더 얻습니다."
+  },
+  "dnd.srd521.feature.fighter.champion.heroic-warrior": {
+   "heading": "영웅적 전사",
+   "nameEn": "Heroic Warrior",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 10,
+   "fallback": "전투 중 자기 턴 시작 시 영웅적 영감이 없으면 영웅적 영감을 얻습니다."
+  },
+  "dnd.srd521.feature.fighter.champion.superior-critical": {
+   "heading": "우월한 치명타",
+   "nameEn": "Superior Critical",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 15,
+   "fallback": "공격 굴림에서 d20이 18, 19, 20이면 치명타입니다."
+  },
+  "dnd.srd521.feature.fighter.champion.survivor": {
+   "heading": "생존자",
+   "nameEn": "Survivor",
+   "classId": "dnd.srd521.class.fighter",
+   "level": 18,
+   "fallback": "전투 중 자기 턴 시작 시 HP가 최대의 절반 이하이고 0이 아니면 5 + 건강 수정치만큼 회복합니다. 죽음 내성 굴림에서 18~20은 20으로 칩니다."
+  }
+ },
+ "subclasses": {
+  "dnd.srd521.subclass.cleric.life-domain": {
+   "classId": "dnd.srd521.class.cleric",
+   "heading": "생명 권역",
+   "nameEn": "Life Domain",
+   "summary": "생명을 지키고 치유하는 클레릭 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {
+     "3": [
+      "dnd.srd521.spell.aid",
+      "dnd.srd521.spell.bless",
+      "dnd.srd521.spell.cure-wounds",
+      "dnd.srd521.spell.lesser-restoration"
+     ],
+     "5": [
+      "dnd.srd521.spell.mass-healing-word",
+      "dnd.srd521.spell.revivify"
+     ],
+     "7": [
+      "dnd.srd521.spell.aura-of-life",
+      "dnd.srd521.spell.death-ward"
+     ],
+     "9": [
+      "dnd.srd521.spell.greater-restoration",
+      "dnd.srd521.spell.mass-cure-wounds"
+     ]
+    }
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.cleric.life-domain.disciple-of-life"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.cleric.life-domain.spells"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.cleric.life-domain.preserve-life"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.cleric.life-domain.blessed-healer"
+    },
+    {
+     "level": 17,
+     "id": "dnd.srd521.feature.cleric.life-domain.supreme-healing"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.druid.circle-of-the-land": {
+   "classId": "dnd.srd521.class.druid",
+   "heading": "대지의 회합",
+   "nameEn": "Circle of the Land",
+   "summary": "대지의 힘을 주문으로 끌어내는 드루이드 서브클래스다.",
+   "definition": {
+    "choices": [
+     {
+      "id": "subclass.land-type",
+      "level": 3,
+      "label": "대지 유형",
+      "description": "긴 휴식을 마칠 때 바꿀 수 있는 대지 유형입니다. 회합 주문과 자연의 수호의 저항이 여기서 정해집니다.",
+      "options": [
+       {
+        "id": "arid",
+        "name": "건조",
+        "nameEn": "Arid",
+        "summary": "Blur, Burning Hands, Fire Bolt → Fireball → Blight → Wall of Stone. 저항: 화염"
+       },
+       {
+        "id": "polar",
+        "name": "극지",
+        "nameEn": "Polar",
+        "summary": "Fog Cloud, Hold Person, Ray of Frost → Sleet Storm → Ice Storm → Cone of Cold. 저항: 냉기"
+       },
+       {
+        "id": "temperate",
+        "name": "온대",
+        "nameEn": "Temperate",
+        "summary": "Misty Step, Shocking Grasp, Sleep → Lightning Bolt → Freedom of Movement → Tree Stride. 저항: 번개"
+       },
+       {
+        "id": "tropical",
+        "name": "열대",
+        "nameEn": "Tropical",
+        "summary": "Acid Splash, Ray of Sickness, Web → Stinking Cloud → Polymorph → Insect Plague. 저항: 독"
+       }
+      ]
+     }
+    ],
+    "spellsByOption": {
+     "subclass.land-type": {
+      "arid": {
+       "3": [
+        "Blur",
+        "Burning Hands",
+        "Fire Bolt"
+       ],
+       "5": [
+        "Fireball"
+       ],
+       "7": [
+        "Blight"
+       ],
+       "9": [
+        "Wall of Stone"
+       ]
+      },
+      "polar": {
+       "3": [
+        "Fog Cloud",
+        "Hold Person",
+        "Ray of Frost"
+       ],
+       "5": [
+        "Sleet Storm"
+       ],
+       "7": [
+        "Ice Storm"
+       ],
+       "9": [
+        "Cone of Cold"
+       ]
+      },
+      "temperate": {
+       "3": [
+        "Misty Step",
+        "Shocking Grasp",
+        "Sleep"
+       ],
+       "5": [
+        "Lightning Bolt"
+       ],
+       "7": [
+        "Freedom of Movement"
+       ],
+       "9": [
+        "Tree Stride"
+       ]
+      },
+      "tropical": {
+       "3": [
+        "Acid Splash",
+        "Ray of Sickness",
+        "Web"
+       ],
+       "5": [
+        "Stinking Cloud"
+       ],
+       "7": [
+        "Polymorph"
+       ],
+       "9": [
+        "Insect Plague"
+       ]
+      }
+     }
+    },
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.druid.circle-of-the-land.spells"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.druid.circle-of-the-land.lands-aid"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.druid.circle-of-the-land.natural-recovery"
+    },
+    {
+     "level": 10,
+     "id": "dnd.srd521.feature.druid.circle-of-the-land.natures-ward"
+    },
+    {
+     "level": 14,
+     "id": "dnd.srd521.feature.druid.circle-of-the-land.natures-sanctuary"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.ranger.hunter": {
+   "classId": "dnd.srd521.class.ranger",
+   "heading": "사냥꾼",
+   "nameEn": "Hunter",
+   "summary": "위험한 먹잇감을 추적해 쓰러뜨리는 레인저 서브클래스다.",
+   "definition": {
+    "choices": [
+     {
+      "id": "subclass.hunters-prey",
+      "level": 3,
+      "label": "사냥꾼의 먹잇감",
+      "description": "휴식마다 바꿀 수 있는 선택입니다.",
+      "options": [
+       {
+        "id": "colossus-slayer",
+        "name": "거상 학살자",
+        "nameEn": "Colossus Slayer",
+        "summary": "턴당 한 번, 상처 입은 생물에 무기 명중 시 1d8 추가 피해"
+       },
+       {
+        "id": "horde-breaker",
+        "name": "무리 격파자",
+        "nameEn": "Horde Breaker",
+        "summary": "턴당 한 번, 인접한 다른 생물에게 같은 무기로 추가 공격"
+       }
+      ]
+     },
+     {
+      "id": "subclass.defensive-tactics",
+      "level": 7,
+      "label": "방어 전술",
+      "description": "휴식마다 바꿀 수 있는 선택입니다.",
+      "options": [
+       {
+        "id": "escape-the-horde",
+        "name": "기회 공격 회피",
+        "nameEn": "Escape the Horde",
+        "summary": "자신을 향한 기회 공격 굴림에 불리"
+       },
+       {
+        "id": "multiattack-defense",
+        "name": "다중 공격 방어",
+        "nameEn": "Multiattack Defense",
+        "summary": "피해를 준 생물의 그 턴 이후 공격에 AC +4"
+       }
+      ]
+     }
+    ],
+    "spellsByOption": {},
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.ranger.hunter.hunters-lore"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.ranger.hunter.hunters-prey"
+    },
+    {
+     "level": 7,
+     "id": "dnd.srd521.feature.ranger.hunter.defensive-tactics"
+    },
+    {
+     "level": 11,
+     "id": "dnd.srd521.feature.ranger.hunter.superior-hunters-prey"
+    },
+    {
+     "level": 15,
+     "id": "dnd.srd521.feature.ranger.hunter.superior-hunters-defense"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.rogue.thief": {
+   "classId": "dnd.srd521.class.rogue",
+   "heading": "도둑",
+   "nameEn": "Thief",
+   "summary": "손재주와 민첩함으로 보물을 손에 넣는 로그 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.rogue.thief.fast-hands"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.rogue.thief.second-story-work"
+    },
+    {
+     "level": 9,
+     "id": "dnd.srd521.feature.rogue.thief.supreme-sneak"
+    },
+    {
+     "level": 13,
+     "id": "dnd.srd521.feature.rogue.thief.use-magic-device"
+    },
+    {
+     "level": 17,
+     "id": "dnd.srd521.feature.rogue.thief.thiefs-reflexes"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.sorcerer.draconic-sorcery": {
+   "classId": "dnd.srd521.class.sorcerer",
+   "heading": "용혈 마법",
+   "nameEn": "Draconic Sorcery",
+   "summary": "용의 피가 흐르는 소서러 서브클래스다.",
+   "definition": {
+    "choices": [
+     {
+      "id": "subclass.elemental-affinity",
+      "level": 6,
+      "label": "원소의 친화력",
+      "description": "저항과 주문 피해 보너스를 받는 피해 유형입니다.",
+      "options": [
+       {
+        "id": "acid",
+        "name": "산성",
+        "nameEn": "Acid",
+        "summary": "산성 저항, 산성 주문 피해 +매력"
+       },
+       {
+        "id": "cold",
+        "name": "냉기",
+        "nameEn": "Cold",
+        "summary": "냉기 저항, 냉기 주문 피해 +매력"
+       },
+       {
+        "id": "fire",
+        "name": "화염",
+        "nameEn": "Fire",
+        "summary": "화염 저항, 화염 주문 피해 +매력"
+       },
+       {
+        "id": "lightning",
+        "name": "번개",
+        "nameEn": "Lightning",
+        "summary": "번개 저항, 번개 주문 피해 +매력"
+       },
+       {
+        "id": "poison",
+        "name": "독",
+        "nameEn": "Poison",
+        "summary": "독 저항, 독 주문 피해 +매력"
+       }
+      ]
+     }
+    ],
+    "spellsByOption": {},
+    "spells": {
+     "3": [
+      "dnd.srd521.spell.alter-self",
+      "dnd.srd521.spell.chromatic-orb",
+      "dnd.srd521.spell.command",
+      "dnd.srd521.spell.dragon-s-breath"
+     ],
+     "5": [
+      "dnd.srd521.spell.fear",
+      "dnd.srd521.spell.fly"
+     ],
+     "7": [
+      "dnd.srd521.spell.arcane-eye",
+      "dnd.srd521.spell.charm-monster"
+     ],
+     "9": [
+      "dnd.srd521.spell.legend-lore",
+      "dnd.srd521.spell.summon-dragon"
+     ]
+    }
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.sorcerer.draconic.draconic-resilience"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.sorcerer.draconic.draconic-spells"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.sorcerer.draconic.elemental-affinity"
+    },
+    {
+     "level": 14,
+     "id": "dnd.srd521.feature.sorcerer.draconic.dragon-wings"
+    },
+    {
+     "level": 18,
+     "id": "dnd.srd521.feature.sorcerer.draconic.dragon-companion"
+    }
+   ],
+   "mechanics": [],
+   "sourceHeading": "용의 마법"
+  },
+  "dnd.srd521.subclass.wizard.evoker": {
+   "classId": "dnd.srd521.class.wizard",
+   "heading": "방출술사",
+   "nameEn": "Evoker",
+   "summary": "파괴적인 에너지를 다루는 위저드 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.wizard.evoker.evocation-savant"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.wizard.evoker.potent-cantrip"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.wizard.evoker.sculpt-spells"
+    },
+    {
+     "level": 10,
+     "id": "dnd.srd521.feature.wizard.evoker.empowered-evocation"
+    },
+    {
+     "level": 14,
+     "id": "dnd.srd521.feature.wizard.evoker.overchannel"
+    }
+   ],
+   "mechanics": [],
+   "sourceHeading": "방출학파"
+  },
+  "dnd.srd521.subclass.barbarian.path-of-the-berserker": {
+   "classId": "dnd.srd521.class.barbarian",
+   "heading": "광전사의 길",
+   "nameEn": "Path of the Berserker",
+   "summary": "격노를 극한까지 밀어붙이는 바바리안 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.barbarian.berserker.frenzy"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.barbarian.berserker.mindless-rage"
+    },
+    {
+     "level": 10,
+     "id": "dnd.srd521.feature.barbarian.berserker.retaliation"
+    },
+    {
+     "level": 14,
+     "id": "dnd.srd521.feature.barbarian.berserker.intimidating-presence"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.monk.warrior-of-the-open-hand": {
+   "classId": "dnd.srd521.class.monk",
+   "heading": "열린 손의 전사",
+   "nameEn": "Warrior of the Open Hand",
+   "summary": "무술과 치유의 숙련으로 전투를 제어하는 수도승 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.monk.open-hand.open-hand-technique"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.monk.open-hand.wholeness-of-body"
+    },
+    {
+     "level": 11,
+     "id": "dnd.srd521.feature.monk.open-hand.fleet-step"
+    },
+    {
+     "level": 17,
+     "id": "dnd.srd521.feature.monk.open-hand.quivering-palm"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.paladin.oath-of-devotion": {
+   "classId": "dnd.srd521.class.paladin",
+   "heading": "헌신의 맹세",
+   "nameEn": "Oath of Devotion",
+   "summary": "헌신의 맹세를 따르는 팔라딘 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {
+     "3": [
+      "dnd.srd521.spell.protection-from-evil-and-good",
+      "dnd.srd521.spell.shield-of-faith"
+     ],
+     "5": [
+      "dnd.srd521.spell.aid",
+      "dnd.srd521.spell.zone-of-truth"
+     ],
+     "9": [
+      "dnd.srd521.spell.beacon-of-hope",
+      "dnd.srd521.spell.dispel-magic"
+     ],
+     "13": [
+      "dnd.srd521.spell.freedom-of-movement",
+      "dnd.srd521.spell.guardian-of-faith"
+     ],
+     "17": [
+      "dnd.srd521.spell.commune",
+      "dnd.srd521.spell.flame-strike"
+     ]
+    }
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.paladin.oath-of-devotion.spells"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.paladin.oath-of-devotion.sacred-weapon"
+    },
+    {
+     "level": 7,
+     "id": "dnd.srd521.feature.paladin.oath-of-devotion.aura-of-devotion"
+    },
+    {
+     "level": 15,
+     "id": "dnd.srd521.feature.paladin.oath-of-devotion.smite-of-protection"
+    },
+    {
+     "level": 20,
+     "id": "dnd.srd521.feature.paladin.oath-of-devotion.holy-nimbus"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.warlock.fiend-patron": {
+   "classId": "dnd.srd521.class.warlock",
+   "heading": "악마 후원자",
+   "nameEn": "Fiend Patron",
+   "summary": "악마적 후원자의 힘을 빌리는 워락 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {
+     "3": [
+      "dnd.srd521.spell.burning-hands",
+      "dnd.srd521.spell.command",
+      "dnd.srd521.spell.scorching-ray",
+      "dnd.srd521.spell.suggestion"
+     ],
+     "5": [
+      "dnd.srd521.spell.fireball",
+      "dnd.srd521.spell.stinking-cloud"
+     ],
+     "7": [
+      "dnd.srd521.spell.fire-shield",
+      "dnd.srd521.spell.wall-of-fire"
+     ],
+     "9": [
+      "dnd.srd521.spell.geas",
+      "dnd.srd521.spell.insect-plague"
+     ]
+    }
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.warlock.fiend.dark-ones-blessing"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.warlock.fiend.fiend-spells"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.warlock.fiend.dark-ones-own-luck"
+    },
+    {
+     "level": 10,
+     "id": "dnd.srd521.feature.warlock.fiend.fiendish-resilience"
+    },
+    {
+     "level": 14,
+     "id": "dnd.srd521.feature.warlock.fiend.hurl-through-hell"
+    }
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "dnd.srd521.feature.warlock.fiend.dark-ones-own-luck",
+      "payments": [
+       {
+        "kind": "resource",
+        "resource": "resource:warlock.fiend.dark-ones-own-luck",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "interceptors": [
+       {
+        "id": "dark-ones-own-luck-d20",
+        "timing": "d20.outcome-determined",
+        "interaction": {
+         "id": "use-dark-ones-own-luck",
+         "kind": "choice",
+         "responder": "actor-owner",
+         "mode": "blocking",
+         "input": {
+          "type": "boolean"
+         },
+         "revalidate": "if-revision-changed",
+         "stalePolicy": "reject"
+        },
+        "operation": "recalculate",
+        "slot": "d20.roll",
+        "families": [
+         "ability-check",
+         "saving-throw"
+        ],
+        "outcomes": [
+         "success",
+         "failure"
+        ],
+        "operations": [
+         {
+          "kind": "roll.modify",
+          "mode": "add-die",
+          "dice": "1d10"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  "dnd.srd521.subclass.bard.college-of-lore": {
+   "classId": "dnd.srd521.class.bard",
+   "heading": "전승 학파",
+   "nameEn": "College of Lore",
+   "summary": "폭넓은 지식과 언변으로 동료를 돕고 적을 방해하는 바드 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.bard.college-of-lore.bonus-proficiencies"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.bard.college-of-lore.cutting-words"
+    },
+    {
+     "level": 6,
+     "id": "dnd.srd521.feature.bard.college-of-lore.magical-discoveries"
+    },
+    {
+     "level": 14,
+     "id": "dnd.srd521.feature.bard.college-of-lore.peerless-skill"
+    }
+   ],
+   "mechanics": []
+  },
+  "dnd.srd521.subclass.fighter.champion": {
+   "classId": "dnd.srd521.class.fighter",
+   "heading": "챔피언",
+   "nameEn": "Champion",
+   "summary": "무기 전투와 육체적 기량을 극대화하는 파이터 서브클래스다.",
+   "definition": {
+    "choices": [],
+    "spellsByOption": {},
+    "spells": {}
+   },
+   "features": [
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.fighter.champion.improved-critical"
+    },
+    {
+     "level": 3,
+     "id": "dnd.srd521.feature.fighter.champion.remarkable-athlete"
+    },
+    {
+     "level": 7,
+     "id": "dnd.srd521.feature.fighter.champion.additional-fighting-style"
+    },
+    {
+     "level": 10,
+     "id": "dnd.srd521.feature.fighter.champion.heroic-warrior"
+    },
+    {
+     "level": 15,
+     "id": "dnd.srd521.feature.fighter.champion.superior-critical"
+    },
+    {
+     "level": 18,
+     "id": "dnd.srd521.feature.fighter.champion.survivor"
+    }
+   ],
+   "mechanics": []
+  }
+ },
+ "optionLists": {
+  "warlock.invocations": [
+   {
+    "id": "invocation.agonizing-blast",
+    "minLevel": 2,
+    "repeatable": true,
+    "targetKind": "damage-cantrip"
+   },
+   {
+    "id": "invocation.armor-of-shadows",
+    "minLevel": 1
+   },
+   {
+    "id": "invocation.ascendant-step",
+    "minLevel": 5
+   },
+   {
+    "id": "invocation.devils-sight",
+    "minLevel": 2
+   },
+   {
+    "id": "invocation.devouring-blade",
+    "minLevel": 12,
+    "requires": "invocation.thirsting-blade"
+   },
+   {
+    "id": "invocation.eldritch-mind",
+    "minLevel": 1
+   },
+   {
+    "id": "invocation.eldritch-smite",
+    "minLevel": 5,
+    "requires": "invocation.pact-of-the-blade"
+   },
+   {
+    "id": "invocation.eldritch-spear",
+    "minLevel": 2,
+    "repeatable": true,
+    "targetKind": "damage-cantrip"
+   },
+   {
+    "id": "invocation.fiendish-vigor",
+    "minLevel": 2
+   },
+   {
+    "id": "invocation.gaze-of-two-minds",
+    "minLevel": 5
+   },
+   {
+    "id": "invocation.gift-of-the-depths",
+    "minLevel": 5
+   },
+   {
+    "id": "invocation.gift-of-the-protectors",
+    "minLevel": 9,
+    "requires": "invocation.pact-of-the-tome"
+   },
+   {
+    "id": "invocation.investment-of-the-chain-master",
+    "minLevel": 5,
+    "requires": "invocation.pact-of-the-chain"
+   },
+   {
+    "id": "invocation.lessons-of-the-first-ones",
+    "minLevel": 2,
+    "repeatable": true,
+    "targetKind": "origin-feat"
+   },
+   {
+    "id": "invocation.lifedrinker",
+    "minLevel": 9,
+    "requires": "invocation.pact-of-the-blade"
+   },
+   {
+    "id": "invocation.mask-of-many-faces",
+    "minLevel": 2
+   },
+   {
+    "id": "invocation.master-of-myriad-forms",
+    "minLevel": 5
+   },
+   {
+    "id": "invocation.misty-visions",
+    "minLevel": 2
+   },
+   {
+    "id": "invocation.one-with-shadows",
+    "minLevel": 5
+   },
+   {
+    "id": "invocation.otherworldly-leap",
+    "minLevel": 2
+   },
+   {
+    "id": "invocation.pact-of-the-blade",
+    "minLevel": 1
+   },
+   {
+    "id": "invocation.pact-of-the-chain",
+    "minLevel": 1
+   },
+   {
+    "id": "invocation.pact-of-the-tome",
+    "minLevel": 1
+   },
+   {
+    "id": "invocation.repelling-blast",
+    "minLevel": 2,
+    "repeatable": true,
+    "targetKind": "attack-cantrip"
+   },
+   {
+    "id": "invocation.thirsting-blade",
+    "minLevel": 5,
+    "requires": "invocation.pact-of-the-blade"
+   },
+   {
+    "id": "invocation.visions-of-distant-realms",
+    "minLevel": 9
+   },
+   {
+    "id": "invocation.whispers-of-the-grave",
+    "minLevel": 7
+   },
+   {
+    "id": "invocation.witch-sight",
+    "minLevel": 15
+   }
+  ],
+  "sorcerer.metamagic": [
+   {
+    "id": "metamagic.careful-spell",
+    "cost": 1
+   },
+   {
+    "id": "metamagic.distant-spell",
+    "cost": 1
+   },
+   {
+    "id": "metamagic.empowered-spell",
+    "cost": 1
+   },
+   {
+    "id": "metamagic.extended-spell",
+    "cost": 1
+   },
+   {
+    "id": "metamagic.heightened-spell",
+    "cost": 2
+   },
+   {
+    "id": "metamagic.quickened-spell",
+    "cost": 2
+   },
+   {
+    "id": "metamagic.seeking-spell",
+    "cost": 1
+   },
+   {
+    "id": "metamagic.subtle-spell",
+    "cost": 1
+   },
+   {
+    "id": "metamagic.transmuted-spell",
+    "cost": 1
+   },
+   {
+    "id": "metamagic.twinned-spell",
+    "cost": 1
+   }
+  ],
+  "cleric.blessed-strikes": [
+   {
+    "id": "cleric.blessed-strikes.divine-strike"
+   },
+   {
+    "id": "cleric.blessed-strikes.potent-spellcasting"
+   }
+  ],
+  "druid.elemental-fury": [
+   {
+    "id": "druid.elemental-fury.potent-spellcasting"
+   },
+   {
+    "id": "druid.elemental-fury.primal-strike"
+   }
+  ]
+ },
+ "options": {
+  "invocation.agonizing-blast": {
+   "heading": "고통스러운 폭발",
+   "nameEn": "Agonizing Blast",
+   "fallback": "피해를 주는 워락 소마법 하나를 골라 그 피해 굴림에 매력 수정치를 더합니다."
+  },
+  "invocation.armor-of-shadows": {
+   "heading": "그림자 갑옷",
+   "nameEn": "Armor of Shadows",
+   "fallback": "주문 슬롯 없이 자신에게 Mage Armor를 시전할 수 있습니다."
+  },
+  "invocation.ascendant-step": {
+   "heading": "승천의 발걸음",
+   "nameEn": "Ascendant Step",
+   "fallback": "주문 슬롯 없이 자신에게 Levitate를 시전할 수 있습니다."
+  },
+  "invocation.devils-sight": {
+   "heading": "악마의 시야",
+   "nameEn": "Devil's Sight",
+   "fallback": "120피트 안의 마법적·비마법적 어둠과 희미한 빛에서 정상적으로 볼 수 있습니다."
+  },
+  "invocation.devouring-blade": {
+   "heading": "포식하는 칼날",
+   "nameEn": "Devouring Blade",
+   "fallback": "갈증 나는 칼날의 추가 공격이 두 번이 됩니다(공격 행동에 세 번 공격).",
+   "sourceHeading": "탐식하는 칼날"
+  },
+  "invocation.eldritch-mind": {
+   "heading": "섬뜩한 정신",
+   "nameEn": "Eldritch Mind",
+   "fallback": "집중을 유지하는 건강 내성 굴림에 유리를 받습니다."
+  },
+  "invocation.eldritch-smite": {
+   "heading": "섬뜩한 강타",
+   "nameEn": "Eldritch Smite",
+   "fallback": "계약 무기로 명중했을 때 계약 마법 슬롯을 소비해 1d8 + 슬롯 레벨당 1d8 역장 피해를 추가하고 거대형 이하 대상을 넘어뜨립니다."
+  },
+  "invocation.eldritch-spear": {
+   "heading": "섬뜩한 창",
+   "nameEn": "Eldritch Spear",
+   "fallback": "사거리 10피트 이상인 피해 워락 소마법 하나의 사거리를 워락 레벨 × 30피트만큼 늘립니다."
+  },
+  "invocation.fiendish-vigor": {
+   "heading": "마귀의 활력",
+   "nameEn": "Fiendish Vigor",
+   "fallback": "주문 슬롯 없이 자신에게 False Life를 시전하며, 임시 HP 주사위는 최대값입니다.",
+   "sourceHeading": "악마적 활력"
+  },
+  "invocation.gaze-of-two-minds": {
+   "heading": "두 정신의 시선",
+   "nameEn": "Gaze of Two Minds",
+   "fallback": "접촉한 자발적 생물의 감각을 통해 지각하고 그 공간에서 주문을 시전할 수 있습니다."
+  },
+  "invocation.gift-of-the-depths": {
+   "heading": "심해의 선물",
+   "nameEn": "Gift of the Depths",
+   "fallback": "수중에서 숨 쉴 수 있고 이동 속도와 같은 수영 속도를 얻으며, 긴 휴식마다 1회 Water Breathing을 슬롯 없이 시전합니다."
+  },
+  "invocation.gift-of-the-protectors": {
+   "heading": "수호자의 선물",
+   "nameEn": "Gift of the Protectors",
+   "fallback": "그림자의 서에 이름을 적은 생물이 HP 0이 되면 대신 1 HP로 남깁니다. 긴 휴식마다 1회."
+  },
+  "invocation.investment-of-the-chain-master": {
+   "heading": "사슬 주인의 투자",
+   "nameEn": "Investment of the Chain Master",
+   "fallback": "사역마가 비행·수영 속도 40피트를 얻고, 추가 행동으로 공격을 지시할 수 있으며, 사역마의 공격이 마법으로 취급되고 내성 DC에 자신의 주문 DC를 씁니다."
+  },
+  "invocation.lessons-of-the-first-ones": {
+   "heading": "태초의 존재의 가르침",
+   "nameEn": "Lessons of the First Ones",
+   "fallback": "아직 갖지 않은 기원 재주 하나를 얻습니다.",
+   "sourceHeading": "태초의 교훈"
+  },
+  "invocation.lifedrinker": {
+   "heading": "생명 흡수자",
+   "nameEn": "Lifedrinker",
+   "fallback": "턴당 한 번, 계약 무기로 명중 시 1d6 괴저·정신·광휘 피해를 추가하고, 히트 다이스 하나를 소비해 그 주사위 + 건강 수정치만큼 회복할 수 있습니다."
+  },
+  "invocation.mask-of-many-faces": {
+   "heading": "수많은 얼굴의 가면",
+   "nameEn": "Mask of Many Faces",
+   "fallback": "주문 슬롯 없이 Disguise Self를 시전할 수 있습니다."
+  },
+  "invocation.master-of-myriad-forms": {
+   "heading": "무수한 형상의 지배자",
+   "nameEn": "Master of Myriad Forms",
+   "fallback": "주문 슬롯 없이 Alter Self를 시전할 수 있습니다.",
+   "sourceHeading": "무수한 형태의 대가"
+  },
+  "invocation.misty-visions": {
+   "heading": "안개 낀 환영",
+   "nameEn": "Misty Visions",
+   "fallback": "주문 슬롯 없이 Silent Image를 시전할 수 있습니다.",
+   "sourceHeading": "안개 환영"
+  },
+  "invocation.one-with-shadows": {
+   "heading": "그림자와 하나",
+   "nameEn": "One with Shadows",
+   "fallback": "희미한 빛이나 어둠 속에서 주문 슬롯 없이 자신에게 Invisibility를 시전할 수 있습니다."
+  },
+  "invocation.otherworldly-leap": {
+   "heading": "이계의 도약",
+   "nameEn": "Otherworldly Leap",
+   "fallback": "주문 슬롯 없이 자신에게 Jump를 시전할 수 있습니다."
+  },
+  "invocation.pact-of-the-blade": {
+   "heading": "칼날의 계약",
+   "nameEn": "Pact of the Blade",
+   "fallback": "추가 행동으로 계약 무기를 소환하거나 마법 무기와 결속합니다. 계약 무기 공격에 매력을 쓸 수 있고, 무기는 주문 매개체가 됩니다."
+  },
+  "invocation.pact-of-the-chain": {
+   "heading": "사슬의 계약",
+   "nameEn": "Pact of the Chain",
+   "fallback": "Find Familiar를 슬롯 없이 시전할 수 있고, 사역마는 임프·유사용·콰짓·스프라이트 같은 특별한 형태를 고를 수 있습니다."
+  },
+  "invocation.pact-of-the-tome": {
+   "heading": "고서의 계약",
+   "nameEn": "Pact of the Tome",
+   "fallback": "그림자의 서를 얻습니다. 어느 목록에서든 소마법 셋과 의식 1레벨 주문 둘을 골라 항상 준비하고, 책은 주문 매개체가 됩니다."
+  },
+  "invocation.repelling-blast": {
+   "heading": "밀쳐내는 폭발",
+   "nameEn": "Repelling Blast",
+   "fallback": "공격 굴림으로 피해를 주는 워락 소마법 하나를 골라, 명중 시 대형 이하 대상을 10피트 밀어낼 수 있습니다.",
+   "sourceHeading": "밀어내는 폭발"
+  },
+  "invocation.thirsting-blade": {
+   "heading": "갈증 나는 칼날",
+   "nameEn": "Thirsting Blade",
+   "fallback": "계약 무기로 공격 행동을 할 때 두 번 공격할 수 있습니다.",
+   "sourceHeading": "갈증의 칼날"
+  },
+  "invocation.visions-of-distant-realms": {
+   "heading": "먼 영역의 환영",
+   "nameEn": "Visions of Distant Realms",
+   "fallback": "주문 슬롯 없이 Arcane Eye를 시전할 수 있습니다.",
+   "sourceHeading": "먼 영역의 환시"
+  },
+  "invocation.whispers-of-the-grave": {
+   "heading": "무덤의 속삭임",
+   "nameEn": "Whispers of the Grave",
+   "fallback": "주문 슬롯 없이 Speak with Dead를 시전할 수 있습니다."
+  },
+  "invocation.witch-sight": {
+   "heading": "마녀의 시야",
+   "nameEn": "Witch Sight",
+   "fallback": "30피트 범위의 진실시야를 얻습니다."
+  },
+  "metamagic.careful-spell": {
+   "heading": "신중한 주문",
+   "nameEn": "Careful Spell",
+   "fallback": "내성 굴림을 요구하는 주문에서 매력 수정치(최소 1)명까지의 생물을 골라 내성에 자동 성공시키고, 성공 시 절반 피해인 주문이면 피해도 받지 않게 합니다."
+  },
+  "metamagic.distant-spell": {
+   "heading": "원거리 주문",
+   "nameEn": "Distant Spell",
+   "fallback": "사거리 5피트 이상인 주문의 사거리를 두 배로 하거나, 접촉 주문의 사거리를 30피트로 만듭니다."
+  },
+  "metamagic.empowered-spell": {
+   "heading": "강화 주문",
+   "nameEn": "Empowered Spell",
+   "fallback": "주문의 피해 주사위를 매력 수정치(최소 1)개까지 다시 굴려 새 결과를 씁니다. 다른 메타매직과 함께 쓸 수 있습니다."
+  },
+  "metamagic.extended-spell": {
+   "heading": "연장 주문",
+   "nameEn": "Extended Spell",
+   "fallback": "지속시간이 1분 이상인 주문의 지속시간을 두 배(최대 24시간)로 하고, 집중 유지 내성 굴림에 유리를 받습니다."
+  },
+  "metamagic.heightened-spell": {
+   "heading": "고양 주문",
+   "nameEn": "Heightened Spell",
+   "fallback": "내성 굴림을 요구하는 주문의 대상 하나가 그 주문의 첫 내성 굴림에 불리를 받게 합니다.",
+   "sourceHeading": "고조 주문"
+  },
+  "metamagic.quickened-spell": {
+   "heading": "신속 주문",
+   "nameEn": "Quickened Spell",
+   "fallback": "시전 시간이 행동인 주문을 이번 시전에 한해 추가 행동으로 시전합니다."
+  },
+  "metamagic.seeking-spell": {
+   "heading": "추적 주문",
+   "nameEn": "Seeking Spell",
+   "fallback": "주문 공격 굴림이 빗나갔을 때 d20을 다시 굴립니다. 다른 메타매직과 함께 쓸 수 있습니다."
+  },
+  "metamagic.subtle-spell": {
+   "heading": "은밀 주문",
+   "nameEn": "Subtle Spell",
+   "fallback": "언어와 동작 구성요소 없이, 그리고 소모되지 않고 비용이 없는 물질 구성요소 없이 주문을 시전합니다.",
+   "sourceHeading": "은밀한 주문"
+  },
+  "metamagic.transmuted-spell": {
+   "heading": "변환 주문",
+   "nameEn": "Transmuted Spell",
+   "fallback": "산성·냉기·화염·번개·독·천둥 피해를 주는 주문의 피해 유형을 그 목록의 다른 유형으로 바꿉니다."
+  },
+  "metamagic.twinned-spell": {
+   "heading": "쌍둥이 주문",
+   "nameEn": "Twinned Spell",
+   "fallback": "상위 슬롯으로 대상을 하나 더 지정할 수 있는 주문을 시전할 때, 슬롯 레벨을 1 높인 것처럼 대상을 하나 더 지정합니다."
+  },
+  "cleric.blessed-strikes.divine-strike": {
+   "heading": "신성한 일격",
+   "nameEn": "Divine Strike",
+   "fallback": "턴당 한 번 무기 공격이 명중하면 1d8(14레벨 2d8) 광휘 또는 괴저 피해를 추가합니다.",
+   "sourceHeading": "축복받은 일격"
+  },
+  "cleric.blessed-strikes.potent-spellcasting": {
+   "heading": "강력한 주문 시전",
+   "nameEn": "Potent Spellcasting",
+   "fallback": "클레릭 소마법의 피해 굴림에 지혜 수정치를 더합니다(14레벨: 소마법 피해 시 아군에게 지혜 수정치 두 배 임시 HP).",
+   "sourceHeading": "축복받은 일격"
+  },
+  "druid.elemental-fury.potent-spellcasting": {
+   "heading": "강력한 주문 시전",
+   "nameEn": "Potent Spellcasting",
+   "fallback": "드루이드 소마법의 피해 굴림에 지혜 수정치를 더합니다(15레벨: 사거리 10피트 이상 소마법 사거리 +300피트).",
+   "sourceHeading": "원소의 격노"
+  },
+  "druid.elemental-fury.primal-strike": {
+   "heading": "원초의 일격",
+   "nameEn": "Primal Strike",
+   "fallback": "턴당 한 번 무기나 야생 변신 공격이 명중하면 1d8(15레벨 2d8) 냉기·화염·번개·천둥 피해를 추가합니다.",
+   "sourceHeading": "원소의 격노"
+  }
+ }
+}

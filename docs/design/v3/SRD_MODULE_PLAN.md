@@ -76,7 +76,7 @@ CLAUDE.md §1.6(설치 모듈도 SRD와 똑같이 동작)과 §2(규칙은 JSON�
 | S1 ✔ (D310) | G1~G3·G6: 설치 모듈이 직업을 만들 수 있다 | 합성 모듈 직업으로 1~20레벨 캐릭터·시전·자원 (호스트 경로 포함) |
 | S2 ✔ (D311) | G7: 괴물 모듈 문법 | 합성 모듈 괴물을 표에 놓고 공격·특성 |
 | S3 ✔ (D312) | G8·G9: 모듈 `spell-mechanic`이 유일한 출처 | 합성 모듈이 SRD 주문 실행을 덮어씀 |
-| S4 | 결정 이전 스크립트 + 빌더 → 새 SRD 모듈. 옛 경로와 **나란히** 비교(같은 캐릭터 파생 결과 diff 0) | 비교 도구 diff 0 |
+| S4 ✔ (D313) | 결정 이전 스크립트 + 빌더 → 새 SRD 모듈. 옛 경로와 **나란히** 비교(같은 캐릭터 파생 결과 diff 0) | 비교 도구 diff 0 |
 | S5 | 내장 로딩을 새 모듈로 전환, 옛 경로(`indexes`·`srd-extras`·생성 카탈로그·옛 모듈·`src/domain` 주문 추측) 삭제 | 게이트, `createCatalog` 입력이 모듈뿐 |
 | S6 | 내용 교정: 주문 감사 85건, 재주·종족·직업 특성을 원문과 대조, 표 검증 `--builtin` | 감사 0건(사유 있는 예외만 목록), 표 검증 거절 0 |
 
@@ -84,7 +84,15 @@ CLAUDE.md §1.6(설치 모듈도 SRD와 똑같이 동작)과 §2(규칙은 JSON�
 
 | 영역 | 결정 | 모듈 | 나란히 비교 |
 |---|---|---|---|
-| 주문 339 ✔ | `content/srd-authoring/spells.json` (실행 + 색인 8종 조각 + 직업 목록) | `content/modules/srd-5.2.1/spells.module.json` | 차이 0 (설명문은 원문에서 평문으로 — 옛 글의 `**`·잘린 끝 `*`가 사라짐) |
+| 주문 339 ✔ | `spells.json` (실행 + 색인 8종 조각 + 직업 목록) | `spells.module.json` | 차이 0 (설명문은 원문에서 평문으로 — 옛 글의 `**`·잘린 끝 `*`가 사라짐) |
+| 종족 9·배경 4·재주 17 ✔ | `origins.json` (정의 + 원문 제목 `heading`) | `origins.module.json` | 특성 이름 13개가 원문 번역명으로(브레스 무기 → 숨결 무기 …) — 그 밖에 차이 0 |
+| 직업 12·서브클래스 12·직업 특성 203·선택지 목록 4 ✔ | `classes.json` (레벨 표 전체, 특성 id `dnd.srd521.feature.<옛 id>`, 원문 제목, 다르면 `sourceHeading`) | `classes.module.json` | 차이 0 (규칙 키 동일) |
+| 괴물 329 ✔ | `monsters.json` (스탯블록 + 특성 규칙 색인을 `traits[].rules`로) | `monsters.module.json` | 깨진 id 4개 수리(`화염-elemental` → `fire-elemental` 등) |
+| 계약 340·장비 134 ✔ | `rules.json`·`equipment.json` (옛 모듈 항목 그대로) | `rules.module.json`·`equipment.module.json` | 그대로 |
+
+**새 모듈만으로 만든 카탈로그**(색인·진행표·extras 없음)에서 캐릭터 100개(직업 12 × 1/3/5/11/20레벨, 종족 선택지 전부, 종족 9, 배경 4)를 옛 카탈로그와 나란히 파생한 결과: HP·AC·특성(규칙 키)·자원·슬롯·시전·공격·부가 효과·선택 전부 같고, 다른 것은 위의 종족 특성 이름뿐. 목록 개수(직업·서브클래스·종족·배경·재주·주문·장비·시작 장비·괴물·선택지 목록)·서브클래스 특성과 주문·주문의 직업 목록도 같다(`tests/client/d313-srd-modules.test.ts`가 이 불변을 지킨다).
+
+S6 목록에 올린 원문 대조 결과: 드래곤본 숨결 무기의 내성이 혈통마다 다르다(초록·은·하양 = 건강). 옛 계약은 전부 민첩.
 
 도구: `npx tsx scripts/srd-export-decisions.ts <영역>`(1회, 옛 경로 → 결정), `node scripts/srd-build-modules.mjs <parsed.json>`(원문 + 결정 → 모듈), `npx tsx scripts/srd-compare.ts <영역>`(새 모듈 vs 옛 카탈로그).
 

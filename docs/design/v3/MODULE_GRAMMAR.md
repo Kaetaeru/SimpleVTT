@@ -295,7 +295,7 @@
 | `monster-definition` (분류 `combatant`, D311) | 붙여넣기 NPC와 같은 형식(`docs/guides/CUSTOM_NPC_JSON.md`: `ac`·`hp`·`abilities`·`cr`·`traits[].rules`·`actions[]` …, 이름은 항목의 이름) 또는 `{ "statBlock": { … } }`(표가 쓰는 스탯블록 그대로). 같은 id의 SRD 괴물을 대신한다 |
 | `subclass-definition` | `spells`(레벨→주문 id 또는 영어 이름), `choices[]`, `spellsByOption`, `spellcasting`(1/3 시전자, 아래), `optionPools[]`(아래) |
 | `option-list-definition` | `list`(목록 키), `options[]`(`option` 항목 id) — 선택지 목록을 선언한다(D303) |
-| `species-definition` | `size[]`, `speed`, `darkvision`, `traits[]`(이름 있는 키), `choices`, `semantics`(`baseCantrips`, `baseFeatures`, `extraChoices`…), `effects` |
+| `species-definition` | `size[]`, `speed`, `darkvision`, `traits[]`(이름 있는 키 `"breath-weapon"`/`"large-form@5"`, 또는 D313 통째로 `{ key, name, nameEn, description, minLevel }`), `choices`(키 → 선택지 목록, 또는 D313 선택 객체 배열 `[{ id, label, description, count, options: [{ id, name, nameEn, summary }] }]`), `semantics`(`baseCantrips`, `baseFeatures`, `extraChoices`…), `effects`(선택 id → 옵션 id → 효과) |
 | `background-definition` | `abilityChoices[]`, `skills[]`, `tool`, `toolChoice`, `originFeat`, `equipmentChoice` |
 | `weapon-definition` · `armor-definition` · `shield-definition` · `tool-definition` · `consumable-definition` · `pack-definition` · `starting-loadout-definition` | 장비 |
 

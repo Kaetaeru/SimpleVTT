@@ -96,8 +96,10 @@ export function featureRuleKey(featureId: string) {
   // unique to the character that happened to pick it up there.
   const feat = /\.feat\.(.+)$/.exec(featureId);
   if (feat) return `feat:${feat[1]}`;
+  // D313: a class row's feature id is `<class>.<level>.<feature>`, and the feature may be an entry id of its own
+  // (`dnd.srd521.feature.fighter.second-wind`, a module class's feature) — whose key is read the same way again.
   const cls = /^[a-z-]+\.\d+\.(.+)$/.exec(featureId);
-  if (cls) return cls[1];
+  if (cls) return featureRuleKey(cls[1]);
   const sub = /^dnd\.[a-z0-9]+\.feature\.(.+)$/.exec(featureId);
   if (sub) return sub[1];
   const trait = /\.trait\.([^.]+)$/.exec(featureId);
