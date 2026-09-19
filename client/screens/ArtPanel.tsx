@@ -6,6 +6,7 @@
 import { useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { useArtUrl, useCampaigns } from "../app/campaigns";
 import type { ArtAsset } from "../campaign/art";
+import type { JournalEntry } from "../campaign/journal";
 import { artRef, canManageArt, unusedArt } from "../campaign/art";
 import { Modal, Notice, Pill } from "../ui/components";
 
@@ -181,4 +182,36 @@ export function ArtDropZone({ onRef, children, className }: { onRef: (ref: strin
       {children}
     </div>
   );
+}
+
+/** A journal entry's picture, or its initial (📜 for a handout). */
+export function EntryAvatar({ entry, size = 22 }: { entry: JournalEntry; size?: number }) {
+  if (entry.avatar) return <ArtImage className="cl-journal-avatar" src={entry.avatar} style={{ width: size, height: size }} />;
+  return <span className="cl-journal-avatar" style={{ width: size, height: size, fontSize: size * 0.55 }} aria-hidden="true">{entry.kind === "handout" ? "📜" : (entry.name || "?").slice(0, 1)}</span>;
+}
+
+/** The picture of a journal entry — a character, an NPC or a handout — from the library, a file, or a drop. */
+export function AvatarField({ entry, onChange, disabled, large = false }: { entry: JournalEntry; onChange: (avatar: string | undefined) => void; disabled: boolean; /** A handout's picture is its content: shown at full width, not as an icon. */ large?: boolean }) {
+  const c = useCampaigns();
+  const [picking, setPicking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    try { const id = await c.uploadArt(file); setError(null); onChange(`art:${id}`); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
+  };
+  const body = (
+    <>
+      {large && entry.avatar ? <ArtImage className="cl-handout-image" src={entry.avatar} alt={entry.name} /> : <EntryAvatar entry={entry} size={72} />}
+      {!disabled ? <div className="cl-row" style={{ gap: 4 }}>
+        <button type="button" className="cl-btn small" onClick={() => setPicking(true)}>라이브러리에서</button>
+        <label className="cl-btn small" style={{ cursor: "pointer" }}>이미지 올리기<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void pick(file); }} /></label>
+        {entry.avatar ? <button type="button" className="cl-btn small quiet" onClick={() => onChange(undefined)}>지우기</button> : null}
+      </div> : null}
+      {error ? <span className="cl-small" style={{ color: "var(--bad)" }}>{error}</span> : null}
+      {picking ? <ArtPicker title="아바타 고르기" onPick={(ref) => { onChange(ref); setPicking(false); }} onClose={() => setPicking(false)} /> : null}
+    </>
+  );
+  const className = `cl-journal-avatar-field${large && entry.avatar ? " large" : ""}`;
+  if (disabled) return <div className={className}>{body}</div>;
+  return <ArtDropZone className={className} onRef={(ref) => onChange(ref)}>{body}</ArtDropZone>;
 }

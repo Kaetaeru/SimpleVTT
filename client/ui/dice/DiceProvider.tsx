@@ -2,10 +2,15 @@
  * Dice roller for the client: `useDice().roll(spec)` rolls in code, shows the physics dice overlay (copied from the
  * earlier client) with the result reel, and resolves once the dice have settled. Rolls queue; the overlay is one at a
  * time. Reduced motion shortens the physics to a guided settle; without WebGL the component shows DOM dice.
+ *
+ * The dice tumble by default. The OS "reduce motion" switch is not read: on Windows it is often off-by-default-on,
+ * and it turned every roll into a die that popped up still in the middle of the screen. Reduced dice are the
+ * viewer's own choice (`setReducedMotion`, kept in this browser).
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { physicalSides, rollFormula, type RollResult, type RollSpec } from "../../character/dice";
+import { diceSignature } from "./messageDice";
 import { PhysicsDice3D, type PhysicsDie } from "./PhysicsDice3D";
 
 const RESULT_HOLD_MS = 2600;
@@ -16,29 +21,52 @@ interface DiceApi {
   roll: (spec: RollSpec) => Promise<RollResult>;
   /** Rolls without animation (tests, batch rolls). */
   rollSilently: (spec: RollSpec) => RollResult;
+  /** Animate dice somebody else already rolled (a chat card the host resolved). A roll this viewer just watched
+   *  tumble locally is not shown twice. */
+  show: (result: RollResult) => void;
   history: RollResult[];
 }
 
 const DiceContext = createContext<DiceApi | null>(null);
 
-export const isReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const MOTION_KEY = "simplevtt.dice.motion";
+export const isReducedMotion = () => { try { return typeof window !== "undefined" && window.localStorage.getItem(MOTION_KEY) === "reduced"; } catch { return false; } };
+export const setReducedMotion = (reduced: boolean) => { try { if (reduced) window.localStorage.setItem(MOTION_KEY, "reduced"); else window.localStorage.removeItem(MOTION_KEY); } catch { /* storage blocked: the default (rolling) stays */ } };
+const RECENT_MS = 20000;
 
 export function DiceProvider({ children }: { children: ReactNode }) {
   // A queue in state (not a ref mutated inside updaters — StrictMode runs updaters twice).
-  const [pending, setPending] = useState<Array<{ result: RollResult; resolve: () => void }>>([]);
+  const [pending, setPending] = useState<Array<{ result: RollResult; resolve: () => void; /** Somebody else's dice, replayed. */ shown?: boolean }>>([]);
   const [history, setHistory] = useState<RollResult[]>([]);
   const finish = useCallback(() => setPending((list) => list.slice(1)), []);
+  const recent = useRef(new Map<string, number>());
   const roll = useCallback((spec: RollSpec) => {
     const result = rollFormula(spec);
+    recent.current.set(diceSignature(result.dice), Date.now());
     setHistory((list) => [...list, result].slice(-50));
     if (typeof document === "undefined") return Promise.resolve(result);
     return new Promise<RollResult>((resolve) => {
       const item = { result, resolve: () => resolve(result) };
-      setPending((list) => (list.some((entry) => entry.result.id === result.id) ? list : [...list, item]));
+      // The viewer's own roll goes ahead of other people's dice still waiting their turn: a click is never kept
+      // waiting behind a replay. The one already on screen finishes.
+      setPending((list) => (list.some((entry) => entry.result.id === result.id) ? list : [...list.slice(0, 1), item, ...list.slice(1)]));
     });
   }, []);
   const rollSilently = useCallback((spec: RollSpec) => { const result = rollFormula(spec); setHistory((list) => [...list, result].slice(-50)); return result; }, []);
-  const api = useMemo<DiceApi>(() => ({ roll, rollSilently, history }), [roll, rollSilently, history]);
+  const show = useCallback((result: RollResult) => {
+    if (typeof document === "undefined") return;
+    const signature = diceSignature(result.dice);
+    const at = recent.current.get(signature);
+    if (at !== undefined && Date.now() - at < RECENT_MS) { recent.current.delete(signature); return; }
+    // ponytail: at most two replays wait; a burst (a fireball on six) keeps the newest, older ones stay in the chat.
+    setPending((list) => {
+      if (list.some((entry) => entry.result.id === result.id)) return list;
+      const waiting = list.slice(1).filter((entry) => entry.shown);
+      const drop = waiting.length >= 2 ? waiting[0] : undefined;
+      return [...list.filter((entry) => entry !== drop), { result, resolve: () => undefined, shown: true }];
+    });
+  }, []);
+  const api = useMemo<DiceApi>(() => ({ roll, rollSilently, show, history }), [roll, rollSilently, show, history]);
   const current = pending[0] ?? null;
   return (
     <DiceContext.Provider value={api}>

@@ -16,6 +16,7 @@ import { traitRuleHint, traitRules } from "../compendium/monsterTraits";
 import type { RollResult, RollSpec } from "../character/dice";
 import { Notice, Pill, signed } from "../ui/components";
 import { useDice } from "../ui/dice/DiceProvider";
+import { AvatarField } from "./ArtPanel";
 
 const modifier = (score: number) => Math.floor((score - 10) / 2);
 const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
@@ -54,6 +55,8 @@ export function NpcWindow({ entry, onClose, onOpen: _onOpen }: { entry: JournalN
   return (
     <div className="cl-journal-window">
       <div className="cl-row" style={{ gap: 10, alignItems: "flex-start" }}>
+        {/* The NPC's picture: its tokens and tracker row use it, like a character's portrait. */}
+        {editable || entry.avatar ? <AvatarField entry={entry} onChange={(avatar) => c.putJournal({ ...entry, avatar, updatedAt: new Date().toISOString() })} disabled={!editable} /> : null}
         <div style={{ flex: 1 }}>
           <h2 className="cl-journal-title">{entry.name}</h2>
           <div className="cl-quiet cl-small">{SIZE_KO[block.size] ?? block.size} {block.typeText}, {block.alignment} · CR {block.crText} ({block.xp} XP) · {block.nameEn}</div>

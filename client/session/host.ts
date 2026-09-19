@@ -6,7 +6,7 @@
  * through callbacks: the campaign (players), the chat archive and journal entries.
  */
 import type { ArtAsset } from "../campaign/art";
-import { ART_CHUNK, ART_LIMIT, ART_MIMES, artVisible, canManageArt, ChunkAssembler, chunkText } from "../campaign/art";
+import { ART_CHUNK, ART_LIMIT, ART_MIMES, artRefsIn, artVisible, canManageArt, ChunkAssembler, chunkText, pageArtIds } from "../campaign/art";
 import type { JournalCharacter, JournalEntry, JournalNpc } from "../campaign/journal";
 import { canEdit, canView, mergePlayerEdit, newJournalNpc, projectEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
@@ -307,7 +307,7 @@ export class TableHost {
       players: this.campaign.players.filter((player) => !player.kicked).map((player) => this.presence(player.userId)),
       chat: this.chat.filter((message) => visibleTo(message, viewer)).slice(-SNAPSHOT_CHAT),
       journal: [...this.journalEntries.values()].map((entry) => projectEntry(entry, viewer)).filter((entry): entry is JournalEntry => entry !== null),
-      art: [...this.artAssets.values()].filter((asset) => artVisible(asset, viewer, this.journal)),
+      art: [...this.artAssets.values()].filter((asset) => artVisible(asset, viewer, this.journal, this.pagesSeenBy(viewer))),
       pages: this.pageList.map((page) => projectPage(page, viewer, this.campaign)).filter((page): page is Page => page !== null),
       playerPageId: this.campaign.playerPageId,
       pageBookmarks: this.campaign.pageBookmarks ?? {},
@@ -519,7 +519,11 @@ export class TableHost {
       }
       case "journal.show": {
         if (!isGm) return refuse("GM만 플레이어에게 보여줍니다");
-        if (!this.journalEntries.has(command.id)) return refuse("그 항목이 없습니다");
+        const shown = this.journalEntries.get(command.id);
+        if (!shown) return refuse("그 항목이 없습니다");
+        // Showing a handout nobody may see shares it with every player: before, it popped up for nobody. A handout
+        // shared with some players is shown to those players only.
+        if (shown.kind === "handout" && shown.canView !== "all" && shown.canView.length === 0) this.storeEntry({ ...shown, canView: "all", updatedAt: this.now() });
         this.emit({ type: "journal.show", id: command.id, by: userId });
         return;
       }
@@ -579,7 +583,7 @@ export class TableHost {
       }
       case "art.fetch": {
         const asset = this.artAssets.get(command.id);
-        if (!asset || !artVisible(asset, this.viewer(userId), this.journal)) return this.reply(peerId, { type: "refused", reason: "볼 수 없는 아트입니다", commandType: command.type, id: command.id });
+        if (!asset || !artVisible(asset, this.viewer(userId), this.journal, this.pagesSeenBy(this.viewer(userId)))) return this.reply(peerId, { type: "refused", reason: "볼 수 없는 아트입니다", commandType: command.type, id: command.id });
         void this.sendArt(peerId, asset);
         return;
       }
@@ -3163,12 +3167,22 @@ export class TableHost {
   private emitRibbon() {
     this.emit({ type: "ribbon", playerPageId: this.campaign.playerPageId, pageBookmarks: this.campaign.pageBookmarks ?? {} });
     for (const page of this.pages.values()) this.emit({ type: "page", page });
+    for (const page of this.pages.values()) this.emitArt(pageArtIds(page));
   }
 
+  /** The scenes as this viewer sees them (a player: only their page, without the GM layer). */
+  private pagesSeenBy(viewer: Viewer): Page[] { return this.pageList.map((page) => projectPage(page, viewer, this.campaign)).filter((page): page is Page => page !== null); }
+
+  /** Something now shows these assets: resend their metadata so every mirror that may see them can fetch the bytes. */
+  private emitArt(ids: string[]) { for (const id of new Set(ids)) { const asset = this.artAssets.get(id); if (asset) this.emit({ type: "art", asset }); } }
+
   private storePage(page: Page) {
+    const before = this.pages.get(page.id);
     this.pages.set(page.id, page);
     this.options.onPage?.({ page });
     this.emit({ type: "page", page });
+    const known = new Set(before ? pageArtIds(before) : []);
+    this.emitArt(pageArtIds(page).filter((id) => !known.has(id)));
   }
 
   private storeToken(page: Page, token: Token) {
@@ -3179,6 +3193,7 @@ export class TableHost {
     this.pages.set(page.id, next);
     this.options.onPage?.({ page: next });
     this.emit({ type: "token", pageId: page.id, token });
+    if (token.image !== page.tokens[index]?.image) this.emitArt(pageArtIds({ tokens: [token] }));
   }
 
   /** Bars linked to a character attribute mirror the sheet (D78). */
@@ -3249,9 +3264,14 @@ export class TableHost {
     this.options.onJournal?.({ entry });
     this.emit({ type: "journal", entry });
     // The entry's avatar may now be visible to more (or fewer) viewers: resend that asset so mirrors converge.
-    const ref = entry.avatar;
-    if (ref?.startsWith("art:")) { const asset = this.artAssets.get(ref.slice(4)); if (asset) this.emit({ type: "art", asset }); }
+    this.emitArt([...(entry.avatar?.startsWith("art:") ? [entry.avatar.slice(4)] : []), ...artRefsIn(entry.kind === "handout" ? entry.notes : (entry as { bio?: string }).bio)]);
     this.refreshTokensOf(entry);
+    // A new picture on a character or an NPC reaches its tokens that were showing the old one (or none).
+    if (entry.kind !== "handout" && before && before.avatar !== entry.avatar) {
+      for (const page of this.pages.values()) for (const token of page.tokens) {
+        if (token.represents === entry.id && (!token.image || token.image === before.avatar)) this.storeToken(this.pages.get(page.id)!, { ...token, image: entry.avatar });
+      }
+    }
   }
 
   /**
@@ -3463,7 +3483,7 @@ export class TableHost {
       case "tables": return viewer.role === "gm" ? event : { ...event, tables: event.tables.filter((table) => table.shared).map((table) => ({ ...table, rows: [] })) };
       case "journal": { const entry = projectEntry(event.entry, viewer); return entry ? { ...event, entry } : { n: event.n, type: "journal.removed", id: event.entry.id }; }
       case "journal.show": { const entry = this.journalEntries.get(event.id); return entry && canView(entry, viewer) ? event : null; }
-      case "art": return artVisible(event.asset, viewer, this.journal) ? event : { n: event.n, type: "art.removed", id: event.asset.id };
+      case "art": return artVisible(event.asset, viewer, this.journal, this.pagesSeenBy(viewer)) ? event : { n: event.n, type: "art.removed", id: event.asset.id };
       case "page": { const page = projectPage(event.page, viewer, this.campaign); return page ? { ...event, page } : { n: event.n, type: "page.removed", id: event.page.id }; }
       case "token": { if (viewer.role === "gm") return event; const page = this.pages.get(event.pageId); if (!page || page.archived || page.id !== playerPageId(this.campaign, viewer)) return null; const token = projectToken(event.token, viewer); return token ? { ...event, token } : { n: event.n, type: "token.removed", pageId: event.pageId, id: event.token.id }; }
       case "token.removed": { if (viewer.role === "gm") return event; return event.pageId === playerPageId(this.campaign, viewer) ? event : null; }

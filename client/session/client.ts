@@ -175,7 +175,7 @@ export class TableClient {
       }
       case "token.removed": state.pages = state.pages.map((item) => (item.id === event.pageId ? { ...item, tokens: item.tokens.filter((token) => token.id !== event.id) } : item)); break;
       case "tracker": state.tracker = event.tracker; break;
-      case "journal.show": for (const listener of [...this.showListeners]) listener(event.id); break;
+      case "journal.show": if (event.by !== this.options.userId) for (const listener of [...this.showListeners]) listener(event.id); break;
       case "kicked": state.players = state.players.filter((item) => item.userId !== event.userId); if (event.userId === this.options.userId) { this.statusState = "refused"; this.refusal = "GM이 내보냈습니다"; } break;
       case "closed": this.statusState = "closed"; break;
     }

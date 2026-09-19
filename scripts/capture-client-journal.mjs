@@ -77,11 +77,12 @@ try {
   await player.screenshot({ path: path.join(OUT, "37-journal-handout-player.png") });
   await playerHandout.getByLabel("창 닫기").click();
 
-  // SC-15: "플레이어에게 보여주기" opens the window on the player.
+  // SC-15: "플레이어에게 보여주기" pops the handout up on the player (D320: a popup over the table, not a window).
   await handout.getByRole("button", { name: "플레이어에게 보여주기" }).click();
-  await player.locator(".cl-window", { hasText: "동쪽 입구" }).waitFor({ timeout: 10000 });
+  const popup = player.getByRole("dialog", { name: "동굴 지도" });
+  await popup.getByText("동쪽 입구").waitFor({ timeout: 10000 });
   check(true, "show-to-players pops the handout on the player");
-  await player.locator(".cl-window").last().getByLabel("창 닫기").click();
+  await popup.getByRole("button", { name: "닫기" }).click();
   await handout.getByLabel("창 닫기").click();
 
   // SC-16: the player makes a character in a journal window; the DM sees it, controlled by the player.

@@ -80,19 +80,21 @@ try {
   await handout.getByLabel("이름").fill("던전 지도");
   await handout.getByRole("button", { name: "라이브러리에서" }).click();
   await dm.getByRole("dialog", { name: "아바타 고르기" }).locator(".cl-art-card").first().click();
-  await handout.locator(".cl-journal-avatar[data-art-status=ready]").waitFor({ timeout: 10000 });
+  // D320: a handout's picture is its content — full width in the window, not an icon.
+  await handout.locator(".cl-handout-image[data-art-status=ready]").waitFor({ timeout: 10000 });
   await handout.getByLabel("볼 수 있는 사람").selectOption("all");
   await handout.getByRole("button", { name: "플레이어에게 보여주기" }).click();
-  const shown = player.locator(".cl-window", { hasText: "던전 지도" });
+  // D320: shown to the players, it pops up as its title and the picture at full size.
+  const shown = player.getByRole("dialog", { name: "던전 지도" });
   await shown.waitFor({ timeout: 10000 });
-  await shown.locator(".cl-journal-avatar[data-art-status=ready]").waitFor({ timeout: 20000 });
-  const natural = await shown.locator(".cl-journal-avatar[data-art-status=ready]").evaluate((img) => img.naturalWidth);
+  await shown.locator(".cl-handout-popup-image[data-art-status=ready]").waitFor({ timeout: 20000 });
+  const natural = await shown.locator(".cl-handout-popup-image[data-art-status=ready]").evaluate((img) => img.naturalWidth);
   check(natural === 320, `the player's avatar is the full image (naturalWidth ${natural})`);
+  await player.screenshot({ path: path.join(OUT, "44-art-handout-avatar-player.png") });
+  await shown.getByRole("button", { name: "닫기" }).click();
   await tab(player, "아트").click();
   await player.locator(".cl-art-card", { hasText: "dungeon-map" }).waitFor({ timeout: 10000 });
   check(true, "the referenced image is now in the player's library");
-  await player.screenshot({ path: path.join(OUT, "44-art-handout-avatar-player.png") });
-  await shown.getByLabel("창 닫기").click();
 
   // SC-24: the player uploads a portrait; the GM sees it with the uploader's name; the player renames it.
   await player.getByLabel("이미지 파일").setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer: png(96, 96, 3) });

@@ -41,11 +41,22 @@ export function newArtAsset(campaignId: string, ownerId: string, file: { name: s
   return { id: randomId(), kind: "art", campaignId, name: file.name, folder: "", mime: file.mime, bytes: file.bytes, width: file.width, height: file.height, hash: file.hash, thumb: file.thumb, ownerId, tags: [], createdAt: now, updatedAt: now };
 }
 
-/** A viewer sees an asset in the library when it is theirs, they are the GM, or something they can see uses it. */
-export function artVisible(asset: ArtAsset, viewer: JournalViewer, journal: JournalEntry[]) {
+/** Every `art:<id>` written into a text (a handout's body, a bio). */
+export const artRefsIn = (text: string | undefined) => [...(text?.matchAll(/art:([A-Za-z0-9_-]+)/g) ?? [])].map((match) => match[1]);
+
+/** The art ids a scene shows: its background and the pictures on its tokens. */
+export const pageArtIds = (page: { background?: { image?: string }; tokens: Array<{ image?: string }> }) => [page.background?.image, ...page.tokens.map((token) => token.image)].map(artIdOf).filter((id): id is string => id !== null);
+
+/**
+ * A viewer sees an asset when it is theirs, they are the GM, or something they can see uses it: an entry's picture
+ * or an image in its text, or the background or a token of a scene they are on (`pages` = the scenes as this viewer
+ * sees them). Scenes were missing, so a player never received the background the DM saw.
+ */
+export function artVisible(asset: ArtAsset, viewer: JournalViewer, journal: JournalEntry[], pages: Array<{ background?: { image?: string }; tokens: Array<{ image?: string }> }> = []) {
   if (viewer.role === "gm" || asset.ownerId === viewer.userId) return true;
   const ref = artRef(asset.id);
-  return journal.some((entry) => entry.avatar === ref && canView(entry, viewer));
+  if (pages.some((page) => pageArtIds(page).includes(asset.id))) return true;
+  return journal.some((entry) => canView(entry, viewer) && (entry.avatar === ref || artRefsIn(entry.kind === "handout" ? entry.notes : (entry as { bio?: string }).bio).includes(asset.id)));
 }
 
 export const canManageArt = (asset: ArtAsset, viewer: JournalViewer) => viewer.role === "gm" || asset.ownerId === viewer.userId;
@@ -58,7 +69,7 @@ export const canManageArt = (asset: ArtAsset, viewer: JournalViewer) => viewer.r
 export function usedArtIds(journal: JournalEntry[], pages: Array<{ background?: { image?: string }; tokens: Array<{ image?: string }> }>): Set<string> {
   const used = new Set<string>();
   const add = (ref: string | undefined) => { const id = artIdOf(ref); if (id) used.add(id); };
-  const scan = (text: string | undefined) => { for (const match of text?.matchAll(/art:([A-Za-z0-9_-]+)/g) ?? []) used.add(match[1]); };
+  const scan = (text: string | undefined) => { for (const id of artRefsIn(text)) used.add(id); };
   for (const entry of journal) {
     add(entry.avatar);
     add((entry as { defaultToken?: { image?: string } }).defaultToken?.image);
@@ -66,10 +77,7 @@ export function usedArtIds(journal: JournalEntry[], pages: Array<{ background?: 
     scan((entry as { notes?: string }).notes);
     scan((entry as { bio?: string }).bio);
   }
-  for (const page of pages) {
-    add(page.background?.image);
-    for (const token of page.tokens) add(token.image);
-  }
+  for (const page of pages) for (const id of pageArtIds(page)) used.add(id);
   return used;
 }
 

@@ -379,8 +379,9 @@ function FloatingMenu({ at, className, label, onClose, ignore, children }: { at:
 /** R65 (D200): one thing the turn panel can press — a row button or a menu entry. */
 interface PanelItem { key: string; label: string; hint?: string; uses?: string; disabled?: boolean; onSelect: () => void }
 
-function Dropdown({ label, items, disabled, tone, up = false }: { label: string; items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void }>; disabled?: boolean; tone?: "primary"; /** Open above the button (menus on the command bar at the bottom of the board). */ up?: boolean }) {
+function Dropdown({ label, items, disabled, tone, up = false }: { label: string; items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void; /** A spell's id: hovering the entry shows the spell's text. */ spell?: string }>; disabled?: boolean; tone?: "primary"; /** Open above the button (menus on the command bar at the bottom of the board). */ up?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [tip, setTip] = useState<{ spell: string; rect: DOMRect } | null>(null);
   const box = useRef<HTMLDivElement>(null);
   // R22 (D119): anchored to the button's place on screen, then nudged to fit — the board clips, the window does not.
   const [at, setAt] = useState({ x: 0, y: 0 });
@@ -390,10 +391,31 @@ function Dropdown({ label, items, disabled, tone, up = false }: { label: string;
       <button type="button" className={`cl-btn small${tone === "primary" ? " primary" : ""}${open ? " active" : ""}`} aria-haspopup="menu" aria-expanded={open} disabled={disabled || !items.length} onClick={() => { anchor(); setOpen((value) => !value); }}>{label} ▾</button>
       {open ? (
         <FloatingMenu at={at} className="cl-dd-menu" label={label} onClose={() => setOpen(false)} ignore={box}>
-          {items.map((item) => <button type="button" key={item.key} role="menuitem" className="cl-dd-item" disabled={item.disabled} title={item.hint} onClick={() => { setOpen(false); item.onSelect(); }}><span>{item.label}</span>{item.hint ? <small>{item.hint}</small> : null}</button>)}
+          {items.map((item) => <button type="button" key={item.key} role="menuitem" className="cl-dd-item" disabled={item.disabled} title={item.spell ? undefined : item.hint} onMouseEnter={(event) => setTip(item.spell ? { spell: item.spell, rect: event.currentTarget.getBoundingClientRect() } : null)} onFocus={(event) => setTip(item.spell ? { spell: item.spell, rect: event.currentTarget.getBoundingClientRect() } : null)} onMouseLeave={() => setTip(null)} onClick={() => { setOpen(false); setTip(null); item.onSelect(); }}><span>{item.label}</span>{item.hint ? <small>{item.hint}</small> : null}</button>)}
         </FloatingMenu>
       ) : null}
+      {open && tip ? <SpellTip spellId={tip.spell} rect={tip.rect} /> : null}
     </div>
+  );
+}
+
+/** The spell's own card beside the menu entry under the pointer: level, school, casting, range, components, duration and its text. */
+function SpellTip({ spellId, rect }: { spellId: string; rect: DOMRect }) {
+  const catalog = useClient().catalog;
+  const view = catalog.spellById(spellId);
+  if (!view) return null;
+  const width = Math.min(380, window.innerWidth - 16);
+  const right = rect.right + 8 + width <= window.innerWidth;
+  const left = right ? rect.right + 8 : Math.max(8, rect.left - 8 - width);
+  const maxHeight = Math.min(window.innerHeight * 0.6, 520);
+  const top = Math.max(8, Math.min(rect.top, window.innerHeight - 8 - maxHeight));
+  return createPortal(
+    <div className="cl-spell-tip" role="tooltip" style={{ left, top, width, maxHeight }}>
+      <strong>{view.name}</strong> <span className="cl-quiet cl-small">{view.level ? `${view.level}레벨` : "소마법"} · {view.school}{view.ritual ? " · 의식" : ""}</span>
+      <div className="cl-small cl-quiet">{view.castingTime} · {view.range} · {view.components} · {view.duration}</div>
+      {view.description || view.summary ? <div className="cl-spell-tip-text">{view.description || view.summary}</div> : null}
+    </div>,
+    document.body,
   );
 }
 
@@ -689,9 +711,9 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     return [{ key: `sustain:${spellId}`, economy: sustain.economy, label: `↻ ${effect.name}`, hint: `${sustain.note ?? "지속 중인 주문을 다시"} · 슬롯 없음${sustain.economy === "none" ? " · 행동 소모 없음 (범위에 들어온 대상)" : ""}`, onSelect: () => void castIt(spellId, effect.name, { kind: "sustain" }) }];
   }) : [];
   const spellItems = entry.kind === "character" && derived
-    ? castableSpells(derived).map((id) => ({ id, view: catalog.spellById(id), exec: spellExec(id)! })).sort((a, b) => (a.view?.level ?? 0) - (b.view?.level ?? 0) || (a.view?.name ?? "").localeCompare(b.view?.name ?? "", "ko")).map(({ id, view, exec }) => ({ key: id, label: `${view?.level ? `${view.level}레벨 ` : "소마법 "}${view?.name ?? id}`, hint: describeSpellExec(exec), onSelect: () => void castIt(id, view?.name ?? id) }))
+    ? castableSpells(derived).map((id) => ({ id, view: catalog.spellById(id), exec: spellExec(id)! })).sort((a, b) => (a.view?.level ?? 0) - (b.view?.level ?? 0) || (a.view?.name ?? "").localeCompare(b.view?.name ?? "", "ko")).map(({ id, view, exec }) => ({ key: id, spell: id, label: `${view?.level ? `${view.level}레벨 ` : "소마법 "}${view?.name ?? id}`, hint: describeSpellExec(exec), onSelect: () => void castIt(id, view?.name ?? id) }))
     : entry.kind === "npc"
-      ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, label: `${item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${Math.max(0, (list.uses ?? 1) - (entry.runtime.uses?.[item.spellId!] ?? 0))}/${list.uses ?? 1} 남음 (일)` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, disabled: list.frequency === "per-day" && (entry.runtime.uses?.[item.spellId!] ?? 0) >= (list.uses ?? 1), onSelect: () => void castIt(item.spellId!, item.name) })))
+      ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, spell: item.spellId!, label: `${catalog.spellById(item.spellId!)?.name ?? item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${Math.max(0, (list.uses ?? 1) - (entry.runtime.uses?.[item.spellId!] ?? 0))}/${list.uses ?? 1} 남음 (일)` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, disabled: list.frequency === "per-day" && (entry.runtime.uses?.[item.spellId!] ?? 0) >= (list.uses ?? 1), onSelect: () => void castIt(item.spellId!, catalog.spellById(item.spellId!)?.name ?? item.name) })))
       : [];
   // R77 (D212): a bonus-action spell is found on the bonus-action row too, where the turn says it belongs.
   // R89 (D224): the areas on this page held by some caster (영혼 수호자, 달빛 광선, 가시 성장) — in or out, and moving inside.

@@ -382,13 +382,13 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "공포",
              "멜프의 산성 화살(레벨 3 버전)"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -396,7 +396,7 @@
               "spellId": "dnd.srd521.spell.fear"
              },
              {
-              "name": "멜프의 산성 화살",
+              "name": "산성 화살",
               "note": "레벨 3 버전",
               "slotLevel": 3,
               "spellId": "dnd.srd521.spell.acid-arrow"
@@ -650,14 +650,14 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "투명화",
              "마법사의 손",
-             "산산조각"
+             "분쇄"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -669,7 +669,7 @@
               "spellId": "dnd.srd521.spell.mage-hand"
              },
              {
-              "name": "산산조각",
+              "name": "분쇄",
               "spellId": "dnd.srd521.spell.shatter"
              }
             ]
@@ -679,7 +679,7 @@
             "uses": 1,
             "spells": [
              "점술",
-             "보내기"
+             "전음"
             ],
             "entries": [
              {
@@ -687,7 +687,7 @@
               "spellId": "dnd.srd521.spell.augury"
              },
              {
-              "name": "보내기",
+              "name": "전음",
               "spellId": "dnd.srd521.spell.sending"
              }
             ]
@@ -943,34 +943,34 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "사소한 환영",
-             "작열 광선",
+             "마법 탐지",
+             "하급 환영",
+             "타오르는 광선",
              "모양 변경(야수 또는 인간형 형태만 해당",
              "주문으로 얻은 임시 히트 포인트 없음",
              "주문을 유지하는 데 집중력이나 임시 히트 포인트 필요 없음)",
-             "동물과 대화"
+             "동물과의 대화"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "사소한 환영",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              },
              {
-              "name": "작열 광선",
+              "name": "타오르는 광선",
               "spellId": "dnd.srd521.spell.scorching-ray"
              },
              {
-              "name": "모양 변경",
+              "name": "형상변화",
               "note": "야수 또는 인간형 형태만 해당, 주문으로 얻은 임시 히트 포인트 없음, 주문을 유지하는 데 집중력이나 임시 히트 포인트 필요 없음",
               "spellId": "dnd.srd521.spell.shapechange"
              },
              {
-              "name": "동물과 대화",
+              "name": "동물과의 대화",
               "spellId": "dnd.srd521.spell.speak-with-animals"
              }
             ]
@@ -1251,27 +1251,27 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "안내 볼트(레벨 2 버전)",
              "형상 변경(야수 또는 인간형 형태만 해당",
              "주문으로 얻은 임시 히트 포인트 없음",
              "주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음)",
              "동물과의 대화",
-             "기적학"
+             "단순마술"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "안내 볼트",
+              "name": "유도 화살",
               "note": "레벨 2 버전",
               "slotLevel": 2,
               "spellId": "dnd.srd521.spell.guiding-bolt"
              },
              {
-              "name": "형상 변경",
+              "name": "형상변화",
               "note": "야수 또는 인간형 형태만 해당, 주문으로 얻은 임시 히트 포인트 없음, 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음",
               "spellId": "dnd.srd521.spell.shapechange"
              },
@@ -1280,7 +1280,7 @@
               "spellId": "dnd.srd521.spell.speak-with-animals"
              },
              {
-              "name": "기적학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -1530,7 +1530,7 @@
             "spells": [
              "마법 탐지",
              "정신 스파이크(레벨 4 버전)",
-             "사소한 환영",
+             "하급 환영",
              "형태 변화(야수 또는 인간형 형태만 해당",
              "주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음)"
             ],
@@ -1540,17 +1540,17 @@
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "정신 스파이크",
+              "name": "정신 쐐기",
               "note": "레벨 4 버전",
               "slotLevel": 4,
               "spellId": "dnd.srd521.spell.mind-spike"
              },
              {
-              "name": "사소한 환영",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              },
              {
-              "name": "형태 변화",
+              "name": "형상변화",
               "note": "야수 또는 인간형 형태만 해당, 주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음",
               "spellId": "dnd.srd521.spell.shapechange"
              }
@@ -1560,16 +1560,16 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "더 큰 복원",
-             "주요 이미지"
+             "상급 회복",
+             "상급 영상"
             ],
             "entries": [
              {
-              "name": "더 큰 복원",
+              "name": "상급 회복",
               "spellId": "dnd.srd521.spell.greater-restoration"
              },
              {
-              "name": "주요 이미지",
+              "name": "상급 영상",
               "spellId": "dnd.srd521.spell.major-image"
              }
             ]
@@ -1854,18 +1854,18 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "가이딩 볼트(레벨 2 버전)",
              "형상변화(야수 또는 인간형 형태만 해당",
              "주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음)"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "가이딩 볼트",
+              "name": "유도 화살",
               "note": "레벨 2 버전",
               "slotLevel": 2,
               "spellId": "dnd.srd521.spell.guiding-bolt"
@@ -1881,16 +1881,16 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "화염 공격",
-             "진실의 지대"
+             "화염 직격",
+             "진실의 공간"
             ],
             "entries": [
              {
-              "name": "화염 공격",
+              "name": "화염 직격",
               "spellId": "dnd.srd521.spell.flame-strike"
              },
              {
-              "name": "진실의 지대",
+              "name": "진실의 공간",
               "spellId": "dnd.srd521.spell.zone-of-truth"
              }
             ]
@@ -2177,11 +2177,11 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "기아스"
+             "사명 부여"
             ],
             "entries": [
              {
-              "name": "기아스",
+              "name": "사명 부여",
               "spellId": "dnd.srd521.spell.geas"
              }
             ]
@@ -2433,7 +2433,7 @@
             "spells": [
              "명령(레벨 2 버전)",
              "마법 탐지",
-             "작열 광선"
+             "타오르는 광선"
             ],
             "entries": [
              {
@@ -2447,7 +2447,7 @@
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "작열 광선",
+              "name": "타오르는 광선",
               "spellId": "dnd.srd521.spell.scorching-ray"
              }
             ]
@@ -2456,11 +2456,11 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "파이어볼"
+             "화염구"
             ],
             "entries": [
              {
-              "name": "파이어볼",
+              "name": "화염구",
               "spellId": "dnd.srd521.spell.fireball"
              }
             ]
@@ -2719,19 +2719,19 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "괴물 잡기",
+             "마법 탐지",
+             "괴물 포박",
              "얼음 칼",
              "모양 변경(야수 또는 인간형 형태만 해당",
              "주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중력이나 임시 히트 포인트가 필요하지 않음)"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "괴물 잡기",
+              "name": "괴물 포박",
               "spellId": "dnd.srd521.spell.hold-monster"
              },
              {
@@ -2739,7 +2739,7 @@
               "spellId": "dnd.srd521.spell.ice-knife"
              },
              {
-              "name": "모양 변경",
+              "name": "형상변화",
               "note": "야수 또는 인간형 형태만 해당, 주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중력이나 임시 히트 포인트가 필요하지 않음",
               "spellId": "dnd.srd521.spell.shapechange"
              }
@@ -3544,7 +3544,7 @@
         {
          "name": "주문 시전",
          "nameEn": "Spellcasting",
-         "text": "고대 흑룡은 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 매력이고 주문 내성 DC는 21다.\n\n의지대로: 마법 감지, 공포, 멜프의 산성 화살(레벨 4 버전)\n\n각 1일: 언데드 만들기, 죽은 사람과 대화, Vitriolic 구체(레벨 5 버전)",
+         "text": "고대 흑룡은 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 매력이고 주문 내성 DC는 21다.\n\n의지대로: 마법 감지, 공포, 멜프의 산성 화살(레벨 4 버전)\n\n각 1일: 언데드 만들기, 죽은 사람과 대화, 산성 구체(레벨 5 버전)",
          "kind": "spellcasting",
          "spellcasting": {
           "ability": "cha",
@@ -3553,13 +3553,13 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "공포",
              "멜프의 산성 화살(레벨 4 버전)"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -3567,7 +3567,7 @@
               "spellId": "dnd.srd521.spell.fear"
              },
              {
-              "name": "멜프의 산성 화살",
+              "name": "산성 화살",
               "note": "레벨 4 버전",
               "slotLevel": 4,
               "spellId": "dnd.srd521.spell.acid-arrow"
@@ -3578,21 +3578,21 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "언데드 만들기",
-             "죽은 사람과 대화",
-             "Vitriolic 구체(레벨 5 버전)"
+             "언데드 창조",
+             "죽은 자와의 대화",
+             "산성 구체(레벨 5 버전)"
             ],
             "entries": [
              {
-              "name": "언데드 만들기",
+              "name": "언데드 창조",
               "spellId": "dnd.srd521.spell.create-undead"
              },
              {
-              "name": "죽은 사람과 대화",
+              "name": "죽은 자와의 대화",
               "spellId": "dnd.srd521.spell.speak-with-dead"
              },
              {
-              "name": "Vitriolic 구체",
+              "name": "산성 구체",
               "note": "레벨 5 버전",
               "slotLevel": 5,
               "spellId": "dnd.srd521.spell.vitriolic-sphere"
@@ -3837,14 +3837,14 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "투명화",
              "마법사의 손",
              "산산조각(레벨 3 버전)"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -3856,7 +3856,7 @@
               "spellId": "dnd.srd521.spell.mage-hand"
              },
              {
-              "name": "산산조각",
+              "name": "분쇄",
               "note": "레벨 3 버전",
               "slotLevel": 3,
               "spellId": "dnd.srd521.spell.shatter"
@@ -3868,7 +3868,7 @@
             "uses": 1,
             "spells": [
              "점술",
-             "보내기"
+             "전음"
             ],
             "entries": [
              {
@@ -3876,7 +3876,7 @@
               "spellId": "dnd.srd521.spell.augury"
              },
              {
-              "name": "보내기",
+              "name": "전음",
               "spellId": "dnd.srd521.spell.sending"
              }
             ]
@@ -4133,25 +4133,25 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "사소한 환상",
+             "마법 탐지",
+             "하급 환영",
              "작열 광선(레벨 3 버전)",
              "형상변화(야수 또는 인간형 형태만 해당",
              "주문으로 얻은 임시 히트 포인트 없음",
              "주문을 유지하는 데 집중 또는 임시 히트 포인트 필요 없음)",
-             "동물과 대화"
+             "동물과의 대화"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "사소한 환상",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              },
              {
-              "name": "작열 광선",
+              "name": "타오르는 광선",
               "note": "레벨 3 버전",
               "slotLevel": 3,
               "spellId": "dnd.srd521.spell.scorching-ray"
@@ -4162,7 +4162,7 @@
               "spellId": "dnd.srd521.spell.shapechange"
              },
              {
-              "name": "동물과 대화",
+              "name": "동물과의 대화",
               "spellId": "dnd.srd521.spell.speak-with-animals"
              }
             ]
@@ -4449,7 +4449,7 @@
              "주문으로 얻은 임시 히트 포인트 없음",
              "주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음)",
              "동물과의 대화",
-             "기적학"
+             "단순마술"
             ],
             "entries": [
              {
@@ -4457,13 +4457,13 @@
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "안내 볼트",
+              "name": "유도 화살",
               "note": "레벨 2 버전",
               "slotLevel": 2,
               "spellId": "dnd.srd521.spell.guiding-bolt"
              },
              {
-              "name": "형상 변경",
+              "name": "형상변화",
               "note": "야수 또는 인간형 형태만 해당, 주문으로 얻은 임시 히트 포인트 없음, 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음",
               "spellId": "dnd.srd521.spell.shapechange"
              },
@@ -4472,7 +4472,7 @@
               "spellId": "dnd.srd521.spell.speak-with-animals"
              },
              {
-              "name": "기적학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -4481,18 +4481,18 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "생각 감지",
-             "물 제어",
+             "생각 탐지",
+             "물 조종",
              "점술",
              "수중 호흡"
             ],
             "entries": [
              {
-              "name": "생각 감지",
+              "name": "생각 탐지",
               "spellId": "dnd.srd521.spell.detect-thoughts"
              },
              {
-              "name": "물 제어",
+              "name": "물 조종",
               "spellId": "dnd.srd521.spell.control-water"
              },
              {
@@ -4750,7 +4750,7 @@
             "spells": [
              "마법 탐지",
              "정신 스파이크(레벨 5 버전)",
-             "사소한 환영",
+             "하급 환영",
              "형태 변화(야수 또는 인간형 형태만 해당",
              "주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음)"
             ],
@@ -4760,17 +4760,17 @@
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "정신 스파이크",
+              "name": "정신 쐐기",
               "note": "레벨 5 버전",
               "slotLevel": 5,
               "spellId": "dnd.srd521.spell.mind-spike"
              },
              {
-              "name": "사소한 환영",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              },
              {
-              "name": "형태 변화",
+              "name": "형상변화",
               "note": "야수 또는 인간형 형태만 해당, 주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음",
               "spellId": "dnd.srd521.spell.shapechange"
              }
@@ -4780,21 +4780,21 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "더 큰 복원",
-             "주요 이미지",
-             "프로젝트 이미지"
+             "상급 회복",
+             "상급 영상",
+             "영상 투사"
             ],
             "entries": [
              {
-              "name": "더 큰 복원",
+              "name": "상급 회복",
               "spellId": "dnd.srd521.spell.greater-restoration"
              },
              {
-              "name": "주요 이미지",
+              "name": "상급 영상",
               "spellId": "dnd.srd521.spell.major-image"
              },
              {
-              "name": "프로젝트 이미지",
+              "name": "영상 투사",
               "spellId": "dnd.srd521.spell.project-image"
              }
             ]
@@ -5083,7 +5083,7 @@
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "가이딩 볼트",
+              "name": "유도 화살",
               "note": "레벨 4 버전",
               "slotLevel": 4,
               "spellId": "dnd.srd521.spell.guiding-bolt"
@@ -5402,16 +5402,16 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "기아스",
-             "메모리 수정"
+             "사명 부여",
+             "기억 조작"
             ],
             "entries": [
              {
-              "name": "기아스",
+              "name": "사명 부여",
               "spellId": "dnd.srd521.spell.geas"
              },
              {
-              "name": "메모리 수정",
+              "name": "기억 조작",
               "spellId": "dnd.srd521.spell.modify-memory"
              }
             ]
@@ -5658,7 +5658,7 @@
             ],
             "entries": [
              {
-              "name": "파이어볼",
+              "name": "화염구",
               "note": "레벨 6 버전",
               "slotLevel": 6,
               "spellId": "dnd.srd521.spell.fireball"
@@ -5924,23 +5924,23 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "몬스터 잡기",
+             "마법 탐지",
+             "괴물 포박",
              "아이스 나이프(레벨 2 버전)",
              "형상변화(야수 또는 인간형 형태만 해당",
              "주문으로 임시 히트 포인트를 얻지 못하고 주문을 유지하는 데 집중력이나 임시 히트 포인트가 필요하지 않음)"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "몬스터 잡기",
+              "name": "괴물 포박",
               "spellId": "dnd.srd521.spell.hold-monster"
              },
              {
-              "name": "아이스 나이프",
+              "name": "얼음 칼",
               "note": "레벨 2 버전",
               "slotLevel": 2,
               "spellId": "dnd.srd521.spell.ice-knife"
@@ -7311,7 +7311,7 @@
         {
          "name": "주문 시전",
          "nameEn": "Spellcasting",
-         "text": "대마법사는 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 지능이고 주문 내성 DC는 17다.\n\n의지대로: 마법 탐지, 생각 탐지, 자기 변장, 투명화, 빛, 마법사 갑옷(AC에 포함), 마법사 손, 요술\n\n각 2일: Fly, 번개 Bolt (레벨 7 버전)\n\n각 1/일: 원뿔 of 냉기 (레벨 9 버전), 무심화 (전투 전 시전), 염탐, 순간이동",
+         "text": "대마법사는 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 지능이고 주문 내성 DC는 17다.\n\n의지대로: 마법 탐지, 생각 탐지, 자기 변장, 투명화, 빛, 마법사 갑옷(AC에 포함), 마법사 손, 요술\n\n각 2일: 비행, 번개 (레벨 7 버전)\n\n각 1/일: 냉기 분사 (레벨 9 버전), 무심화 (전투 전 시전), 염탐, 순간이동",
          "kind": "spellcasting",
          "spellcasting": {
           "ability": "int",
@@ -7322,11 +7322,11 @@
             "spells": [
              "마법 탐지",
              "생각 탐지",
-             "자기 변장",
+             "자기 위장",
              "투명화",
              "빛",
              "마법사 갑옷(AC에 포함)",
-             "마법사 손",
+             "마법사의 손",
              "요술"
             ],
             "entries": [
@@ -7339,7 +7339,7 @@
               "spellId": "dnd.srd521.spell.detect-thoughts"
              },
              {
-              "name": "자기 변장",
+              "name": "자기 위장",
               "spellId": "dnd.srd521.spell.disguise-self"
              },
              {
@@ -7351,12 +7351,12 @@
               "spellId": "dnd.srd521.spell.light"
              },
              {
-              "name": "마법사 갑옷",
+              "name": "마법 갑주",
               "note": "AC에 포함",
               "spellId": "dnd.srd521.spell.mage-armor"
              },
              {
-              "name": "마법사 손",
+              "name": "마법사의 손",
               "spellId": "dnd.srd521.spell.mage-hand"
              },
              {
@@ -7369,16 +7369,16 @@
             "frequency": "per-day",
             "uses": 2,
             "spells": [
-             "Fly",
-             "번개 Bolt (레벨 7 버전)"
+             "비행",
+             "번개 (레벨 7 버전)"
             ],
             "entries": [
              {
-              "name": "Fly",
+              "name": "비행",
               "spellId": "dnd.srd521.spell.fly"
              },
              {
-              "name": "번개 Bolt",
+              "name": "번개",
               "note": "레벨 7 버전",
               "slotLevel": 7,
               "spellId": "dnd.srd521.spell.lightning-bolt"
@@ -7389,14 +7389,14 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "원뿔 of 냉기 (레벨 9 버전)",
+             "냉기 분사 (레벨 9 버전)",
              "무심화 (전투 전 시전)",
              "염탐",
              "순간이동"
             ],
             "entries": [
              {
-              "name": "원뿔 of 냉기",
+              "name": "냉기 분사",
               "note": "레벨 9 버전",
               "slotLevel": 9,
               "spellId": "dnd.srd521.spell.cone-of-cold"
@@ -13502,13 +13502,13 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "안개 구름",
              "빛"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -14224,27 +14224,27 @@
            {
             "frequency": "at-will",
             "spells": [
-             "악과 선 감지",
-             "마법 감지",
-             "생각 감지",
+             "악과 선 탐지",
+             "마법 탐지",
+             "생각 탐지",
              "모양 변경(야수 또는 인간형 형태만 해당",
              "주문으로 임시 히트 포인트를 얻지 못하며 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음)"
             ],
             "entries": [
              {
-              "name": "악과 선 감지",
+              "name": "악과 선 탐지",
               "spellId": "dnd.srd521.spell.detect-evil-and-good"
              },
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "생각 감지",
+              "name": "생각 탐지",
               "spellId": "dnd.srd521.spell.detect-thoughts"
              },
              {
-              "name": "모양 변경",
+              "name": "형상변화",
               "note": "야수 또는 인간형 형태만 해당, 주문으로 임시 히트 포인트를 얻지 못하며 주문을 유지하는 데 집중이나 임시 히트 포인트가 필요하지 않음",
               "spellId": "dnd.srd521.spell.shapechange"
              }
@@ -14254,23 +14254,23 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "음식과 물 만들기",
-             "꿈",
-             "대복원",
+             "음식과 물 창조",
+             "몽환",
+             "상급 회복",
              "점술",
              "수면"
             ],
             "entries": [
              {
-              "name": "음식과 물 만들기",
+              "name": "음식과 물 창조",
               "spellId": "dnd.srd521.spell.create-food-and-water"
              },
              {
-              "name": "꿈",
+              "name": "몽환",
               "spellId": "dnd.srd521.spell.dream"
              },
              {
-              "name": "대복원",
+              "name": "상급 회복",
               "spellId": "dnd.srd521.spell.greater-restoration"
              },
              {
@@ -14743,7 +14743,7 @@
             "frequency": "at-will",
             "spells": [
              "빛",
-             "마법학"
+             "단순마술"
             ],
             "entries": [
              {
@@ -14751,7 +14751,7 @@
               "spellId": "dnd.srd521.spell.light"
              },
              {
-              "name": "마법학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -14773,11 +14773,11 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "사람 잡아두기"
+             "인간형 포박"
             ],
             "entries": [
              {
-              "name": "사람 잡아두기",
+              "name": "인간형 포박",
               "spellId": "dnd.srd521.spell.hold-person"
              }
             ]
@@ -15612,11 +15612,11 @@
            {
             "frequency": "at-will",
             "spells": [
-             "악과 선을 감지하고 마법을 감지한다."
+             "악과 선 탐지"
             ],
             "entries": [
              {
-              "name": "악과 선을 감지하고 마법을 감지한다.",
+              "name": "악과 선 탐지",
               "spellId": "dnd.srd521.spell.detect-evil-and-good"
              }
             ]
@@ -15626,10 +15626,10 @@
             "uses": 1,
             "spells": [
              "창조",
-             "기체 형태",
+             "가스 형상",
              "투명화",
-             "주요 이미지",
-             "평면 이동"
+             "상급 영상",
+             "이계 전송"
             ],
             "entries": [
              {
@@ -15637,7 +15637,7 @@
               "spellId": "dnd.srd521.spell.creation"
              },
              {
-              "name": "기체 형태",
+              "name": "가스 형상",
               "spellId": "dnd.srd521.spell.gaseous-form"
              },
              {
@@ -15645,11 +15645,11 @@
               "spellId": "dnd.srd521.spell.invisibility"
              },
              {
-              "name": "주요 이미지",
+              "name": "상급 영상",
               "spellId": "dnd.srd521.spell.major-image"
              },
              {
-              "name": "평면 이동",
+              "name": "이계 전송",
               "spellId": "dnd.srd521.spell.plane-shift"
              }
             ]
@@ -16696,7 +16696,7 @@
             "frequency": "at-will",
             "spells": [
              "드루이드술",
-             "동물과 대화"
+             "동물과의 대화"
             ],
             "entries": [
              {
@@ -16704,7 +16704,7 @@
               "spellId": "dnd.srd521.spell.druidcraft"
              },
              {
-              "name": "동물과 대화",
+              "name": "동물과의 대화",
               "spellId": "dnd.srd521.spell.speak-with-animals"
              }
             ]
@@ -16713,21 +16713,21 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "동물 메신저",
-             "롱스트라이더",
-             "달빛"
+             "동물 전달자",
+             "활보",
+             "달빛 광선"
             ],
             "entries": [
              {
-              "name": "동물 메신저",
+              "name": "동물 전달자",
               "spellId": "dnd.srd521.spell.animal-messenger"
              },
              {
-              "name": "롱스트라이더",
+              "name": "활보",
               "spellId": "dnd.srd521.spell.longstrider"
              },
              {
-              "name": "달빛",
+              "name": "달빛 광선",
               "spellId": "dnd.srd521.spell.moonbeam"
              }
             ]
@@ -16918,17 +16918,17 @@
            {
             "frequency": "at-will",
             "spells": [
-             "동물 우정",
+             "동물 친밀화",
              "참 몬스터(24시간 지속; 드라이어드가 주문을 다시 시전하면 일찍 종료됨)",
              "드루이드술"
             ],
             "entries": [
              {
-              "name": "동물 우정",
+              "name": "동물 친밀화",
               "spellId": "dnd.srd521.spell.animal-friendship"
              },
              {
-              "name": "참 몬스터",
+              "name": "괴물 매혹",
               "note": "24시간 지속; 드라이어드가 주문을 다시 시전하면 일찍 종료됨",
               "spellId": "dnd.srd521.spell.charm-monster"
              },
@@ -16942,16 +16942,16 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "얽힘",
-             "흔적 없이 통과"
+             "옭아매기",
+             "흔적 없는 이동"
             ],
             "entries": [
              {
-              "name": "얽힘",
+              "name": "옭아매기",
               "spellId": "dnd.srd521.spell.entangle"
              },
              {
-              "name": "흔적 없이 통과",
+              "name": "흔적 없는 이동",
               "spellId": "dnd.srd521.spell.pass-without-trace"
              }
             ]
@@ -17608,7 +17608,7 @@
         {
          "name": "주문 시전",
          "nameEn": "Spellcasting",
-         "text": "에프리티는 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 매력이고 주문 내성 DC는 16다.\n\n의지대로: 마법 감지, 원소주의\n\n각 1일: 가스 형상, 투명화, 상급 영상, 이계 전송, 언어구사, Wall of 화염 (레벨 7 버전)",
+         "text": "에프리티는 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 매력이고 주문 내성 DC는 16다.\n\n의지대로: 마법 감지, 원소주의\n\n각 1일: 가스 형상, 투명화, 상급 영상, 이계 전송, 언어구사, 화염 장벽 (레벨 7 버전)",
          "kind": "spellcasting",
          "spellcasting": {
           "ability": "cha",
@@ -17617,16 +17617,16 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "원소주의"
+             "마법 탐지",
+             "원소술"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "원소주의",
+              "name": "원소술",
               "spellId": "dnd.srd521.spell.elementalism"
              }
             ]
@@ -17640,7 +17640,7 @@
              "상급 영상",
              "이계 전송",
              "언어구사",
-             "Wall of 화염 (레벨 7 버전)"
+             "화염 장벽 (레벨 7 버전)"
             ],
             "entries": [
              {
@@ -17664,7 +17664,7 @@
               "spellId": "dnd.srd521.spell.tongues"
              },
              {
-              "name": "Wall of 화염",
+              "name": "화염 장벽",
               "note": "레벨 7 버전",
               "slotLevel": 7,
               "spellId": "dnd.srd521.spell.wall-of-fire"
@@ -22395,11 +22395,11 @@
            {
             "frequency": "at-will",
             "spells": [
-             "악과 선을 감지하고 마법을 감지한다."
+             "악과 선 탐지"
             ],
             "entries": [
              {
-              "name": "악과 선을 감지하고 마법을 감지한다.",
+              "name": "악과 선 탐지",
               "spellId": "dnd.srd521.spell.detect-evil-and-good"
              }
             ]
@@ -24112,17 +24112,17 @@
            {
             "frequency": "at-will",
             "spells": [
-             "어둠",
-             "마법 감지",
+             "암흑",
+             "마법 탐지",
              "마법 무효화"
             ],
             "entries": [
              {
-              "name": "어둠",
+              "name": "암흑",
               "spellId": "dnd.srd521.spell.darkness"
              },
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -24137,7 +24137,7 @@
             "spells": [
              "혼란",
              "비행",
-             "힘의 권능 기절"
+             "권능어: 충격"
             ],
             "entries": [
              {
@@ -24149,7 +24149,7 @@
               "spellId": "dnd.srd521.spell.fly"
              },
              {
-              "name": "힘의 권능 기절",
+              "name": "권능어: 충격",
               "spellId": "dnd.srd521.spell.power-word-stun"
              }
             ]
@@ -25812,7 +25812,7 @@
              "변장 셀프(24시간 지속)",
              "투명화(자신만 가능",
              "투명 상태에서는 노파가 흔적을 남기지 않음)",
-             "사소한 환영",
+             "하급 환영",
              "질병의 광선(레벨 3 버전)"
             ],
             "entries": [
@@ -25821,7 +25821,7 @@
               "spellId": "dnd.srd521.spell.dancing-lights"
              },
              {
-              "name": "변장 셀프",
+              "name": "자기 위장",
               "note": "24시간 지속",
               "spellId": "dnd.srd521.spell.disguise-self"
              },
@@ -25831,11 +25831,11 @@
               "spellId": "dnd.srd521.spell.invisibility"
              },
              {
-              "name": "사소한 환영",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              },
              {
-              "name": "질병의 광선",
+              "name": "질병 광선",
               "note": "레벨 3 버전",
               "slotLevel": 3,
               "spellId": "dnd.srd521.spell.ray-of-sickness"
@@ -26694,11 +26694,11 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마석학"
+             "단순마술"
             ],
             "entries": [
              {
-              "name": "마석학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -29634,16 +29634,16 @@
            {
             "frequency": "at-will",
             "spells": [
-             "자기 변장",
-             "에테르성"
+             "자기 위장",
+             "에테르화"
             ],
             "entries": [
              {
-              "name": "자기 변장",
+              "name": "자기 위장",
               "spellId": "dnd.srd521.spell.disguise-self"
              },
              {
-              "name": "에테르성",
+              "name": "에테르화",
               "spellId": "dnd.srd521.spell.etherealness"
              }
             ]
@@ -29652,12 +29652,12 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "꿈",
+             "몽환",
              "최면 패턴"
             ],
             "entries": [
              {
-              "name": "꿈",
+              "name": "몽환",
               "spellId": "dnd.srd521.spell.dream"
              },
              {
@@ -31114,16 +31114,16 @@
             "frequency": "at-will",
             "spells": [
              "자기 변장(대형 또는 중형 Biped로 나타날 수 있음)",
-             "사소한 환상"
+             "하급 환영"
             ],
             "entries": [
              {
-              "name": "자기 변장",
+              "name": "자기 위장",
               "note": "대형 또는 중형 Biped로 나타날 수 있음",
               "spellId": "dnd.srd521.spell.disguise-self"
              },
              {
-              "name": "사소한 환상",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              }
             ]
@@ -31132,17 +31132,17 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "기아스",
-             "주요 이미지",
+             "사명 부여",
+             "상급 영상",
              "점술"
             ],
             "entries": [
              {
-              "name": "기아스",
+              "name": "사명 부여",
               "spellId": "dnd.srd521.spell.geas"
              },
              {
-              "name": "주요 이미지",
+              "name": "상급 영상",
               "spellId": "dnd.srd521.spell.major-image"
              },
              {
@@ -31440,9 +31440,9 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "생각 감지",
-             "마법 해제",
+             "마법 탐지",
+             "생각 탐지",
+             "마법 무효화",
              "파이어볼(레벨 5 버전)",
              "투명화",
              "라이트닝 볼트(레벨 5 버전)",
@@ -31451,19 +31451,19 @@
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "생각 감지",
+              "name": "생각 탐지",
               "spellId": "dnd.srd521.spell.detect-thoughts"
              },
              {
-              "name": "마법 해제",
+              "name": "마법 무효화",
               "spellId": "dnd.srd521.spell.dispel-magic"
              },
              {
-              "name": "파이어볼",
+              "name": "화염구",
               "note": "레벨 5 버전",
               "slotLevel": 5,
               "spellId": "dnd.srd521.spell.fireball"
@@ -31473,7 +31473,7 @@
               "spellId": "dnd.srd521.spell.invisibility"
              },
              {
-              "name": "라이트닝 볼트",
+              "name": "번개",
               "note": "레벨 5 버전",
               "slotLevel": 5,
               "spellId": "dnd.srd521.spell.lightning-bolt"
@@ -31492,21 +31492,21 @@
             "frequency": "per-day",
             "uses": 2,
             "spells": [
-             "애니메이트 데드",
-             "디멘션 도어",
-             "플레인 시프트"
+             "사체 조종",
+             "차원문",
+             "이계 전송"
             ],
             "entries": [
              {
-              "name": "애니메이트 데드",
+              "name": "사체 조종",
               "spellId": "dnd.srd521.spell.animate-dead"
              },
              {
-              "name": "디멘션 도어",
+              "name": "차원문",
               "spellId": "dnd.srd521.spell.dimension-door"
              },
              {
-              "name": "플레인 시프트",
+              "name": "이계 전송",
               "spellId": "dnd.srd521.spell.plane-shift"
              }
             ]
@@ -32028,7 +32028,7 @@
         {
          "name": "주문 시전",
          "nameEn": "Spellcasting",
-         "text": "마법사는 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 지능이고 주문 내성 DC는 14다.\n\n의지대로: 마법 감지, 빛, 마법사 갑옷(AC에 포함), 마법사 손, 요술\n\n각 2/일: 파이어볼(레벨 4 버전), 투명화\n\n각 1일: 원뿔 of 냉기, Fly",
+         "text": "마법사는 물질 구성 요소 없이 다음 주문 중 하나를 시전한다. 주문 시전 능력치는 지능이고 주문 내성 DC는 14다.\n\n의지대로: 마법 감지, 빛, 마법사 갑옷(AC에 포함), 마법사 손, 요술\n\n각 2/일: 파이어볼(레벨 4 버전), 투명화\n\n각 1일: 냉기 분사, 비행",
          "kind": "spellcasting",
          "spellcasting": {
           "ability": "int",
@@ -32037,15 +32037,15 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "빛",
              "마법사 갑옷(AC에 포함)",
-             "마법사 손",
+             "마법사의 손",
              "요술"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -32053,12 +32053,12 @@
               "spellId": "dnd.srd521.spell.light"
              },
              {
-              "name": "마법사 갑옷",
+              "name": "마법 갑주",
               "note": "AC에 포함",
               "spellId": "dnd.srd521.spell.mage-armor"
              },
              {
-              "name": "마법사 손",
+              "name": "마법사의 손",
               "spellId": "dnd.srd521.spell.mage-hand"
              },
              {
@@ -32076,7 +32076,7 @@
             ],
             "entries": [
              {
-              "name": "파이어볼",
+              "name": "화염구",
               "note": "레벨 4 버전",
               "slotLevel": 4,
               "spellId": "dnd.srd521.spell.fireball"
@@ -32091,16 +32091,16 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "원뿔 of 냉기",
-             "Fly"
+             "냉기 분사",
+             "비행"
             ],
             "entries": [
              {
-              "name": "원뿔 of 냉기",
+              "name": "냉기 분사",
               "spellId": "dnd.srd521.spell.cone-of-cold"
              },
              {
-              "name": "Fly",
+              "name": "비행",
               "spellId": "dnd.srd521.spell.fly"
              }
             ]
@@ -34465,16 +34465,16 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 해제",
-             "마석학"
+             "마법 무효화",
+             "단순마술"
             ],
             "entries": [
              {
-              "name": "마법 해제",
+              "name": "마법 무효화",
               "spellId": "dnd.srd521.spell.dispel-magic"
              },
              {
-              "name": "마석학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -34484,7 +34484,7 @@
             "uses": 1,
             "spells": [
              "죽은",
-             "해로움",
+             "가해",
              "곤충 역병 애니메이션화(레벨 7 버전)"
             ],
             "entries": [
@@ -34492,11 +34492,11 @@
               "name": "죽은"
              },
              {
-              "name": "해로움",
+              "name": "가해",
               "spellId": "dnd.srd521.spell.harm"
              },
              {
-              "name": "곤충 역병 애니메이션화",
+              "name": "곤충 무리",
               "note": "레벨 7 버전",
               "slotLevel": 7,
               "spellId": "dnd.srd521.spell.insect-plague"
@@ -34960,21 +34960,21 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "에테르성",
+             "마법 탐지",
+             "에테르화",
              "마법 미사일(레벨 4 버전)"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "에테르성",
+              "name": "에테르화",
               "spellId": "dnd.srd521.spell.etherealness"
              },
              {
-              "name": "마법 미사일",
+              "name": "마법 화살",
               "note": "레벨 4 버전",
               "slotLevel": 4,
               "spellId": "dnd.srd521.spell.magic-missile"
@@ -34985,16 +34985,16 @@
             "frequency": "per-day",
             "uses": 2,
             "spells": [
-             "판타스멀 킬러",
+             "환영 살해자",
              "플레인 시프트(본인만)"
             ],
             "entries": [
              {
-              "name": "판타스멀 킬러",
+              "name": "환영 살해자",
               "spellId": "dnd.srd521.spell.phantasmal-killer"
              },
              {
-              "name": "플레인 시프트",
+              "name": "이계 전송",
               "note": "본인만",
               "spellId": "dnd.srd521.spell.plane-shift"
              }
@@ -37559,11 +37559,11 @@
            {
             "frequency": "at-will",
             "spells": [
-             "악과 선을 감지"
+             "악과 선 탐지"
             ],
             "entries": [
              {
-              "name": "악과 선을 감지",
+              "name": "악과 선 탐지",
               "spellId": "dnd.srd521.spell.detect-evil-and-good"
              }
             ]
@@ -38094,7 +38094,7 @@
             "frequency": "at-will",
             "spells": [
              "빛",
-             "마법학"
+             "단순마술"
             ],
             "entries": [
              {
@@ -38102,7 +38102,7 @@
               "spellId": "dnd.srd521.spell.light"
              },
              {
-              "name": "마법학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -38281,7 +38281,7 @@
             "frequency": "at-will",
             "spells": [
              "빛",
-             "마법학"
+             "단순마술"
             ],
             "entries": [
              {
@@ -38289,7 +38289,7 @@
               "spellId": "dnd.srd521.spell.light"
              },
              {
-              "name": "마법학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -39139,23 +39139,23 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
-             "생각 감지",
-             "자아 변장",
+             "마법 탐지",
+             "생각 탐지",
+             "자기 위장",
              "마법사의 손",
-             "사소한 환영"
+             "하급 환영"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "생각 감지",
+              "name": "생각 탐지",
               "spellId": "dnd.srd521.spell.detect-thoughts"
              },
              {
-              "name": "자아 변장",
+              "name": "자기 위장",
               "spellId": "dnd.srd521.spell.disguise-self"
              },
              {
@@ -39163,7 +39163,7 @@
               "spellId": "dnd.srd521.spell.mage-hand"
              },
              {
-              "name": "사소한 환영",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              }
             ]
@@ -39174,8 +39174,8 @@
             "spells": [
              "비행",
              "투명화",
-             "주요 이미지",
-             "평면 이동"
+             "상급 영상",
+             "이계 전송"
             ],
             "entries": [
              {
@@ -39187,11 +39187,11 @@
               "spellId": "dnd.srd521.spell.invisibility"
              },
              {
-              "name": "주요 이미지",
+              "name": "상급 영상",
               "spellId": "dnd.srd521.spell.major-image"
              },
              {
-              "name": "평면 이동",
+              "name": "이계 전송",
               "spellId": "dnd.srd521.spell.plane-shift"
              }
             ]
@@ -42892,11 +42892,11 @@
            {
             "frequency": "at-will",
             "spells": [
-             "악과 선을 감지"
+             "악과 선 탐지"
             ],
             "entries": [
              {
-              "name": "악과 선을 감지",
+              "name": "악과 선 탐지",
               "spellId": "dnd.srd521.spell.detect-evil-and-good"
              }
             ]
@@ -42905,22 +42905,22 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "공동체",
-             "날씨 제어",
-             "악과 선 추방",
+             "신과의 회화",
+             "기후 조종",
+             "악과 선 퇴치",
              "부활"
             ],
             "entries": [
              {
-              "name": "공동체",
+              "name": "신과의 회화",
               "spellId": "dnd.srd521.spell.commune"
              },
              {
-              "name": "날씨 제어",
+              "name": "기후 조종",
               "spellId": "dnd.srd521.spell.control-weather"
              },
              {
-              "name": "악과 선 추방",
+              "name": "악과 선 퇴치",
               "spellId": "dnd.srd521.spell.dispel-evil-and-good"
              },
              {
@@ -43335,15 +43335,15 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "식별",
              "마법사의 손",
-             "사소한 환영",
+             "하급 환영",
              "요술"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -43355,7 +43355,7 @@
               "spellId": "dnd.srd521.spell.mage-hand"
              },
              {
-              "name": "사소한 환영",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              },
              {
@@ -43596,7 +43596,7 @@
             "frequency": "at-will",
             "spells": [
              "악과 선 탐지",
-             "기적학"
+             "단순마술"
             ],
             "entries": [
              {
@@ -43604,7 +43604,7 @@
               "spellId": "dnd.srd521.spell.detect-evil-and-good"
              },
              {
-              "name": "기적학",
+              "name": "단순마술",
               "spellId": "dnd.srd521.spell.thaumaturgy"
              }
             ]
@@ -43614,10 +43614,10 @@
             "uses": 1,
             "spells": [
              "마법 탐지",
-             "마법 해제",
-             "대복원",
-             "영웅의 향연",
-             "진실의 지대"
+             "마법 무효화",
+             "상급 회복",
+             "영웅들의 축연",
+             "진실의 공간"
             ],
             "entries": [
              {
@@ -43625,19 +43625,19 @@
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
-              "name": "마법 해제",
+              "name": "마법 무효화",
               "spellId": "dnd.srd521.spell.dispel-magic"
              },
              {
-              "name": "대복원",
+              "name": "상급 회복",
               "spellId": "dnd.srd521.spell.greater-restoration"
              },
              {
-              "name": "영웅의 향연",
+              "name": "영웅들의 축연",
               "spellId": "dnd.srd521.spell.heroes-feast"
              },
              {
-              "name": "진실의 지대",
+              "name": "진실의 공간",
               "spellId": "dnd.srd521.spell.zone-of-truth"
              }
             ]
@@ -44120,14 +44120,14 @@
            {
             "frequency": "at-will",
             "spells": [
-             "마법 감지",
+             "마법 탐지",
              "마법사의 손",
-             "사소한 환영",
+             "하급 환영",
              "수중 호흡"
             ],
             "entries": [
              {
-              "name": "마법 감지",
+              "name": "마법 탐지",
               "spellId": "dnd.srd521.spell.detect-magic"
              },
              {
@@ -44135,7 +44135,7 @@
               "spellId": "dnd.srd521.spell.mage-hand"
              },
              {
-              "name": "사소한 환영",
+              "name": "하급 환영",
               "spellId": "dnd.srd521.spell.minor-illusion"
              },
              {
@@ -45368,14 +45368,14 @@
             "frequency": "at-will",
             "spells": [
              "마법",
-             "빛 감지"
+             "빛"
             ],
             "entries": [
              {
               "name": "마법"
              },
              {
-              "name": "빛 감지",
+              "name": "빛",
               "spellId": "dnd.srd521.spell.light"
              }
             ]
@@ -45384,11 +45384,11 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "날씨 제어"
+             "기후 조종"
             ],
             "entries": [
              {
-              "name": "날씨 제어",
+              "name": "기후 조종",
               "spellId": "dnd.srd521.spell.control-weather"
              }
             ]
@@ -48152,12 +48152,12 @@
            {
             "frequency": "at-will",
             "spells": [
-             "악과 선을 감지",
+             "악과 선 탐지",
              "드루이드술"
             ],
             "entries": [
              {
-              "name": "악과 선을 감지",
+              "name": "악과 선 탐지",
               "spellId": "dnd.srd521.spell.detect-evil-and-good"
              },
              {
@@ -48170,31 +48170,31 @@
             "frequency": "per-day",
             "uses": 1,
             "spells": [
-             "감정 진정",
-             "악과 선 제거",
-             "얽힘",
-             "흔적 없이 통과",
-             "회상의 말씀"
+             "감정 진정화",
+             "악과 선 퇴치",
+             "옭아매기",
+             "흔적 없는 이동",
+             "귀환의 단어"
             ],
             "entries": [
              {
-              "name": "감정 진정",
+              "name": "감정 진정화",
               "spellId": "dnd.srd521.spell.calm-emotions"
              },
              {
-              "name": "악과 선 제거",
+              "name": "악과 선 퇴치",
               "spellId": "dnd.srd521.spell.dispel-evil-and-good"
              },
              {
-              "name": "얽힘",
+              "name": "옭아매기",
               "spellId": "dnd.srd521.spell.entangle"
              },
              {
-              "name": "흔적 없이 통과",
+              "name": "흔적 없는 이동",
               "spellId": "dnd.srd521.spell.pass-without-trace"
              },
              {
-              "name": "회상의 말씀",
+              "name": "귀환의 단어",
               "spellId": "dnd.srd521.spell.word-of-recall"
              }
             ]

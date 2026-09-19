@@ -20,7 +20,7 @@ import type { CharacterRuntime } from "../character/runtime";
 import { resolveRuntime } from "../character/save";
 import type { CharacterSource } from "../character/types";
 import { Modal, Notice, Pill, signed } from "../ui/components";
-import { ArtDropZone, ArtImage, ArtPicker } from "./ArtPanel";
+import { ArtImage, AvatarField, EntryAvatar } from "./ArtPanel";
 import { CreateScreen } from "./CreateScreen";
 import { NpcWindow } from "./NpcSheet";
 import { TrackerWindow } from "./TrackerWindow";
@@ -143,10 +143,6 @@ function characterLine(entry: JournalCharacter, catalog: ReturnType<typeof useCl
   return `${derived.classes.map((cls) => `${cls.name} ${cls.level}`).join("/") || "직업 없음"}`;
 }
 
-function EntryAvatar({ entry, size = 22 }: { entry: JournalEntry; size?: number }) {
-  if (entry.avatar) return <ArtImage className="cl-journal-avatar" src={entry.avatar} style={{ width: size, height: size }} />;
-  return <span className="cl-journal-avatar" style={{ width: size, height: size, fontSize: size * 0.55 }} aria-hidden="true">{entry.kind === "handout" ? "📜" : (entry.name || "?").slice(0, 1)}</span>;
-}
 
 function AudiencePill({ audience, players }: { audience: Audience; players: number }) {
   if (audience === "all") return <Pill tone="good">모두</Pill>;
@@ -301,29 +297,6 @@ function GmFields<T extends JournalEntry>({ draft, edit, set }: { draft: T; edit
   );
 }
 
-function AvatarField({ entry, onChange, disabled }: { entry: JournalEntry; onChange: (avatar: string | undefined) => void; disabled: boolean }) {
-  const c = useCampaigns();
-  const [picking, setPicking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const pick = async (file: File | undefined) => {
-    if (!file) return;
-    try { const id = await c.uploadArt(file); setError(null); onChange(`art:${id}`); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
-  };
-  const body = (
-    <>
-      <EntryAvatar entry={entry} size={72} />
-      {!disabled ? <div className="cl-row" style={{ gap: 4 }}>
-        <button type="button" className="cl-btn small" onClick={() => setPicking(true)}>라이브러리에서</button>
-        <label className="cl-btn small" style={{ cursor: "pointer" }}>이미지 올리기<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void pick(file); }} /></label>
-        {entry.avatar ? <button type="button" className="cl-btn small quiet" onClick={() => onChange(undefined)}>지우기</button> : null}
-      </div> : null}
-      {error ? <span className="cl-small" style={{ color: "var(--bad)" }}>{error}</span> : null}
-      {picking ? <ArtPicker title="아바타 고르기" onPick={(ref) => { onChange(ref); setPicking(false); }} onClose={() => setPicking(false)} /> : null}
-    </>
-  );
-  if (disabled) return <div className="cl-journal-avatar-field">{body}</div>;
-  return <ArtDropZone className="cl-journal-avatar-field" onRef={(ref) => onChange(ref)}>{body}</ArtDropZone>;
-}
 
 function CommonActions({ draft, set, onClose }: { draft: JournalEntry; set: (patch: Partial<JournalEntry>) => void; onClose: () => void }) {
   const c = useCampaigns();
@@ -345,10 +318,13 @@ function HandoutWindow({ entry, onClose, onOpen }: { entry: Extract<JournalEntry
   const editable = canEdit(entry, viewer);
   const { draft, edit, set } = useEntryDraft(entry);
   const [editing, setEditing] = useState(false);
+  // A handout with a picture is the picture: it leads the window at full width instead of sitting as an icon.
+  const pictured = Boolean(draft.avatar);
   return (
     <div className="cl-journal-window">
+      {pictured ? <AvatarField entry={draft} onChange={(avatar) => set({ avatar })} disabled={!editable} large /> : null}
       <div className="cl-row" style={{ gap: 12, alignItems: "flex-start" }}>
-        <AvatarField entry={draft} onChange={(avatar) => set({ avatar })} disabled={!editable} />
+        {pictured ? null : <AvatarField entry={draft} onChange={(avatar) => set({ avatar })} disabled={!editable} />}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
           {editable ? <input className="cl-input cl-journal-title" aria-label="이름" value={draft.name} onChange={(event) => edit({ name: event.target.value })} /> : <h2 className="cl-journal-title">{draft.name}</h2>}
           <div className="cl-row cl-small" style={{ gap: 6 }}>
@@ -566,6 +542,26 @@ function AttributesTab({ derived, runtime }: { derived: ReturnType<typeof derive
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <p className="cl-muted cl-small">Roll20의 Attributes 탭에 해당합니다. 값은 시트에서 파생돼 자동으로 맞춰지며, 아이콘의 바가 여기의 HP·AC를 연결합니다. 능력(매크로)은 R17에서 옵니다.</p>
       <table className="cl-table"><thead><tr><th>속성</th><th>이름</th><th>값</th></tr></thead><tbody>{rows.map(([key, value]) => <tr key={key}><td><code>{key}</code></td><td>{label(key)}</td><td className="num">{value}</td></tr>)}</tbody></table>
+    </div>
+  );
+}
+
+/**
+ * A handout shown as itself: its title and its picture at full size over the table, the text under it. It opens on
+ * every player's screen when the DM shows it, and when a player opens a pictured handout from the journal.
+ */
+export function HandoutPopup({ entry, onClose, onOpen }: { entry: Extract<JournalEntry, { kind: "handout" }>; onClose: () => void; onOpen: (id: string) => void }) {
+  useEffect(() => { const key = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); }, [onClose]);
+  return (
+    <div className="cl-modal-backdrop cl-handout-popup-backdrop" onClick={onClose} role="presentation">
+      <div className="cl-handout-popup" role="dialog" aria-label={entry.name} onClick={(event) => event.stopPropagation()}>
+        <div className="cl-row" style={{ gap: 8 }}>
+          <h2 className="cl-journal-title" style={{ flex: 1 }}>{entry.name}</h2>
+          <button type="button" className="cl-btn" onClick={onClose}>닫기</button>
+        </div>
+        {entry.avatar ? <ArtImage className="cl-handout-popup-image" src={entry.avatar} alt={entry.name} /> : null}
+        {entry.notes.trim() ? <div className="cl-handout-popup-text"><JournalText text={entry.notes} onOpen={(id) => { onClose(); onOpen(id); }} /></div> : null}
+      </div>
     </div>
   );
 }

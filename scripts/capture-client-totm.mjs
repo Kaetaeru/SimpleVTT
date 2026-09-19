@@ -246,7 +246,7 @@ try {
   check(await dm.locator(".cl-canvas-viewport.scene").evaluate((el) => el.scrollHeight <= el.clientHeight + 1), "the scene never scrolls: it fits the frame");
   check((await dm.locator(".cl-chat-msg.act", { hasText: "붙잡기" }).last().innerText()).includes("내성"), "붙잡기 rolls the target's save against the DC");
 
-  // SC-53 (D102): the DM places a mage; ✨ 마법 lists its stat-block spells; 파이어볼 at the goblin and the fighter rolls one damage die
+  // SC-53 (D102): the DM places a mage; ✨ 마법 lists its stat-block spells; 화염구 at the goblin and the fighter rolls one damage die
   // for both, each saves against the mage's DC, and the HP bars fall on both screens.
   await tab(dm, "컴펜디움").click();
   await dm.getByLabel("컴펜디움 검색").fill("mage");
@@ -257,18 +257,22 @@ try {
   const mageBar = dm.getByRole("toolbar", { name: "마법사 액션" });
   await mageBar.waitFor();
   await mageBar.getByRole("button", { name: /^✨ 마법/ }).click();
-  const fireball = dm.getByRole("menuitem", { name: /파이어볼/ });
+  // D320: the menu names the spell as the spell list does (화염구), and hovering it shows the spell's card.
+  const fireball = dm.getByRole("menuitem", { name: /화염구/ });
   await fireball.waitFor({ timeout: 5000 });
-  check((await fireball.getAttribute("title") ?? "").includes("2/2 남음") && (await fireball.getAttribute("title") ?? "").includes("민첩 내성"), "the menu says how often and what the spell asks for");
+  check((await fireball.innerText()).includes("2/2 남음") && (await fireball.innerText()).includes("민첩 내성"), "the menu says how often and what the spell asks for");
+  await fireball.hover();
+  await dm.locator(".cl-spell-tip", { hasText: "화염구" }).waitFor({ timeout: 5000 });
+  check(true, "hovering a spell in the menu shows its card");
   await fireball.click();
   await dm.locator(".cl-targeting-banner[data-multi='1']").waitFor();
   await iconOf(dm, "고블린 전사").click();
   await iconOf(dm, "앨리스의 파이터").click();
   await dm.locator(".cl-targeting-banner[data-picked='2']").waitFor({ timeout: 10000 });
   await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
-  const spellCard = player.locator(".cl-chat-msg.spell", { hasText: "파이어볼" });
+  const spellCard = player.locator(".cl-chat-msg.spell", { hasText: "화염구" });
   await spellCard.waitFor({ timeout: 15000 });
-  await dm.locator(".cl-chat-msg.spell", { hasText: "파이어볼" }).waitFor({ timeout: 15000 });
+  await dm.locator(".cl-chat-msg.spell", { hasText: "화염구" }).waitFor({ timeout: 15000 });
   const spellText = await spellCard.innerText();
   check(spellCard && spellText.includes("고블린 전사") && spellText.includes("앨리스의 파이터") && /DC \d+/.test(spellText), "the spell card shows both targets' saves against the mage's DC");
   await dm.waitForTimeout(800);
@@ -279,8 +283,8 @@ try {
   await iconOf(dm, "마법사").click();
   await mageBar.waitFor();
   await mageBar.getByRole("button", { name: /^✨ 마법/ }).click();
-  await dm.getByRole("menuitem", { name: /파이어볼/ }).waitFor({ timeout: 5000 });
-  check((await dm.getByRole("menuitem", { name: /파이어볼/ }).getAttribute("title") ?? "").includes("1/2 남음"), "the per-day spell shows its remaining uses after the cast");
+  await dm.getByRole("menuitem", { name: /화염구/ }).waitFor({ timeout: 5000 });
+  check((await dm.getByRole("menuitem", { name: /화염구/ }).innerText()).includes("1/2 남음"), "the per-day spell shows its remaining uses after the cast");
   await dm.keyboard.press("Escape");
 
   // SC-54 (R9, D103/D104): the DM's dragon — 다중공격 runs the routine (three 찢기 cards, one pre-roll dialog), ☄ 화염 브레스

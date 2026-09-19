@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { controlsToken } from "../campaign/page";
-import { audienceIncludes } from "../campaign/journal";
+import { audienceIncludes, canEdit } from "../campaign/journal";
 import type { SpellResolution, SpellTargetResult } from "../rules/spellcast";
 import { monsterById } from "../compendium/monsters";
 import { spellExec } from "../compendium/spells";
@@ -20,9 +20,10 @@ import { damageTypeKo } from "../rules/resolve";
 import { parseFormula } from "../character/dice";
 import { describeChatRoll, expandMacros, parseChatInput } from "../session/chat";
 import { copyText, Notice, Pill } from "../ui/components";
-import { useDice } from "../ui/dice/DiceProvider";
+import { isReducedMotion, setReducedMotion, useDice } from "../ui/dice/DiceProvider";
+import { diceSignature, rollOfMessage } from "../ui/dice/messageDice";
 import { ArtTab } from "./ArtPanel";
-import { JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
+import { HandoutPopup, JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
 import { CompendiumTab } from "./CompendiumPanel";
 import { PageCanvas, requestTargets, setHighlight } from "./PageCanvas";
 
@@ -58,8 +59,35 @@ function Table() {
       if (trackerOpen && !has) return [...list, { key: "tracker", kind: "tracker" }]; if (!trackerOpen && has) return list.filter((item) => item.kind !== "tracker"); return list; }); }, [trackerOpen, isGm]);
   const openTracker = useCallback(() => { if (isGm) c.setTracker({ ...snapshot.tracker, open: true }); setWindows((list) => (list.some((item) => item.kind === "tracker") ? list : [...list, { key: "tracker", kind: "tracker" }])); }, [c, snapshot.tracker, isGm]);
   // "플레이어에게 보여주기": the GM's request opens the entry here.
+  // A shown handout pops up over the table (title and picture); anything else opens as its window.
+  const [popup, setPopup] = useState<string | null>(null);
   const shows = c.table.shows;
-  useEffect(() => { for (const id of shows) { openEntry(id); c.dismissShow(id); } }, [shows, openEntry, c]);
+  useEffect(() => { for (const id of shows) { if (snapshot.journal.find((entry) => entry.id === id)?.kind === "handout") setPopup(id); else openEntry(id); c.dismissShow(id); } }, [shows, openEntry, c, snapshot.journal]);
+  // A pictured handout the viewer cannot edit opens as its picture; the editor gets the window.
+  const openFromJournal = useCallback((id: string) => {
+    const entry = snapshot.journal.find((item) => item.id === id);
+    if (entry?.kind === "handout" && entry.avatar && !canEdit(entry, { userId: c.userId, role: isGm ? "gm" : "player" })) setPopup(id);
+    else openEntry(id);
+  }, [snapshot.journal, openEntry, c.userId, isGm]);
+  const popupEntry = popup ? snapshot.journal.find((entry) => entry.id === popup) : undefined;
+  // Every roll tumbles: a card that arrives with dice (an attack, a spell, a check, an initiative) is shown as the
+  // dice it rolled. What was already in the chat when the table opened is history and stays still.
+  const dice = useDice();
+  const seen = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!seen.current) { seen.current = new Set(snapshot.chat.map((message) => message.id)); return; }
+    const fresh = snapshot.chat.filter((message) => !seen.current!.has(message.id));
+    for (const message of fresh) seen.current.add(message.id);
+    for (const message of fresh.slice(-3)) {
+      const roll = rollOfMessage(message);
+      if (!roll) continue;
+      // A DM edit re-issues the card; only a reroll (new dice) tumbles again.
+      const before = message.supersedes ? snapshot.chat.find((item) => item.id === message.supersedes) : undefined;
+      const previous = before ? rollOfMessage(before) : null;
+      if (previous && diceSignature(previous.dice) === diceSignature(roll.dice)) continue;
+      dice.show(roll);
+    }
+  }, [snapshot.chat, dice]);
   return (
     <div className="cl-page cl-table">
       <div className="cl-page-head">
@@ -101,7 +129,8 @@ function Table() {
       {/* R68 (D203): a note the host reads once; it can be closed for the rest of the session. */}
       {c.table.role === "host" && c.table.transportNote && !noteClosed ? <Notice tone="warn"><span className="cl-row" style={{ gap: 8 }}>{c.table.transportNote}<button type="button" className="cl-btn small quiet" style={{ marginLeft: "auto" }} aria-label="안내 닫기" onClick={() => setNoteClosed(true)}>✕</button></span></Notice> : null}
       {c.table.refusals.length ? <div className="cl-toasts">{c.table.refusals.map((reason, index) => <Notice tone="bad" key={`${reason}-${index}`}>{reason}</Notice>)}</div> : null}
-      <JournalWindows windows={windows} onClose={closeWindow} onFocus={focusWindow} onOpen={openEntry} />
+      <JournalWindows windows={windows} onClose={closeWindow} onFocus={focusWindow} onOpen={openFromJournal} />
+      {popupEntry?.kind === "handout" ? <HandoutPopup entry={popupEntry} onClose={() => setPopup(null)} onOpen={openFromJournal} /> : null}
       <div className="cl-table-grid">
         <section className="cl-table-main">
           <PageCanvas onOpenEntry={openEntry} onOpenToken={openToken} onOpenPageSettings={openPageSettings} onOpenTracker={openTracker} />
@@ -113,7 +142,7 @@ function Table() {
             <button type="button" role="tab" aria-selected={tab === "art"} className={tab === "art" ? "active" : ""} onClick={() => setTab("art")}>아트{snapshot.art.length ? <small className="cl-quiet"> {snapshot.art.length}</small> : null}</button>
             <button type="button" role="tab" aria-selected={tab === "compendium"} className={tab === "compendium" ? "active" : ""} onClick={() => setTab("compendium")}>컴펜디움</button>
           </div>
-          {tab === "chat" ? <ChatTab isGm={isGm} /> : tab === "journal" ? <JournalTab onOpen={openEntry} onNewCharacter={openNewCharacter} /> : tab === "art" ? <ArtTab /> : <CompendiumTab onOpenEntry={openEntry} />}
+          {tab === "chat" ? <ChatTab isGm={isGm} /> : tab === "journal" ? <JournalTab onOpen={openFromJournal} onNewCharacter={openNewCharacter} /> : tab === "art" ? <ArtTab /> : <CompendiumTab onOpenEntry={openEntry} />}
         </aside>
       </div>
     </div>
@@ -125,6 +154,7 @@ function ChatTab({ isGm }: { isGm: boolean }) {
   const dice = useDice();
   const snapshot = c.table.snapshot!;
   const [text, setText] = useState("");
+  const [stillDice, setStillDice] = useState(isReducedMotion);
   const listRef = useRef<HTMLDivElement>(null);
   const superseded = useMemo(() => new Set(snapshot.chat.map((message) => message.supersedes).filter((id): id is string => Boolean(id))), [snapshot.chat]);
   const messages = useMemo(() => snapshot.chat.filter((message) => !superseded.has(message.id)), [snapshot.chat, superseded]);
@@ -161,6 +191,7 @@ function ChatTab({ isGm }: { isGm: boolean }) {
         <textarea className="cl-input" rows={2} placeholder="말하기… (/roll 4d6kh3, #매크로, /roll 1t[표], [[1d6]])" aria-label="채팅 입력" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submit(); } }} />
         <div className="cl-row" style={{ gap: 4 }}>
           {["1d20", "1d12", "1d10", "1d8", "1d6", "1d4"].map((formula) => <button type="button" key={formula} className="cl-btn small" onClick={() => { setText(`/roll ${formula}`); }} title={`/roll ${formula}`}>{formula.slice(1)}</button>)}
+          <button type="button" className="cl-btn small quiet" aria-pressed={!stillDice} title="주사위를 굴려서 보여줄지, 멈춘 채로 보여줄지 (이 브라우저에만 저장)" onClick={() => { setReducedMotion(!stillDice); setStillDice(!stillDice); }}>{stillDice ? "주사위: 간단" : "주사위: 굴림"}</button>
           <button type="button" className="cl-btn small primary" style={{ marginLeft: "auto" }} disabled={!text.trim()} onClick={() => void submit()}>보내기</button>
         </div>
       </div>
