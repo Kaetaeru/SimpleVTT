@@ -324,6 +324,7 @@ npm run gate:client                                                  # 엔진을
 - `모르는 속성`: §4에 없는 `property`
 - 테이블에서 전부 눌러 본다(D307): `node --import tsx --import ./tests/support/register-css.mjs scripts/verify-module-at-table.ts <파일> [보고서.json]` — 거절·무반응·풀 미소모를 센다. `--builtin`(파일 없이)이면 SRD 콘텐츠 전체를 누르고, 종족 선택마다 캐릭터를 만들어 선택이 사용을 가르는지도 본다(D308).
 - 주문 글과 실행을 맞대 본다: `npx tsx scripts/audit-spells.ts [--module <파일>] [--out <보고서.json>]` — 글이 말하는 피해 주사위·유형, 내성, 명중 굴림, 집중, 상태, 상위 슬롯 증가가 실행에 있는지. 불일치가 곧 버그는 아니지만(선택 부가 효과일 수 있다) 버그는 전부 여기 나온다.
+- 재주를 훑어본다: `npx tsx scripts/audit-feats.ts [--module <파일>]` — 재주마다 정의·계약이 있는지, 실행기가 못 읽는 조각, DM 줄뿐인 재주.
 - 그다음은 실제로 캐릭터를 만들어 본다 — 특성마다 계약이 붙었는지, 자원 풀이 생겼는지, 창이 뜨는지. 시험은 **합성 모듈**로 쓴다(저장소에 남의 콘텐츠를 넣지 않는다): `tests/client/v6-module.test.ts`가 본보기다.
 
 ## 11. 문법을 넓혀야 할 때

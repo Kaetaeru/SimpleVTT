@@ -863,7 +863,10 @@ test("V4z: a rule may wait on the option this sheet took — 향상된 축복받
   const cat = catalog();
   const made = (option: string) => build({ name: "클레릭", classes: "cleric", level: 14, abilities: { wis: 18 }, choices: { "class.6.blessed-strikes": [`cleric.blessed-strikes.${option}`] } }, { "class.6.blessed-strikes": [`cleric.blessed-strikes.${option}`] });
   assert.equal(tableOutcome(made("potent-spellcasting").derived, cat, "cleric.improved-blessed-strikes#potent")?.party.tempHp, "8");
-  assert.equal(tableOutcome(made("divine-strike").derived, cat, "cleric.improved-blessed-strikes#potent")?.party.tempHp, undefined, "신성한 일격을 골랐으면 임시 HP 줄은 없다");
+  assert.equal(tableOutcome(made("divine-strike").derived, cat, "cleric.improved-blessed-strikes#potent"), null, "신성한 일격을 골랐으면 임시 HP 줄은 없다");
+  // D308: nor a line on the sheet.
+  assert.ok(!made("divine-strike").derived.features.some((feature) => feature.id.endsWith("#potent")));
+  assert.ok(made("potent-spellcasting").derived.features.some((feature) => feature.id.endsWith("#potent")));
 
   // 행동 폭증: the payment names a pool that exists, and the once-a-turn limit says whose call it is.
   const fighter = build({ name: "파이터", classes: "fighter", level: 17 });
