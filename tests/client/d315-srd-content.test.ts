@@ -55,6 +55,12 @@ test("D315: under 영웅심 a creature cannot be frightened — its neighbour ca
   assert.ok(!conditions(1).includes("공포"), "the heroic one is not");
 });
 
+test("D317: necrotic has one name — a chthonic tiefling resists what the resolver calls 사령", () => {
+  const cat = createCatalog([]);
+  const made = autofill(sourceOf({ classes: "fighter", level: 3, species: "tiefling", choices: { "origin.species.legacy": ["chthonic"] } }), cat, { prefer: { "origin.species.legacy": ["chthonic"] } });
+  assert.ok(made.derived.defenses.resistances.some((entry) => entry.startsWith("사령")), made.derived.defenses.resistances.join(", "));
+});
+
 test("D315: 동물 소환 deals its damage only on a failed Dexterity save", () => {
   const primary = spellExec("dnd.srd521.spell.conjure-animals")!.primary as { saveAbility?: string; successDamage?: string };
   assert.equal(primary.saveAbility, "dex", "민첩 내성 — the 근력 in the text is the caster's own advantage");

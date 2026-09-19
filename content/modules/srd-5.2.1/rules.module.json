@@ -338,6 +338,19 @@
           "question": "DM 판정 (남의 판정에 끼어드는 자리가 없음): 60피트 안 다른 이의 판정에도 쓸 수 있고, 굴림을 깎을 수는 없음"
          }
         ]
+       },
+       {
+        "id": "initiative",
+        "invocation": "initiative",
+        "operations": [
+         {
+          "kind": "resource.change",
+          "resource": "resource:feat.fate",
+          "amount": 1,
+          "upTo": true,
+          "target": "self"
+         }
+        ]
        }
       ]
      }
@@ -641,7 +654,7 @@
           "property": "resistance",
           "operation": "add",
           "value": {
-           "value": "괴저"
+           "value": "사령"
           }
          },
          {
@@ -658,14 +671,6 @@
           "operation": "add",
           "value": {
            "value": "독"
-          }
-         },
-         {
-          "kind": "property.modify",
-          "property": "resistance",
-          "operation": "add",
-          "value": {
-           "value": "정신"
           }
          },
          {
@@ -691,13 +696,6 @@
           "value": {
            "value": "천둥"
           }
-         },
-         {
-          "kind": "property.modify",
-          "property": "speed.walk",
-          "operation": "multiply",
-          "value": 2,
-          "note": "그림자 형상"
          }
         ]
        }
@@ -997,7 +995,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "격노를 시작할 때 이미 걸려 있던 매혹·공포는 격노가 끝날 때까지 멈춤 — 표에서"
+          "question": "격노를 시작할 때 이미 걸려 있던 매혹·공포 상태는 끝남 — 상태를 손으로 해제 (DM 판정: 격노 시작 때 상태를 지우는 자리가 없음)"
          }
         ]
        }
@@ -3008,7 +3006,7 @@
           "kind": "property.modify",
           "property": "rule.applied-elsewhere",
           "operation": "set",
-          "note": "명중 창에서 광휘 또는 괴저 — 아래 줄"
+          "note": "명중 창에서 광휘 또는 사령 — 아래 줄"
          }
         ]
        },
@@ -3051,7 +3049,7 @@
        },
        {
         "id": "necrotic",
-        "label": "신성한 일격 (괴저)",
+        "label": "신성한 일격 (사령)",
         "invocation": "on-hit",
         "attack": {
          "oncePerTurn": true,
@@ -3546,7 +3544,7 @@
        },
        {
         "id": "divine-spark-harm-necrotic",
-        "label": "신성한 불꽃 (괴저 피해)",
+        "label": "신성한 불꽃 (사령 피해)",
         "invocation": "manual",
         "payments": [
          {
@@ -3567,7 +3565,7 @@
          },
          {
           "kind": "damage.apply",
-          "damageType": "괴저",
+          "damageType": "사령",
           "target": "target",
           "dice": "1d8",
           "amount": {
@@ -3617,7 +3615,7 @@
          },
          {
           "kind": "damage.apply",
-          "damageType": "괴저",
+          "damageType": "사령",
           "target": "target",
           "dice": "2d8",
           "amount": {
@@ -3667,7 +3665,7 @@
          },
          {
           "kind": "damage.apply",
-          "damageType": "괴저",
+          "damageType": "사령",
           "target": "target",
           "dice": "3d8",
           "amount": {
@@ -3717,7 +3715,7 @@
          },
          {
           "kind": "damage.apply",
-          "damageType": "괴저",
+          "damageType": "사령",
           "target": "target",
           "dice": "4d8",
           "amount": {
@@ -6093,7 +6091,7 @@
             }
            ]
           },
-          "damageType": "괴저",
+          "damageType": "사령",
           "target": "targets",
           "save": {
            "ability": "con",
@@ -6253,6 +6251,19 @@
            "recovery": "long-rest",
            "maxLevel": 5
           }
+         },
+         {
+          "kind": "property.modify",
+          "property": "grant.resource",
+          "operation": "set",
+          "value": {
+           "value": 1
+          },
+          "params": {
+           "id": "resource.druid.natural-recovery",
+           "label": "자연의 회복 (슬롯 회복)",
+           "recovery": "long-rest"
+          }
          }
         ]
        },
@@ -6366,14 +6377,28 @@
       "id": "feature:druid.circle-of-the-land.natures-ward",
       "entryPoints": [
        {
+        "id": "gain",
+        "invocation": "gain",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "grant.condition-immunity",
+          "operation": "set",
+          "value": {
+           "value": 1
+          },
+          "params": {
+           "conditions": [
+            "poisoned"
+           ]
+          }
+         }
+        ]
+       },
+       {
         "id": "rule",
         "invocation": "manual",
         "operations": [
-         {
-          "kind": "condition.remove",
-          "condition": "중독",
-          "target": "self"
-         },
          {
           "kind": "adjudication.request",
           "question": "중독 면역 · 고른 대지 유형의 저항(건조 화염 / 극지 냉기 / 온대 번개 / 열대 독)은 시트에서 이미 더해집니다"
@@ -6425,6 +6450,20 @@
           "params": {
            "id": "druidic",
            "name": "드루이드어"
+          }
+         },
+         {
+          "kind": "property.modify",
+          "property": "grant.spells",
+          "operation": "set",
+          "value": {
+           "value": 1
+          },
+          "params": {
+           "spells": [
+            "dnd.srd521.spell.speak-with-animals"
+           ],
+           "into": "alwaysPrepared"
           }
          }
         ]
@@ -6849,7 +6888,7 @@
           "kind": "property.modify",
           "property": "rule.applied-elsewhere",
           "operation": "set",
-          "note": "시전 창에서 — 야생 변신 1회로 사역마 찾기 (의식 없이, 지속 10분)"
+          "note": "시전 창에서 — 야생 변신 1회로 사역마 찾기 (마법 행동, 물질 구성요소 없이) · 긴 휴식이 끝나면 사라짐"
          }
         ]
        }
@@ -6903,7 +6942,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "턴당 한 번"
+          "question": "턴당 한 번 · 야생 변신 사용이 남아 있지 않을 때만"
          }
         ]
        },
@@ -6912,6 +6951,12 @@
         "label": "야생 재발: 야생 변신 1회 → 1레벨 슬롯",
         "invocation": "manual",
         "operations": [
+         {
+          "kind": "resource.change",
+          "resource": "resource:druid.wild-resurgence",
+          "amount": -1,
+          "target": "self"
+         },
          {
           "kind": "resource.change",
           "resource": "resource:druid.wild-shape",
@@ -6927,21 +6972,12 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "긴 휴식마다 한 번, 슬롯이 하나도 없을 때만"
+          "question": "긴 휴식마다 한 번"
          }
         ]
        }
       ],
-      "payments": [
-       {
-        "kind": "economy",
-        "bucket": "bonus-action",
-        "amount": {
-         "value": 1
-        },
-        "consumeAt": "commit"
-       }
-      ]
+      "payments": []
      }
     }
    ]
@@ -7048,7 +7084,6 @@
            "creatureTypes": [
             "beast"
            ],
-           "swimFrom": 4,
            "flyFrom": 8,
            "level": {
             "ref": "actor.class-level:dnd.srd521.class.druid"
@@ -8352,7 +8387,33 @@
          {
           "kind": "damage.apply",
           "dice": "1d8",
-          "diceCount": 2,
+          "diceCount": {
+           "op": "add",
+           "args": [
+            {
+             "value": 1
+            },
+            {
+             "op": "min",
+             "args": [
+              {
+               "value": 5
+              },
+              {
+               "op": "ceil-div",
+               "args": [
+                {
+                 "ref": "actor.class-level:dnd.srd521.class.warlock"
+                },
+                {
+                 "value": 2
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
           "damageType": "역장",
           "target": "attack-target"
          },
@@ -8366,7 +8427,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "대형 이하 대상만 넘어짐. 슬롯 레벨이 1을 넘으면 주사위 하나씩 더"
+          "question": "초거대형 대상은 넘어지지 않음, 넘어뜨리지 않기로 했으면 상태를 지울 것 — DM 판정 (크기·선택은 앱이 모름)"
          }
         ]
        }
@@ -8407,7 +8468,7 @@
         "operations": [
          {
           "kind": "adjudication.request",
-          "question": "DM 판정 (사거리 표시 없음): 마력 파열의 사거리가 두 배"
+          "question": "DM 판정 (사거리 표시 없음): 고른 워락 소마법의 사거리가 워락 레벨 × 30피트 늘어남"
          }
         ]
        }
@@ -8507,6 +8568,20 @@
           "params": {
            "mode": "swim",
            "equalsWalk": true
+          }
+         },
+         {
+          "kind": "property.modify",
+          "property": "grant.resource",
+          "operation": "set",
+          "value": {
+           "value": 1
+          },
+          "params": {
+           "id": "resource.invocation.gift-of-the-depths",
+           "label": "심해의 선물 (수중 호흡)",
+           "spell": "dnd.srd521.spell.water-breathing",
+           "recovery": "long-rest"
           }
          }
         ]
@@ -8678,7 +8753,7 @@
          {
           "kind": "damage.apply",
           "dice": "1d6",
-          "damageType": "괴저",
+          "damageType": "사령",
           "target": "attack-target"
          },
          {
@@ -9630,13 +9705,13 @@
           },
           "params": {
            "effect": "target-save-disadvantage",
-           "note": "대상 하나의 첫 내성만 — 누구인지는 표에서",
+           "note": "대상 하나는 이 주문에 대한 모든 내성에 불리 — 누구인지는 표에서",
            "needs": "save"
           }
          },
          {
           "kind": "adjudication.request",
-          "question": "대상 하나의 첫 내성만 — 누구인지는 표에서"
+          "question": "대상 하나는 이 주문에 대한 모든 내성에 불리 — 누구인지는 표에서"
          }
         ]
        }
@@ -9803,12 +9878,12 @@
            "value": 1
           },
           "params": {
-           "note": "동작·음성 구성요소 없이 — 표에서"
+           "note": "음성·동작·물질 구성요소 없이 (소비되거나 값이 적힌 물질은 필요) — 표에서"
           }
          },
          {
           "kind": "adjudication.request",
-          "question": "동작·음성 구성요소 없이 — 표에서"
+          "question": "음성·동작·물질 구성요소 없이 (소비되거나 값이 적힌 물질은 필요) — 표에서"
          }
         ]
        }
@@ -9861,13 +9936,13 @@
            "value": 1
           },
           "params": {
-           "note": "피해 유형을 산성·냉기·화염·번개·독 중 하나로 — 표에서",
+           "note": "피해 유형(산성·냉기·화염·번개·독·천둥)을 목록의 다른 하나로 — 표에서",
            "needs": "damage"
           }
          },
          {
           "kind": "adjudication.request",
-          "question": "피해 유형을 산성·냉기·화염·번개·독 중 하나로 — 표에서"
+          "question": "피해 유형(산성·냉기·화염·번개·독·천둥)을 목록의 다른 하나로 — 표에서"
          }
         ]
        }
@@ -10143,6 +10218,94 @@
           "kind": "property.modify",
           "property": "reaction.redirect",
           "operation": "set",
+          "dice": "2d6",
+          "value": {
+           "ref": "ability.dex.modifier"
+          },
+          "params": {
+           "dc": {
+            "op": "add",
+            "args": [
+             {
+              "value": 8
+             },
+             {
+              "ref": "ability.wis.modifier"
+             },
+             {
+              "ref": "proficiency.bonus"
+             }
+            ]
+           },
+           "ability": "dex",
+           "damageType": "역장"
+          },
+          "note": "되돌리기 (기 1)",
+          "when": {
+           "op": "lt",
+           "left": {
+            "ref": "actor.class-level:dnd.srd521.class.monk"
+           },
+           "right": {
+            "value": 5
+           }
+          }
+         },
+         {
+          "kind": "property.modify",
+          "property": "reaction.redirect",
+          "operation": "set",
+          "dice": "2d8",
+          "value": {
+           "ref": "ability.dex.modifier"
+          },
+          "params": {
+           "dc": {
+            "op": "add",
+            "args": [
+             {
+              "value": 8
+             },
+             {
+              "ref": "ability.wis.modifier"
+             },
+             {
+              "ref": "proficiency.bonus"
+             }
+            ]
+           },
+           "ability": "dex",
+           "damageType": "역장"
+          },
+          "note": "되돌리기 (기 1)",
+          "when": {
+           "op": "all",
+           "args": [
+            {
+             "op": "gte",
+             "left": {
+              "ref": "actor.class-level:dnd.srd521.class.monk"
+             },
+             "right": {
+              "value": 5
+             }
+            },
+            {
+             "op": "lt",
+             "left": {
+              "ref": "actor.class-level:dnd.srd521.class.monk"
+             },
+             "right": {
+              "value": 11
+             }
+            }
+           ]
+          }
+         },
+         {
+          "kind": "property.modify",
+          "property": "reaction.redirect",
+          "operation": "set",
           "dice": "2d10",
           "value": {
            "ref": "ability.dex.modifier"
@@ -10165,7 +10328,67 @@
            "ability": "dex",
            "damageType": "역장"
           },
-          "note": "되돌리기 (기 1)"
+          "note": "되돌리기 (기 1)",
+          "when": {
+           "op": "all",
+           "args": [
+            {
+             "op": "gte",
+             "left": {
+              "ref": "actor.class-level:dnd.srd521.class.monk"
+             },
+             "right": {
+              "value": 11
+             }
+            },
+            {
+             "op": "lt",
+             "left": {
+              "ref": "actor.class-level:dnd.srd521.class.monk"
+             },
+             "right": {
+              "value": 17
+             }
+            }
+           ]
+          }
+         },
+         {
+          "kind": "property.modify",
+          "property": "reaction.redirect",
+          "operation": "set",
+          "dice": "2d12",
+          "value": {
+           "ref": "ability.dex.modifier"
+          },
+          "params": {
+           "dc": {
+            "op": "add",
+            "args": [
+             {
+              "value": 8
+             },
+             {
+              "ref": "ability.wis.modifier"
+             },
+             {
+              "ref": "proficiency.bonus"
+             }
+            ]
+           },
+           "ability": "dex",
+           "damageType": "역장"
+          },
+          "note": "되돌리기 (기 1)",
+          "when": {
+           "op": "gte",
+           "left": {
+            "ref": "actor.class-level:dnd.srd521.class.monk"
+           },
+           "right": {
+            "value": 17
+           }
+          }
          },
          {
           "kind": "adjudication.request",
@@ -11662,7 +11885,7 @@
           "kind": "property.modify",
           "property": "resistance",
           "operation": "add",
-          "value": "괴저"
+          "value": "사령"
          },
          {
           "kind": "property.modify",
@@ -11705,16 +11928,6 @@
           "property": "resistance",
           "operation": "add",
           "value": "참격"
-         }
-        ],
-        "payments": [
-         {
-          "kind": "economy",
-          "bucket": "bonus-action",
-          "amount": {
-           "value": 1
-          },
-          "consumeAt": "commit"
          }
         ]
        }
@@ -12228,7 +12441,15 @@
           "property": "saving-throw.bonus",
           "operation": "add",
           "value": {
-           "ref": "ability.cha.modifier"
+           "op": "max",
+           "args": [
+            {
+             "value": 1
+            },
+            {
+             "ref": "ability.cha.modifier"
+            }
+           ]
           },
           "note": "10피트 오라 안의 자신과 아군 — 시트는 자신의 몫만 더합니다"
          },
@@ -12237,7 +12458,15 @@
           "property": "aura.grant",
           "operation": "set",
           "value": {
-           "ref": "ability.cha.modifier"
+           "op": "max",
+           "args": [
+            {
+             "value": 1
+            },
+            {
+             "ref": "ability.cha.modifier"
+            }
+           ]
           },
           "params": {
            "name": "보호의 오라"
@@ -12657,9 +12886,34 @@
       "id": "feature:paladin.oath-of-devotion.holy-nimbus",
       "entryPoints": [
        {
+        "id": "gain",
+        "invocation": "gain",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "grant.resource",
+          "operation": "set",
+          "value": {
+           "value": 1
+          },
+          "params": {
+           "id": "resource.paladin.holy-nimbus",
+           "label": "성스러운 후광",
+           "recovery": "long-rest"
+          }
+         }
+        ]
+       },
+       {
         "id": "while-active",
         "invocation": "manual",
         "operations": [
+         {
+          "kind": "resource.change",
+          "resource": "resource:paladin.holy-nimbus",
+          "amount": -1,
+          "target": "self"
+         },
          {
           "kind": "effect.apply",
           "template": {
@@ -12673,7 +12927,17 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "밝은 빛 30피트·약한 빛 30피트 — 표에서"
+          "question": "DM 판정 (조명은 앱이 모름): 보호의 오라가 햇빛인 밝은 빛으로 채워짐"
+         }
+        ],
+        "payments": [
+         {
+          "kind": "economy",
+          "bucket": "bonus-action",
+          "amount": {
+           "value": 1
+          },
+          "consumeAt": "commit"
          }
         ]
        },
@@ -12682,23 +12946,43 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "property.modify",
-          "property": "saving-throw.advantage-vs-condition",
-          "operation": "set",
-          "value": {
-           "value": 1
-          },
-          "params": {
-           "conditions": [
-            "매혹",
-            "공포"
-           ]
-          },
-          "note": "성스러운 후광"
+          "kind": "adjudication.request",
+          "question": "DM 판정 (강요한 쪽의 생물 유형은 앱이 모름): 악마나 언데드가 강요한 내성 굴림에 이점"
          },
          {
           "kind": "adjudication.request",
-          "question": "오라 10피트 안에서 자기 턴을 시작한 적대적 생물에게 광휘 피해 = 팔라딘 레벨 — 좌표가 없어 표에서"
+          "question": "DM 판정 (좌표가 없음, D109): 오라 안에서 자기 턴을 시작한 적에게 광휘 피해 = 매력 수정치 + 숙련 보너스",
+          "amount": {
+           "op": "add",
+           "args": [
+            {
+             "ref": "ability.cha.modifier"
+            },
+            {
+             "ref": "proficiency.bonus"
+            }
+           ]
+          }
+         }
+        ]
+       },
+       {
+        "id": "restore",
+        "label": "성스러운 후광: 5레벨 슬롯으로 회복",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "resource.change",
+          "resource": "resource:spell-slot",
+          "amount": -1,
+          "target": "self",
+          "level": 5
+         },
+         {
+          "kind": "resource.change",
+          "resource": "resource:paladin.holy-nimbus",
+          "amount": 1,
+          "target": "self"
          }
         ]
        }
@@ -15955,6 +16239,16 @@
           "target": "self",
           "level": 1
          }
+        ],
+        "payments": [
+         {
+          "kind": "economy",
+          "bucket": "bonus-action",
+          "amount": {
+           "value": 1
+          },
+          "consumeAt": "commit"
+         }
         ]
        },
        {
@@ -15974,6 +16268,16 @@
           "amount": 1,
           "target": "self",
           "level": 2
+         }
+        ],
+        "payments": [
+         {
+          "kind": "economy",
+          "bucket": "bonus-action",
+          "amount": {
+           "value": 1
+          },
+          "consumeAt": "commit"
          }
         ]
        },
@@ -15995,6 +16299,16 @@
           "target": "self",
           "level": 3
          }
+        ],
+        "payments": [
+         {
+          "kind": "economy",
+          "bucket": "bonus-action",
+          "amount": {
+           "value": 1
+          },
+          "consumeAt": "commit"
+         }
         ]
        },
        {
@@ -16014,6 +16328,16 @@
           "amount": 1,
           "target": "self",
           "level": 4
+         }
+        ],
+        "payments": [
+         {
+          "kind": "economy",
+          "bucket": "bonus-action",
+          "amount": {
+           "value": 1
+          },
+          "consumeAt": "commit"
          }
         ]
        },
@@ -16035,17 +16359,17 @@
           "target": "self",
           "level": 5
          }
+        ],
+        "payments": [
+         {
+          "kind": "economy",
+          "bucket": "bonus-action",
+          "amount": {
+           "value": 1
+          },
+          "consumeAt": "commit"
+         }
         ]
-       }
-      ],
-      "payments": [
-       {
-        "kind": "economy",
-        "bucket": "bonus-action",
-        "amount": {
-         "value": 1
-        },
-        "consumeAt": "commit"
        }
       ]
      }
@@ -17037,9 +17361,34 @@
       "id": "feature:species.draconic-flight",
       "entryPoints": [
        {
+        "id": "gain",
+        "invocation": "gain",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "grant.resource",
+          "operation": "set",
+          "value": {
+           "value": 1
+          },
+          "params": {
+           "id": "resource.species.draconic-flight",
+           "label": "용의 비행",
+           "recovery": "long-rest"
+          }
+         }
+        ]
+       },
+       {
         "id": "use",
         "invocation": "manual",
         "operations": [
+         {
+          "kind": "resource.change",
+          "resource": "resource:species.draconic-flight",
+          "amount": -1,
+          "target": "self"
+         },
          {
           "kind": "effect.apply",
           "target": "self",
@@ -17052,7 +17401,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "갑옷을 입지 않은 동안만 — 표에서"
+          "question": "날개는 행동 없이 거두거나 행동불능이 되면 끝남 — 효과 종료로 처리 (DM 판정)"
          }
         ]
        },
@@ -17602,9 +17951,34 @@
       "id": "feature:species.large-form",
       "entryPoints": [
        {
+        "id": "gain",
+        "invocation": "gain",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "grant.resource",
+          "operation": "set",
+          "value": {
+           "value": 1
+          },
+          "params": {
+           "id": "resource.species.large-form",
+           "label": "거대화",
+           "recovery": "long-rest"
+          }
+         }
+        ]
+       },
+       {
         "id": "use",
         "invocation": "manual",
         "operations": [
+         {
+          "kind": "resource.change",
+          "resource": "resource:species.large-form",
+          "amount": -1,
+          "target": "self"
+         },
          {
           "kind": "effect.apply",
           "target": "self",
@@ -17617,7 +17991,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "크기가 대형이 됨, 붙잡기·밀치기 판정에 유리 — 표에서"
+          "question": "크기가 대형이 됨 (공간이 허용할 때) — 좌표가 없어 DM 판정"
          }
         ]
        },
@@ -17631,6 +18005,15 @@
           "operation": "add",
           "value": 10,
           "note": "거대한 형태"
+         },
+         {
+          "kind": "property.modify",
+          "property": "ability-check.advantage",
+          "operation": "add",
+          "abilities": [
+           "str"
+          ],
+          "note": "근력 판정 유리"
          }
         ]
        }
@@ -17869,12 +18252,17 @@
         "operations": [
          {
           "kind": "property.modify",
-          "property": "skill.athletics.advantage",
+          "property": "saving-throw.advantage-vs-condition",
           "operation": "set",
           "value": {
            "value": 1
           },
-          "note": "강력한 체격 (붙잡힘 탈출)"
+          "params": {
+           "conditions": [
+            "붙잡힘"
+           ]
+          },
+          "note": "강력한 체격 (붙잡힘 종료)"
          },
          {
           "kind": "adjudication.request",
@@ -18051,6 +18439,39 @@
           }
          }
         ]
+       },
+       {
+        "id": "use",
+        "label": "석재 감각 (진동감지 60피트, 10분)",
+        "invocation": "manual",
+        "payments": [
+         {
+          "kind": "economy",
+          "bucket": "bonus-action",
+          "amount": {
+           "value": 1
+          },
+          "consumeAt": "commit"
+         }
+        ],
+        "operations": [
+         {
+          "kind": "resource.change",
+          "resource": "resource:species.stonecunning",
+          "amount": -1,
+          "target": "self"
+         },
+         {
+          "kind": "effect.apply",
+          "target": "self",
+          "lifetime": "until-duration",
+          "template": {
+           "name": "석재 감각",
+           "duration": "10분 (100라운드)",
+           "rounds": 100
+          }
+         }
+        ]
        }
       ]
      }
@@ -18089,7 +18510,7 @@
         "operations": [
          {
           "kind": "adjudication.request",
-          "question": "DM 판정 (긴 휴식 창에 명상 자리가 없음): 4시간 명상으로 긴 휴식을 마치고, 그때 기술·도구 숙련 하나를 바꿈"
+          "question": "DM 판정 (긴 휴식 창에 명상 자리가 없음): 4시간 무아경으로 긴 휴식을 마침 · 잠이 필요 없고 마법으로 잠들지 않음"
          }
         ]
        }
@@ -18671,7 +19092,7 @@
        },
        {
         "id": "necrotic",
-        "label": "악마적 회복력: 괴저",
+        "label": "악마적 회복력: 사령",
         "invocation": "manual",
         "operations": [
          {
@@ -18741,7 +19162,7 @@
           "kind": "property.modify",
           "property": "resistance",
           "operation": "add",
-          "value": "괴저"
+          "value": "사령"
          }
         ]
        },
@@ -19363,6 +19784,23 @@
            "amount": 1,
            "boundary": "end",
            "anchor": "source"
+          },
+          "save": {
+           "ability": "cha",
+           "dc": {
+            "op": "add",
+            "args": [
+             {
+              "value": 8
+             },
+             {
+              "ref": "ability.cha.modifier"
+             },
+             {
+              "ref": "proficiency.bonus"
+             }
+            ]
+           }
           }
          },
          {
@@ -19373,7 +19811,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "마귀에게는 피해 없음"
+          "question": "악마에게는 피해 없음 · 매력 내성에 성공하면 8d10 피해도 없음 — 피해 되돌리기 (DM 판정)"
          }
         ]
        }
@@ -19908,7 +20346,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "긴 휴식 뒤 첫 사용은 무해 · 그 뒤로는 사용마다 주문 레벨당 2d12 괴저(누적, 저항·면역 무시)"
+          "question": "긴 휴식 뒤 첫 사용은 무해 · 그 뒤로는 사용마다 주문 레벨당 2d12 사령(누적, 저항·면역 무시)"
          }
         ]
        }
@@ -20572,7 +21010,7 @@
           "property": "resistance",
           "operation": "add",
           "value": {
-           "value": "괴저"
+           "value": "사령"
           }
          },
          {

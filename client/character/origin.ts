@@ -14,7 +14,7 @@ import { applyFeat } from "./feats";
 import { applyGainContract } from "./tracks";
 import type { Ledger } from "./ledger";
 
-const DAMAGE_KO: Record<string, string> = { acid: "산성", cold: "냉기", fire: "화염", lightning: "번개", poison: "독", necrotic: "괴저", radiant: "광휘", thunder: "천둥", psychic: "정신", force: "역장", bludgeoning: "타격", piercing: "관통", slashing: "참격" };
+const DAMAGE_KO: Record<string, string> = { acid: "산성", cold: "냉기", fire: "화염", lightning: "번개", poison: "독", necrotic: "사령", radiant: "광휘", thunder: "천둥", psychic: "정신", force: "역장", bludgeoning: "타격", piercing: "관통", slashing: "참격" };
 export const damageTypeKo = (type: string) => DAMAGE_KO[type] ?? type;
 
 function speciesEffect(species: SpeciesView, choiceId: string, optionId: string): SpeciesOptionEffect | undefined {

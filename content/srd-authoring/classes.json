@@ -5935,7 +5935,7 @@
    "nameEn": "Channel Divinity",
    "classId": "dnd.srd521.class.cleric",
    "level": 2,
-   "fallback": "신성한 힘을 끌어 씁니다: 신성한 불꽃(60피트 안의 생물을 1d8(7레벨 2d8, 13레벨 3d8, 18레벨 4d8) + 지혜 수정치만큼 치유하거나 건강 내성 실패 시 광휘/괴저 피해)과 언데드 퇴치(30피트 안의 언데드는 지혜 내성 실패 시 1분간 공포·행동불능). 긴 휴식마다 2회(6레벨 3회, 18레벨 4회), 짧은 휴식을 마치면 1회를 회복합니다."
+   "fallback": "신성한 힘을 끌어 씁니다: 신성한 불꽃(60피트 안의 생물을 1d8(7레벨 2d8, 13레벨 3d8, 18레벨 4d8) + 지혜 수정치만큼 치유하거나 건강 내성 실패 시 광휘/사령 피해)과 언데드 퇴치(30피트 안의 언데드는 지혜 내성 실패 시 1분간 공포·행동불능). 긴 휴식마다 2회(6레벨 3회, 18레벨 4회), 짧은 휴식을 마치면 1회를 회복합니다."
   },
   "dnd.srd521.feature.cleric.sear-undead": {
    "heading": "언데드 소각",
@@ -5949,7 +5949,7 @@
    "nameEn": "Blessed Strikes",
    "classId": "dnd.srd521.class.cleric",
    "level": 7,
-   "fallback": "신성한 일격(턴당 한 번 무기 공격 명중 시 1d8 광휘 또는 괴저 피해 추가) 또는 강력한 주문 시전(클레릭 소마법 피해에 지혜 수정치 추가) 중 하나를 고릅니다."
+   "fallback": "신성한 일격(턴당 한 번 무기 공격 명중 시 1d8 광휘 또는 사령 피해 추가) 또는 강력한 주문 시전(클레릭 소마법 피해에 지혜 수정치 추가) 중 하나를 고릅니다."
   },
   "dnd.srd521.feature.cleric.divine-intervention": {
    "heading": "신성 개입",
@@ -6229,7 +6229,7 @@
    "nameEn": "Land's Aid",
    "classId": "dnd.srd521.class.druid",
    "level": 3,
-   "fallback": "행동으로 야생 변신 1회를 소비해 60피트 안의 한 지점을 중심으로 10피트 구체를 만듭니다. 안의 생물은 건강 내성에 실패하면 2d6 괴저 피해를 받고, 안의 생물 하나는 2d6 HP를 회복합니다. 10레벨에 3d6, 14레벨에 4d6이 됩니다."
+   "fallback": "행동으로 야생 변신 1회를 소비해 60피트 안의 한 지점을 중심으로 10피트 구체를 만듭니다. 안의 생물은 건강 내성에 실패하면 2d6 사령 피해를 받고, 안의 생물 하나는 2d6 HP를 회복합니다. 10레벨에 3d6, 14레벨에 4d6이 됩니다."
   },
   "dnd.srd521.feature.druid.circle-of-the-land.natural-recovery": {
    "heading": "자연의 회복",
@@ -6390,7 +6390,7 @@
    "nameEn": "Overchannel",
    "classId": "dnd.srd521.class.wizard",
    "level": 14,
-   "fallback": "1~5레벨 위저드 주문을 시전할 때 피해를 최대값으로 낼 수 있습니다. 긴 휴식 뒤 첫 사용은 무해하지만, 이후 사용마다 주문 레벨당 2d12 괴저 피해를 받고 다음 긴 휴식 전까지 사용할 때마다 d12가 하나씩 늘어납니다."
+   "fallback": "1~5레벨 위저드 주문을 시전할 때 피해를 최대값으로 낼 수 있습니다. 긴 휴식 뒤 첫 사용은 무해하지만, 이후 사용마다 주문 레벨당 2d12 사령 피해를 받고 다음 긴 휴식 전까지 사용할 때마다 d12가 하나씩 늘어납니다."
   },
   "dnd.srd521.feature.barbarian.berserker.frenzy": {
    "heading": "광란",
@@ -7564,7 +7564,7 @@
   "invocation.lifedrinker": {
    "heading": "생명 흡수자",
    "nameEn": "Lifedrinker",
-   "fallback": "턴당 한 번, 계약 무기로 명중 시 1d6 괴저·정신·광휘 피해를 추가하고, 히트 다이스 하나를 소비해 그 주사위 + 건강 수정치만큼 회복할 수 있습니다."
+   "fallback": "턴당 한 번, 계약 무기로 명중 시 1d6 사령·정신·광휘 피해를 추가하고, 히트 다이스 하나를 소비해 그 주사위 + 건강 수정치만큼 회복할 수 있습니다."
   },
   "invocation.mask-of-many-faces": {
    "heading": "수많은 얼굴의 가면",
@@ -7684,7 +7684,7 @@
   "cleric.blessed-strikes.divine-strike": {
    "heading": "신성한 일격",
    "nameEn": "Divine Strike",
-   "fallback": "턴당 한 번 무기 공격이 명중하면 1d8(14레벨 2d8) 광휘 또는 괴저 피해를 추가합니다.",
+   "fallback": "턴당 한 번 무기 공격이 명중하면 1d8(14레벨 2d8) 광휘 또는 사령 피해를 추가합니다.",
    "sourceHeading": "축복받은 일격"
   },
   "cleric.blessed-strikes.potent-spellcasting": {
