@@ -290,11 +290,29 @@
 |---|---|
 | `spell-definition` | `level, school, ritual, castingTimeText, rangeText, componentsText, durationText, summary, classes[]` |
 | `feat-definition` | `tier`(origin/general/fighting-style/epic-boon), `repeatable`, `minimumLevel`, `abilityPrerequisite`, `abilityIncrease`, `requires`, `grants[]`, `choices`, `execution.status`, `armorAcBonus`, `rangedWeaponAttackBonus`, `damageDieMinimum`+`weaponPropertiesAny`, `oncePerTurn`, `lightExtraAttackAbilityModifier`, `resistances[]`, `languages[]`, `speedBonus`, `hitPointsPerLevel`, `truesight`, `darkvision`, `<x>SaveProficiency`, `proficiencyChoice`, `expertiseChoice`, `allSkillProficiencies`, `saveProficiencyChoice`, `resistanceChoice`, `ignoreResistanceChoice`, `weaponMasteryChoice`, `grantCantrips[]`, `grantSpells[]`, `grantSpellChoice`, `grantSpellAbility`, `freeCastReset`, `resources[]` |
+| `class-definition` | `hitDie`, `primaryAbilities[]`, `savingThrowProficiencies[]`, `armorTraining[]`, `weaponTraining[]`, `toolProficiencies[]`, `multiclass`, `spellcastingAbility`, `spellcastingFeature`, `resources[]`, `optionPools[]`, 그리고 D310: `casterKind`(`full`/`half`/`pact`/`none`), `levels[]`(아래), `skillOptions`(`{count, options}`), `level1Choices[]`, `spells`(`cantrips`·`prepared`·`spellbook`·`spellbookPerLevel`·`preparedFromSpellbook`), `multiclassGrants[]` |
 | `subclass-definition` | `spells`(레벨→주문 id 또는 영어 이름), `choices[]`, `spellsByOption`, `spellcasting`(1/3 시전자, 아래), `optionPools[]`(아래) |
 | `option-list-definition` | `list`(목록 키), `options[]`(`option` 항목 id) — 선택지 목록을 선언한다(D303) |
 | `species-definition` | `size[]`, `speed`, `darkvision`, `traits[]`(이름 있는 키), `choices`, `semantics`(`baseCantrips`, `baseFeatures`, `extraChoices`…), `effects` |
 | `background-definition` | `abilityChoices[]`, `skills[]`, `tool`, `toolChoice`, `originFeat`, `equipmentChoice` |
 | `weapon-definition` · `armor-definition` · `shield-definition` · `tool-definition` · `consumable-definition` · `pack-definition` · `starting-loadout-definition` | 장비 |
+
+**직업 레벨 표 (D310)** — 직업 하나를 모듈이 통째로 정의한다:
+
+```json
+{ "levels": [
+  { "level": 1, "features": ["<특성 option 항목 id>"], "columns": { "소마법": 2, "준비 주문": 2, "1": 2, "불꽃": 2 } },
+  { "level": 3, "features": [{ "role": "subclass", "name": "땜장이 서브클래스" }], "columns": { … } },
+  { "level": 4, "features": [{ "role": "asi", "name": "능력치 향상" }], "columns": { … } } ] }
+```
+
+- `features`: 특성 항목 id(그 항목의 이름·글·계약을 쓴다), 또는 표 자체의 줄 `{ role }` — `subclass`(서브클래스 고르기), `asi`, `epic-boon`, `subclass-feature`(서브클래스 특성이 붙는 자리).
+- `columns`: 열 이름은 표 어휘(`소마법`, `준비 주문`, 슬롯 레벨 `"1"`~`"9"`, `계약 슬롯`, `슬롯 레벨`, `무기 통달`, …) 또는 직업이 정한 이름 — 자원(`resources[].column`)과 선택지 풀(`optionPools[].column`)이 그 이름으로 읽는다.
+- `proficiencyBonus`는 생략하면 레벨로 계산한다.
+
+**선택지 풀과 문(門) (D310)** — `optionPools[]`의 수는 `known`(레벨→개수) 또는 `column`(표의 열)로. `featureName: "option"`이면 시트 줄이 선택지 이름 그대로.
+`option-list-definition.options[]`의 항목은 id 문자열 또는 `{ "id", "minLevel", "requires": "<먼저 필요한 선택지 id>", "cost", "repeatable", "targetKind": "origin-feat" | "damage-cantrip" | "attack-cantrip" }`.
+워락의 섬뜩한 기원술도 이 풀 하나다(`column: "기원술"`).
 
 **서브클래스가 주는 주문 시전 (D303)** — 스스로 시전하지 않는 직업을 1/3 시전자로 만든다:
 

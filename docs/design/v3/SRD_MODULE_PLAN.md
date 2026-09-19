@@ -50,10 +50,10 @@ CLAUDE.md §1.6(설치 모듈도 SRD와 똑같이 동작)과 §2(규칙은 JSON�
 | # | 무엇 | 지금 | 새 문법 |
 |---|---|---|---|
 | G1 | 직업 레벨 표: 레벨별 특성·열(슬롯·소마법·준비·통달·기원술·자원·무술 주사위), 시전자 종류, 멀티클래스 | `progressionCatalog` | `class-definition.levels[]` + `casterKind` + `multiclass` |
-| G2 | 직업 특성 기록(이름·글·레벨) | extras class-features | 직업 항목의 `progressionContributions` → `option` 항목(서브클래스와 같은 길) |
+| G2 | 직업 특성 기록(이름·글·레벨) | extras class-features | `levels[].features`에 특성 `option` 항목 id (D310) |
 | G3 | 직업 1레벨 선택·기술 목록·주문 수·주문책 | 색인 `classes` | `class-definition.skillOptions`, `choices[]`, `spellcasting` |
 | G4 | 주문의 직업 목록 | 색인 + extras spell-lists | `spell-definition.classes`만 |
-| G5 | 기술·언어·장인 도구 어휘 | 색인 | `vocabulary-definition` (기술·언어) — 능력치·기술 이름은 §2 핵심 어휘라 엔진에 둘 수도 있다(결정 S1에서) |
+| G5 | 기술·언어·장인 도구 어휘 | 색인 | 기술은 §2 핵심 어휘(엔진). 언어·장인 도구는 S4에서 `vocabulary-definition`으로 |
 | G6 | 선택지 목록의 레벨·선행·비용 | extras class-options | `option-list-definition.options[]`에 `minLevel`·`requires`·`cost`·`repeatable` |
 | G7 | 괴물 스탯블록·특성 규칙 | `monsterCatalog` + 색인 | `monster-definition` (지금 붙여넣기 NPC와 같은 모양) |
 | G8 | 주문 실행 우선순위 | 생성 카탈로그가 항상 이김 | 모듈의 `spell-mechanic`이 유일한 출처 |
@@ -73,7 +73,7 @@ CLAUDE.md §1.6(설치 모듈도 SRD와 똑같이 동작)과 §2(규칙은 JSON�
 | 단계 | 내용 | 끝났다는 증거 |
 |---|---|---|
 | S0 | 이 계획, 원문 파서 | 파서 개수 일치 |
-| S1 | G1~G3·G6: 설치 모듈이 직업을 만들 수 있다 | 합성 모듈 직업으로 1~20레벨 캐릭터·시전·자원 (호스트 경로 포함) |
+| S1 ✔ (D310) | G1~G3·G6: 설치 모듈이 직업을 만들 수 있다 | 합성 모듈 직업으로 1~20레벨 캐릭터·시전·자원 (호스트 경로 포함) |
 | S2 | G7: 괴물 모듈 문법 | 합성 모듈 괴물을 표에 놓고 공격·특성 |
 | S3 | G8·G9: 모듈 `spell-mechanic`이 유일한 출처 | 합성 모듈이 SRD 주문 실행을 덮어씀 |
 | S4 | 결정 이전 스크립트 + 빌더 → 새 SRD 모듈. 옛 경로와 **나란히** 비교(같은 캐릭터 파생 결과 diff 0) | 비교 도구 diff 0 |

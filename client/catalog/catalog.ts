@@ -21,7 +21,18 @@ export interface FeatureRecord {
   nameEn: string;
   description?: string;
   descriptionSource?: "module" | "srd-summary";
+  /**
+   * D310: what a level-table row does besides being a feature — ask for the subclass, an Ability Score Improvement or
+   * an Epic Boon, or mark where subclass features land. A module class says so; the SRD table is read by its words.
+   */
+  role?: ClassRowRole;
 }
+
+/** D310: the kinds of level-table row that are the table's own structure rather than a feature of their own. */
+export type ClassRowRole = "subclass" | "asi" | "epic-boon" | "subclass-feature";
+const ROW_ROLES: readonly ClassRowRole[] = ["subclass", "asi", "epic-boon", "subclass-feature"];
+/** D310: one row of a module class's `class-definition.levels`. A feature is an entry id, a plain name, or a role. */
+interface ModuleClassLevel { level: number; proficiencyBonus?: number; features?: Array<string | { role: ClassRowRole; name?: string }>; columns?: Record<string, string | number | null> }
 
 export interface ClassLevelRow extends ProgressionLevelRowJson { featureRecords: FeatureRecord[] }
 
@@ -442,12 +453,24 @@ export class ContentCatalog {
     };
     const views: ClassView[] = [];
     for (const entry of this.byCategory("class")) {
-      const def = mechanic<{ hitDie?: number; primaryAbilities?: AbilityKey[]; savingThrowProficiencies?: AbilityKey[]; skillChoiceCount?: number } & Partial<ClassRules>>(entry, "class-definition") ?? {};
+      // D310: a module class carries its whole level table and creation choices here; the SRD's still come from the
+      // generated progression and the creation index until the SRD itself is a module (SRD_MODULE_PLAN.md S5).
+      const def = mechanic<{ hitDie?: number; primaryAbilities?: AbilityKey[]; savingThrowProficiencies?: AbilityKey[]; skillChoiceCount?: number; casterKind?: ClassView["casterKind"]; levels?: ModuleClassLevel[]; multiclassGrants?: string[]; skillOptions?: ClassView["skillChoice"]; level1Choices?: IndexClassChoiceJson[]; spells?: IndexClassJson["spells"] } & Partial<ClassRules>>(entry, "class-definition") ?? {};
       const slug = slugOfId(entry.id);
       const table = this.inputs.progression.classes.find((row) => row.id === entry.id);
       const indexClass = this.inputs.index.classes[entry.id];
       const descriptions = this.inputs.extras.classFeatures[slug] ?? [];
-      const progression: ClassLevelRow[] = (table?.progression ?? []).map((row) => ({
+      const moduleRows: ClassLevelRow[] | undefined = def.levels?.map((row) => {
+        const records = (row.features ?? []).map((item): FeatureRecord => {
+          if (typeof item === "object" && ROW_ROLES.includes(item.role)) return { id: `${slug}.${item.role}`, name: item.name ?? item.role, nameEn: item.role, role: item.role };
+          const id = String(item);
+          const found = this.entries.get(id);
+          return found ? { id, name: found.name, nameEn: found.nameEn, description: found.description ?? found.summary, descriptionSource: "module" } : { id: `${slug}.${row.level}.${id}`, name: id, nameEn: id };
+        });
+        const columns = Object.fromEntries(Object.entries(row.columns ?? {}).map(([key, value]) => [key, value === null ? null : String(value)]));
+        return { level: row.level, proficiencyBonus: row.proficiencyBonus ?? 2 + Math.floor((row.level - 1) / 4), features: records.map((record) => record.name), columns, featureRecords: records };
+      }).sort((a, b) => a.level - b.level);
+      const progression: ClassLevelRow[] = moduleRows ?? (table?.progression ?? []).map((row) => ({
         ...row,
         featureRecords: row.features.map((name) => {
           const found = descriptions.find((item) => item.name === name && (item.level === row.level || item.level === 0)) ?? descriptions.find((item) => item.name === name);
@@ -455,18 +478,18 @@ export class ContentCatalog {
           return { id: found.id, name: found.name, nameEn: found.nameEn, description: found.description, descriptionSource: "srd-summary" as const };
         }),
       }));
-      const casterKind = (table?.spellcastingMode === "full" || table?.spellcastingMode === "half" || table?.spellcastingMode === "pact") ? table.spellcastingMode : "none";
+      const casterKind = def.casterKind ?? ((table?.spellcastingMode === "full" || table?.spellcastingMode === "half" || table?.spellcastingMode === "pact") ? table.spellcastingMode : "none");
       views.push({
         id: entry.id, slug, name: entry.name, nameEn: entry.nameEn, summary: entry.summary,
         hitDie: def.hitDie ?? table?.hitDie ?? 8,
         primaryAbilities: def.primaryAbilities ?? abilityText(table?.primaryAbilitiesText ?? ""),
         savingThrows: def.savingThrowProficiencies ?? abilityText(table?.savingThrowsText ?? ""),
-        skillChoice: indexClass?.skills ?? { count: def.skillChoiceCount ?? 2, options: "any" },
-        level1Choices: indexClass?.choices ?? [],
-        spells: indexClass?.spells,
+        skillChoice: def.skillOptions ?? indexClass?.skills ?? { count: def.skillChoiceCount ?? 2, options: "any" },
+        level1Choices: def.level1Choices ?? indexClass?.choices ?? [],
+        spells: def.spells ?? indexClass?.spells,
         casterKind,
         progression,
-        multiclassGrants: table?.multiclassGrants ?? [],
+        multiclassGrants: def.multiclassGrants ?? table?.multiclassGrants ?? [],
         rules: {
           armorTraining: def.armorTraining ?? [], weaponTraining: def.weaponTraining ?? ["simple"], toolProficiencies: def.toolProficiencies ?? [],
           multiclass: { armor: [], weapons: [], ...(def.multiclass ?? {}) },
@@ -487,12 +510,15 @@ export class ContentCatalog {
   private buildClassOptions(): Record<string, ClassOptionDefinition[]> {
     const lists: Record<string, ClassOptionDefinition[]> = { ...this.inputs.extras.classOptions };
     for (const entry of this.entries.values()) {
-      const def = mechanic<{ list?: string; options?: string[] }>(entry, "option-list-definition");
+      // D310: an option may carry what gates it — the class level it needs, the option it needs first, its cost, and
+      // what it asks for once taken (a cantrip to empower, an origin feat).
+      const def = mechanic<{ list?: string; options?: Array<string | ({ id: string; requires?: string } & Pick<ClassOptionDefinition, "minLevel" | "cost" | "repeatable" | "targetKind">)> }>(entry, "option-list-definition");
       if (!def?.list) continue;
       const options: ClassOptionDefinition[] = [];
-      for (const id of def.options ?? []) {
+      for (const item of def.options ?? []) {
+        const { id, requires, ...gates } = typeof item === "string" ? { id: item } : item;
         const option = this.entries.get(id);
-        if (option) options.push({ id, name: option.name, nameEn: option.nameEn, description: option.description ?? option.summary });
+        if (option) options.push({ id, name: option.name, nameEn: option.nameEn, description: option.description ?? option.summary, ...gates, ...(requires ? { prerequisiteOptionId: requires } : {}) });
         else this.warnings.push(`선택지 목록 "${def.list}"의 항목 "${id}"을(를) 찾을 수 없습니다.`);
       }
       lists[def.list] = [...(lists[def.list] ?? []).filter((item) => !options.some((option) => option.id === item.id)), ...options];

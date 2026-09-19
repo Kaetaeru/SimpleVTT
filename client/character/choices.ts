@@ -150,21 +150,20 @@ export function spellOptions(catalog: ContentCatalog, classIds: string[], levels
   return options.sort((a, b) => (a.group ?? "").localeCompare(b.group ?? "", "ko") || a.name.localeCompare(b.name, "ko"));
 }
 
-export function invocationOptions(catalog: ContentCatalog, warlockLevel: number, selected: string[]): ChoiceOption[] {
-  const list = catalog.classOptions["warlock.invocations"] ?? [];
+/**
+ * The options of a list, with what keeps one out of reach: the class level it needs and the option it needs first
+ * (D310 — the gates are the list's data, so a module's list is gated the same way as the SRD's invocations).
+ */
+export function classOptionList(catalog: ContentCatalog, key: string, gate?: { className: string; level: number; selected: string[] }): ChoiceOption[] {
+  const list = catalog.classOptions[key] ?? [];
+  const leveled = list.some((option) => option.minLevel && option.minLevel > 1);
   return list.map((option) => {
     let reason: string | undefined;
-    if (option.minLevel && warlockLevel < option.minLevel) reason = `워락 ${option.minLevel}레벨 이상`;
-    else if (option.prerequisiteOptionId && !selected.includes(option.prerequisiteOptionId)) {
-      const needed = list.find((item) => item.id === option.prerequisiteOptionId);
-      reason = `${needed?.name ?? option.prerequisiteOptionId} 필요`;
-    }
-    return { id: option.id, name: option.name, nameEn: option.nameEn, summary: option.description, description: option.description, group: option.minLevel && option.minLevel > 1 ? `${option.minLevel}레벨+` : "1레벨+", ...(reason ? { disabledReason: reason } : {}) };
+    if (gate && option.minLevel && gate.level < option.minLevel) reason = `${gate.className} ${option.minLevel}레벨 이상`;
+    else if (gate && option.prerequisiteOptionId && !gate.selected.includes(option.prerequisiteOptionId)) reason = `${list.find((item) => item.id === option.prerequisiteOptionId)?.name ?? option.prerequisiteOptionId} 필요`;
+    const group = option.cost ? `${option.cost}점` : leveled ? (option.minLevel && option.minLevel > 1 ? `${option.minLevel}레벨+` : "1레벨+") : undefined;
+    return { id: option.id, name: option.name, nameEn: option.nameEn, summary: option.description, description: option.description, ...(group ? { group } : {}), ...(reason ? { disabledReason: reason } : {}) };
   });
-}
-
-export function classOptionList(catalog: ContentCatalog, key: string): ChoiceOption[] {
-  return (catalog.classOptions[key] ?? []).map((option) => ({ id: option.id, name: option.name, nameEn: option.nameEn, summary: option.description, description: option.description, ...(option.cost ? { group: `${option.cost}점` } : {}) }));
 }
 
 export type WeaponMasteryFilter = "simple-or-martial-melee" | "all-simple-or-martial" | "rogue-proficient" | string;

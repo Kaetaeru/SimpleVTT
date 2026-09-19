@@ -8,9 +8,9 @@ import type { ClassLevelRow, ClassView } from "../catalog/catalog";
 import type { IndexClassChoiceJson } from "../catalog/types";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
-import { COLUMN, numericColumn, type ArmorTraining, type WeaponTraining } from "../rules/classes";
+import { COLUMN, numericColumn, type ArmorTraining, type ClassOptionPool, type WeaponTraining } from "../rules/classes";
 import {
-  artisanToolOptions, classOptionList, featOptions, fixedOptions, instrumentOptions, invocationOptions, languageOptions, skillOptions, spellOptions,
+  artisanToolOptions, classOptionList, featOptions, fixedOptions, instrumentOptions, languageOptions, skillOptions, spellOptions,
   subclassOptions, toolName, weaponMasteryOptions, type FeatContext,
 } from "./choices";
 import { applyFeat } from "./feats";
@@ -168,10 +168,12 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
     const key = feature.id.split(".").pop() ?? feature.id;
     // hardcode: the progression table's own row words (HARDCODE_AUDIT §4) — every class table, SRD or module, writes
     // its ASI, Epic Boon and subclass rows this way, so they are the table format's vocabulary, not content.
-    if (feature.nameEn === "Ability Score Improvement") { askAsi(ledger, cls, index, sourceLabel); continue; }
-    if (feature.nameEn === "Epic Boon") { askEpicBoon(ledger, cls, index, sourceLabel); continue; }
-    if (feature.nameEn === "Subclass Feature") continue;
-    if (/Subclass$/.test(feature.nameEn)) {
+    // D310: a module class names the row's role; the SRD table still says it in English words.
+    const role = feature.role ?? (feature.nameEn === "Ability Score Improvement" ? "asi" : feature.nameEn === "Epic Boon" ? "epic-boon" : feature.nameEn === "Subclass Feature" ? "subclass-feature" : /Subclass$/.test(feature.nameEn) ? "subclass" : undefined);
+    if (role === "asi") { askAsi(ledger, cls, index, sourceLabel); continue; }
+    if (role === "epic-boon") { askEpicBoon(ledger, cls, index, sourceLabel); continue; }
+    if (role === "subclass-feature") continue;
+    if (role === "subclass") {
       const picked = ledger.askOne({ ...ask, id: `class.${index}.subclass`, label: `${cls.name} 서브클래스`, description: feature.description, options: subclassOptions(catalog, cls.id) });
       if (picked) {
         state.subclassId = picked;
@@ -408,24 +410,15 @@ function applyClassWide(ledger: Ledger, cls: ClassView, state: ClassState) {
     for (const id of picked) ledger.weaponMasteries.add(id);
   }
 
-  const invocationCount = numericColumn(row.columns[COLUMN.invocations]);
-  if (invocationCount > 0) {
-    const id = `class.${first}.invocations`;
-    const raw = source.choices[id] ?? [];
-    const picked = ledger.ask({ ...ask, id, label: `섬뜩한 기원술 (${invocationCount}개)`, count: invocationCount, options: invocationOptions(catalog, level, raw) });
-    applyInvocations(ledger, cls, first, picked);
-  }
-
   // H4 (D243): option lists known in growing numbers (메타매직), from the class definition — and D303, from the subclass.
+  // D310: the count may be a progression column (기원술), and the options are gated by the list's own data.
   const subclass = state.subclassId ? catalog.subclassById(state.subclassId) : undefined;
   for (const pool of [...cls.rules.optionPools, ...(subclass?.optionPools ?? [])]) {
-    const count = Object.entries(pool.known).filter(([threshold]) => Number(threshold) <= level).reduce((max, [, value]) => Math.max(max, value), 0);
+    const count = pool.column ? numericColumn(row.columns[pool.column]) : Object.entries(pool.known ?? {}).filter(([threshold]) => Number(threshold) <= level).reduce((max, [, value]) => Math.max(max, value), 0);
     if (count <= 0) continue;
-    const picked = ledger.ask({ ...ask, id: `class.${first}.${pool.id}`, label: `${pool.label} (${count}개)`, count, options: classOptionList(catalog, pool.list) });
-    for (const optionId of picked) {
-      const option = catalog.classOptions[pool.list]?.find((item) => item.id === optionId);
-      if (option) ledger.addFeature({ id: option.id, name: `${pool.label}: ${option.name}`, nameEn: option.nameEn, source: pool.source ?? "class", sourceLabel: cls.name, description: option.description, descriptionSource: "srd-summary" });
-    }
+    const id = `class.${first}.${pool.id}`;
+    const picked = ledger.ask({ ...ask, id, label: `${pool.label} (${count}개)`, count, options: classOptionList(catalog, pool.list, { className: cls.name, level, selected: source.choices[id] ?? [] }) });
+    applyPoolOptions(ledger, cls, first, pool, picked);
   }
 
   // H4 (D243): resource pools from the class definition — a progression column or an expression.
@@ -446,25 +439,31 @@ function applyClassWide(ledger: Ledger, cls: ClassView, state: ClassState) {
   applyClassSpellcasting(ledger, cls, state, row);
 }
 
-function applyInvocations(ledger: Ledger, cls: ClassView, first: number, picked: string[]) {
+/**
+ * The options taken from a pool: each is a feature, asks for what it targets (D310: `targetKind` — an origin feat, a
+ * cantrip it empowers), and runs its own gain contract. The follow-up choice ids are `class.<first>.<option id>.feat`
+ * and `….target`, and the feat's key puts the class's first track after the option id's first part — the ids the
+ * warlock's invocations have always been saved under.
+ */
+function applyPoolOptions(ledger: Ledger, cls: ClassView, first: number, pool: ClassOptionPool, picked: string[]) {
   const { catalog } = ledger;
-  const list = catalog.classOptions["warlock.invocations"] ?? [];
+  const list = catalog.classOptions[pool.list] ?? [];
   const entry = classSpellEntry(ledger, cls);
-  const ask = { scope: "class" as const, sourceLabel: `${cls.name} 기원술`, trackIndex: first };
+  const ask = { scope: "class" as const, sourceLabel: `${cls.name} ${pool.label}`, trackIndex: first };
   for (const optionId of picked) {
     const option = list.find((item) => item.id === optionId);
     if (!option) continue;
-    const slug = option.id.replace(/^invocation\./, "");
-    ledger.addFeature({ id: option.id, name: option.name, nameEn: option.nameEn, source: "invocation", sourceLabel: cls.name, description: option.description, descriptionSource: "srd-summary" });
+    const [head, ...rest] = option.id.split(".");
+    ledger.addFeature({ id: option.id, name: pool.featureName === "option" ? option.name : `${pool.label}: ${option.name}`, nameEn: option.nameEn, source: pool.source ?? "class", sourceLabel: cls.name, description: option.description, descriptionSource: "srd-summary" });
     if (option.targetKind === "origin-feat") {
-      const featId = ledger.askOne({ ...ask, id: `class.${first}.invocation.${slug}.feat`, label: `${option.name} — 기원 재주`, options: featOptions(catalog, ["origin"], featContext(ledger)) });
+      const featId = ledger.askOne({ ...ask, id: `class.${first}.${option.id}.feat`, label: `${option.name} — 기원 재주`, options: featOptions(catalog, ["origin"], featContext(ledger)) });
       const feat = featId ? catalog.featById(featId) : undefined;
-      if (feat) applyFeat(ledger, feat, { key: `invocation.${first}.${slug}`, sourceLabel: `${cls.name} · ${option.name}`, trackIndex: first });
+      if (feat) applyFeat(ledger, feat, { key: [head, first, ...rest].join("."), sourceLabel: `${cls.name} · ${option.name}`, trackIndex: first });
     }
     if (option.targetKind === "damage-cantrip" || option.targetKind === "attack-cantrip") {
       // R93 (D228): the class cantrips are picked after the invocations, so the picks in the source count as known too.
       const known = [...new Set([...entry.cantrips, ...entry.extraCantrips, ...(ledger.source.choices[`class.${first}.cantrips`] ?? [])])].map((id) => catalog.spellById(id)).filter((spell): spell is NonNullable<typeof spell> => Boolean(spell));
-      const target = ledger.askOne({ ...ask, id: `class.${first}.invocation.${slug}.target`, label: `${option.name} — 대상 소마법`, description: "알고 있는 워락 소마법 중 피해를 주는 것.", options: known.map((spell) => ({ id: spell.id, name: spell.name, nameEn: spell.nameEn, summary: spell.summary })), optional: true });
+      const target = ledger.askOne({ ...ask, id: `class.${first}.${option.id}.target`, label: `${option.name} — 대상 소마법`, description: `알고 있는 ${cls.name} 소마법 중 피해를 주는 것.`, options: known.map((spell) => ({ id: spell.id, name: spell.name, nameEn: spell.nameEn, summary: spell.summary })), optional: true });
       if (target) ledger.addFeatureTarget(option.id, target);
     }
     // H3 (D240): 그림자의 서, 심연의 선물, 마녀의 눈 — what an invocation grants is in its contract.

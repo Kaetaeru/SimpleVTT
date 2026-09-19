@@ -45,8 +45,12 @@ export interface ClassOptionPool {
   id: string;
   list: string;
   label: string;
-  source?: "metamagic";
-  known: Record<string, number>;
+  source?: "metamagic" | "invocation";
+  /** How many are known by class level (threshold → count), or — D310 — the progression column that says it (기원술). */
+  known?: Record<string, number>;
+  column?: string;
+  /** D310: the sheet line is the option's own name, not `<label>: <name>` (섬뜩한 기원술). */
+  featureName?: "option";
 }
 
 /** H4 (D243): the rules a class definition carries beside its hit die and saves. */
