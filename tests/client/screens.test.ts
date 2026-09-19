@@ -20,7 +20,7 @@ test("the sheet view renders every section of a level-5 life cleric with descrip
   const { derived } = build({ species: "dwarf", background: "acolyte", classes: "cleric", level: 5, abilities: { wis: 16, con: 14 } }, { "class.2.subclass": ["dnd.srd521.subclass.cleric.life-domain"] });
   const html = renderToStaticMarkup(createElement(SheetView, { derived, catalog: catalog(), runtime: initialRuntime(derived) }));
   const text = strip(html);
-  for (const needle of ["테스트", "드워프", derived.background!.name, "클레릭 (생명 권역) 5", "숙련 보너스 +3", "최대 HP", String(derived.hp.max), "AC", "패시브 지각", "암시야 120", "기술", "숙련", "방어", "독", "자원", "신성 변환", "가방", "공격", "주문", "DC", "항상 준비", "Bless", "종족 특성", "드워프의 강인함", "직업 특성", "서브클래스 특성", "생명 보존", "재주", "마법 입문자"]) {
+  for (const needle of ["테스트", "드워프", derived.background!.name, "클레릭 (생명 권역) 5", "숙련 보너스 +3", "최대 HP", String(derived.hp.max), "AC", "패시브 지각", "암시야 120", "기술", "숙련", "방어", "독", "자원", "신성 변환", "가방", "공격", "주문", "DC", "항상 준비", "축복", "종족 특성", "드워프의 강인함", "직업 특성", "서브클래스 특성", "생명 보존", "재주", "마법 입문자"]) {
     assert.ok(text.includes(needle), `missing "${needle}"`);
   }
   assert.ok(html.includes(`title="${derived.hp.breakdown.join("\n")}"`) || html.includes("1레벨 클레릭 d8"), "HP breakdown is attached as a title");
@@ -60,7 +60,7 @@ test("the app renders the library, the wizard and the contents screen against a 
   const wizard = strip(renderToStaticMarkup(createElement(ClientProvider, { store, initialRoute: { screen: "new" }, children: createElement(App) })));
   for (const needle of ["새 캐릭터", "기본", "종족", "배경", "능력치", "직업·레벨", "언어·장비", "검토·저장", "이름", "검증", "이름을 정하세요"]) assert.ok(wizard.includes(needle), `wizard missing "${needle}"`);
   const contents = strip(renderToStaticMarkup(createElement(ClientProvider, { store, initialRoute: { screen: "contents" }, children: createElement(App) })));
-  assert.ok(contents.includes("내장 SRD 5.2.1 모듈 38개"));
+  assert.ok(contents.includes("내장 SRD 5.2.1 모듈 7개"));
   assert.ok(contents.includes("dnd.srd-5.2.1.classes"));
   void ids;
 });

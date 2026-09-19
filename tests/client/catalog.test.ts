@@ -46,7 +46,7 @@ test("spell lists: the whole SRD list is reachable from some class, and the cast
 test("species carry described traits and their choices; backgrounds resolve origin feats (including magic-initiate variants)", () => {
   const catalog = createCatalog();
   const dwarf = catalog.speciesById("dnd.srd521.species.dwarf")!;
-  assert.deepEqual(dwarf.traits.map((trait) => trait.name), ["독 저항", "드워프의 강인함", "돌 감각"]);
+  assert.deepEqual(dwarf.traits.map((trait) => trait.name), ["드워프의 회복력", "드워프의 강인함", "석재 감각"]);
   assert.ok(dwarf.traits.every((trait) => trait.description));
   const elf = catalog.speciesById("dnd.srd521.species.elf")!;
   assert.ok(elf.choices.some((choice) => choice.id === "species.lineage"));

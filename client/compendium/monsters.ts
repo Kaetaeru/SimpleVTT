@@ -1,10 +1,10 @@
 /**
- * The compendium's monsters: the generated SRD stat blocks (src/generated/monsterCatalog.generated.json) with the
+ * The compendium's monsters: the SRD stat blocks (the SRD monsters module) with the
  * fields the table uses — AC, HP, initiative, abilities, saves, skills, defenses, attacks with bonus and damage
  * dice, save actions with DC and area, recharge timings, legendary actions and spellcasting. A monster dragged to
  * the canvas becomes an NPC journal entry that carries a copy of this block (ROLL20_TABLE_SPEC.md §4.3, §9).
  */
-import monsterJson from "../../src/generated/monsterCatalog.generated.json";
+import srdMonstersJson from "../../content/modules/srd-5.2.1/monsters.module.json";
 import type { AbilityKey } from "../catalog/types";
 import type { TraitRule } from "./monsterTraits";
 
@@ -69,8 +69,9 @@ export interface MonsterView {
   legendaryResistance: number;
 }
 
-const source = monsterJson as unknown as { monsters: Array<MonsterView & { presentation?: unknown }> };
-const BUILTIN: MonsterView[] = source.monsters.map(({ presentation: _markdown, ...monster }) => monster as MonsterView);
+/** D314: the SRD's stat blocks, from the SRD monsters module (content/modules/srd-5.2.1). */
+const srdModule = srdMonstersJson as unknown as { content: Array<{ id: string; presentation: { originalName: string; locales: Record<string, { name: string }> }; mechanics: Array<{ kind: string; config: { statBlock: MonsterView } }> }> };
+const BUILTIN: MonsterView[] = srdModule.content.map((entry) => ({ ...entry.mechanics[0].config.statBlock, id: entry.id, slug: entry.id.split(".").pop() ?? entry.id, name: entry.presentation.locales["ko-KR"]?.name ?? entry.presentation.originalName, nameEn: entry.presentation.originalName }));
 /**
  * Every monster the table knows: the SRD's, and — D311 — every `monster-definition` in the loaded modules, which
  * replaces an SRD block of the same id. Filled in place when the catalog is built (`registerCatalogMonsters`).

@@ -27,7 +27,7 @@ test("level-1 dwarf fighter (soldier): HP, AC, saves, skills, masteries, species
   assert.equal(athletics.proficient, true);
   assert.equal(athletics.bonus, 3 + 2);
   assert.ok(derived.skills.find((skill) => skill.id === "intimidation")?.proficient, "background skill");
-  assert.deepEqual(derived.features.filter((feature) => feature.source === "species").map((feature) => feature.name), ["독 저항", "드워프의 강인함", "돌 감각"]);
+  assert.deepEqual(derived.features.filter((feature) => feature.source === "species").map((feature) => feature.name), ["드워프의 회복력", "드워프의 강인함", "석재 감각"]);
   assert.ok(derived.features.filter((feature) => feature.source === "species").every((feature) => feature.description));
   assert.deepEqual(derived.defenses.resistances, ["독"]);
   assert.equal(derived.senses.darkvision, 120);

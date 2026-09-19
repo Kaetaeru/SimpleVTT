@@ -77,7 +77,7 @@ CLAUDE.md §1.6(설치 모듈도 SRD와 똑같이 동작)과 §2(규칙은 JSON�
 | S2 ✔ (D311) | G7: 괴물 모듈 문법 | 합성 모듈 괴물을 표에 놓고 공격·특성 |
 | S3 ✔ (D312) | G8·G9: 모듈 `spell-mechanic`이 유일한 출처 | 합성 모듈이 SRD 주문 실행을 덮어씀 |
 | S4 ✔ (D313) | 결정 이전 스크립트 + 빌더 → 새 SRD 모듈. 옛 경로와 **나란히** 비교(같은 캐릭터 파생 결과 diff 0) | 비교 도구 diff 0 |
-| S5 | 내장 로딩을 새 모듈로 전환, 옛 경로(`indexes`·`srd-extras`·생성 카탈로그·옛 모듈·`src/domain` 주문 추측) 삭제 | 게이트, `createCatalog` 입력이 모듈뿐 |
+| S5 ✔ (D314) | 내장 로딩을 새 모듈로 전환, 옛 경로(`indexes`·`srd-extras`·생성 카탈로그·옛 모듈·`src/domain` 주문 추측) 삭제 | 게이트, `createCatalog` 입력이 모듈뿐 |
 | S6 | 내용 교정: 주문 감사 85건, 재주·종족·직업 특성을 원문과 대조, 표 검증 `--builtin` | 감사 0건(사유 있는 예외만 목록), 표 검증 거절 0 |
 
 ### S4 진행
@@ -94,7 +94,18 @@ CLAUDE.md §1.6(설치 모듈도 SRD와 똑같이 동작)과 §2(규칙은 JSON�
 
 S6 목록에 올린 원문 대조 결과: 드래곤본 숨결 무기의 내성이 혈통마다 다르다(초록·은·하양 = 건강). 옛 계약은 전부 민첩.
 
-도구: `npx tsx scripts/srd-export-decisions.ts <영역>`(1회, 옛 경로 → 결정), `node scripts/srd-build-modules.mjs <parsed.json>`(원문 + 결정 → 모듈), `npx tsx scripts/srd-compare.ts <영역>`(새 모듈 vs 옛 카탈로그).
+도구: `node scripts/srd-build-modules.mjs <parsed.json>`(원문 + 결정 → 모듈). 결정 이전(`srd-export-decisions.ts`)과 나란히 비교(`srd-compare.ts`)는 1회용이라 S5에서 지웠다(a164a66b에 있다).
+
+### S5 결과 (D314)
+
+- `createCatalog`의 입력은 모듈뿐이다: `ContentCatalog({ modules, installedModules })`. 색인·진행표·extras·주문 표시 카탈로그 입력이 없어졌다.
+- 기술·언어·장인 도구는 `vocabulary-definition`(SRD의 `core` 모듈).
+- SRD 주문 실행과 괴물은 SRD 모듈 JSON에서 — 카탈로그를 만들기 전에도 쓰인다(`spells.ts`의 `srdExecs`, `monsters.ts`).
+- 괴물 특성 규칙은 특성 위에(`traits[].rules`). 규칙 없이 저장된 옛 NPC는 같은 id의 도감 괴물에서 같은 이름의 특성 규칙을 빌린다.
+- 직업표의 역할 줄(ASI·에픽 은총·서브클래스)을 SRD도 데이터로 가진다 — `tracks.ts`의 영어 줄 이름 비교가 사라졌다(하드코딩 이름 비교 3 → 0, 이름 정규식 2 → 1).
+- 반응 주문이 여럿일 때의 순서는 `reaction.priority`(방패 1).
+- 클라이언트 경계 검사: `client/`는 `content/modules/srd-5.2.1`만 가져올 수 있다. 옛 `src/` 앱이 쓰는 파일(`content/indexes`, `content/modules/dnd-srd-5.2.1.*`, `src/generated`)은 남아 있다 — 옛 앱 정리는 소유자가 새 클라이언트를 받아들인 뒤(HANDOFF §7). 아무도 안 쓰는 `content/srd-extras`는 지웠다.
+- **이제 SRD 규칙을 고치는 곳**: `content/srd-authoring/*.json`을 고치고 `node scripts/srd-build-modules.mjs <parsed.json>`로 다시 빌드한다.
 
 S4의 나란히 비교가 핵심 안전장치다 — 전환 전에 옛 SRD와 새 SRD가 같은 캐릭터를 같게 만드는지 본다. 차이는 전부 원문 대조로 판정한다(옛 쪽이 틀렸으면 S6 목록으로).
 

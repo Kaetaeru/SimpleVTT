@@ -7,7 +7,7 @@ import type { SpeciesChoice, SpeciesView } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import { SIZE_KO } from "../rules/tables";
-import type { SpeciesOptionEffect } from "../data/srd";
+import type { SpeciesOptionEffect } from "../catalog/catalog";
 import { abilityOptions, featOptions, fixedOptions, gamingSetOptions, languageOptions, skillOptions, toolName } from "./choices";
 import { slugOfId } from "../catalog/catalog";
 import { applyFeat } from "./feats";

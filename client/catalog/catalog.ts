@@ -2,19 +2,39 @@
  * ContentCatalog — one id space for the SRD 5.2.1 modules and installed modules (docs/design/v3/NEW_CLIENT.md §2).
  *
  * The catalog turns RuleModule JSON into typed views the character engine reads: classes (with their level tables),
- * subclasses, species, backgrounds, feats, spells (with class lists), items and starting loadouts. Builtin data that the
- * modules do not carry (subclass feature tables, species choice details, feature descriptions, spell lists above
- * level 1) comes in through `SrdExtras`, JSON under content/srd-extras (H7b, D252).
+ * subclasses, species, backgrounds, feats, spells (with class lists), items, starting loadouts and monsters.
+ * D314 (SRD_MODULE_PLAN.md S5): modules are its only input — the SRD is modules too (content/modules/srd-5.2.1), built
+ * from the SRD's source, so an installed module is read by exactly the same code as the SRD.
  */
 import { readCustomMonster } from "../compendium/customMonster";
 import type { MonsterView } from "../compendium/monsters";
 import type {
-  AbilityKey, CatalogEntry, CreationIndexJson, EntryJson, IndexClassChoiceJson, IndexClassJson, IndexSpeciesSemanticsJson,
-  ProgressionCatalogJson, ProgressionLevelRowJson, RuleModuleJson, SpellPresentationJson,
+  AbilityKey, CatalogEntry, EntryJson, IndexClassChoiceJson, IndexClassJson, IndexSpeciesSemanticsJson, ProgressionLevelRowJson, RuleModuleJson,
 } from "./types";
 import { parseContract, type CommonPlayContract } from "../rules/contract";
 import type { ClassOptionPool, ClassRules } from "../rules/classes";
-import type { SpeciesOptionEffect, SrdSpeciesData, SrdSubclassChoice, SrdSubclassData } from "../data/srd";
+
+/** A choice a subclass adds (Circle of the Land's land type, Hunter's Prey …). */
+export interface SubclassChoice { id: string; level: number; label: string; description: string; options: Array<{ id: string; name: string; nameEn: string; summary: string }> }
+/** Always-prepared spells that depend on a subclass choice: choiceId → optionId → level → spells. */
+export type SpellsByOption = Record<string, Record<string, Record<number, string[]>>>;
+/** What an option of a species choice does. */
+export interface SpeciesOptionEffect {
+  cantrips?: string[];
+  /** Spells by total-level threshold, always prepared (cast once free per long rest). */
+  spellsByLevel?: Record<number, string[]>;
+  speed?: number;
+  darkvision?: number;
+  resistances?: string[];
+  features?: Array<{ name: string; nameEn: string; description: string }>;
+}
+/** D314: the table's vocabulary a module declares (`vocabulary-definition`): skills, languages, artisan tools. */
+export interface Vocabulary {
+  skills: Record<string, string>;
+  standardLanguages: Array<{ id: string; name: string; nameEn: string }>;
+  generalLanguages: Array<{ id: string; name: string; nameEn: string }>;
+  artisanToolIds: string[];
+}
 
 export interface FeatureRecord {
   /** Stable id such as `fighter.second-wind` or `dnd.srd521.feature.cleric.life-domain.preserve-life`. */
@@ -34,7 +54,7 @@ export interface FeatureRecord {
 export type ClassRowRole = "subclass" | "asi" | "epic-boon" | "subclass-feature";
 const ROW_ROLES: readonly ClassRowRole[] = ["subclass", "asi", "epic-boon", "subclass-feature"];
 /** D310: one row of a module class's `class-definition.levels`. A feature is an entry id, a plain name, or a role. */
-interface ModuleClassLevel { level: number; proficiencyBonus?: number; features?: Array<string | { role: ClassRowRole; name?: string }>; columns?: Record<string, string | number | null> }
+interface ModuleClassLevel { level: number; proficiencyBonus?: number; features?: Array<string | { role: ClassRowRole; name?: string; nameEn?: string; description?: string }>; columns?: Record<string, string | number | null> }
 
 export interface ClassLevelRow extends ProgressionLevelRowJson { featureRecords: FeatureRecord[] }
 
@@ -71,8 +91,8 @@ export interface SubclassView {
   /** Always-prepared spells by class level (domain/oath/circle spells), resolved to spell ids. */
   spells: Record<number, string[]>;
   /** H7b (D252): the choices the subclass adds, and the spells a chosen option prepares (English names). */
-  choices: SrdSubclassChoice[];
-  spellsByOption: NonNullable<SrdSubclassData["spellsByOption"]>;
+  choices: SubclassChoice[];
+  spellsByOption: SpellsByOption;
   /** D303: the subclass makes a class that does not cast a one-third caster. */
   spellcasting?: SubclassSpellcasting;
   /** D303: option lists the subclass knows in growing numbers by class level, the way a class's pools work. */
@@ -210,25 +230,9 @@ export interface ClassOptionDefinition {
   targetKind?: string;
 }
 
-/** Builtin data the SRD modules do not carry; JSON under content/srd-extras (H7b, D252). */
-export interface SrdExtras {
-  classFeatures: Record<string, Array<{ level: number; name: string; nameEn: string; id: string; description: string }>>;
-  subclasses: SrdSubclassData[];
-  species: Record<string, SrdSpeciesData>;
-  feats: Record<string, { description: string }>;
-  backgrounds: Record<string, { description: string }>;
-  /** Class spell lists by level as English names (levels the index does not cover). */
-  spellLists: Record<string, Record<number, string[]>>;
-  classOptions: Record<string, ClassOptionDefinition[]>;
-}
-
 export interface CatalogInputs {
   modules: readonly RuleModuleJson[];
   installedModules?: readonly RuleModuleJson[];
-  index: CreationIndexJson;
-  progression: ProgressionCatalogJson;
-  spellPresentations: readonly SpellPresentationJson[];
-  extras: SrdExtras;
 }
 
 const LOCALE = "ko-KR";
@@ -309,7 +313,8 @@ export class ContentCatalog {
   readonly skills: Record<string, string>;
   readonly languages: { standard: Array<{ id: string; name: string; nameEn: string }>; general: Array<{ id: string; name: string; nameEn: string }> };
   readonly classOptions: Record<string, ClassOptionDefinition[]>;
-  readonly index: CreationIndexJson;
+  /** D314: the artisan tools a background or class may offer, from the modules' vocabulary. */
+  readonly artisanToolIds: string[];
   readonly warnings: string[] = [];
   /**
    * R34 (D171): every `common-play` contract in the installed content, keyed by the feature rule key it belongs to
@@ -320,12 +325,22 @@ export class ContentCatalog {
   /** Module spell ids that name a presentation-catalog spell under a different slug. */
   readonly spellAliases = new Map<string, string>();
 
-  constructor(private readonly inputs: CatalogInputs) {
+  constructor(inputs: CatalogInputs) {
     for (const module of inputs.modules) this.addModule(module, "builtin");
     for (const module of inputs.installedModules ?? []) this.addModule(module, "installed");
-    this.index = inputs.index;
-    this.skills = inputs.index.skills;
-    this.languages = { standard: inputs.index.standardLanguages, general: inputs.index.generalLanguages };
+    // D314: the vocabulary is every `vocabulary-definition` the modules carry, later ones adding to earlier ones.
+    const vocabulary: Vocabulary = { skills: {}, standardLanguages: [], generalLanguages: [], artisanToolIds: [] };
+    for (const entry of this.entries.values()) {
+      const def = mechanic<Partial<Vocabulary>>(entry, "vocabulary-definition");
+      if (!def) continue;
+      Object.assign(vocabulary.skills, def.skills ?? {});
+      vocabulary.standardLanguages.push(...(def.standardLanguages ?? []).filter((item) => !vocabulary.standardLanguages.some((known) => known.id === item.id)));
+      vocabulary.generalLanguages.push(...(def.generalLanguages ?? []).filter((item) => !vocabulary.generalLanguages.some((known) => known.id === item.id)));
+      vocabulary.artisanToolIds.push(...(def.artisanToolIds ?? []).filter((id) => !vocabulary.artisanToolIds.includes(id)));
+    }
+    this.skills = vocabulary.skills;
+    this.languages = { standard: vocabulary.standardLanguages, general: vocabulary.generalLanguages };
+    this.artisanToolIds = vocabulary.artisanToolIds;
     this.classOptions = this.buildClassOptions();
     this.spells = this.buildSpells();
     this.classes = this.buildClasses();
@@ -418,9 +433,6 @@ export class ContentCatalog {
 
   private buildSpells(): SpellView[] {
     const byId = new Map<string, SpellView>();
-    for (const p of this.inputs.spellPresentations) {
-      byId.set(p.id, { id: p.id, name: p.name, nameEn: p.nameEn, level: p.level, school: p.school, ritual: p.ritual, castingTime: p.castingTime, range: p.range, components: p.components, duration: p.duration, summary: p.summary, description: p.description, classes: [], scope: "builtin" });
-    }
     const byName = new Map<string, SpellView>();
     for (const spell of byId.values()) byName.set(normalizeName(spell.nameEn), spell);
     // Installed spells (spell-definition mechanic) and builtin module spells that the presentation catalog lacks.
@@ -441,25 +453,6 @@ export class ContentCatalog {
     }
     const spells = [...byId.values()];
     for (const spell of spells) this.spellIdByName.set(normalizeName(spell.nameEn), spell.id);
-    // Class lists: the index (levels 0–1) plus the authored extras (levels 2–9 and any corrections).
-    const lists: Record<string, Record<string, string[]>> = {};
-    for (const [classId, levels] of Object.entries(this.inputs.index.spellLists)) lists[classId] = { ...levels };
-    for (const [classKey, levels] of Object.entries(this.inputs.extras.spellLists)) {
-      const classId = this.classIdFromKey(classKey);
-      lists[classId] = lists[classId] ?? {};
-      for (const [level, names] of Object.entries(levels)) lists[classId][level] = [...(lists[classId][level] ?? []), ...names];
-    }
-    for (const [classId, levels] of Object.entries(lists)) {
-      for (const [level, names] of Object.entries(levels)) {
-        for (const nameEn of names) {
-          const id = this.spellIdByName.get(normalizeName(nameEn));
-          const spell = id ? byId.get(id) : undefined;
-          if (!spell) { this.warnings.push(`주문 목록 ${classId} L${level}: "${nameEn}"을(를) 찾을 수 없습니다.`); continue; }
-          if (spell.level !== Number(level)) this.warnings.push(`주문 목록 ${classId} L${level}: "${nameEn}"의 레벨은 ${spell.level}입니다.`);
-          if (!spell.classes.includes(classId)) spell.classes.push(classId);
-        }
-      }
-    }
     return spells.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name, "ko"));
   }
 
@@ -469,22 +462,14 @@ export class ContentCatalog {
   }
 
   private buildClasses(): ClassView[] {
-    const abilityText = (text: string): AbilityKey[] => {
-      const map: Record<string, AbilityKey> = { 근력: "str", 민첩: "dex", 건강: "con", 지능: "int", 지혜: "wis", 매력: "cha" };
-      return Object.entries(map).filter(([ko]) => text.includes(ko)).map(([, key]) => key);
-    };
     const views: ClassView[] = [];
     for (const entry of this.byCategory("class")) {
-      // D310: a module class carries its whole level table and creation choices here; the SRD's still come from the
-      // generated progression and the creation index until the SRD itself is a module (SRD_MODULE_PLAN.md S5).
+      // D310: a class carries its whole level table and creation choices here — the SRD's as much as a module's (D314).
       const def = mechanic<{ hitDie?: number; primaryAbilities?: AbilityKey[]; savingThrowProficiencies?: AbilityKey[]; skillChoiceCount?: number; casterKind?: ClassView["casterKind"]; levels?: ModuleClassLevel[]; multiclassGrants?: string[]; skillOptions?: ClassView["skillChoice"]; level1Choices?: IndexClassChoiceJson[]; spells?: IndexClassJson["spells"] } & Partial<ClassRules>>(entry, "class-definition") ?? {};
       const slug = slugOfId(entry.id);
-      const table = this.inputs.progression.classes.find((row) => row.id === entry.id);
-      const indexClass = this.inputs.index.classes[entry.id];
-      const descriptions = this.inputs.extras.classFeatures[slug] ?? [];
       const moduleRows: ClassLevelRow[] | undefined = def.levels?.map((row) => {
         const records = (row.features ?? []).map((item): FeatureRecord => {
-          if (typeof item === "object" && ROW_ROLES.includes(item.role)) return { id: `${slug}.${item.role}`, name: item.name ?? item.role, nameEn: item.role, role: item.role };
+          if (typeof item === "object" && ROW_ROLES.includes(item.role)) return { id: `${slug}.${item.role}`, name: item.name ?? item.role, nameEn: item.nameEn ?? item.role, role: item.role, ...(item.description ? { description: item.description, descriptionSource: "module" as const } : {}) };
           const id = String(item);
           const found = this.entries.get(id);
           return found ? { id, name: found.name, nameEn: found.nameEn, description: found.description ?? found.summary, descriptionSource: "module" } : { id: `${slug}.${row.level}.${id}`, name: id, nameEn: id };
@@ -492,26 +477,19 @@ export class ContentCatalog {
         const columns = Object.fromEntries(Object.entries(row.columns ?? {}).map(([key, value]) => [key, value === null ? null : String(value)]));
         return { level: row.level, proficiencyBonus: row.proficiencyBonus ?? 2 + Math.floor((row.level - 1) / 4), features: records.map((record) => record.name), columns, featureRecords: records };
       }).sort((a, b) => a.level - b.level);
-      const progression: ClassLevelRow[] = moduleRows ?? (table?.progression ?? []).map((row) => ({
-        ...row,
-        featureRecords: row.features.map((name) => {
-          const found = descriptions.find((item) => item.name === name && (item.level === row.level || item.level === 0)) ?? descriptions.find((item) => item.name === name);
-          if (!found) { this.warnings.push(`직업 특성 설명 없음: ${slug} ${row.level}레벨 "${name}"`); return { id: `${slug}.${row.level}.${name}`, name, nameEn: name }; }
-          return { id: found.id, name: found.name, nameEn: found.nameEn, description: found.description, descriptionSource: "srd-summary" as const };
-        }),
-      }));
-      const casterKind = def.casterKind ?? ((table?.spellcastingMode === "full" || table?.spellcastingMode === "half" || table?.spellcastingMode === "pact") ? table.spellcastingMode : "none");
+      const progression: ClassLevelRow[] = moduleRows ?? [];
+      const casterKind = def.casterKind ?? "none";
       views.push({
         id: entry.id, slug, name: entry.name, nameEn: entry.nameEn, summary: entry.summary,
-        hitDie: def.hitDie ?? table?.hitDie ?? 8,
-        primaryAbilities: def.primaryAbilities ?? abilityText(table?.primaryAbilitiesText ?? ""),
-        savingThrows: def.savingThrowProficiencies ?? abilityText(table?.savingThrowsText ?? ""),
-        skillChoice: def.skillOptions ?? indexClass?.skills ?? { count: def.skillChoiceCount ?? 2, options: "any" },
-        level1Choices: def.level1Choices ?? indexClass?.choices ?? [],
-        spells: def.spells ?? indexClass?.spells,
+        hitDie: def.hitDie ?? 8,
+        primaryAbilities: def.primaryAbilities ?? [],
+        savingThrows: def.savingThrowProficiencies ?? [],
+        skillChoice: def.skillOptions ?? { count: def.skillChoiceCount ?? 2, options: "any" },
+        level1Choices: def.level1Choices ?? [],
+        spells: def.spells,
         casterKind,
         progression,
-        multiclassGrants: def.multiclassGrants ?? table?.multiclassGrants ?? [],
+        multiclassGrants: def.multiclassGrants ?? [],
         rules: {
           armorTraining: def.armorTraining ?? [], weaponTraining: def.weaponTraining ?? ["simple"], toolProficiencies: def.toolProficiencies ?? [],
           multiclass: { armor: [], weapons: [], ...(def.multiclass ?? {}) },
@@ -530,7 +508,7 @@ export class ContentCatalog {
    * `option-list-definition` entry (its options are `option` entries of the same catalog, named by id).
    */
   private buildClassOptions(): Record<string, ClassOptionDefinition[]> {
-    const lists: Record<string, ClassOptionDefinition[]> = { ...this.inputs.extras.classOptions };
+    const lists: Record<string, ClassOptionDefinition[]> = {};
     for (const entry of this.entries.values()) {
       // D310: an option may carry what gates it — the class level it needs, the option it needs first, its cost, and
       // what it asks for once taken (a cantrip to empower, an origin feat).
@@ -550,35 +528,22 @@ export class ContentCatalog {
 
   private buildSubclasses(): SubclassView[] {
     const views: SubclassView[] = [];
-    const authored = new Map(this.inputs.extras.subclasses.map((item) => [item.id, item]));
-    // SRD subclasses the modules do not list yet come from the authored tables alone.
-    for (const data of this.inputs.extras.subclasses) {
-      if (this.entries.has(data.id)) continue;
-      const spells: Record<number, string[]> = {};
-      for (const [level, names] of Object.entries(data.spells ?? {})) spells[Number(level)] = names.map((name) => this.spellByName(name)?.id ?? name);
-      views.push({ id: data.id, classId: data.classId, name: data.name, nameEn: data.nameEn, summary: data.summary, features: data.features.map((feature) => ({ ...feature, descriptionSource: "srd-summary" as const })).sort((a, b) => a.level - b.level), spells, choices: data.choices ?? [], spellsByOption: data.spellsByOption ?? {}, optionPools: [], scope: "builtin" });
-    }
     for (const entry of this.byCategory("subclass")) {
       const classId = entry.relationships.find((rel) => rel.kind === "parent")?.target ?? "";
-      const data = authored.get(entry.id);
       // H7b (D252): a module subclass writes its choices in `subclass-definition`, as the SRD extras do.
       // H7b (D252) + D300: a module subclass writes its choices — and the spells it always prepares, by class level — here.
-      const def = mechanic<Pick<SrdSubclassData, "choices" | "spellsByOption"> & { spells?: Record<string, string[]>; spellcasting?: SubclassSpellcasting; optionPools?: ClassOptionPool[] }>(entry, "subclass-definition") ?? {};
+      const def = mechanic<{ choices?: SubclassChoice[]; spellsByOption?: SpellsByOption; spells?: Record<string, string[]>; spellcasting?: SubclassSpellcasting; optionPools?: ClassOptionPool[] }>(entry, "subclass-definition") ?? {};
       const features: SubclassFeature[] = [];
-      if (data) {
-        for (const feature of data.features) features.push({ ...feature, descriptionSource: "srd-summary" });
-      } else {
-        for (const contribution of entry.progressionContributions) {
-          for (const grant of contribution.grants) {
-            const option = this.entries.get(grant);
-            features.push({ level: contribution.threshold, id: grant, name: option?.name ?? grant, nameEn: option?.nameEn ?? grant, description: option?.description, descriptionSource: "module" });
-          }
+      for (const contribution of entry.progressionContributions) {
+        for (const grant of contribution.grants) {
+          const option = this.entries.get(grant);
+          features.push({ level: contribution.threshold, id: grant, name: option?.name ?? grant, nameEn: option?.nameEn ?? grant, description: option?.description, descriptionSource: "module" });
         }
       }
       const spells: Record<number, string[]> = {};
       // D300: the module's own list wins where it has one; either spelling of a spell (id or English name) resolves.
-      for (const [level, names] of Object.entries(def.spells ?? data?.spells ?? {})) spells[Number(level)] = (Array.isArray(names) ? names : [names]).map((name) => this.spellById(name)?.id ?? this.spellByName(name)?.id ?? name);
-      views.push({ id: entry.id, classId, name: entry.name, nameEn: entry.nameEn, summary: entry.summary ?? data?.summary, description: entry.description, features: features.sort((a, b) => a.level - b.level), spells, choices: def.choices ?? data?.choices ?? [], spellsByOption: def.spellsByOption ?? data?.spellsByOption ?? {}, ...(def.spellcasting ? { spellcasting: def.spellcasting } : {}), optionPools: def.optionPools ?? [], scope: entry.scope });
+      for (const [level, names] of Object.entries(def.spells ?? {})) spells[Number(level)] = (Array.isArray(names) ? names : [names]).map((name) => this.spellById(name)?.id ?? this.spellByName(name)?.id ?? name);
+      views.push({ id: entry.id, classId, name: entry.name, nameEn: entry.nameEn, summary: entry.summary, description: entry.description, features: features.sort((a, b) => a.level - b.level), spells, choices: def.choices ?? [], spellsByOption: def.spellsByOption ?? {}, ...(def.spellcasting ? { spellcasting: def.spellcasting } : {}), optionPools: def.optionPools ?? [], scope: entry.scope });
     }
     return views;
   }
@@ -588,27 +553,25 @@ export class ContentCatalog {
     for (const entry of this.byCategory("species")) {
       // D313: a trait may be written whole (`{ key, name, nameEn, description, minLevel }`), and the choices as full
       // choice objects (labels, option names and summaries) — what the SRD's extras carried, now in the module.
-      const def = mechanic<{ size?: string[]; speed?: number; darkvision?: number; traits?: Array<string | { key: string; name: string; nameEn?: string; description?: string; minLevel?: number }>; choices?: Record<string, unknown> | SpeciesChoice[]; semantics?: IndexSpeciesSemanticsJson; effects?: SrdSpeciesData["effects"] }>(entry, "species-definition") ?? {};
-      const extras = this.inputs.extras.species[entry.id];
-      const semantics = this.inputs.index.species[entry.id] ?? def.semantics ?? {};
+      const def = mechanic<{ size?: string[]; speed?: number; darkvision?: number; traits?: Array<string | { key: string; name: string; nameEn?: string; description?: string; minLevel?: number }>; choices?: Record<string, unknown> | SpeciesChoice[]; semantics?: IndexSpeciesSemanticsJson; effects?: Record<string, Record<string, SpeciesOptionEffect>> }>(entry, "species-definition") ?? {};
+      const semantics = def.semantics ?? {};
       const traits: SpeciesTrait[] = (def.traits ?? []).map((raw, index) => {
         if (typeof raw === "object") return { id: `${entry.id}.trait.${raw.key}`, name: raw.name, nameEn: raw.nameEn ?? raw.key, ...(raw.description ? { description: raw.description, descriptionSource: "module" as const } : {}), ...(raw.minLevel ? { minLevel: raw.minLevel } : {}) };
         const [traitId, level] = raw.split("@");
-        const authored = extras?.traits[traitId];
         const installedName = def.semantics?.baseFeatures?.[index]?.replace(/\s*\(.*\)\s*$/, "");
         const traitNames = (def.semantics?.baseFeatures ?? []).map((name) => name.replace(/\s*\(.*\)\s*$/, ""));
         const installedDescription = installedName ? sectionOf(entry.description, installedName, traitNames) : undefined;
         return {
           id: `${entry.id}.trait.${traitId}`,
-          name: authored?.name ?? installedName ?? traitId,
-          nameEn: authored?.nameEn ?? traitId,
-          description: authored?.description ?? installedDescription,
-          descriptionSource: authored ? "srd-summary" : installedDescription ? "module" : undefined,
+          name: installedName ?? traitId,
+          nameEn: traitId,
+          description: installedDescription,
+          descriptionSource: installedDescription ? "module" : undefined,
           ...(level ? { minLevel: Number(level) } : {}),
         };
       });
-      const choices: SpeciesChoice[] = extras?.choices ? extras.choices : Array.isArray(def.choices) ? def.choices : this.genericSpeciesChoices(def.choices ?? {}, semantics);
-      views.push({ id: entry.id, name: entry.name, nameEn: entry.nameEn, summary: entry.summary, description: entry.description ?? extras?.description, sizes: def.size ?? ["medium"], speed: def.speed ?? 30, darkvision: def.darkvision, traits, choices, semantics, effects: def.effects ?? extras?.effects ?? {}, scope: entry.scope });
+      const choices: SpeciesChoice[] = Array.isArray(def.choices) ? def.choices : this.genericSpeciesChoices(def.choices ?? {}, semantics);
+      views.push({ id: entry.id, name: entry.name, nameEn: entry.nameEn, summary: entry.summary, description: entry.description, sizes: def.size ?? ["medium"], speed: def.speed ?? 30, darkvision: def.darkvision, traits, choices, semantics, effects: def.effects ?? {}, scope: entry.scope });
     }
     return views.sort((a, b) => a.name.localeCompare(b.name, "ko"));
   }
@@ -634,7 +597,7 @@ export class ContentCatalog {
       const def = mechanic<{ abilityChoices?: AbilityKey[]; skills?: string[]; tool?: string; toolChoice?: string; originFeat?: string; equipmentChoice?: boolean }>(entry, "background-definition") ?? {};
       const feat = this.resolveFeatReference(def.originFeat ?? "");
       views.push({
-        id: entry.id, name: entry.name, nameEn: entry.nameEn, description: entry.description ?? this.inputs.extras.backgrounds[entry.id]?.description,
+        id: entry.id, name: entry.name, nameEn: entry.nameEn, description: entry.description,
         abilityChoices: def.abilityChoices ?? ["str", "dex", "con"], skills: def.skills ?? [], tool: def.tool, toolChoice: def.toolChoice,
         originFeat: feat.id, originFeatPreset: feat.preset, equipmentChoice: def.equipmentChoice ?? true, scope: entry.scope,
       });
@@ -659,7 +622,7 @@ export class ContentCatalog {
       const tierRaw = (config.tier as string | undefined) ?? (tags.includes("origin") ? "origin" : tags.includes("fighting-style") ? "fighting-style" : tags.includes("epic-boon") ? "epic-boon" : "general");
       const tier: FeatTier = tierRaw === "origin" || tierRaw === "fighting-style" || tierRaw === "epic-boon" ? tierRaw : "general";
       views.push({
-        id: entry.id, name: entry.name, nameEn: entry.nameEn, description: entry.description ?? this.inputs.extras.feats[entry.id]?.description,
+        id: entry.id, name: entry.name, nameEn: entry.nameEn, description: entry.description,
         tier, repeatable: config.repeatable === true || tags.includes("repeatable"), minimumLevel: config.minimumLevel as number | undefined,
         abilityPrerequisite: config.abilityPrerequisite as FeatView["abilityPrerequisite"], abilityIncrease: config.abilityIncrease as FeatView["abilityIncrease"],
         requires: config.requires as string | undefined, grants: (config.grants as string[] | undefined) ?? [], choices: config.choices as Record<string, unknown> | undefined,

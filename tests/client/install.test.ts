@@ -33,7 +33,7 @@ test("parseModuleJson accepts the compiler's output and rejects broken files wit
   const odd = parseModuleJson({ moduleId: "odd", content: [{ id: "odd.thing", category: "vehicle", presentation: { originalName: "Cart" } }] });
   assert.deepEqual(odd.errors, []);
   assert.ok(odd.warnings.some((line) => line.includes("vehicle")));
-  const srd = parseModuleJson(JSON.stringify(createCatalog().index ? { moduleId: "dnd.srd-5.2.1.classes", dependencies: [{ moduleId: "dnd.srd-5.2.1.core" }], content: [{ id: "x.class", category: "class", presentation: { originalName: "X" } }] } : {}));
+  const srd = parseModuleJson(JSON.stringify(createCatalog().artisanToolIds ? { moduleId: "dnd.srd-5.2.1.classes", dependencies: [{ moduleId: "dnd.srd-5.2.1.core" }], content: [{ id: "x.class", category: "class", presentation: { originalName: "X" } }] } : {}));
   assert.deepEqual(missingDependencies(srd.module!, ["dnd.srd-5.2.1.core"]), []);
   assert.deepEqual(missingDependencies(srd.module!, []), ["dnd.srd-5.2.1.core"]);
 });

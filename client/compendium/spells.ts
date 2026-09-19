@@ -3,15 +3,7 @@
  * cast at the table — targeting, the primary effect (attack, save, healing, projectiles, tracked effect …),
  * concentration and conditions. Read-only views for the resolver and the command bar.
  */
-import catalogJson from "../../src/generated/spellExecutionCatalog.generated.json";
-import sustainJson from "../../content/indexes/dnd-srd-5.2.1.spell-sustain.json";
-import onHitJson from "../../content/indexes/dnd-srd-5.2.1.spell-on-hit.json";
-import bearerJson from "../../content/indexes/dnd-srd-5.2.1.spell-bearer.json";
-import weaponSpellJson from "../../content/indexes/dnd-srd-5.2.1.spell-weapon.json";
-import creaturesJson from "../../content/indexes/dnd-srd-5.2.1.spell-creatures.json";
-import reactionJson from "../../content/indexes/dnd-srd-5.2.1.spell-reaction.json";
-import repeatSaveJson from "../../content/indexes/dnd-srd-5.2.1.spell-repeat-save.json";
-import variantsJson from "../../content/indexes/dnd-srd-5.2.1.spell-variants.json";
+import srdSpellsJson from "../../content/modules/srd-5.2.1/spells.module.json";
 import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
@@ -79,7 +71,6 @@ export interface SpellOnHit {
   mark?: { name: string; nextAttack?: { advantage?: boolean; bonus?: number; by: "any" | "others" } };
   note?: string;
 }
-const BUILTIN_ON_HIT = (onHitJson as unknown as { spells: Record<string, SpellOnHit> }).spells;
 
 /** H6a (D248): which compendium creatures a spell places — named ones, or every monster of a type and challenge rating — or why it places none. */
 export interface SpellCreatures {
@@ -90,16 +81,14 @@ export interface SpellCreatures {
   needsOwnBlock?: boolean;
   none?: string;
 }
-const BUILTIN_CREATURES = (creaturesJson as unknown as { spells: Record<string, SpellCreatures> }).spells;
 /** V4f (D268): a choice made when casting — its patch over the execution (objects merge, arrays and values replace). */
 export interface SpellVariant { id: string; label: string; patch: Record<string, unknown> }
-const BUILTIN_VARIANTS = (variantsJson as unknown as { spells: Record<string, { variants: SpellVariant[] }> }).spells;
 /** V4f (D268): the choices this spell asks for when cast, SRD index or installed module alike. */
 /** V4v (D284): how many creatures a cast of this spell may take at this slot level (축복: 슬롯마다 한 명 더). */
 export const targetCountOf = (exec: SpellExec, level: number) =>
   exec.targeting.maxTargets + Math.max(0, (level ?? exec.baseLevel) - exec.baseLevel) * (exec.targeting.targetsPerSlotAboveBase ?? 0);
 
-export const variantsOf = (spellId: string): SpellVariant[] => spellExec(spellId)?.variants ?? BUILTIN_VARIANTS[spellId]?.variants ?? [];
+export const variantsOf = (spellId: string): SpellVariant[] => spellExec(spellId)?.variants ?? [];
 const mergePatch = (base: unknown, patch: unknown): unknown => {
   if (!patch || typeof patch !== "object" || Array.isArray(patch) || !base || typeof base !== "object" || Array.isArray(base)) return patch;
   const out: Record<string, unknown> = { ...(base as Record<string, unknown>) };
@@ -113,22 +102,17 @@ export function withVariant(exec: SpellExec, variantId: string | undefined): { e
 }
 
 /** H6b (D249): a reaction spell and the moment it answers — an attack hitting its caster, or a spell being cast in sight. */
-export interface SpellReaction { trigger: "attack.hit-self" | "spell.cast-seen" }
-const BUILTIN_REACTION = (reactionJson as unknown as { spells: Record<string, SpellReaction> }).spells;
+export interface SpellReaction { trigger: "attack.hit-self" | "spell.cast-seen"; /** D314: which one the table offers first when a creature could answer with several (lower first). */ priority?: number }
 /** H6b (D249): every spell, SRD or installed, that answers this trigger — the table offers the first one the reactor can cast. */
-export const reactionSpellIds = (trigger: SpellReaction["trigger"]): string[] => [
-  ...Object.entries(BUILTIN_REACTION).filter(([, rule]) => rule.trigger === trigger).map(([id]) => id),
-  ...[...installed.values()].filter((exec) => exec.reaction?.trigger === trigger).map((exec) => exec.spellId),
-];
+export const reactionSpellIds = (trigger: SpellReaction["trigger"]): string[] => spellExecs().filter((exec) => exec.reaction?.trigger === trigger).sort((a, b) => (a.reaction?.priority ?? 100) - (b.reaction?.priority ?? 100)).map((exec) => exec.spellId);
 
-const BUILTIN_REPEAT_SAVE = (repeatSaveJson as unknown as { spells: Record<string, "turn-end"> }).spells;
-/** H6c (D250): when the target of this spell repeats its save, from the spell's mechanics or the SRD index. */
-export const repeatSaveOf = (exec: SpellExec): "turn-end" | undefined => exec.repeatSave ?? BUILTIN_REPEAT_SAVE[exec.spellId];
+/** H6c (D250): when the target of this spell repeats its save, from the spell's mechanics. */
+export const repeatSaveOf = (exec: SpellExec): "turn-end" | undefined => exec.repeatSave;
 
-/** H6a (D248): the spell's creature rule, from its mechanics or the SRD index. */
-export const creaturesOf = (spellId: string): SpellCreatures | undefined => spellExec(spellId)?.creatures ?? BUILTIN_CREATURES[spellId];
-/** R82 (D218): the spell's on-hit rule, from its mechanics or the SRD index. */
-export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => (exec ? exec.onHit ?? BUILTIN_ON_HIT[exec.spellId] : undefined);
+/** H6a (D248): the spell's creature rule, from its mechanics. */
+export const creaturesOf = (spellId: string): SpellCreatures | undefined => spellExec(spellId)?.creatures;
+/** R82 (D218): the spell's on-hit rule, from its mechanics. */
+export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => exec?.onHit;
 
 /**
  * R90 (D225): what a spell's lasting effect does to the dice of the creature under it (`scope: "actor"`) or of whoever
@@ -138,17 +122,15 @@ export interface SpellBearerPart {
   modifier?: { family: string; scope?: "actor" | "target"; rollState?: "advantage" | "disadvantage"; bonus?: { dice?: { count: number; sides: number }; flat?: number; sign?: number }; consumeOnUse?: boolean; ability?: string };
   attackDamage?: { damageType: string; dice?: { count: number; sides: number }; flat?: number; againstTargetOnly?: boolean; sourceKinds?: string[] };
 }
-const BUILTIN_BEARER = (bearerJson as unknown as { spells: Record<string, SpellBearerPart[]> }).spells;
-/** R90 (D225): the lasting-effect parts of a spell — the catalog's, plus what the SRD index adds (유도 화살's advantage). */
-export const bearerPartsOf = (spellId: string, /** V4f (D268): the variant the effect was cast with. */ variant?: string): SpellBearerPart[] => { const exec = spellExec(spellId); return [...((exec ? withVariant(exec, variant).exec : undefined)?.trackedEffects ?? []), ...(BUILTIN_BEARER[spellId] ?? [])]; };
+/** R90 (D225): the lasting-effect parts of a spell (유도 화살's advantage), with the variant it was cast with. */
+export const bearerPartsOf = (spellId: string, /** V4f (D268): the variant the effect was cast with. */ variant?: string): SpellBearerPart[] => { const exec = spellExec(spellId); return (exec ? withVariant(exec, variant).exec : undefined)?.trackedEffects ?? []; };
 
 /**
  * H2 (D239): a spell cast through a weapon attack — the attack and damage use the spellcasting ability of the list
  * that knows it, and from each character `level` on its extra dice are the step's.
  */
 export interface WeaponSpell { ability: "spellcasting"; damageType?: string; extraDice?: Array<{ level: number; dice: string }> }
-const BUILTIN_WEAPON_SPELLS = (weaponSpellJson as unknown as { spells: Record<string, WeaponSpell> }).spells;
-export const weaponSpellOf = (spellId: string): WeaponSpell | undefined => spellExec(spellId)?.weaponSpell ?? BUILTIN_WEAPON_SPELLS[spellId];
+export const weaponSpellOf = (spellId: string): WeaponSpell | undefined => spellExec(spellId)?.weaponSpell;
 
 /** R77 (D212): a concentration spell used again without a slot — its economy, and a different effect when it has one. */
 export interface SpellSustain {
@@ -163,12 +145,8 @@ export interface SpellSustain {
   endWhen?: string;
 }
 
-const raw = catalogJson as unknown as { definitions: Record<string, SpellExec> | SpellExec[] };
-const list: SpellExec[] = Array.isArray(raw.definitions) ? raw.definitions : Object.values(raw.definitions);
-const byId = new Map(list.map((entry) => [entry.spellId, entry]));
 
 const DAMAGE_KINDS = new Set(["attack-damage", "save-damage", "save-compound-damage", "automatic-projectiles", "multi-attack-damage"]);
-const BUILTIN_SUSTAIN = (sustainJson as unknown as { spells: Record<string, Partial<SpellSustain> | false> }).spells;
 
 /**
  * R77 (D212): whether a spell in effect can be used again without a slot, and how. A concentration spell that deals
@@ -178,7 +156,7 @@ const BUILTIN_SUSTAIN = (sustainJson as unknown as { spells: Record<string, Part
  * content/indexes/dnd-srd-5.2.1.spell-sustain.json.
  */
 export function sustainOf(exec: SpellExec): SpellSustain | null {
-  const authored = exec.sustain ?? BUILTIN_SUSTAIN[exec.spellId];
+  const authored = exec.sustain;
   if (authored === false) return null;
   if (!authored && !(exec.concentration && DAMAGE_KINDS.has(exec.primary.kind))) return null;
   const economy = authored?.economy ?? (exec.targeting.maxTargets > 1 ? "none" : exec.castingEconomy === "bonus-action" ? "bonus-action" : "action");
@@ -203,7 +181,7 @@ export function sustainedExec(exec: SpellExec): SpellExec | null {
  * all. D312: also an SRD spell a module writes a `spell-mechanic` for — the module's execution wins.
  */
 const installed = new Map<string, SpellExec>();
-export const spellExec = (spellId: string): SpellExec | undefined => installed.get(spellId) ?? byId.get(spellId);
+export const spellExec = (spellId: string): SpellExec | undefined => installed.get(spellId) ?? srdExecs().get(spellId);
 
 /** What the catalog knows about a spell: its text, and the `spell-mechanic` config its module may carry. */
 export interface CatalogSpell { id: string; level: number; castingTime: string; range: string; duration: string; ritual: boolean; summary?: string; mechanic?: Record<string, unknown> }
@@ -266,7 +244,7 @@ function patchParts(mechanic: Record<string, unknown>): Partial<SpellExec> {
 export function registerCatalogSpells(spells: readonly CatalogSpell[]) {
   installed.clear();
   for (const spell of spells) {
-    const builtin = byId.get(spell.id);
+    const builtin = srdExecs().get(spell.id);
     if (!builtin) { installed.set(spell.id, execForCatalogSpell(spell)); continue; }
     // D312: a module's mechanic for an SRD spell — a whole one replaces the SRD's, a patch lays its parts over it.
     if (!spell.mechanic) continue;
@@ -274,7 +252,24 @@ export function registerCatalogSpells(spells: readonly CatalogSpell[]) {
     installed.set(spell.id, whole ? execForCatalogSpell(spell) : { ...builtin, ...patchParts(spell.mechanic) });
   }
 }
-export const spellExecs = () => list;
+export const spellExecs = () => [...new Map([...srdExecs(), ...installed]).values()];
+
+/**
+ * D314: the SRD's spells, executed from the SRD spells module (content/modules/srd-5.2.1) the same way as any
+ * module's — so a spell can be cast before any catalog is built. Read once, on first use.
+ */
+let srdCache: Map<string, SpellExec> | undefined;
+function srdExecs(): Map<string, SpellExec> {
+  if (srdCache) return srdCache;
+  const module = srdSpellsJson as unknown as { content: Array<{ id: string; mechanics: Array<{ kind: string; config: Record<string, unknown> }> }> };
+  srdCache = new Map();
+  for (const entry of module.content) {
+    const def = entry.mechanics.find((item) => item.kind === "spell-definition")?.config ?? {};
+    const mechanic = entry.mechanics.find((item) => item.kind === "spell-mechanic")?.config;
+    srdCache.set(entry.id, execForCatalogSpell({ id: entry.id, level: Number(def.level ?? 0), castingTime: String(def.castingTimeText ?? ""), range: String(def.rangeText ?? ""), duration: String(def.durationText ?? ""), ritual: def.ritual === true, mechanic }));
+  }
+  return srdCache;
+}
 
 /** SRD condition ids → the sheet's Korean condition names. */
 export const CONDITION_KO: Record<string, string> = {

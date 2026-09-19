@@ -146,7 +146,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Druid Subclass",
+       "fallback": "드루이드 서브클래스(회합)를 하나 선택합니다."
       }
      ]
     },
@@ -161,7 +163,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -188,7 +192,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -215,7 +221,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -240,7 +248,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -265,7 +275,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -290,7 +302,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -317,7 +331,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -354,7 +370,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -545,7 +563,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Ranger Subclass",
+       "fallback": "레인저 서브클래스를 하나 선택합니다."
       }
      ]
     },
@@ -564,7 +584,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -615,7 +637,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -634,7 +658,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -685,7 +711,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -704,7 +732,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -755,7 +785,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -774,7 +806,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -825,7 +859,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -974,7 +1010,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Rogue Subclass",
+       "fallback": "로그 서브클래스를 하나 선택합니다."
       },
       "dnd.srd521.feature.rogue.steady-aim"
      ]
@@ -988,7 +1026,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1033,7 +1073,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1046,7 +1088,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1059,7 +1103,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1082,7 +1128,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1095,7 +1143,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1128,7 +1178,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1141,7 +1193,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1164,7 +1218,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -1292,7 +1348,9 @@
       "dnd.srd521.feature.monk.deflect-attacks",
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Monk Subclass",
+       "fallback": "몽크 서브클래스(전사의 길)를 하나 선택합니다."
       }
      ]
     },
@@ -1307,7 +1365,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       },
       "dnd.srd521.feature.monk.slow-fall"
      ]
@@ -1337,7 +1397,9 @@
       "dnd.srd521.feature.monk.empowered-strikes",
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1364,7 +1426,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1404,7 +1468,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1419,7 +1485,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1470,7 +1538,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1485,7 +1555,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1512,7 +1584,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -1648,7 +1722,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Bard Subclass",
+       "fallback": "바드 서브클래스(학파)를 하나 선택합니다."
       }
      ]
     },
@@ -1663,7 +1739,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1690,7 +1768,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1717,7 +1797,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1766,7 +1848,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1791,7 +1875,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -1816,7 +1902,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -1853,7 +1941,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -1989,7 +2079,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Barbarian Subclass",
+       "fallback": "바바리안 서브클래스를 하나 선택합니다. 서브클래스는 3레벨과 이후 정해진 레벨에 특성을 줍니다."
       },
       "dnd.srd521.feature.barbarian.primal-knowledge"
      ]
@@ -2005,7 +2097,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2033,7 +2127,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -2061,7 +2157,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2088,7 +2186,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -2115,7 +2215,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2142,7 +2244,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -2169,7 +2273,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2208,7 +2314,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -2378,7 +2486,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Sorcerer Subclass",
+       "fallback": "소서러 서브클래스(마법 기원)를 하나 선택합니다."
       }
      ]
     },
@@ -2402,7 +2512,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2447,7 +2559,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -2492,7 +2606,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2575,7 +2691,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2618,7 +2736,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -2661,7 +2781,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2706,7 +2828,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -2730,7 +2854,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -2944,7 +3070,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "워락 서브클래스"
+       "name": "워락 서브클래스",
+       "nameEn": "Warlock Subclass",
+       "fallback": "워락 서브클래스(후원자)를 하나 선택합니다."
       }
      ]
     },
@@ -2961,7 +3089,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -2990,7 +3120,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -3019,7 +3151,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3050,7 +3184,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -3081,7 +3217,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3112,7 +3250,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -3143,7 +3283,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3186,7 +3328,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -3329,7 +3473,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "위저드 서브클래스"
+       "name": "위저드 서브클래스",
+       "nameEn": "Wizard Subclass",
+       "fallback": "위저드 서브클래스(학파)를 하나 선택합니다."
       }
      ]
     },
@@ -3352,7 +3498,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3395,7 +3543,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -3436,7 +3586,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3477,7 +3629,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -3518,7 +3672,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3559,7 +3715,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -3600,7 +3758,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3661,7 +3821,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -3824,7 +3986,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Cleric Subclass",
+       "fallback": "클레릭 서브클래스(권역)를 하나 선택합니다."
       }
      ]
     },
@@ -3839,7 +4003,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3866,7 +4032,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -3893,7 +4061,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3940,7 +4110,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -3987,7 +4159,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4002,7 +4176,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -4027,7 +4203,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -4235,7 +4413,9 @@
      "features": [
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Fighter Subclass",
+       "fallback": "파이터 서브클래스를 하나 선택합니다."
       }
      ]
     },
@@ -4249,7 +4429,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4275,7 +4457,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4289,7 +4473,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -4303,7 +4489,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4329,7 +4517,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -4354,7 +4544,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4380,7 +4572,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4394,7 +4588,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -4408,7 +4604,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4434,7 +4632,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -4448,7 +4648,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -4635,7 +4837,9 @@
       "dnd.srd521.feature.paladin.channel-divinity",
       {
        "role": "subclass",
-       "name": "서브클래스"
+       "name": "서브클래스",
+       "nameEn": "Paladin Subclass",
+       "fallback": "팔라딘 서브클래스(맹세)를 하나 선택합니다."
       }
      ]
     },
@@ -4654,7 +4858,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4706,7 +4912,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -4725,7 +4933,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4792,7 +5002,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4841,7 +5053,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     },
@@ -4860,7 +5074,9 @@
      "features": [
       {
        "role": "asi",
-       "name": "능력치 향상"
+       "name": "능력치 향상",
+       "nameEn": "Ability Score Improvement",
+       "fallback": "능력치 향상 재주를 얻거나, 그 대신 조건을 만족하는 다른 일반 재주 하나를 얻습니다. 능력치 향상은 한 능력치 +2 또는 두 능력치 +1이며 20을 넘길 수 없습니다."
       }
      ]
     },
@@ -4909,7 +5125,9 @@
      "features": [
       {
        "role": "epic-boon",
-       "name": "에픽 은총"
+       "name": "에픽 은총",
+       "nameEn": "Epic Boon",
+       "fallback": "서사시 은혜 재주 하나를 얻습니다. 원한다면 조건을 만족하는 다른 재주로 대신할 수 있습니다."
       }
      ]
     },
@@ -4928,7 +5146,9 @@
      "features": [
       {
        "role": "subclass-feature",
-       "name": "서브클래스 특성"
+       "name": "서브클래스 특성",
+       "nameEn": "Subclass Feature",
+       "fallback": "선택한 서브클래스가 이 레벨에 주는 특성을 얻습니다."
       }
      ]
     }

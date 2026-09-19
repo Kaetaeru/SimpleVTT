@@ -23,10 +23,10 @@ const CEILINGS = {
   slugBranches: 0,
   /** A content id checked by its ending or a piece of it (`classId.endsWith(".rogue")`). */
   idPieces: 0,
-  /** A name compared to a literal. §4: "Ability Score Improvement", "Epic Boon", "Subclass Feature". */
-  nameCompares: 3,
-  /** A regex run over a name, a description or a note. §4: `/Subclass$/` on a progression row, a token's copy number. */
-  nameRegex: 2,
+  /** A name compared to a literal. D314: the level table's rows name their role, so none are left. */
+  nameCompares: 0,
+  /** A regex run over a name, a description or a note. §4: a token's copy number. */
+  nameRegex: 1,
 };
 
 const PATTERNS: Record<keyof typeof CEILINGS, RegExp> = {

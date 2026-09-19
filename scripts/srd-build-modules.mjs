@@ -152,7 +152,15 @@ function classes() {
     const source = classDoc(id);
     if (!source) { problems.push(`${id}: 원문 classes/${id.split(".").pop()}.md 없음`); continue; }
     const top = source.tree[0];
-    content.push({ id, category: "class", tags: ["class", "srd-5.2.1"], presentation: presentation(top.head, source.fm.original_name, { description: plain(nodeText(top)) }), mechanics: [{ kind: "class-definition", config: def }] });
+    // A row of the table's own (subclass, ASI, Epic Boon) takes its text from the source section of that name.
+    const levels = def.levels.map((row) => ({ ...row, features: row.features.map((item) => {
+      if (typeof item !== "object") return item;
+      const { fallback, ...rest } = item;
+      const node = findHeading(source.tree, item.name);
+      const description = node ? plain(nodeText(node)) : fallback;
+      return { ...rest, ...(description ? { description } : {}) };
+    }) }));
+    content.push({ id, category: "class", tags: ["class", "srd-5.2.1"], presentation: presentation(top.head, source.fm.original_name, { description: plain(nodeText(top)) }), mechanics: [{ kind: "class-definition", config: { ...def, levels } }] });
   }
   for (const [id, decision] of Object.entries(decided.features)) content.push(feature(id, decision, classDoc(decision.classId)));
   for (const [id, decision] of Object.entries(decided.subclasses)) {
@@ -189,6 +197,12 @@ function monsters() {
   return { moduleId: "dnd.srd-5.2.1.monsters", content: content.sort((a, b) => a.id.localeCompare(b.id)) };
 }
 
+/** The table's vocabulary a character is made from: skills, languages, artisan tools (`vocabulary.json`). */
+function core() {
+  const vocabulary = decisions("vocabulary.json");
+  return { moduleId: "dnd.srd-5.2.1.core", content: [{ id: "dnd.srd521.vocabulary", category: "option", tags: ["srd-5.2.1"], presentation: presentation("SRD 어휘", "SRD vocabulary"), mechanics: [{ kind: "vocabulary-definition", config: vocabulary }] }] };
+}
+
 /** Areas whose decisions are module entries already (contracts, equipment): re-emitted as they are, in id order. */
 function verbatim(file, moduleId, taken = new Set()) {
   return { moduleId, content: Object.values(decisions(file)).filter((entry) => !taken.has(entry.id)).sort((a, b) => a.id.localeCompare(b.id)) };
@@ -196,7 +210,7 @@ function verbatim(file, moduleId, taken = new Set()) {
 
 const classModule = classes();
 // An entry the classes module writes (a feature whose contract sat on the same id) is not written twice.
-const built = [spells(), origins(), classModule, monsters(), verbatim("rules.json", "dnd.srd-5.2.1.rules", new Set(classModule.content.map((entry) => entry.id))), verbatim("equipment.json", "dnd.srd-5.2.1.equipment")];
+const built = [core(), spells(), origins(), classModule, monsters(), verbatim("rules.json", "dnd.srd-5.2.1.rules", new Set(classModule.content.map((entry) => entry.id))), verbatim("equipment.json", "dnd.srd-5.2.1.equipment")];
 if (textMissing.length) console.warn(`원문에서 글을 찾지 못한 항목 ${textMissing.length}개 (옛 글을 씀):\n${textMissing.join("\n")}`);
 if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 mkdirSync(outDir, { recursive: true });

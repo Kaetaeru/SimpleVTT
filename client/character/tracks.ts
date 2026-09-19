@@ -166,10 +166,8 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
 
   for (const feature of row.featureRecords) {
     const key = feature.id.split(".").pop() ?? feature.id;
-    // hardcode: the progression table's own row words (HARDCODE_AUDIT §4) — every class table, SRD or module, writes
-    // its ASI, Epic Boon and subclass rows this way, so they are the table format's vocabulary, not content.
-    // D310: a module class names the row's role; the SRD table still says it in English words.
-    const role = feature.role ?? (feature.nameEn === "Ability Score Improvement" ? "asi" : feature.nameEn === "Epic Boon" ? "epic-boon" : feature.nameEn === "Subclass Feature" ? "subclass-feature" : /Subclass$/.test(feature.nameEn) ? "subclass" : undefined);
+    // D310, D314: the class's level table names the row's role (ASI, Epic Boon, subclass) — the SRD's as a module's.
+    const role = feature.role;
     if (role === "asi") { askAsi(ledger, cls, index, sourceLabel); continue; }
     if (role === "epic-boon") { askEpicBoon(ledger, cls, index, sourceLabel); continue; }
     if (role === "subclass-feature") continue;

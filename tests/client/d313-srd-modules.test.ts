@@ -1,63 +1,39 @@
 /**
- * V0.9 D313 (SRD_MODULE_PLAN.md S4): the SRD rebuilt as modules from its source says what the old channels say.
+ * V0.9 D313, D314 (SRD_MODULE_PLAN.md S4, S5): the SRD is modules built from its source, and the catalog reads nothing
+ * else.
  *
  * `content/modules/srd-5.2.1/*.module.json` is built from the SRD translation and `content/srd-authoring/*.json`
- * (`scripts/srd-build-modules.mjs`). A catalog made of those modules alone — no generated progression, no creation
- * index beyond the table's vocabulary, no extras — must derive the same characters as today's catalog, which is what
- * makes the switch in S5 safe. Also the two grammar pieces the rebuild needed: a species trait written whole with its
- * text, choices written as full objects, and a class feature whose entry id carries its rule key.
+ * (`scripts/srd-build-modules.mjs`); before the switch, a catalog of those modules alone derived 100 characters the
+ * same as the old channels (`scripts/srd-compare.ts`, D313). These pin what the switch must keep: the counts, a species
+ * trait written whole with the translation's own name and text, choices as objects, a class feature's rule key, the
+ * table's vocabulary from a module, and SRD spells and monsters that work before any catalog is built.
  */
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
-import { ContentCatalog, createCatalog } from "../../client/catalog";
-import { CREATION_INDEX, PROGRESSION_CATALOG } from "../../client/catalog/sources";
-import type { RuleModuleJson } from "../../client/catalog/types";
-import { deriveCharacter } from "../../client/character/derive";
+import { createCatalog } from "../../client/catalog";
+import { BUILTIN_MODULES } from "../../client/catalog/sources";
+import { monsterById } from "../../client/compendium/monsters";
+import { traitRule } from "../../client/compendium/monsterTraits";
+import { spellExec, sustainOf } from "../../client/compendium/spells";
 import { featureRuleKey } from "../../client/rules/activation";
-import { build } from "./support";
 
-const DIR = "content/modules/srd-5.2.1";
-function newOnly() {
-  const modules = readdirSync(DIR).map((file) => JSON.parse(readFileSync(`${DIR}/${file}`, "utf8")) as RuleModuleJson);
-  return new ContentCatalog({
-    modules, installedModules: [], spellPresentations: [],
-    index: { ...CREATION_INDEX, classes: {}, spellLists: {}, species: {} },
-    progression: { ...PROGRESSION_CATALOG, classes: [] },
-    extras: { classFeatures: {}, subclasses: [], species: {}, feats: {}, backgrounds: {}, spellLists: {}, classOptions: {} },
-  });
-}
-
-const sheet = (derived: ReturnType<typeof deriveCharacter>) => ({
-  hp: derived.hp.max, ac: derived.ac.value, slots: derived.spellSlots, pact: derived.pactMagic,
-  features: derived.features.map((feature) => featureRuleKey(feature.id)).sort(),
-  resources: derived.resources.map((pool) => `${pool.id}:${pool.max}`).sort(),
-  casting: derived.spellcasting.map((entry) => `${entry.classId}:${entry.cantripsMax}/${entry.preparedMax}`).sort(),
-  choices: derived.choices.map((choice) => `${choice.id}:${choice.count}`).sort(),
-  riders: (derived.attackRiders ?? []).map((rider) => rider.key).sort(),
-});
-
-test("D313: the SRD modules alone derive the same sheets as the old channels", () => {
-  const next = newOnly();
-  const old = createCatalog([]);
-  assert.equal(next.classes.length, old.classes.length);
-  assert.equal(next.subclasses.length, old.subclasses.length);
-  assert.equal(next.spells.length, old.spells.length);
-  assert.equal(next.monsters.length, 329);
-  for (const [spec, prefer] of [
-    [{ name: "위", classes: "wizard", level: 5 }, {}],
-    [{ name: "워", classes: "warlock", level: 7 }, {}],
-    [{ name: "바", classes: "barbarian", level: 11 }, {}],
-    [{ name: "용", classes: "fighter", level: 5, species: "dragonborn" }, { "origin.species.draconicAncestry": ["green"] }],
-  ] as const) {
-    const made = build(spec, prefer as Record<string, string[]>);
-    assert.deepEqual(sheet(deriveCharacter(made.source, next)), sheet(made.derived), spec.name);
-  }
+test("D314: the builtin catalog is the SRD modules, and they hold the whole SRD", () => {
+  assert.deepEqual(BUILTIN_MODULES.map((module) => module.moduleId).sort(), ["dnd.srd-5.2.1.classes", "dnd.srd-5.2.1.core", "dnd.srd-5.2.1.equipment", "dnd.srd-5.2.1.monsters", "dnd.srd-5.2.1.origins", "dnd.srd-5.2.1.rules", "dnd.srd-5.2.1.spells"]);
+  const catalog = createCatalog([]);
+  assert.equal(catalog.classes.length, 12);
+  assert.equal(catalog.subclasses.length, 12);
+  assert.equal(catalog.species.length, 9);
+  assert.equal(catalog.backgrounds.length, 4);
+  assert.equal(catalog.feats.length, 17);
+  assert.equal(catalog.spells.length, 339);
+  assert.equal(catalog.monsters.length, 329);
+  assert.equal(Object.keys(catalog.skills).length, 18, "the vocabulary comes from a module too");
+  assert.ok(catalog.artisanToolIds.length > 0);
+  assert.ok(catalog.classes.every((cls) => cls.progression.length === 20), "every class has its twenty rows");
 });
 
 test("D313: a species trait is written whole and its choices as objects; the text is the source's", () => {
-  const next = newOnly();
-  const dragonborn = next.speciesById("dnd.srd521.species.dragonborn")!;
+  const dragonborn = createCatalog([]).speciesById("dnd.srd521.species.dragonborn")!;
   const breath = dragonborn.traits.find((trait) => trait.id.endsWith(".trait.breath-weapon"))!;
   assert.equal(breath.name, "숨결 무기", "the translation's own name");
   assert.ok((breath.description ?? "").length > 40, "and its text");
@@ -69,4 +45,12 @@ test("D313: a class feature entry id keeps the rule key its contracts are writte
   assert.equal(featureRuleKey("fighter.2.dnd.srd521.feature.fighter.action-surge"), "fighter.action-surge");
   assert.equal(featureRuleKey("fighter.2.fighter.action-surge"), "fighter.action-surge");
   assert.equal(featureRuleKey("tinker.1.test.d310.feature.tinker.sparks"), "test.d310.feature.tinker.sparks");
+});
+
+test("D314: SRD spells and monsters work before any catalog is built, from their modules", () => {
+  const sphere = spellExec("dnd.srd521.spell.flaming-sphere")!;
+  assert.ok(sphere, "the SRD spells module executes");
+  assert.equal(sustainOf(sphere)?.economy, "bonus-action", "with the repeat the old index carried");
+  assert.equal(traitRule(monsterById("dnd.srd521.monster.troll")!, "regeneration")?.rule.amount, 15, "a trait carries its rule");
+  assert.ok(monsterById("dnd.srd521.monster.fire-elemental"), "the repaired id");
 });

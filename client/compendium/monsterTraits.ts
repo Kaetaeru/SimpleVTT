@@ -1,13 +1,11 @@
 /**
  * H1 (V0.9, D238): monster trait rules. A stat-block trait says what it does as data — `traits[].rules`, a list of
  * generic patterns with their numbers — and the table runs the pattern. The engine never reads a trait's name or
- * sentence to guess its rule. SRD stat blocks get their rules from content/indexes/dnd-srd-5.2.1.monster-traits.json
- * (by monster id and the trait's English name), so an NPC saved before this still has them; a pasted or module
- * monster writes them itself (docs/guides/CUSTOM_NPC_JSON.md).
+ * sentence to guess its rule. Every stat block writes them on its traits — the SRD's in the SRD monsters module (D314),
+ * a pasted or module monster itself (docs/guides/CUSTOM_NPC_JSON.md).
  */
-import traitIndex from "../../content/indexes/dnd-srd-5.2.1.monster-traits.json";
 import type { AbilityKey } from "../catalog/types";
-import type { MonsterAction, MonsterView } from "./monsters";
+import { monsterById, type MonsterAction, type MonsterView } from "./monsters";
 
 export type TraitRule =
   /** Advantage on saving throws against spells. */
@@ -31,11 +29,15 @@ export type TraitRule =
 
 export const TRAIT_PATTERNS = ["magic-resistance", "legendary-resistance", "regeneration", "absorb", "hold-at-one-hp", "bloodied-advantage", "evasion", "aura-damage", "situational"] as const;
 
-const INDEX = (traitIndex as unknown as { monsters: Record<string, Record<string, TraitRule[]>> }).monsters;
-
-/** Every rule on a stat block with the trait that carries it — its own `rules`, or the SRD index for a stat block without them. */
+/**
+ * Every rule on a stat block with the trait that carries it — its own `rules`, or, for a block saved before its traits
+ * carried them (an NPC copied from the compendium earlier), the rules of the same trait on the compendium's block of
+ * that id.
+ */
 export function traitRules(block: Pick<MonsterView, "id" | "traits">): Array<{ trait: MonsterAction; rule: TraitRule }> {
-  return block.traits.flatMap((trait) => (trait.rules ?? INDEX[block.id]?.[trait.nameEn ?? trait.name] ?? []).map((rule) => ({ trait, rule })));
+  const current = monsterById(block.id);
+  const borrowed = (trait: MonsterAction) => (current && current.traits !== block.traits ? current.traits.find((item) => (item.nameEn ?? item.name) === (trait.nameEn ?? trait.name))?.rules : undefined);
+  return block.traits.flatMap((trait) => (trait.rules ?? borrowed(trait) ?? []).map((rule) => ({ trait, rule })));
 }
 
 /** The first rule of one pattern, typed. */

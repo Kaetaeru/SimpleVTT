@@ -73,14 +73,14 @@ export function gamingSetOptions(catalog: ContentCatalog, taken?: (id: string) =
 }
 
 export function artisanToolOptions(catalog: ContentCatalog, taken?: (id: string) => boolean): ChoiceOption[] {
-  return catalog.index.artisanToolIds.map((id) => ({ id, name: catalog.itemById(id)?.name ?? id, nameEn: catalog.itemById(id)?.nameEn, group: "장인 도구", ...(taken?.(id) ? { disabledReason: "이미 숙련" } : {}) }));
+  return catalog.artisanToolIds.map((id) => ({ id, name: catalog.itemById(id)?.name ?? id, nameEn: catalog.itemById(id)?.nameEn, group: "장인 도구", ...(taken?.(id) ? { disabledReason: "이미 숙련" } : {}) }));
 }
 
 /** Every tool proficiency a character can hold: artisan tools, other kits, instruments and gaming sets by variant. */
 export function allToolOptions(catalog: ContentCatalog, taken?: (id: string) => boolean): ChoiceOption[] {
   const variants = new Set(["musical-instrument", "gaming-set"]);
   const kits = catalog.items
-    .filter((item) => item.kind === "tool" && !catalog.index.artisanToolIds.includes(item.id) && !variants.has(item.id.split(".").pop() ?? ""))
+    .filter((item) => item.kind === "tool" && !catalog.artisanToolIds.includes(item.id) && !variants.has(item.id.split(".").pop() ?? ""))
     .map((item): ChoiceOption => ({ id: item.id, name: item.name, nameEn: item.nameEn, group: "기타 도구", ...(taken?.(item.id) ? { disabledReason: "이미 숙련" } : {}) }));
   return [...artisanToolOptions(catalog, taken), ...kits, ...instrumentOptions(catalog, taken), ...gamingSetOptions(catalog, taken)];
 }

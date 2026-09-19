@@ -3,8 +3,10 @@ import { join, relative, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * The new client (client/) may import only itself, the content data under content/, and the generated JSON catalogs under
- * src/generated/. Nothing from the old app (src/**.ts[x]) — the rebuild does not inherit the old adapters or screens.
+ * The new client (client/) may import only itself and modules under content/modules/srd-5.2.1. Nothing from the old
+ * app (src/**) — the rebuild does not inherit the old adapters or screens — and, since D314, none of the SRD's old
+ * channels either (src/generated catalogs, content/indexes, content/srd-extras, the old dnd-srd-5.2.1.* modules): the
+ * SRD is the modules built from its source, read the way any installed module is.
  */
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const clientRoot = join(root, "client");
@@ -20,7 +22,7 @@ function walk(dir) {
       if (!spec.startsWith(".")) continue;
       const target = resolve(dirname(path), spec);
       const rel = relative(root, target).replaceAll("\\", "/");
-      const ok = rel.startsWith("client/") || rel.startsWith("content/") || (rel.startsWith("src/generated/") && rel.endsWith(".json"));
+      const ok = rel.startsWith("client/") || rel.startsWith("content/modules/srd-5.2.1/");
       if (!ok) errors.push(`${relative(root, path)} imports ${spec} (${rel})`);
     }
   }

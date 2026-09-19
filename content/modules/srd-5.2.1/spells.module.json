@@ -24139,7 +24139,8 @@
       },
       "ritual": false,
       "reaction": {
-       "trigger": "attack.hit-self"
+       "trigger": "attack.hit-self",
+       "priority": 1
       }
      }
     }

@@ -266,7 +266,7 @@
 - `sustain`: `economy`(`action`/`bonus-action`/`none`) · `primary` · `note` · `move` · `target: "bound"`(처음 겨눈 대상에게만 — 빗나가도 묶인다) · `endWhen`(사람이 누르는 종료 버튼)
 - `onHit`: 무기 명중 직후 시전하는 강타류 (`weapon`, `damage`, `inflicts`, `save`, `versus`, `mark`)
 - `summon`: 소환 템플릿(`forms[].template`, 치환값 `{level}` `{attack}` `{dc}`)
-- `creatures`, `reaction`(`attack.hit-self`/`spell.cast-seen`), `repeatSave: "turn-end"`, `variants`(시전 때 고르는 갈래), `casterHealing`, `weaponSpell`
+- `creatures`, `reaction`(`attack.hit-self`/`spell.cast-seen`, 같은 순간에 답할 주문이 여럿이면 `priority`가 낮은 것부터 — D314), `repeatSave: "turn-end"`, `variants`(시전 때 고르는 갈래), `casterHealing`, `weaponSpell`
 - 아무 `spell-mechanic`이 없어도 시전은 된다(대상·슬롯·집중은 기록된다). 필요한 조각만 덧대도 된다.
 - **SRD 주문도 덮어쓴다 (D312)**: SRD 주문 id에 `primary`+`targeting`이 있는 메커닉을 쓰면 그것이 실행 전체를 대신하고, 조각만 쓰면(`onHit`·`sustain`·`summon`·`creatures`·`reaction`·`repeatSave`·`trackedEffects`·`weaponSpell`·`variants`·`effects`·`removesConditions`·`casterHealing`) SRD 실행 위에 얹힌다.
 
@@ -291,6 +291,7 @@
 |---|---|
 | `spell-definition` | `level, school, ritual, castingTimeText, rangeText, componentsText, durationText, summary, classes[]` |
 | `feat-definition` | `tier`(origin/general/fighting-style/epic-boon), `repeatable`, `minimumLevel`, `abilityPrerequisite`, `abilityIncrease`, `requires`, `grants[]`, `choices`, `execution.status`, `armorAcBonus`, `rangedWeaponAttackBonus`, `damageDieMinimum`+`weaponPropertiesAny`, `oncePerTurn`, `lightExtraAttackAbilityModifier`, `resistances[]`, `languages[]`, `speedBonus`, `hitPointsPerLevel`, `truesight`, `darkvision`, `<x>SaveProficiency`, `proficiencyChoice`, `expertiseChoice`, `allSkillProficiencies`, `saveProficiencyChoice`, `resistanceChoice`, `ignoreResistanceChoice`, `weaponMasteryChoice`, `grantCantrips[]`, `grantSpells[]`, `grantSpellChoice`, `grantSpellAbility`, `freeCastReset`, `resources[]` |
+| `vocabulary-definition` (D314) | `skills`(id → 이름), `standardLanguages[]`·`generalLanguages[]`(`{ id, name, nameEn }`), `artisanToolIds[]` — 캐릭터를 만드는 어휘. 여러 모듈의 것이 합쳐진다(SRD는 `core` 모듈) |
 | `class-definition` | `hitDie`, `primaryAbilities[]`, `savingThrowProficiencies[]`, `armorTraining[]`, `weaponTraining[]`, `toolProficiencies[]`, `multiclass`, `spellcastingAbility`, `spellcastingFeature`, `resources[]`, `optionPools[]`, 그리고 D310: `casterKind`(`full`/`half`/`pact`/`none`), `levels[]`(아래), `skillOptions`(`{count, options}`), `level1Choices[]`, `spells`(`cantrips`·`prepared`·`spellbook`·`spellbookPerLevel`·`preparedFromSpellbook`), `multiclassGrants[]` |
 | `monster-definition` (분류 `combatant`, D311) | 붙여넣기 NPC와 같은 형식(`docs/guides/CUSTOM_NPC_JSON.md`: `ac`·`hp`·`abilities`·`cr`·`traits[].rules`·`actions[]` …, 이름은 항목의 이름) 또는 `{ "statBlock": { … } }`(표가 쓰는 스탯블록 그대로). 같은 id의 SRD 괴물을 대신한다 |
 | `subclass-definition` | `spells`(레벨→주문 id 또는 영어 이름), `choices[]`, `spellsByOption`, `spellcasting`(1/3 시전자, 아래), `optionPools[]`(아래) |
@@ -308,7 +309,7 @@
   { "level": 4, "features": [{ "role": "asi", "name": "능력치 향상" }], "columns": { … } } ] }
 ```
 
-- `features`: 특성 항목 id(그 항목의 이름·글·계약을 쓴다), 또는 표 자체의 줄 `{ role }` — `subclass`(서브클래스 고르기), `asi`, `epic-boon`, `subclass-feature`(서브클래스 특성이 붙는 자리).
+- `features`: 특성 항목 id(그 항목의 이름·글·계약을 쓴다), 또는 표 자체의 줄 `{ role, name, nameEn, description }` — `subclass`(서브클래스 고르기), `asi`, `epic-boon`, `subclass-feature`(서브클래스 특성이 붙는 자리). SRD 직업표도 이렇게 쓴다(D314) — 엔진은 줄 이름을 읽지 않는다.
 - `columns`: 열 이름은 표 어휘(`소마법`, `준비 주문`, 슬롯 레벨 `"1"`~`"9"`, `계약 슬롯`, `슬롯 레벨`, `무기 통달`, …) 또는 직업이 정한 이름 — 자원(`resources[].column`)과 선택지 풀(`optionPools[].column`)이 그 이름으로 읽는다.
 - `proficiencyBonus`는 생략하면 레벨로 계산한다.
 

@@ -1,0 +1,222 @@
+{
+ "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+ "schemaVersion": "0.1-draft",
+ "moduleVersion": "1",
+ "rulesProfile": {
+  "id": "dnd.srd-5.2.1",
+  "version": "0.1-draft"
+ },
+ "defaultLocale": "ko-KR",
+ "source": {
+  "document": "System Reference Document",
+  "version": "5.2.1",
+  "license": "CC-BY-4.0",
+  "srdDerived": true
+ },
+ "localizationSource": {
+  "defaultLocale": "ko-KR",
+  "repository": "Kaetaeru/D-D-2024-",
+  "srdPathRoot": "10-RULEBOOKS/srd-5.2.1/"
+ },
+ "dependencies": [],
+ "conflicts": [],
+ "capabilities": [],
+ "extensionPoints": [],
+ "moduleId": "dnd.srd-5.2.1.core",
+ "content": [
+  {
+   "id": "dnd.srd521.vocabulary",
+   "category": "option",
+   "tags": [
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "SRD vocabulary",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "SRD 어휘"
+     },
+     "en": {
+      "name": "SRD vocabulary"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "vocabulary-definition",
+     "config": {
+      "skills": {
+       "acrobatics": "곡예",
+       "animal-handling": "동물 조련",
+       "arcana": "비전",
+       "athletics": "운동",
+       "deception": "기만",
+       "history": "역사",
+       "insight": "통찰",
+       "intimidation": "위협",
+       "investigation": "조사",
+       "medicine": "의학",
+       "nature": "자연",
+       "perception": "지각",
+       "performance": "공연",
+       "persuasion": "설득",
+       "religion": "종교",
+       "sleight-of-hand": "손재주",
+       "stealth": "은신",
+       "survival": "생존"
+      },
+      "standardLanguages": [
+       {
+        "id": "common-sign-language",
+        "name": "공용 수어",
+        "nameEn": "Common Sign Language"
+       },
+       {
+        "id": "draconic",
+        "name": "용언어",
+        "nameEn": "Draconic"
+       },
+       {
+        "id": "dwarvish",
+        "name": "드워프어",
+        "nameEn": "Dwarvish"
+       },
+       {
+        "id": "elvish",
+        "name": "엘프어",
+        "nameEn": "Elvish"
+       },
+       {
+        "id": "giant",
+        "name": "거인어",
+        "nameEn": "Giant"
+       },
+       {
+        "id": "gnomish",
+        "name": "노움어",
+        "nameEn": "Gnomish"
+       },
+       {
+        "id": "goblin",
+        "name": "고블린어",
+        "nameEn": "Goblin"
+       },
+       {
+        "id": "halfling",
+        "name": "하플링어",
+        "nameEn": "Halfling"
+       },
+       {
+        "id": "orc",
+        "name": "오크어",
+        "nameEn": "Orc"
+       }
+      ],
+      "generalLanguages": [
+       {
+        "id": "common-sign-language",
+        "name": "공용 수어",
+        "nameEn": "Common Sign Language"
+       },
+       {
+        "id": "draconic",
+        "name": "용언어",
+        "nameEn": "Draconic"
+       },
+       {
+        "id": "dwarvish",
+        "name": "드워프어",
+        "nameEn": "Dwarvish"
+       },
+       {
+        "id": "elvish",
+        "name": "엘프어",
+        "nameEn": "Elvish"
+       },
+       {
+        "id": "giant",
+        "name": "거인어",
+        "nameEn": "Giant"
+       },
+       {
+        "id": "gnomish",
+        "name": "노움어",
+        "nameEn": "Gnomish"
+       },
+       {
+        "id": "goblin",
+        "name": "고블린어",
+        "nameEn": "Goblin"
+       },
+       {
+        "id": "halfling",
+        "name": "하플링어",
+        "nameEn": "Halfling"
+       },
+       {
+        "id": "orc",
+        "name": "오크어",
+        "nameEn": "Orc"
+       },
+       {
+        "id": "abyssal",
+        "name": "심연어",
+        "nameEn": "Abyssal"
+       },
+       {
+        "id": "celestial",
+        "name": "천상어",
+        "nameEn": "Celestial"
+       },
+       {
+        "id": "deep-speech",
+        "name": "심층어",
+        "nameEn": "Deep Speech"
+       },
+       {
+        "id": "infernal",
+        "name": "지옥어",
+        "nameEn": "Infernal"
+       },
+       {
+        "id": "primordial",
+        "name": "원시어",
+        "nameEn": "Primordial"
+       },
+       {
+        "id": "sylvan",
+        "name": "실반어",
+        "nameEn": "Sylvan"
+       },
+       {
+        "id": "undercommon",
+        "name": "지하공용어",
+        "nameEn": "Undercommon"
+       }
+      ],
+      "artisanToolIds": [
+       "dnd.srd521.item.tool.alchemists-supplies",
+       "dnd.srd521.item.tool.brewers-supplies",
+       "dnd.srd521.item.tool.calligraphers-supplies",
+       "dnd.srd521.item.tool.carpenters-tools",
+       "dnd.srd521.item.tool.cartographers-tools",
+       "dnd.srd521.item.tool.cobblers-tools",
+       "dnd.srd521.item.tool.cooks-utensils",
+       "dnd.srd521.item.tool.glassblowers-tools",
+       "dnd.srd521.item.tool.jewelers-tools",
+       "dnd.srd521.item.tool.leatherworkers-tools",
+       "dnd.srd521.item.tool.masons-tools",
+       "dnd.srd521.item.tool.painters-supplies",
+       "dnd.srd521.item.tool.potters-tools",
+       "dnd.srd521.item.tool.smiths-tools",
+       "dnd.srd521.item.tool.tinkers-tools",
+       "dnd.srd521.item.tool.weavers-tools",
+       "dnd.srd521.item.tool.woodcarvers-tools"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
