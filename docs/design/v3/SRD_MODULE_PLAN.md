@@ -80,6 +80,14 @@ CLAUDE.md §1.6(설치 모듈도 SRD와 똑같이 동작)과 §2(규칙은 JSON�
 | S5 | 내장 로딩을 새 모듈로 전환, 옛 경로(`indexes`·`srd-extras`·생성 카탈로그·옛 모듈·`src/domain` 주문 추측) 삭제 | 게이트, `createCatalog` 입력이 모듈뿐 |
 | S6 | 내용 교정: 주문 감사 85건, 재주·종족·직업 특성을 원문과 대조, 표 검증 `--builtin` | 감사 0건(사유 있는 예외만 목록), 표 검증 거절 0 |
 
+### S4 진행
+
+| 영역 | 결정 | 모듈 | 나란히 비교 |
+|---|---|---|---|
+| 주문 339 ✔ | `content/srd-authoring/spells.json` (실행 + 색인 8종 조각 + 직업 목록) | `content/modules/srd-5.2.1/spells.module.json` | 차이 0 (설명문은 원문에서 평문으로 — 옛 글의 `**`·잘린 끝 `*`가 사라짐) |
+
+도구: `npx tsx scripts/srd-export-decisions.ts <영역>`(1회, 옛 경로 → 결정), `node scripts/srd-build-modules.mjs <parsed.json>`(원문 + 결정 → 모듈), `npx tsx scripts/srd-compare.ts <영역>`(새 모듈 vs 옛 카탈로그).
+
 S4의 나란히 비교가 핵심 안전장치다 — 전환 전에 옛 SRD와 새 SRD가 같은 캐릭터를 같게 만드는지 본다. 차이는 전부 원문 대조로 판정한다(옛 쪽이 틀렸으면 S6 목록으로).
 
 ## 7. 지켜야 할 것
