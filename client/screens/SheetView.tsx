@@ -113,7 +113,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
               <Explain terms={terms} total={ability.score} label={`${ABILITY_KO[key]} 점수`}><div className="cl-score">{ability.score}</div></Explain>
               <div className="cl-mod">{signed(ability.modifier)}</div>
               <Explain terms={derived.saves[key].terms} total={derived.saves[key].bonus} label={`${ABILITY_KO[key]} 내성`}><div className="cl-small cl-quiet">내성 {signed(derived.saves[key].bonus)}{derived.saves[key].proficient ? " ●" : ""}</div></Explain>
-              {live ? <div className="cl-row" style={{ gap: 3 }}><RollButton label="판정" onClick={() => actions!.roll(`${ABILITY_KO[key]} 판정`, d20(ability.modifier, derived.checkTerms), undefined, "check")} /><RollButton label="내성" onClick={() => actions!.roll(`${ABILITY_KO[key]} 내성`, d20(derived.saves[key].bonus), undefined, "save")} /></div> : null}
+              {live ? <div className="cl-row" style={{ gap: 3 }}><RollButton label="판정" onClick={() => actions!.roll(`${ABILITY_KO[key]} 판정`, d20(ability.modifier, derived.checkTerms.filter((term) => !term.abilities || term.abilities.includes(key))), undefined, "check")} /><RollButton label="내성" onClick={() => actions!.roll(`${ABILITY_KO[key]} 내성`, d20(derived.saves[key].bonus), undefined, "save")} /></div> : null}
             </div>
           );
         })}

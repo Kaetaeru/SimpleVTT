@@ -88,7 +88,7 @@ export interface DerivedFeature {
 }
 
 /** One addend of a derived number, so the sheet can show where it came from ("민첩 +2", "숙련 보너스 +3"). */
-export interface Term { label: string; value: number; /** Dice added instead of a number ("1d4" from Bless); value stays 0. */ dice?: string }
+export interface Term { label: string; value: number; /** Dice added instead of a number ("1d4" from Bless); value stays 0. */ dice?: string; /** A check term for these abilities only (D319); every check when absent. */ abilities?: AbilityKey[] }
 
 /** A feature or spell in effect (Rage, Bless): ended by its "종료" button, by the round counter, or by a rest. */
 /** V4d (D266): hold at `hp` instead of dropping to 0 — after a save whose DC grows with each use, paying a pool, while an effect runs. */

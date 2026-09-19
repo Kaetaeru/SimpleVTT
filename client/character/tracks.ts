@@ -22,7 +22,7 @@ import type { ClassState, Ledger } from "./ledger";
 import { resolveToolId } from "./origin";
 import { applyClassSpellcasting, classSpellEntry } from "./spells";
 
-export const RECOVERY_KO: Record<string, string> = { "short-rest": "짧은 휴식", "long-rest": "긴 휴식", "short-rest:1": "긴 휴식 (짧은 휴식마다 1회 회복)", "short-rest:half": "긴 휴식 (짧은 휴식에 절반 회복)" };
+export const RECOVERY_KO: Record<string, string> = { "short-rest": "짧은 휴식", "long-rest": "긴 휴식", "short-rest:1": "긴 휴식 (짧은 휴식마다 1회 회복)", "short-rest:half": "긴 휴식 (짧은 휴식에 절반 회복)", "short-or-long-rest": "짧은 휴식" };
 
 const featContext = (ledger: Ledger, hasFightingStyle = false): FeatContext => ({
   level: ledger.level,
@@ -234,7 +234,7 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
     if (classLevel) return [...ledger.classes.values()].find((state) => state.classId === classLevel[1])?.level ?? 0;
     return undefined;
   };
-  const strings = (value: unknown) => (Array.isArray(value) ? value.map(String) : []);
+  const strings = (value: unknown) => (Array.isArray(value) ? value.map(String) : typeof value === "string" && value ? [value] : []);
   for (const operation of (contract?.entryPoints ?? []).filter((entry) => entry.invocation === GAIN_INVOCATION).flatMap((entry) => entry.operations)) {
     if (operation.kind !== "property.modify") continue;
     const p = operation.params ?? {};

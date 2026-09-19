@@ -27,7 +27,7 @@ export interface EffectApplication {
   damage?: { value?: number; dice?: string; filter?: (attack: DerivedAttack) => boolean };
   saves?: { value?: number; dice?: string; keys?: AbilityKey[] };
   /** Every ability check and skill. */
-  checks?: { value?: number; dice?: string };
+  checks?: { value?: number; dice?: string; keys?: AbilityKey[] };
   skills?: Array<{ id: string; value: number }>;
   speed?: { add?: number; multiply?: number; fly?: number; climbAsWalk?: boolean; flyAsWalk?: boolean; /** D300: a swimming speed, or one equal to the walking speed. */ swim?: number; swimAsWalk?: boolean };
   hpMax?: number;
@@ -327,9 +327,10 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
       notes.push(`내성 ${describe(keys.length === 6 ? "전부" : keys.join("/"), application.saves.value, application.saves.dice)}`);
     }
     if (application.checks) {
+      const keys = application.checks.keys;
       const extra = term(label, application.checks.value, application.checks.dice);
-      if (extra) next = { ...next, checkTerms: [...next.checkTerms, extra], skills: next.skills.map((skill) => ({ ...skill, terms: [...skill.terms, extra], bonus: sum([...skill.terms, extra]) })) };
-      notes.push(`능력 판정 ${describe("전부", application.checks.value, application.checks.dice)}`);
+      if (extra) next = { ...next, checkTerms: [...next.checkTerms, keys ? { ...extra, abilities: keys } : extra], skills: next.skills.map((skill) => keys && !keys.includes(skill.ability) ? skill : ({ ...skill, terms: [...skill.terms, extra], bonus: sum([...skill.terms, extra]) })) };
+      notes.push(`능력 판정 ${describe(keys ? keys.join("/") : "전부", application.checks.value, application.checks.dice)}`);
     }
     if (application.skills) {
       next = { ...next, skills: next.skills.map((skill) => { const bonus = application.skills!.find((item) => item.id === skill.id); return bonus ? { ...skill, terms: [...skill.terms, { label, value: bonus.value }], bonus: skill.bonus + bonus.value } : skill; }) };

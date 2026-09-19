@@ -118,7 +118,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.bonus": application.attack = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) }; break;
       case "damage.bonus": application.damage = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) }; break;
       case "saving-throw.bonus": application.saves = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(operation.abilities ? { keys: operation.abilities as AbilityKey[] } : {}) }; break;
-      case "ability-check.bonus": application.checks = operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }; break;
+      case "ability-check.bonus": application.checks = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(operation.abilities?.length ? { keys: operation.abilities as AbilityKey[] } : {}) }; break;
 
       case "speed.walk": application.speed = { ...application.speed, ...(operation.operation === "multiply" ? { multiply: number(operation, scope) } : { add: (application.speed?.add ?? 0) + (number(operation, scope) ?? 0) }) }; break;
       case "speed.fly": application.speed = { ...application.speed, fly: number(operation, scope) }; break;

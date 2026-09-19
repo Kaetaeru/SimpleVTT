@@ -157,7 +157,7 @@
 형태: `{"kind":"property.modify","property":"<이름>","operation":"add"|"set"|"multiply"|"minimum","value":<식>,"dice":"1d4","diceSides":<식>,"scope":"<공격 필터>","abilities":["con"],"damageTypes":["화염"],"params":{…},"note":"시트에 보일 한 줄"}`
 
 - **방어·체력**: `ac.bonus` `ac.unarmored-base` `ac.minimum` `hp.maximum` `hp.heal-on-start` `hp.zero.hold` `damage-taken.reduce` `damage-taken.halve` `resistance` `condition-immunity`
-- **굴림**: `attack-roll.bonus` `damage.bonus` `saving-throw.bonus` `ability-check.bonus` `skill.<id>.bonus` `skill.<id>.expertise` `skill.<id>.advantage` `attack-roll.advantage` `ability-check.advantage` `saving-throw.advantage` `saving-throw.advantage-vs-condition`(`params.conditions`) `attack-roll.crit-range` `attack-roll.ignore-cover` `attack-roll.against-me.advantage` `attack-roll.against-me.no-advantage` `attack-roll.against-me.opportunity-disadvantage` `attack-roll.against-me.after-hit-disadvantage` `ability-check.minimum-d20` `ability-check.minimum-score` `saving-throw.minimum-score` `saving-throw.evasion` `saving-throw.concentration-advantage`(D318) `death-save.advantage` `death-save.crit-range` `initiative.advantage` `initiative.extra-turn` `heroic-inspiration.gain`
+- **굴림**: `attack-roll.bonus` `damage.bonus` `saving-throw.bonus` `ability-check.bonus`(`abilities`가 있으면 그 능력치 판정과 그 능력치 기술에만 — D319) `skill.<id>.bonus` `skill.<id>.expertise` `skill.<id>.advantage` `attack-roll.advantage` `ability-check.advantage` `saving-throw.advantage` `saving-throw.advantage-vs-condition`(`params.conditions`) `attack-roll.crit-range` `attack-roll.ignore-cover` `attack-roll.against-me.advantage` `attack-roll.against-me.no-advantage` `attack-roll.against-me.opportunity-disadvantage` `attack-roll.against-me.after-hit-disadvantage` `ability-check.minimum-d20` `ability-check.minimum-score` `saving-throw.minimum-score` `saving-throw.evasion` `saving-throw.concentration-advantage`(D318) `death-save.advantage` `death-save.crit-range` `initiative.advantage` `initiative.extra-turn` `heroic-inspiration.gain`
 - **이동·감각**: `speed.walk` `speed.fly` `speed.climb` `speed.fly-as-walk` `speed.swim` `speed.swim-as-walk` `senses.darkvision` `senses.blindsight`
 - **주문**: `spell.save-dc` `spell.attack-roll.bonus` `spell.cantrip-damage.ability-modifier` `spell.cantrip-potent` `spell.damage.maximize`(`params.class`) `spell.damage.ability-modifier` `spell.damage-type.ability-modifier`(`damageTypes`, `params.class`) `spell.school-damage.ability-modifier`(`school`) `spell.metamagic` `spell.metamagic-limit` `spell.metamagic-free` `healing.maximize` `healing.spell-slot-bonus` `healing.self-on-slot-heal` `concentration.damage-immune` `marked-spell.die` `marked-spell.advantage` `marked-spell.reveal-defenses`(`spell`)
 - **공격 횟수·무기**: `attack-action.attacks` `damage.extra-die` `damage.reroll-lowest` `damage.die-minimum` `damage.ignore-resistance` `weapon.shillelagh`(`params.items`, `dice`)
@@ -182,8 +182,8 @@
 | `choice.spells` | `id, label, classes[], levels[], into: "alwaysPrepared"\|"cantrips", ritual?` |
 | `choice.class-option` | `list`(내장 목록 키 또는 모듈이 `option-list-definition`으로 선언한 목록, D303) |
 | `choice.fighting-style` | `extra[]` |
-| `grant.resource` | `id, label, recovery, minLevel?, spell?/spells?/maxLevel?, atWill?` · `value`=최대치(식) |
-| `grant.spells` | `spells[], into` |
+| `grant.resource` | `id, label, recovery`(`long-rest` `short-rest` `short-or-long-rest` `short-rest:1` `short-rest:half`)`, minLevel?, spell?/spells?/maxLevel?, atWill?` · `value`=최대치(식) |
+| `grant.spells` | `spells[]`(id 하나도 된다 — D319)`, into` |
 | `grant.spell-lists` | `classes[]`(직업 slug) — 그 직업들의 목록에서도 준비한다(D305) |
 | `grant.cantrips` | (값=개수) |
 | `grant.spellbook-picks` | `id, label, school` |
