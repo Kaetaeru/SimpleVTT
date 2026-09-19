@@ -30,7 +30,7 @@ export interface TableOutcome {
   /** V4d (D266): effects the chosen creatures carry, with the rescue die they may spend (바드의 영감). */
   effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>;
   /** V4b (D264): conditions the chosen creatures save against (언데드 퇴치, 적 퇴치). */
-  conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end" }>;
+  conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end"; /** D318: more conditions the same save decides. */ also?: string[] }>;
   /** V4a (D263): damage the use deals to the chosen creatures, rolled once, with the save that resists it. */
   strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>;
 }
@@ -63,7 +63,13 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
       if (operation.kind === "effect.apply" && atOthers(operation.target)) { const sides = operation.template.rescueDie ? Number(evaluate(operation.template.rescueDie, scope)) : undefined; effects.push({ name: operation.template.name ?? contract.id, duration: operation.template.duration ?? "", ...(operation.template.rounds !== undefined ? { rounds: operation.template.rounds } : {}), ...(sides ? { rescueDice: `1d${sides}` } : {}) }); continue; }
       // V4c (D265): points chosen on the sheet may heal somebody else (안수).
       if (operation.kind === "resource.change" && "ref" in operation.amount && operation.amount.ref === CHOSEN_POINTS_REF) { party.healPoints = derived.resources.find((resource) => resource.id === operation.resourceId)?.max ?? 0; continue; }
-      if (operation.kind === "condition.apply" && operation.target !== "self" && operation.save) { conditionSaves.push({ condition: operation.condition, ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10, ...(operation.duration ? { duration: operation.duration } : {}), ...(operation.repeatSave ? { repeatSave: operation.repeatSave } : {}) }); continue; }
+      if (operation.kind === "condition.apply" && operation.target !== "self" && operation.save) {
+        const rule = { condition: operation.condition, ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10, ...(operation.duration ? { duration: operation.duration } : {}), ...(operation.repeatSave ? { repeatSave: operation.repeatSave } : {}) };
+        // D318: one use asking the same save twice is one save — 언데드 퇴치's fear and incapacitation land together.
+        const same = conditionSaves.find((item) => item.ability === rule.ability && item.dc === rule.dc && JSON.stringify(item.duration) === JSON.stringify(rule.duration) && item.repeatSave === rule.repeatSave);
+        if (same) same.also = [...(same.also ?? []), rule.condition]; else conditionSaves.push(rule);
+        continue;
+      }
       if (operation.kind === "condition.apply" && operation.target !== "self") { applied.push(operation.condition); continue; }
       if (operation.kind === "condition.apply") { selfMarks.push(operation.condition); continue; }
       // V3f (D260): a condition the use takes off the people it is aimed at.

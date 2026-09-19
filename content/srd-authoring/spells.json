@@ -12897,19 +12897,21 @@
     "directTarget": true
    },
    "primary": {
-    "kind": "save-effect",
+    "kind": "save-damage",
     "saveAbility": "int",
-    "summary": "반신, 오래전에 죽은 현자의 영혼 또는 다른 차원의 지식 있는 존재에게 정신적으로 접촉한다. 이계의 지성체와 접촉하면 정신이 무너질 수 있다. 주문을 시전할 때 DC 15 지능 내성 굴림을 한다.",
-    "duration": {
-     "kind": "minutes",
-     "amount": 1
-    }
+    "saveDc": 15,
+    "damageType": "psychic",
+    "dice": {
+     "count": 6,
+     "sides": 6
+    },
+    "successDamage": "none"
    },
    "concentration": false,
    "trackedEffects": [
     {
-     "summary": "반신, 오래전에 죽은 현자의 영혼 또는 다른 차원의 지식 있는 존재에게 정신적으로 접촉한다. 이계의 지성체와 접촉하면 정신이 무너질 수 있다. 주문을 시전할 때 DC 15 지능 내성 굴림을 한다.",
-     "trigger": "failed-save",
+     "summary": "실패하면 긴 휴식이 끝날 때까지 행동불능 — 긴 휴식 뒤 해제(수동 처리 필요) · 성공하면 질문 다섯 개(DM 판정)",
+     "trigger": "always",
      "duration": {
       "kind": "minutes",
       "amount": 1
@@ -12922,7 +12924,16 @@
     "somatic": false
    },
    "ritual": true,
-   "castingDurationSeconds": 60
+   "castingDurationSeconds": 60,
+   "effects": [
+    {
+     "conditionId": "incapacitated",
+     "trigger": "failed-save",
+     "duration": {
+      "kind": "special"
+     }
+    }
+   ]
   }
  },
  "dnd.srd521.spell.planar-binding": {

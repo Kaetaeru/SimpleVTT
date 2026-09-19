@@ -267,6 +267,8 @@ export interface DerivedCharacter {
   critRange?: number;
   /** R95 (D230): 회피술. */
   evasion?: boolean;
+  /** D318: advantage on concentration saves. */
+  concentrationAdvantage?: boolean;
   /** R96 (D231): see EffectApplication. */
   cantripModifierClasses?: string[];
   healingSlotBonus?: boolean;

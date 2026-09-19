@@ -50,6 +50,8 @@ export interface Combatant {
   exhaustion?: number;
   /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
   evasion?: boolean;
+  /** D318: rolls its concentration saves with advantage. */
+  concentrationAdvantage?: boolean;
   /** R96 (D231): 포착 불가 — attacks against it cannot have advantage while it is not incapacitated. */
   elusive?: boolean;
   /** R31 (D161): 마법 저항 — advantage on saving throws against spells and other magical effects. */
@@ -518,7 +520,8 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
   let concentration: AttackResolution["concentration"];
   if (damageTotal > 0 && target.concentration) {
     const dc = Math.max(10, Math.floor(damageTotal / 2));
-    const d20 = dice.d(20);
+    const first = dice.d(20);
+    const d20 = target.concentrationAdvantage ? Math.max(first, dice.d(20)) : first;
     const total = d20 + target.conSave;
     concentration = { effect: target.concentration, dc, d20, total, success: total >= dc };
   }

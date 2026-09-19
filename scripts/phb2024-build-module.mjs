@@ -16,8 +16,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { createCatalog } from "../client/catalog/index.ts";
 
-const [parsedPath, oldPath, out] = process.argv.slice(2);
-if (!parsedPath || !oldPath || !out) { console.error("usage: npx tsx scripts/phb2024-build-module.mjs <phb-parsed.json> <old module.json> <out module.json>"); process.exit(2); }
+const [parsedPath, oldPath, out, patchesPath] = process.argv.slice(2);
+if (!parsedPath || !oldPath || !out) { console.error("usage: npx tsx scripts/phb2024-build-module.mjs <phb-parsed.json> <old module.json> <out module.json> [patches.json]"); process.exit(2); }
 
 const parsed = JSON.parse(readFileSync(parsedPath, "utf8"));
 const old = JSON.parse(readFileSync(oldPath, "utf8"));
@@ -441,6 +441,24 @@ for (const [id, name, originalName] of [["phb2024.item.chef-treat", "요리사�
 
 // Effects the subclass features start keep their ids (their contracts are keyed `feature:<effect>`), so they come along whole.
 for (const effect of old.content.filter((item) => item.id.startsWith("effect.phb2024.") && !item.id.startsWith("effect.phb2024.aasimar."))) add("subclass-effect", structuredClone(effect));
+
+/**
+ * D318: the corrections a review of the module against its source decided, kept outside the repository with the
+ * source (`[{ entryId, kind, config }]` — the whole new config of that mechanic on that entry). Applied last, so a
+ * rebuild keeps them; an entry or a patch that no longer matches is a problem, not a silent skip.
+ */
+if (patchesPath) {
+  const patches = JSON.parse(readFileSync(patchesPath, "utf8"));
+  const byEntry = new Map(content.map((entry) => [entry.id, entry]));
+  for (const patch of patches) {
+    const entry = byEntry.get(patch.entryId);
+    if (!entry) { problems.push(`패치: ${patch.entryId} 항목이 없다`); continue; }
+    const at = (entry.mechanics ?? []).findIndex((item) => item.kind === patch.kind);
+    if (at >= 0) entry.mechanics[at] = { ...entry.mechanics[at], config: patch.config };
+    else entry.mechanics = [...(entry.mechanics ?? []), { kind: patch.kind, config: patch.config }];
+  }
+  decisions.push(`패치 ${patches.length}개 적용 (${patchesPath})`);
+}
 
 const { content: _unused, ...header } = old;
 const module = { ...header, moduleId: "phb-2024", moduleVersion: "1", source: { ...header.source, version: "2024" }, content };

@@ -98,6 +98,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     // R28 (D147): exhaustion reaches the dice at last.
     exhaustion: runtime.exhaustion,
     ...(derived.evasion ? { evasion: true } : {}),
+    ...(derived.concentrationAdvantage ? { concentrationAdvantage: true } : {}),
     ...(derived.elusive ? { elusive: true } : {}),
     ...(derived.opportunityDisadvantage?.length ? { opportunityDisadvantage: derived.opportunityDisadvantage } : {}),
     ...(derived.hitDefense ? { hitDefense: derived.hitDefense } : {}),

@@ -150,6 +150,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.against-me.advantage": application.grantsAdvantage = [...(application.grantsAdvantage ?? []), operation.note ?? ""]; break;
       case "attack-roll.ignore-cover": application.ignoresCover = true; break;
       case "saving-throw.evasion": application.evasion = true; break;
+      // D318: advantage on the Constitution save that keeps concentration (섬뜩한 정신, 전쟁 시전자).
+      case "saving-throw.concentration-advantage": application.concentrationAdvantage = true; break;
       case "spell.cantrip-damage.ability-modifier": application.cantripModifierClasses = [...(application.cantripModifierClasses ?? []), text(operation, scope) ?? ""]; break;
       case "healing.spell-slot-bonus": application.healingSlotBonus = true; break;
       case "initiative.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], skills: ["initiative"] }]; break;

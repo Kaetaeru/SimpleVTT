@@ -151,7 +151,10 @@ export interface CastInput {
 
 /** Resolve the spell against every target. */
 export function resolveSpell(input: CastInput): SpellResolution {
-  const { spec, caster, casterStats } = input;
+  const { spec, caster } = input;
+  // D318: a spell whose save has its own DC (이계 접촉: 15) rather than the caster's.
+  const fixedDc = (spec.exec.primary as { saveDc?: unknown }).saveDc;
+  const casterStats = typeof fixedDc === "number" ? { ...input.casterStats, saveDc: fixedDc } : input.casterStats;
   // V3g (D261): 과부하 — damage dice at their maximum. ponytail: a d20 still rolls, since no SRD damage die is a d20.
   const dice: DiceSource = casterStats.damageMaximized ? { ...input.dice, d: (sides: number) => (sides === 20 ? input.dice.d(20) : sides) } : input.dice;
   const exec = spec.exec;

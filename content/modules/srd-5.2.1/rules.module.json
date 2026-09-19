@@ -8320,8 +8320,12 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "DM 판정 (집중 내성에 유리를 주는 자리가 없음): 집중 유지 내성에 유리"
+          "kind": "property.modify",
+          "property": "saving-throw.concentration-advantage",
+          "operation": "set",
+          "value": {
+           "value": true
+          }
          }
         ]
        }

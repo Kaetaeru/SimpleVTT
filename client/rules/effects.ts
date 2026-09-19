@@ -53,6 +53,8 @@ export interface EffectApplication {
   critRange?: number;
   /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
   evasion?: boolean;
+  /** D318: advantage on concentration saves. */
+  concentrationAdvantage?: boolean;
   /** R96 (D231): class slugs whose cantrips add the spellcasting modifier to damage (강력한 주문 시전). */
   cantripModifierClasses?: string[];
   /** R96 (D231): a healing spell cast with a slot heals 2 + the slot level more (생명의 제자). */
@@ -463,6 +465,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.schoolDamageModifier?.length) { next = { ...next, schoolDamageModifier: [...(next.schoolDamageModifier ?? []), ...application.schoolDamageModifier] }; notes.push("그 학파 주문 피해 한 번에 주문 능력 수정치"); }
     if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }
     if (application.evasion) { next = { ...next, evasion: true }; notes.push("회피술: 민첩 내성 절반 피해 — 성공 0, 실패 절반"); }
+    if (application.concentrationAdvantage) { next = { ...next, concentrationAdvantage: true }; notes.push("집중 유지 건강 내성에 유리"); }
     if (application.critRange !== undefined) { next = { ...next, critRange: Math.min(next.critRange ?? 20, application.critRange) }; notes.push(`치명타 범위 ${application.critRange}–20`); }
     if (application.attackActionAttacks !== undefined) { next = { ...next, attackActionAttacks: Math.max(next.attackActionAttacks ?? 1, application.attackActionAttacks) }; notes.push(`공격 행동에 ${application.attackActionAttacks}번 공격`); }
     const mechanical = Object.keys(application).some((field) => field !== "notes" && application[field as keyof typeof application] !== undefined);
