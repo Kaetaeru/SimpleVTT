@@ -198,9 +198,12 @@ export function sustainedExec(exec: SpellExec): SpellExec | null {
   return { ...rest, ...(needsCreature ? { targeting: { ...exec.targeting, kind: "creature" as const, minTargets: 1, maxTargets: 1 } } : {}), primary: sustain.primary ?? exec.primary, castingEconomy: sustain.economy === "bonus-action" ? "bonus-action" : "action", repeat: { economy: sustain.economy } };
 }
 
-/** R76 (D211): spells the generated catalog does not know — an installed module's, and any spell with no mechanics at all. */
+/**
+ * R76 (D211): spells the generated catalog does not know — an installed module's, and any spell with no mechanics at
+ * all. D312: also an SRD spell a module writes a `spell-mechanic` for — the module's execution wins.
+ */
 const installed = new Map<string, SpellExec>();
-export const spellExec = (spellId: string): SpellExec | undefined => byId.get(spellId) ?? installed.get(spellId);
+export const spellExec = (spellId: string): SpellExec | undefined => installed.get(spellId) ?? byId.get(spellId);
 
 /** What the catalog knows about a spell: its text, and the `spell-mechanic` config its module may carry. */
 export interface CatalogSpell { id: string; level: number; castingTime: string; range: string; duration: string; ritual: boolean; summary?: string; mechanic?: Record<string, unknown> }
@@ -233,20 +236,43 @@ export function execForCatalogSpell(spell: CatalogSpell): SpellExec {
     targeting: self ? { kind: "self", minTargets: 1, maxTargets: 1, allowedRelations: ["self"] } : { kind: "creature", minTargets: 1, maxTargets: 8, ...(feet ? { rangeFeet: feet } : {}), allowedRelations: ["self", "ally", "enemy", "neutral"] },
     primary: { kind: "tracked-effect", ...(spell.summary ? { summary: spell.summary } : {}), ...(concentration ? { duration: { kind: "concentration" } } : {}) },
     concentration, ritual: spell.ritual,
-    // R82 (D218): a patch may give a spell only its on-hit rule or its repeat, without the rest of the mechanics.
-    ...(mechanic && isObject(mechanic.onHit) ? { onHit: mechanic.onHit as unknown as SpellOnHit } : {}),
-    ...(mechanic && mechanic.sustain !== undefined ? { sustain: mechanic.sustain as SpellExec["sustain"] } : {}),
-    ...(mechanic && isObject(mechanic.summon) && Array.isArray(mechanic.summon.forms) ? { summon: mechanic.summon as unknown as SpellSummon } : {}),
-    ...(mechanic && isObject(mechanic.creatures) ? { creatures: mechanic.creatures as unknown as SpellCreatures } : {}),
-    ...(mechanic && isObject(mechanic.reaction) ? { reaction: mechanic.reaction as unknown as SpellReaction } : {}),
-    ...(mechanic && mechanic.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}),
+    ...(mechanic ? patchParts(mechanic) : {}),
+  };
+}
+
+/**
+ * R82 (D218): a patch may give a spell only some parts — its on-hit rule, its repeat — without the rest of the
+ * mechanics. D312: every part a full mechanic has may come this way, including the lasting effect's dice
+ * (`trackedEffects`), the weapon it is cast through, its conditions and its cast-time choices.
+ */
+function patchParts(mechanic: Record<string, unknown>): Partial<SpellExec> {
+  return {
+    ...(isObject(mechanic.onHit) ? { onHit: mechanic.onHit as unknown as SpellOnHit } : {}),
+    ...(mechanic.sustain !== undefined ? { sustain: mechanic.sustain as SpellExec["sustain"] } : {}),
+    ...(isObject(mechanic.summon) && Array.isArray(mechanic.summon.forms) ? { summon: mechanic.summon as unknown as SpellSummon } : {}),
+    ...(isObject(mechanic.creatures) ? { creatures: mechanic.creatures as unknown as SpellCreatures } : {}),
+    ...(isObject(mechanic.reaction) ? { reaction: mechanic.reaction as unknown as SpellReaction } : {}),
+    ...(mechanic.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}),
+    ...(Array.isArray(mechanic.trackedEffects) ? { trackedEffects: mechanic.trackedEffects as SpellExec["trackedEffects"] } : {}),
+    ...(isObject(mechanic.weaponSpell) ? { weaponSpell: mechanic.weaponSpell as unknown as WeaponSpell } : {}),
+    ...(Array.isArray(mechanic.variants) ? { variants: mechanic.variants as SpellVariant[] } : {}),
+    ...(Array.isArray(mechanic.effects) ? { effects: mechanic.effects as SpellExec["effects"] } : {}),
+    ...(Array.isArray(mechanic.removesConditions) ? { removesConditions: mechanic.removesConditions as string[] } : {}),
+    ...(isObject(mechanic.casterHealing) ? { casterHealing: mechanic.casterHealing as SpellExec["casterHealing"] } : {}),
   };
 }
 
 /** R76 (D211): called when the catalog is built, so the table (and the host in the same app) can cast every spell it lists. */
 export function registerCatalogSpells(spells: readonly CatalogSpell[]) {
   installed.clear();
-  for (const spell of spells) if (!byId.has(spell.id)) installed.set(spell.id, execForCatalogSpell(spell));
+  for (const spell of spells) {
+    const builtin = byId.get(spell.id);
+    if (!builtin) { installed.set(spell.id, execForCatalogSpell(spell)); continue; }
+    // D312: a module's mechanic for an SRD spell — a whole one replaces the SRD's, a patch lays its parts over it.
+    if (!spell.mechanic) continue;
+    const whole = isObject(spell.mechanic.primary) && isObject(spell.mechanic.targeting);
+    installed.set(spell.id, whole ? execForCatalogSpell(spell) : { ...builtin, ...patchParts(spell.mechanic) });
+  }
 }
 export const spellExecs = () => list;
 

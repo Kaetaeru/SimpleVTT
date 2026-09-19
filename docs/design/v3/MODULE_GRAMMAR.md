@@ -268,6 +268,7 @@
 - `summon`: 소환 템플릿(`forms[].template`, 치환값 `{level}` `{attack}` `{dc}`)
 - `creatures`, `reaction`(`attack.hit-self`/`spell.cast-seen`), `repeatSave: "turn-end"`, `variants`(시전 때 고르는 갈래), `casterHealing`, `weaponSpell`
 - 아무 `spell-mechanic`이 없어도 시전은 된다(대상·슬롯·집중은 기록된다). 필요한 조각만 덧대도 된다.
+- **SRD 주문도 덮어쓴다 (D312)**: SRD 주문 id에 `primary`+`targeting`이 있는 메커닉을 쓰면 그것이 실행 전체를 대신하고, 조각만 쓰면(`onHit`·`sustain`·`summon`·`creatures`·`reaction`·`repeatSave`·`trackedEffects`·`weaponSpell`·`variants`·`effects`·`removesConditions`·`casterHealing`) SRD 실행 위에 얹힌다.
 
 ---
 
