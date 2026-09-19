@@ -103,7 +103,11 @@ test("spells: the last nine 'DM이 적용합니다' spells resolve (D152)", () =
   assert.deepEqual([aid.mode, aid.healed, aid.hpAfter], ["heal", 5, 15]);
   assert.equal(cast("aid", 4, hurt).targets[0].healed, 15, "two levels above base is +10 more");
   const heal = cast("power-word-heal", 9, hurt).targets[0];
-  assert.deepEqual([heal.hpAfter, heal.clears], [40, ["매혹", "공포", "마비", "충격", "무의식", "넘어짐"]]);
+  // D315: the conditions come from the spell's data (2024: charmed, frightened, paralyzed, poisoned, stunned end;
+  // standing up from prone is the creature's reaction), not a list in the resolver.
+  assert.deepEqual([heal.hpAfter, heal.clears], [40, ["매혹", "공포", "마비", "중독", "충격"]]);
+  // And a spell of any other kind ends what it names too — 영웅심 is temporary hit points and the end of fear.
+  assert.ok(cast("heroism", 1, hurt).targets[0].clears?.includes("공포"));
   const kill = cast("power-word-kill", 9, hurt).targets[0];
   assert.deepEqual([kill.hpAfter, kill.marks], [0, ["사망"]]);
   const tough = cast("power-word-kill", 9, combatant({ hp: { current: 140, max: 200, temp: 0 } })).targets[0];

@@ -29,7 +29,7 @@ import { emptySource } from "../client/character/source";
 import { initialRuntime } from "../client/character/runtime";
 import type { CharacterRuntime, DerivedCharacter } from "../client/character/types";
 import { parseCustomMonster } from "../client/compendium/customMonster";
-import { spellExec, sustainOf } from "../client/compendium/spells";
+import { spellExec, sustainedExec, sustainOf } from "../client/compendium/spells";
 import { featureRuleKey } from "../client/rules/activation";
 import { riderFitsAttack } from "../client/rules/attackRiders";
 import { tableOutcome } from "../client/rules/contractTable";
@@ -263,7 +263,10 @@ async function castSpells() {
       const again = t.messages();
       const boardAgain = t.board();
       const refusedAgain = t.refusals.length;
-      t.dm.send({ type: "act.cast", caster: t.heroRef, spellId: spell.id, targets: sustain.target === "bound" ? [] : targets, method: { kind: "sustain" } } as never);
+      // The repeat of an area spell names the creature it lands on even when the cast named none (D308).
+      const repeatTakes = sustainedExec(exec)?.targeting.maxTargets ?? 0;
+      const repeatTargets = sustain.target === "bound" ? [] : targets.length || repeatTakes < 1 ? targets : [friendly ? t.ref("ally") : t.ref("dummy")];
+      t.dm.send({ type: "act.cast", caster: t.heroRef, spellId: spell.id, targets: repeatTargets, method: { kind: "sustain" } } as never);
       await tick();
       const repeat = t.host.archive.slice(again).find((message) => message.type === "spell" && message.spell);
       const refusedRepeat = t.refusals.slice(refusedAgain);

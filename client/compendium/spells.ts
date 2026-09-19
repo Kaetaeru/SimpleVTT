@@ -121,6 +121,10 @@ export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => 
 export interface SpellBearerPart {
   modifier?: { family: string; scope?: "actor" | "target"; rollState?: "advantage" | "disadvantage"; bonus?: { dice?: { count: number; sides: number }; flat?: number; sign?: number }; consumeOnUse?: boolean; ability?: string };
   attackDamage?: { damageType: string; dice?: { count: number; sides: number }; flat?: number; againstTargetOnly?: boolean; sourceKinds?: string[] };
+  /** V4f (D268): resistances, immunities and vulnerabilities the effect gives its bearer. */
+  damageDefenses?: Array<{ kind: "resistance" | "immunity" | "vulnerability"; damageType: string }>;
+  /** D315: conditions the bearer cannot be given while the effect lasts (영웅심: 공포). English condition ids. */
+  conditionImmunities?: string[];
 }
 /** R90 (D225): the lasting-effect parts of a spell (유도 화살's advantage), with the variant it was cast with. */
 export const bearerPartsOf = (spellId: string, /** V4f (D268): the variant the effect was cast with. */ variant?: string): SpellBearerPart[] => { const exec = spellExec(spellId); return (exec ? withVariant(exec, variant).exec : undefined)?.trackedEffects ?? []; };

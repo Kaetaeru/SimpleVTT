@@ -320,8 +320,6 @@ export function resolveSpell(input: CastInput): SpellResolution {
       const duration = exec.trackedEffects?.[0]?.duration ?? primary.duration;
       for (const { combatant } of all) {
         const row = base(combatant);
-        // V4g (D269): the conditions the spell ends (하급 회복).
-        if (exec.removesConditions?.length) row.clears = exec.removesConditions.map((id) => CONDITION_KO[id] ?? id);
         row.mode = "effect";
         row.effect = effectStart(duration);
         row.marks = conditionMarks("always", combatant);
@@ -356,8 +354,8 @@ export function resolveSpell(input: CastInput): SpellResolution {
         row.mode = "heal";
         row.healed = Math.max(0, combatant.hp.max - combatant.hp.current);
         row.hpAfter = combatant.hp.max;
-        row.clears = ["매혹", "공포", "마비", "충격", "무의식", "넘어짐"];
-        row.note = "HP 전부 회복 · 매혹·공포·마비·충격 종료, 넘어짐에서 일어남";
+        // D315: the conditions it ends are the spell's own list (`removesConditions`), laid on below like any spell's.
+        row.note = `HP 전부 회복${primary.summary ? ` · ${String(primary.summary)}` : ""}`;
         targets.push(row);
       }
       break;
@@ -411,6 +409,12 @@ export function resolveSpell(input: CastInput): SpellResolution {
       note = `${spec.name}: ${(primary as { summary?: string }).summary ?? "DM이 효과를 적용합니다"}`;
       for (const { combatant } of all) targets.push(base(combatant));
     }
+  }
+  // V4g (D269), D315: the conditions the spell ends, whatever it otherwise does (영웅심's fear, 치유's blindness) —
+  // on every creature it reached, except one that resisted it with a successful save.
+  if (exec.removesConditions?.length) {
+    const ended = exec.removesConditions.map((id) => CONDITION_KO[id] ?? id);
+    for (const row of targets) if (!row.save?.success) row.clears = [...new Set([...(row.clears ?? []), ...ended])];
   }
   // V4u (D283): the caster drinks part of what the spell dealt (흡혈의 손길: half the necrotic damage).
   const dealt = targets.reduce((sum, row) => sum + Math.max(0, row.attack?.damageTotal ?? row.damage?.damageTotal ?? 0), 0);

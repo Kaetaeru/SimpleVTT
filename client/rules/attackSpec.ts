@@ -40,8 +40,8 @@ type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" 
  * V4f (D268): what the spell effects a creature is under do to its defenses — resistances, immunities and
  * vulnerabilities by damage type, a bonus to AC, a strike back at melee attackers, holding at 1 HP instead of dropping.
  */
-export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: string[]; immunities: string[]; vulnerabilities: string[]; acBonus: number; retaliation: Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>; preventsDeath: string[] } {
-  const out = { resistances: [] as string[], immunities: [] as string[], vulnerabilities: [] as string[], acBonus: 0, retaliation: [] as Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>, preventsDeath: [] as string[] };
+export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: string[]; immunities: string[]; vulnerabilities: string[]; conditionImmunities: string[]; acBonus: number; retaliation: Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>; preventsDeath: string[] } {
+  const out = { resistances: [] as string[], immunities: [] as string[], vulnerabilities: [] as string[], conditionImmunities: [] as string[], acBonus: 0, retaliation: [] as Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>, preventsDeath: [] as string[] };
   for (const effect of effects) {
     if (!effect.key.startsWith("spell:") || !(effect.bearer || effect.from)) continue;
     for (const part of bearerPartsOf(effect.key.slice("spell:".length), effect.variant) as Array<Record<string, unknown>>) {
@@ -49,6 +49,8 @@ export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: str
         const list = defense.kind === "immunity" ? out.immunities : defense.kind === "vulnerability" ? out.vulnerabilities : out.resistances;
         list.push(`${damageTypeKo(defense.damageType)} (${effect.name.replace(/\s*\(.*$/, "")})`);
       }
+      // D315: a condition the effect keeps off its bearer (영웅심's fear), labelled with the effect like the sheet does.
+      for (const condition of (part.conditionImmunities as string[] | undefined) ?? []) out.conditionImmunities.push(`${CONDITION_KO[condition] ?? condition} (${effect.name.replace(/\s*\(.*$/, "")})`);
       const armor = part.armorClass as { bonus?: number } | undefined;
       if (armor?.bonus) out.acBonus += armor.bonus;
       const back = part.retaliation as { damageType: string; dice?: { count: number; sides: number }; flat?: number; meleeOnly?: boolean } | undefined;
@@ -92,7 +94,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
   return {
     // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
     id: entry.id, name: entry.name, kind: "pc", ac: derived.ac.value, /* a sheet takes flat AC from the effect contracts already (방패) */ hp: { current: runtime.hp.current, max: derived.hp.max, temp: runtime.hp.temp },
-    conditions: runtime.conditions, defenses: { ...derived.defenses, resistances: [...derived.defenses.resistances, ...shielded.resistances], immunities: [...derived.defenses.immunities, ...shielded.immunities], vulnerabilities: [...derived.defenses.vulnerabilities, ...shielded.vulnerabilities] }, conSave: derived.saves.con.bonus, concentration: concentration?.name, effects: (runtime.effects ?? []).map((effect) => effect.name),
+    conditions: runtime.conditions, defenses: { ...derived.defenses, resistances: [...derived.defenses.resistances, ...shielded.resistances], immunities: [...derived.defenses.immunities, ...shielded.immunities], vulnerabilities: [...derived.defenses.vulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...derived.defenses.conditionImmunities, ...shielded.conditionImmunities] }, conSave: derived.saves.con.bonus, concentration: concentration?.name, effects: (runtime.effects ?? []).map((effect) => effect.name),
     // R28 (D147): exhaustion reaches the dice at last.
     exhaustion: runtime.exhaustion,
     ...(derived.evasion ? { evasion: true } : {}),
@@ -141,7 +143,7 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
     id: entry.id, name: token?.name ?? entry.name, kind: "npc", ac: block.ac + shielded.acBonus, hp,
     // H1 (D238): 마법 저항, 재생, 흡수 and the rest come from the stat block's trait rules, never from its words.
     ...traitCombatant(block),
-    conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: [...block.damageResistances, ...shielded.resistances], immunities: [...block.damageImmunities, ...shielded.immunities], vulnerabilities: [...block.damageVulnerabilities, ...shielded.vulnerabilities], conditionImmunities: block.conditionImmunities },
+    conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: [...block.damageResistances, ...shielded.resistances], immunities: [...block.damageImmunities, ...shielded.immunities], vulnerabilities: [...block.damageVulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...block.conditionImmunities, ...shielded.conditionImmunities] },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),
     ...bearerRolls(entry.runtime.effects, true),

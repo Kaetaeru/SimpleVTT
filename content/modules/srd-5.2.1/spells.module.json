@@ -1014,7 +1014,7 @@
       "targeting": {
        "kind": "creature",
        "rangeFeet": 60,
-       "minTargets": 1,
+       "minTargets": 0,
        "maxTargets": 1,
        "allowedRelations": [
         "self",
@@ -1026,26 +1026,16 @@
        "directTarget": true
       },
       "primary": {
-       "kind": "save-effect",
-       "saveAbility": "wis",
-       "summary": "주문을 시전할 때 반감 또는 공감 중 하나를 선택하고, 거대형 이하인 크리처나 물체 하나를 대상으로 한다. 그런 다음 레드 드래곤, 고블린, 뱀파이어 같은 크리처 종류 하나를 지정한다. 지정한 종류의 크리처가 대상에서 120피트 이내에 들어오면 지혜 내성 굴림을 한다. 실패했을 때 일어나는 일은 선택한 효과에 따라 달라진다.",
+       "kind": "tracked-effect",
+       "summary": "대상(거대 이하 크리처 또는 물체)에 반감/공감을 건다. 지정한 종류의 크리처가 대상 120피트 안에 들어오면 지혜 내성 — 실패 시 반감은 공포, 공감은 매혹.",
        "duration": {
         "kind": "hours",
         "amount": 240
        }
       },
       "concentration": false,
-      "trackedEffects": [
-       {
-        "summary": "주문을 시전할 때 반감 또는 공감 중 하나를 선택하고, 거대형 이하인 크리처나 물체 하나를 대상으로 한다. 그런 다음 레드 드래곤, 고블린, 뱀파이어 같은 크리처 종류 하나를 지정한다. 지정한 종류의 크리처가 대상에서 120피트 이내에 들어오면 지혜 내성 굴림을 한다. 실패했을 때 일어나는 일은 선택한 효과에 따라 달라진다.",
-        "trigger": "failed-save",
-        "duration": {
-         "kind": "hours",
-         "amount": 240
-        }
-       }
-      ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "trackedEffects": [],
+      "executionScope": "The target bears antipathy or sympathy (chosen as a variant) for 10 days; each creature of the named kind that comes within 120 feet makes the WIS save as the repeat — frightened (antipathy) or charmed (sympathy) on a failure. DM 판정 (크리처 종류·120피트 거리, 강제 이동; 120피트 밖에서 턴을 끝낼 때와 공감 대상에게 피해를 받을 때의 종료 내성, 성공 후 1분 면역).",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -1054,7 +1044,53 @@
        ]
       },
       "ritual": false,
-      "castingDurationSeconds": 3600
+      "castingDurationSeconds": 3600,
+      "variants": [
+       {
+        "id": "antipathy",
+        "label": "반감",
+        "patch": {
+         "effects": [
+          {
+           "conditionId": "frightened",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "hours",
+            "amount": 240
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "sympathy",
+        "label": "공감",
+        "patch": {
+         "effects": [
+          {
+           "conditionId": "charmed",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "hours",
+            "amount": 240
+           }
+          }
+         ]
+        }
+       }
+      ],
+      "sustain": {
+       "economy": "none",
+       "primary": {
+        "kind": "save-effect",
+        "saveAbility": "wis",
+        "duration": {
+         "kind": "hours",
+         "amount": 240
+        }
+       },
+       "note": "지정한 종류의 크리처가 대상 120피트 안에 들어올 때 지혜 내성 (종류·거리 확인은 DM 판정)"
+      }
      }
     }
    ]
@@ -1738,14 +1774,20 @@
       "runtimeSupport": "tracked-executable",
       "castingEconomy": "action",
       "targeting": {
-       "kind": "any",
-       "minTargets": 0,
-       "maxTargets": 0,
-       "directTarget": false
+       "kind": "creature",
+       "minTargets": 1,
+       "maxTargets": 1,
+       "rangeFeet": 5,
+       "allowedRelations": [
+        "ally",
+        "enemy",
+        "neutral"
+       ],
+       "directTarget": true
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "시전 시간 동안 귀중한 보석 안에 마법 경로를 그린 뒤 대상에게 접촉한다. 대상은 지능 3 이하인 야수나 식물 크리처 또는 크리처가 아닌 자연 식물이어야 한다. 대상은 지능 10과 당신이 아는 언어 하나를 말할 능력을 얻는다.",
+       "summary": "지능 3 이하 야수·식물(또는 자연 식물)이 지능 10과 언어 하나를 얻는다. 30일 동안 매혹 — 당신이나 아군이 피해를 주면 끝(수동 처리 필요). 식물 크리처의 게임 수치는 DM 판정.",
        "duration": {
         "kind": "instant"
        }
@@ -1764,7 +1806,17 @@
        ]
       },
       "ritual": false,
-      "castingDurationSeconds": 28800
+      "castingDurationSeconds": 28800,
+      "effects": [
+       {
+        "conditionId": "charmed",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 720
+        }
+       }
+      ]
      }
     }
    ]
@@ -4487,7 +4539,8 @@
         "neutral"
        ],
        "requiresSight": true,
-       "directTarget": true
+       "directTarget": true,
+       "targetsPerSlotAboveBase": 1
       },
       "primary": {
        "kind": "save-effect",
@@ -4533,7 +4586,7 @@
          "primary": {
           "kind": "save-effect",
           "saveAbility": "wis",
-          "summary": "도망쳐: 대상은 자기 턴에 당신에게서 최대한 멀어진다 — 이동은 표에서.",
+          "summary": "도망쳐: 대상은 자기 턴에 가장 빠른 수단으로 당신에게서 멀어진다 — DM 판정 (이동 경로는 좌표 없음)",
           "duration": {
            "kind": "rounds",
            "amount": 1
@@ -4548,7 +4601,7 @@
          "primary": {
           "kind": "save-effect",
           "saveAbility": "wis",
-          "summary": "멈춰: 대상은 움직이지 않고 아무 행동도 하지 않는다 — 표에서.",
+          "summary": "멈춰: 대상은 자기 턴에 이동하지 않고 행동·추가 행동을 하지 않는다 — DM 판정 (대상의 턴 진행)",
           "duration": {
            "kind": "rounds",
            "amount": 1
@@ -4563,7 +4616,7 @@
          "primary": {
           "kind": "save-effect",
           "saveAbility": "wis",
-          "summary": "이리 와: 대상은 가장 짧은 길로 당신에게 다가온다 — 이동은 표에서.",
+          "summary": "이리 와: 대상은 가장 짧은 경로로 당신에게 다가오고 5피트 이내에 오면 턴을 끝낸다 — DM 판정 (이동 경로는 좌표 없음)",
           "duration": {
            "kind": "rounds",
            "amount": 1
@@ -4578,7 +4631,7 @@
          "primary": {
           "kind": "save-effect",
           "saveAbility": "wis",
-          "summary": "버려: 대상은 들고 있는 것을 떨어뜨리고 그 턴을 끝낸다 — 가방은 표에서.",
+          "summary": "버려: 대상은 들고 있는 것을 떨어뜨리고 그 턴을 끝낸다 — DM 판정 (떨어뜨린 물건은 장비 칸에서 수동 처리)",
           "duration": {
            "kind": "rounds",
            "amount": 1
@@ -5139,10 +5192,10 @@
         "sides": 10,
         "dicePerSlotAboveBase": 1
        },
-       "successDamage": "half"
+       "successDamage": "none"
       },
       "concentration": true,
-      "executionScope": "Authored (C1-03): creatures the spectral pack moves within 10 feet of, or that enter or end their turn there, make a DEX save for 3d10 slashing, half on success, +1d10 per slot level above 3rd; the DM selects who is affected on each cast. The pack's movement and the once-per-turn limit are tracked by the table.",
+      "executionScope": "Authored (C1-03): creatures the spectral pack moves within 10 feet of, or that enter or end their turn there, make a DEX save; on a failure 3d10 slashing, nothing on a success, +1d10 per slot level above 3rd; the DM selects who is affected on each cast. DM 판정 (좌표 없음): 무리의 이동과 10피트 거리, 크리처당 턴 1회 제한, 무리 5피트 안에서 시전자의 근력 내성 이점은 수동 처리 필요.",
       "components": {
        "verbal": true,
        "somatic": true
@@ -5217,7 +5270,7 @@
        "successDamage": "half"
       },
       "concentration": true,
-      "executionScope": "Authored (C1-03): creatures of the caster's choice in the 20-foot-radius cylinder make a DEX save for 6d12 radiant, half on success, +1d12 per slot level above 7th. The SRD lets the caster instead heal one creature in the cylinder for 6d12; the DM applies that option with 서술 회복. Repeating the choice at the start of each turn and the bright light are not enforced.",
+      "executionScope": "Creatures of the caster's choice in the 10-foot-radius, 40-foot-high cylinder: searing light (DEX save, 6d12 radiant, half on success) or healing light (4d12 + spellcasting modifier), each +1d12 per slot level above 7th, chosen as a variant. DM 판정 (원기둥 위치·30피트 이동과 그 안의 크리처는 앱이 볼 수 없다; 한 번의 시전에서 크리처마다 다른 빛을 고르면 variant별로 나눠 적용).",
       "components": {
        "verbal": true,
        "somatic": true
@@ -5225,6 +5278,32 @@
       "ritual": false,
       "creatures": {
        "none": "빛의 기둥이라 크리처가 아닙니다."
+      },
+      "variants": [
+       {
+        "id": "searing",
+        "label": "작열하는 빛",
+        "patch": {}
+       },
+       {
+        "id": "healing",
+        "label": "치유의 빛",
+        "patch": {
+         "primary": {
+          "kind": "healing",
+          "dice": {
+           "count": 4,
+           "sides": 12,
+           "dicePerSlotAboveBase": 1,
+           "addSpellcastingModifier": true
+          }
+         }
+        }
+       }
+      ],
+      "sustain": {
+       "economy": "none",
+       "note": "원기둥이 크리처 공간으로 옮겨 가거나, 크리처가 원기둥에 들어오거나 그 안에서 턴을 끝낼 때 — 크리처마다 턴당 한 번, 빛은 매번 선택"
       }
      }
     }
@@ -6096,7 +6175,7 @@
        }
       },
       "concentration": true,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "집중 동안 물 조종. 소용돌이를 고르면 들어오거나 그 안에서 턴을 끝낸 크리처마다 반복(슬롯 없음)으로 근력 내성 2d8 타격(성공 절반). DM 판정 (좌표 없음): 홍수·파도·물 가르기·흐름 전환, 소용돌이로 끌려감, 빠져나오기 판정, 운송수단 전복 25%.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -6104,7 +6183,21 @@
         {}
        ]
       },
-      "ritual": false
+      "ritual": false,
+      "sustain": {
+       "economy": "none",
+       "primary": {
+        "kind": "save-damage",
+        "saveAbility": "str",
+        "damageType": "bludgeoning",
+        "dice": {
+         "count": 2,
+         "sides": 8
+        },
+        "successDamage": "half"
+       },
+       "note": "소용돌이: 한 턴에 처음 들어오거나 그 안에서 턴을 끝낸 크리처 · 효과 바꾸기(마법 행동)와 10피트 끌려감은 DM 판정"
+      }
      }
     }
    ]
@@ -7564,7 +7657,7 @@
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "사거리 안의 장소로 순간이동한다. 원하는 정확한 지점에 도착한다. 볼 수 있거나 시각화할 수 있는 곳, 또는 “수직으로 아래 200피트”, “북서쪽 위 45도 방향으로 300피트”처럼 거리와 방향으로 설명할 수 있는 곳을 선택할 수 있다.",
+       "summary": "사거리 500피트 안의 장소로 순간이동한다(받으려는 크리처 하나 동행 가능). DM 판정 (좌표 없음): 도착 공간이 점유됐거나 물체로 차 있으면 당신과 동행자 각각 4d6 역장 피해를 받고 순간이동은 실패 — 수동 처리 필요.",
        "duration": {
         "kind": "instant"
        }
@@ -8885,7 +8978,7 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary. DM 판정 (전달자는 무아지경 동안 행동불능·속도 0 — 전달자가 누구인지는 앱이 모른다; 공포스러운 모습으로 메시지를 전하면 대상은 지혜 내성, 실패 시 휴식 이득 없음 + 깨어날 때 3d6 정신 피해 — 잠·깨어남 시점은 앱이 볼 수 없다).",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -9020,7 +9113,7 @@
       "primary": {
        "kind": "save-effect",
        "saveAbility": "dex",
-       "summary": "실패한 크리처는 넘어짐 상태가 된다.",
+       "summary": "실패한 크리처는 넘어짐 상태가 되고 집중이 깨진다(집중 종료는 수동 처리 필요). DM 판정 (좌표 없음): 험난한 지형, 균열 1d6개, 구조물에 50 타격 — 무너지면 근처 크리처 민첩 내성, 실패 12d6 타격+넘어짐+매몰(DC 20 근력(운동)), 성공 절반.",
        "duration": {
         "kind": "instant"
        }
@@ -9044,7 +9137,11 @@
         {}
        ]
       },
-      "ritual": false
+      "ritual": false,
+      "sustain": {
+       "economy": "none",
+       "note": "당신의 각 턴이 끝날 때 구역 지면 위의 각 크리처가 다시 민첩 내성"
+      }
      }
     }
    ]
@@ -10031,13 +10128,16 @@
            "trigger": "failed-save",
            "duration": {
             "kind": "concentration"
+           },
+           "termination": {
+            "targetTakesDamage": true
            }
           }
          ],
          "primary": {
           "kind": "save-effect",
           "saveAbility": "wis",
-          "summary": "잠듦: 대상은 무의식 상태가 된다 (피해를 입거나 누가 깨우면 끝).",
+          "summary": "잠듦: 대상은 무의식 상태가 된다. 피해를 받거나 다른 크리처가 행동으로 흔들어 깨우면 끝 (수동 처리 필요).",
           "duration": {
            "kind": "concentration"
           }
@@ -10060,7 +10160,7 @@
          "primary": {
           "kind": "save-effect",
           "saveAbility": "wis",
-          "summary": "공포: 대상은 당신에게 공포 상태가 되고 자기 턴마다 당신에게서 멀어진다 — 이동은 표에서.",
+          "summary": "경악: 대상은 공포 상태가 되고 자기 턴마다 질주로 당신에게서 멀어진다. DM 판정 (좌표 없음): 당신을 볼 수 없고 60피트 이상 떨어지면 이 효과가 끝난다.",
           "duration": {
            "kind": "concentration"
           }
@@ -10083,14 +10183,18 @@
          "primary": {
           "kind": "save-effect",
           "saveAbility": "wis",
-          "summary": "병듦: 대상은 중독 상태가 된다 (자기 턴이 끝날 때 지혜 내성으로 끝냄).",
+          "summary": "병약: 대상은 지속시간 동안 중독 상태가 된다.",
           "duration": {
            "kind": "concentration"
           }
          }
         }
        }
-      ]
+      ],
+      "sustain": {
+       "economy": "action",
+       "note": "자신의 각 턴에 마법 행동으로 다른 크리처 하나에 다시 — 이번 시전의 내성에 성공한 크리처는 다시 대상으로 삼을 수 없음 (DM 판정)"
+      }
      }
     }
    ]
@@ -10304,7 +10408,7 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "8시간 동안 사냥개. 당신의 턴 시작마다 반복(슬롯 없음)으로 적 하나에게 민첩 내성 4d8 역장. DM 판정 (좌표 없음): 짖기(암호), 30피트 진시야, 사냥개 이동(마법 행동 30피트).",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -10312,7 +10416,22 @@
         {}
        ]
       },
-      "ritual": false
+      "ritual": false,
+      "sustain": {
+       "economy": "none",
+       "primary": {
+        "kind": "save-damage",
+        "saveAbility": "dex",
+        "damageType": "force",
+        "dice": {
+         "count": 4,
+         "sides": 8
+        },
+        "successDamage": "none"
+       },
+       "note": "당신의 턴이 시작될 때 사냥개 5피트 안의 적 하나 — 누가 5피트 안인지는 DM 판정 (좌표 없음)",
+       "endWhen": "당신과 사냥개의 거리가 300피트를 넘음"
+      }
      }
     }
    ]
@@ -10723,6 +10842,187 @@
        ],
        "count": 1,
        "note": "대형 탑승 동물의 모습이고, 유형은 천상체·요정·악마 중 하나입니다."
+      },
+      "summon": {
+       "note": "이계의 탈것 — 시전자와 같은 우선권, 탑승 시 조종하는 탈것. 추가 행동 능력은 긴 휴식당 1회 (수동 차감)",
+       "forms": [
+        {
+         "name": "천상체",
+         "template": {
+          "name": "이계의 탈것 (천상체)",
+          "size": "large",
+          "type": "천상체",
+          "creatureType": "celestial",
+          "alignment": "중립",
+          "ac": "{10+level}",
+          "hp": "{5+level*10}",
+          "hitDice": "{level}d10",
+          "speed": 60,
+          "abilities": {
+           "str": 18,
+           "dex": 12,
+           "con": 14,
+           "int": 6,
+           "wis": 12,
+           "cha": 8
+          },
+          "cr": 0,
+          "languages": "시전자와만 텔레파시 1마일",
+          "traits": [
+           {
+            "name": "생명 결속",
+            "text": "1레벨 이상 주문으로 시전자가 HP를 회복할 때 탈것이 5피트 이내면 같은 양을 회복한다 — DM 판정 (거리는 좌표 없음)"
+           },
+           {
+            "name": "비행",
+            "text": "4레벨 이상 슬롯으로 시전했다면 비행 60피트"
+           }
+          ],
+          "actions": [
+           {
+            "name": "이계의 강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "rangeFeet": 5,
+             "damage": [
+              {
+               "formula": "1d8+{level}",
+               "type": "radiant"
+              }
+             ]
+            }
+           }
+          ],
+          "bonusActions": [
+           {
+            "name": "치유의 손길 (긴 휴식당 1회)",
+            "text": "탈것에서 5피트 이내 크리처 하나가 2d8+{level} HP를 회복한다 — 회복은 수동 적용"
+           }
+          ]
+         }
+        },
+        {
+         "name": "요정",
+         "template": {
+          "name": "이계의 탈것 (요정)",
+          "size": "large",
+          "type": "요정",
+          "creatureType": "fey",
+          "alignment": "중립",
+          "ac": "{10+level}",
+          "hp": "{5+level*10}",
+          "hitDice": "{level}d10",
+          "speed": 60,
+          "abilities": {
+           "str": 18,
+           "dex": 12,
+           "con": 14,
+           "int": 6,
+           "wis": 12,
+           "cha": 8
+          },
+          "cr": 0,
+          "languages": "시전자와만 텔레파시 1마일",
+          "traits": [
+           {
+            "name": "생명 결속",
+            "text": "1레벨 이상 주문으로 시전자가 HP를 회복할 때 탈것이 5피트 이내면 같은 양을 회복한다 — DM 판정 (거리는 좌표 없음)"
+           },
+           {
+            "name": "비행",
+            "text": "4레벨 이상 슬롯으로 시전했다면 비행 60피트"
+           }
+          ],
+          "actions": [
+           {
+            "name": "이계의 강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "rangeFeet": 5,
+             "damage": [
+              {
+               "formula": "1d8+{level}",
+               "type": "psychic"
+              }
+             ]
+            }
+           }
+          ],
+          "bonusActions": [
+           {
+            "name": "요정 걸음 (긴 휴식당 1회)",
+            "text": "탈것과 기수를 60피트 이내 빈 공간으로 순간이동 — DM 판정 (좌표 없음)"
+           }
+          ]
+         }
+        },
+        {
+         "name": "악마",
+         "template": {
+          "name": "이계의 탈것 (악마)",
+          "size": "large",
+          "type": "악마",
+          "creatureType": "fiend",
+          "alignment": "중립",
+          "ac": "{10+level}",
+          "hp": "{5+level*10}",
+          "hitDice": "{level}d10",
+          "speed": 60,
+          "abilities": {
+           "str": 18,
+           "dex": 12,
+           "con": 14,
+           "int": 6,
+           "wis": 12,
+           "cha": 8
+          },
+          "cr": 0,
+          "languages": "시전자와만 텔레파시 1마일",
+          "traits": [
+           {
+            "name": "생명 결속",
+            "text": "1레벨 이상 주문으로 시전자가 HP를 회복할 때 탈것이 5피트 이내면 같은 양을 회복한다 — DM 판정 (거리는 좌표 없음)"
+           },
+           {
+            "name": "비행",
+            "text": "4레벨 이상 슬롯으로 시전했다면 비행 60피트"
+           }
+          ],
+          "actions": [
+           {
+            "name": "이계의 강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "rangeFeet": 5,
+             "damage": [
+              {
+               "formula": "1d8+{level}",
+               "type": "necrotic"
+              }
+             ]
+            }
+           }
+          ],
+          "bonusActions": [
+           {
+            "name": "불길한 눈빛 (긴 휴식당 1회)",
+            "text": "60피트 이내 보이는 크리처 하나가 지혜 내성, 실패 시 시전자의 다음 턴 끝까지 공포",
+            "save": {
+             "ability": "wis",
+             "dc": "{dc}",
+             "onSuccess": "none",
+             "conditions": [
+              "frightened"
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
       }
      }
     }
@@ -12075,7 +12375,7 @@
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "사거리 내에서 선택한 구역을 둘러싸며 움직이지 않고 보이지 않는 정육면체형 마법 역장 감옥이 생긴다. 감옥은 우리 또는 단단한 상자 중 하나다.",
+       "summary": "보이지 않는 역장 감옥(우리 한 변 20피트, 또는 상자 한 변 10피트)을 만든다. DM 판정 (좌표 없음): 구역 안에 완전히 든 크리처가 갇힌다; 갇힌 크리처가 순간이동·차원 이동으로 나가려면 매력 내성 — 실패하면 그 효과를 낭비. 마법 무효화로 무효화 불가.",
        "duration": {
         "kind": "concentration"
        }
@@ -12284,7 +12584,8 @@
        "allowedRelations": [
         "self",
         "ally"
-       ]
+       ],
+       "targetsPerSlotAboveBase": 1
       },
       "primary": {
        "kind": "tracked-effect",
@@ -12380,7 +12681,7 @@
        "successDamage": "half"
       },
       "concentration": false,
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle. DM 판정 (수역에 맞으면 30피트 정사각형이 1분간 얼고 헤엄치던 크리처는 구속 — 행동으로 주문 DC 근력 판정해 탈출; 구체를 손에 들었다가 나중에 던지는 선택 — 좌표 없음)",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -12449,7 +12750,8 @@
         "neutral"
        ],
        "requiresSight": false,
-       "directTarget": true
+       "directTarget": true,
+       "targetsPerSlotAboveBase": 1
       },
       "primary": {
        "kind": "tracked-effect",
@@ -12467,7 +12769,72 @@
         {}
        ]
       },
-      "ritual": false
+      "ritual": false,
+      "trackedEffects": [
+       {
+        "summary": "가스 형상: 타격·관통·참격 저항 · 비행 10피트 · 말·공격·주문 시전·물체 조작 불가 — 넘어짐 면역 · 이동은 DM 판정",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "bludgeoning"
+         },
+         {
+          "kind": "resistance",
+          "damageType": "piercing"
+         },
+         {
+          "kind": "resistance",
+          "damageType": "slashing"
+         }
+        ],
+        "conditionImmunities": [
+         "prone"
+        ]
+       },
+       {
+        "summary": "근력 내성 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "str"
+        }
+       },
+       {
+        "summary": "민첩 내성 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "dex"
+        }
+       },
+       {
+        "summary": "건강 내성 이점",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "advantage",
+         "scope": "actor",
+         "ability": "con"
+        }
+       }
+      ]
      }
     }
    ]
@@ -12630,13 +12997,26 @@
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "WIS save or charmed for 30 days; the 5d10 psychic is the repeat bound to the charmed creature. DM 판정 (명령을 이해하지 못하면 자동 성공; 7·8레벨 슬롯은 365일, 9레벨 슬롯은 해제될 때까지 — 지속시간 조정은 DM; 저주 해제·상급 회복·소원으로 종료).",
       "components": {
        "verbal": true,
        "somatic": false
       },
       "ritual": false,
-      "castingDurationSeconds": 60
+      "castingDurationSeconds": 60,
+      "sustain": {
+       "economy": "none",
+       "target": "bound",
+       "primary": {
+        "kind": "area-damage",
+        "damageType": "psychic",
+        "dice": {
+         "count": 5,
+         "sides": 10
+        }
+       },
+       "note": "매혹된 대상이 명령에 직접 반하는 행동을 했을 때 — 하루에 한 번 (행동 여부는 DM 판정)"
+      }
      }
     }
    ]
@@ -13329,7 +13709,71 @@
         }
        ]
       },
-      "ritual": false
+      "ritual": false,
+      "variants": [
+       {
+        "id": "exhaustion",
+        "label": "탈진 1단계",
+        "patch": {
+         "removesConditions": [
+          "exhaustion"
+         ],
+         "primary": {
+          "kind": "tracked-effect",
+          "summary": "탈진 레벨 1을 제거한다.",
+          "duration": {
+           "kind": "instant"
+          }
+         }
+        }
+       },
+       {
+        "id": "charmed",
+        "label": "매혹",
+        "patch": {
+         "removesConditions": [
+          "charmed"
+         ],
+         "primary": {
+          "kind": "tracked-effect",
+          "summary": "매혹 상태를 끝낸다.",
+          "duration": {
+           "kind": "instant"
+          }
+         }
+        }
+       },
+       {
+        "id": "petrified",
+        "label": "석화",
+        "patch": {
+         "removesConditions": [
+          "petrified"
+         ],
+         "primary": {
+          "kind": "tracked-effect",
+          "summary": "석화 상태를 끝낸다.",
+          "duration": {
+           "kind": "instant"
+          }
+         }
+        }
+       },
+       {
+        "id": "other",
+        "label": "저주 / 능력치 감소 / 최대 HP 감소",
+        "patch": {
+         "removesConditions": [],
+         "primary": {
+          "kind": "tracked-effect",
+          "summary": "DM 판정 (저주·능력치 감소·최대 HP 감소 중 하나를 제거 — 앱이 추적하지 않는 효과, 수동 처리 필요)",
+          "duration": {
+           "kind": "instant"
+          }
+         }
+        }
+       }
+      ]
      }
     }
    ]
@@ -13816,7 +14260,7 @@
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "한 지점에 접촉해 그 주변에 신성하거나 불경한 힘을 불어넣는다. 범위는 반경 최대 60피트이며, 이미 신성화 주문의 영향을 받는 지역이 반경 안에 포함되면 주문은 실패한다. 영향받은 지역에는 다음 효과가 적용된다.",
+       "summary": "반경 최대 60피트 지역을 신성화한다(신성한 방비 + 추가 효과 하나). DM 판정 (좌표 없음): 선택한 유형의 진입 금지와 빙의·매혹·공포 억제, 추가 효과(용기·암흑·태양광·평온한 안식·이차원 간섭·공포·저항·침묵·언어구사·취약성)는 지역 안의 크리처에게 수동 처리 필요.",
        "duration": {
         "kind": "permanent"
        }
@@ -14157,7 +14601,8 @@
        "dice": {
         "count": 0,
         "sides": 2,
-        "flat": 70
+        "flat": 70,
+        "flatPerSlotAboveBase": 10
        }
       },
       "concentration": false,
@@ -14461,19 +14906,20 @@
       "castingEconomy": "action",
       "targeting": {
        "kind": "creature",
-       "rangeFeet": 0,
        "minTargets": 1,
-       "maxTargets": 1,
+       "maxTargets": 12,
        "allowedRelations": [
-        "self"
+        "self",
+        "ally"
        ],
        "directTarget": true
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "자신과 인접한 빈 10피트 정육면체의 표면에 연회를 만들어 낸다. 연회를 먹는 데 1시간이 걸리고 그 시간이 끝나면 음식은 사라진다. 이로운 효과는 이 1시간이 끝난 뒤에야 적용된다. 최대 열두 크리처가 연회에 참여할 수 있다.",
+       "summary": "연회에 참여한 최대 열두 크리처는 1시간 식사가 끝난 뒤 24시간 동안 독 피해 저항. 공포·중독 면역과 HP 최대치 2d10 증가(같은 수만큼 회복)는 수동 처리 필요.",
        "duration": {
-        "kind": "instant"
+        "kind": "hours",
+        "amount": 24
        }
       },
       "concentration": false,
@@ -14490,7 +14936,27 @@
        ]
       },
       "ritual": false,
-      "castingDurationSeconds": 600
+      "castingDurationSeconds": 600,
+      "trackedEffects": [
+       {
+        "summary": "독 피해 저항 · 공포·중독 면역 (24시간)",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 24
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "poison"
+         }
+        ],
+        "conditionImmunities": [
+         "frightened",
+         "poisoned"
+        ]
+       }
+      ]
      }
     }
    ]
@@ -14567,7 +15033,19 @@
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "trackedEffects": [
+       {
+        "summary": "공포 면역",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "conditionImmunities": [
+         "frightened"
+        ]
+       }
+      ]
      }
     }
    ]
@@ -15874,7 +16352,7 @@
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "지혜 내성 실패 시 해제될 때까지 감금, 고른 갈래의 상태(사슬 속박: 포박, 잠: 의식불명)가 자동으로 붙는다. DM 판정: 성공 시 24시간 이 주문 면역, 매장·에워싼 감옥·축소 수용의 서사, 종료 조건, 9레벨 마법 무효화.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -15887,7 +16365,72 @@
        ]
       },
       "ritual": false,
-      "castingDurationSeconds": 60
+      "castingDurationSeconds": 60,
+      "variants": [
+       {
+        "id": "burial",
+        "label": "매장",
+        "patch": {
+         "primary": {
+          "summary": "매장: 역장 구체에 넣어 땅속에 묻는다 — 아무것도 통과할 수 없다."
+         }
+        }
+       },
+       {
+        "id": "chaining",
+        "label": "사슬 속박",
+        "patch": {
+         "primary": {
+          "summary": "사슬 속박: 대상은 포박 상태이며 어떤 수단으로도 이동시킬 수 없다."
+         },
+         "effects": [
+          {
+           "conditionId": "restrained",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "permanent"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "hedged-prison",
+        "label": "에워싼 감옥",
+        "patch": {
+         "primary": {
+          "summary": "에워싼 감옥: 순간이동·차원 이동을 막는 데미플레인에 갇힌다."
+         }
+        }
+       },
+       {
+        "id": "minimus",
+        "label": "축소 수용",
+        "patch": {
+         "primary": {
+          "summary": "축소 수용: 키 1인치가 되어 파괴할 수 없는 보석 안에 갇힌다."
+         }
+        }
+       },
+       {
+        "id": "slumber",
+        "label": "잠",
+        "patch": {
+         "primary": {
+          "summary": "잠: 대상은 의식불명 상태가 되며 깨울 수 없다."
+         },
+         "effects": [
+          {
+           "conditionId": "unconscious",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "permanent"
+           }
+          }
+         ]
+        }
+       }
+      ]
      }
     }
    ]
@@ -16344,7 +16887,7 @@
       "primary": {
        "kind": "save-effect",
        "saveAbility": "wis",
-       "summary": "사거리 내에서 볼 수 있는 크리처 하나는 지혜 내성 굴림을 한다. 성공하면 자신의 다음 턴이 끝날 때까지 우스꽝스럽게 춤추며, 그동안 모든 이동력을 제자리에서 춤추는 데 사용해야 한다.",
+       "summary": "실패: 지속시간 동안 매혹 — 제자리에서 춤추며 모든 이동력 사용, 민첩 내성·명중 굴림 불리, 대상을 향한 명중 굴림 유리. 성공: 다음 턴 끝까지 제자리 춤(이동력 소모). DM 판정 (이동력 소모; 대상이 자기 턴에 행동으로 내성을 반복해 성공하면 종료 — 효과 종료 버튼)",
        "duration": {
         "kind": "concentration"
        }
@@ -16352,20 +16895,10 @@
       "concentration": true,
       "trackedEffects": [
        {
-        "summary": "사거리 내에서 볼 수 있는 크리처 하나는 지혜 내성 굴림을 한다. 성공하면 자신의 다음 턴이 끝날 때까지 우스꽝스럽게 춤추며, 그동안 모든 이동력을 제자리에서 춤추는 데 사용해야 한다.",
+        "summary": "춤: 대상을 향한 명중 굴림에 유리",
         "trigger": "failed-save",
         "duration": {
          "kind": "concentration"
-        }
-       },
-       {
-        "summary": "사거리 내에서 볼 수 있는 크리처 하나는 지혜 내성 굴림을 한다. 성공하면 자신의 다음 턴이 끝날 때까지 우스꽝스럽게 춤추며, 그동안 모든 이동력을 제자리에서 춤추는 데 사용해야 한다.",
-        "trigger": "failed-save",
-        "duration": {
-         "kind": "rounds",
-         "amount": 1,
-         "anchorActorId": "$target",
-         "boundary": "end"
         },
         "modifier": {
          "family": "attack-roll",
@@ -16374,33 +16907,28 @@
         }
        },
        {
-        "summary": "사거리 내에서 볼 수 있는 크리처 하나는 지혜 내성 굴림을 한다. 성공하면 자신의 다음 턴이 끝날 때까지 우스꽝스럽게 춤추며, 그동안 모든 이동력을 제자리에서 춤추는 데 사용해야 한다.",
+        "summary": "춤: 명중 굴림에 불리",
         "trigger": "failed-save",
         "duration": {
-         "kind": "rounds",
-         "amount": 1,
-         "anchorActorId": "$target",
-         "boundary": "end"
-        },
-        "modifier": {
-         "family": "attack-roll",
-         "rollState": "advantage",
-         "scope": "actor"
-        }
-       },
-       {
-        "summary": "사거리 내에서 볼 수 있는 크리처 하나는 지혜 내성 굴림을 한다. 성공하면 자신의 다음 턴이 끝날 때까지 우스꽝스럽게 춤추며, 그동안 모든 이동력을 제자리에서 춤추는 데 사용해야 한다.",
-        "trigger": "failed-save",
-        "duration": {
-         "kind": "rounds",
-         "amount": 1,
-         "anchorActorId": "$target",
-         "boundary": "end"
+         "kind": "concentration"
         },
         "modifier": {
          "family": "attack-roll",
          "rollState": "disadvantage",
          "scope": "actor"
+        }
+       },
+       {
+        "summary": "춤: 민첩 내성 굴림에 불리",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        },
+        "modifier": {
+         "family": "saving-throw",
+         "rollState": "disadvantage",
+         "scope": "actor",
+         "ability": "dex"
         }
        }
       ],
@@ -16409,7 +16937,16 @@
        "verbal": true,
        "somatic": false
       },
-      "ritual": false
+      "ritual": false,
+      "effects": [
+       {
+        "conditionId": "charmed",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ]
      }
     }
    ]
@@ -17578,7 +18115,7 @@
         }
        }
       ],
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "DM 판정 (좌표 없음): 누가 원통 안/밖인지, 선택한 크리처 유형인지, 순간이동으로 들어오려는 크리처의 매력 내성, 원통 안 대상에 대한 빙의·매혹·공포 차단. 선택한 유형의 명중 불리는 추적 효과로 표시.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -17657,7 +18194,7 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "DM 판정: 용기로 들어간 영혼, 인간형 빙의 시도(매력 내성, 실패 시 몸 교체·성공 시 24시간 재시도 불가), 히트 포인트·근력·민첩·건강·속도·감각 대체, 숙주 사망 시 매력 내성, 거리 100피트 조건. 앱은 시전·지속만 기록한다.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -18636,7 +19173,7 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary. DM 판정 (돌이 부분 파괴·변형되면 튕겨 나오며 6d6 역장 피해, 완전 파괴·변질되면 50 역장 피해, 둘 다 가장 가까운 빈 공간으로 나와 넘어짐 — 돌 상태는 앱이 볼 수 없다; 밖 소리를 듣는 지혜(감지) 판정 불리; 5피트 이동으로 나오면 종료).",
       "components": {
        "verbal": true,
        "somatic": true
@@ -18960,12 +19497,31 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "24시간 동안 대상은 정신 피해 면역(자동). DM 판정: 매혹 면역(지속 효과의 상태 면역 문법 없음), 감정·생각 읽기·위치 탐지·원격 관찰·정신 통제 차단.",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "trackedEffects": [
+       {
+        "summary": "정신 피해·매혹 면역 · 정신 탐지·예지 차단(DM 판정)",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 24
+        },
+        "damageDefenses": [
+         {
+          "kind": "immunity",
+          "damageType": "psychic"
+         }
+        ],
+        "conditionImmunities": [
+         "charmed"
+        ]
+       }
+      ]
      }
     }
    ]
@@ -19513,24 +20069,20 @@
         "termination": {
          "targetTakesDamage": true
         }
-       }
-      ],
-      "trackedEffects": [
+       },
        {
-        "summary": "다른 크리처의 기억을 바꾸려 한다. 사거리 내에서 볼 수 있는 크리처 하나는 지혜 내성 굴림을 한다. 당신과 전투 중이라면 내성 굴림에 이점을 얻는다. 실패하면 지속시간 동안 매혹 상태가 된다. 이렇게 매혹된 대상은 행동불능 상태이고 주변을 인식하지 못하지만 당신의 말은 들을 수 있다. 피해를 받거나 다른 주문의 대상이 되면 주문이 끝나고 기억은 바뀌지 않는다.",
+        "conditionId": "incapacitated",
         "trigger": "failed-save",
         "duration": {
-         "kind": "hours",
-         "amount": 24
+         "kind": "concentration"
         },
-        "modifier": {
-         "family": "saving-throw",
-         "rollState": "advantage",
-         "scope": "actor"
+        "termination": {
+         "targetTakesDamage": true
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "trackedEffects": [],
+      "executionScope": "지혜 내성 실패 시 집중 동안 매혹+행동불능(피해를 받으면 끝). DM 판정: 당신과 전투 중이면 첫 내성에 이점, 다른 주문의 대상이 되면 종료, 기억 내용과 상위 슬롯의 시간 범위.",
       "components": {
        "verbal": true,
        "somatic": true
@@ -19997,7 +20549,7 @@
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "지능 내성 실패 시 집중 동안 환영. 당신의 턴마다 반복(슬롯 없음)으로 묶인 대상에게 2d8 정신. DM 판정: 환영의 모양·대상이 범위 안인지(좌표 없음), 대상의 연구 행동 지능(수사) 판정.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -20005,7 +20557,21 @@
         {}
        ]
       },
-      "ritual": false
+      "ritual": false,
+      "sustain": {
+       "economy": "none",
+       "target": "bound",
+       "primary": {
+        "kind": "area-damage",
+        "damageType": "psychic",
+        "dice": {
+         "count": 2,
+         "sides": 8
+        }
+       },
+       "note": "당신의 턴마다 대상이 환영 안이나 5피트 안에 있으면 2d8 정신 — 위치는 DM 판정 (좌표 없음)",
+       "endWhen": "대상이 지능(수사) 판정으로 환영임을 알아챔"
+      }
      }
     }
    ]
@@ -20719,7 +21285,8 @@
        "directTarget": true
       },
       "primary": {
-       "kind": "full-healing"
+       "kind": "full-healing",
+       "summary": "넘어져 있으면 반응으로 일어날 수 있음"
       },
       "concentration": false,
       "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
@@ -20727,7 +21294,14 @@
        "verbal": true,
        "somatic": false
       },
-      "ritual": false
+      "ritual": false,
+      "removesConditions": [
+       "charmed",
+       "frightened",
+       "paralyzed",
+       "poisoned",
+       "stunned"
+      ]
      }
     }
    ]
@@ -26672,28 +27246,53 @@
      "kind": "spell-mechanic",
      "config": {
       "baseLevel": 5,
-      "runtimeSupport": "tracked-executable",
+      "runtimeSupport": "combat-executable",
       "castingEconomy": "action",
       "targeting": {
-       "kind": "any",
+       "kind": "creature",
+       "rangeFeet": 60,
        "minTargets": 0,
-       "maxTargets": 0,
-       "directTarget": false
+       "maxTargets": 1,
+       "allowedRelations": [
+        "self",
+        "ally",
+        "enemy",
+        "neutral"
+       ],
+       "requiresSight": true,
+       "directTarget": true
       },
       "primary": {
-       "kind": "tracked-effect",
-       "summary": "생각만으로 크리처나 물체를 움직이거나 조작하는 능력을 얻는다. 주문을 시전할 때와 이후 턴에 마법 행동으로 사거리 내에서 볼 수 있는 크리처나 물체 하나에게 다음 효과 중 적절한 것을 적용한다. 같은 대상을 계속 선택하거나 언제든 새 대상으로 바꿀 수 있다. 대상을 바꾸면 이전 대상은 더 이상 영향을 받지 않는다.",
+       "kind": "save-effect",
+       "saveAbility": "str",
+       "summary": "거대 이하 크리처: 근력 내성 실패 시 최대 30피트 이동하고 당신의 다음 턴이 끝날 때까지 포박. DM 판정 (이동 방향·거리, 공중에 뜬 경우 낙하; 물체 이동·빼앗기·정밀 조작은 대상 없이 시전하고 DM이 처리)",
        "duration": {
         "kind": "concentration"
        }
       },
       "concentration": true,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Creature option: STR save or restrained until the end of the caster's next turn, repeated with a Magic action each turn while concentrating. DM 판정 (30피트 이동·낙하, 거대 이하 크기 확인, 물체 조작 — 좌표·물체는 앱이 볼 수 없다).",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "effects": [
+       {
+        "conditionId": "restrained",
+        "trigger": "failed-save",
+        "duration": {
+         "kind": "rounds",
+         "amount": 1,
+         "anchorActorId": "$source",
+         "boundary": "end"
+        }
+       }
+      ],
+      "sustain": {
+       "economy": "action",
+       "note": "이후 턴마다 마법 행동으로 같은 대상 또는 새 대상에게 다시 적용 — 대상을 바꾸면 이전 대상은 풀려난다"
+      }
      }
     }
    ]
@@ -28472,7 +29071,7 @@
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "사거리 내의 한 지점에 비마법적 돌벽이 생긴다. 두께 6인치인 10×10피트 판 열 개로 만들며 각 판은 다른 판과 이어져야 한다. 대신 두께 3인치인 10×20피트 판으로 만들 수도 있다.",
+       "summary": "돌벽(6인치 10×10피트 판 10개, 또는 3인치 10×20피트 판)을 만든다. DM 판정 (좌표 없음): 완전히 둘러싸일 크리처는 민첩 내성에 성공하면 반응으로 이동해 벗어남; 판은 AC 15, 두께 1인치당 HP 30, 독·정신 면역; 전체 지속시간 집중하면 영구.",
        "duration": {
         "kind": "concentration"
        }
@@ -28880,15 +29479,14 @@
       "runtimeSupport": "combat-executable",
       "castingEconomy": "action",
       "targeting": {
-       "kind": "creature",
-       "minTargets": 1,
-       "maxTargets": 8,
-       "rangeFeet": 60
+       "kind": "any",
+       "minTargets": 0,
+       "maxTargets": 0,
+       "directTarget": false
       },
       "primary": {
-       "kind": "save-effect",
-       "saveAbility": "dex",
-       "summary": "실패한 크리처는 거미줄에 걸려 포박 상태가 된다.",
+       "kind": "tracked-effect",
+       "summary": "20피트 정육면체에 거미줄 — 어려운 지형·가볍게 가려짐. 들어가거나 그 안에서 턴을 시작한 크리처는 반복 버튼으로 민첩 내성.",
        "duration": {
         "kind": "concentration"
        }
@@ -28903,7 +29501,7 @@
         }
        }
       ],
-      "executionScope": "Authored (C1-03): creatures in the 20-foot cube when the webs appear make a DEX save; on a failure they are Restrained while the caster concentrates. Escaping with a STR check, the difficult terrain, the webs burning (2d4 fire) and the anchoring rule are not enforced.",
+      "executionScope": "지점에 거미줄을 놓고, 들어가거나 그 안에서 턴을 시작한 크리처마다 반복(슬롯 없음)으로 민첩 내성 → 실패 시 포박(집중 동안). DM 판정 (좌표 없음): 누가 거미줄 안인지, 탈출 판정, 고정되지 않은 거미줄의 붕괴, 불 붙은 5피트 칸에서 턴을 시작한 크리처의 2d4 화염.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -28911,7 +29509,19 @@
         {}
        ]
       },
-      "ritual": false
+      "ritual": false,
+      "sustain": {
+       "economy": "none",
+       "primary": {
+        "kind": "save-effect",
+        "saveAbility": "dex",
+        "summary": "실패하면 거미줄 안에 있는 동안 또는 탈출할 때까지 포박.",
+        "duration": {
+         "kind": "concentration"
+        }
+       },
+       "note": "한 턴에 처음 거미줄에 들어가거나 그 안에서 턴을 시작한 크리처 · 탈출(행동, 주문 내성 DC 판정)과 불탄 칸의 2d4 화염은 DM 판정 (좌표 없음)"
+      }
      }
     }
    ]
@@ -29048,10 +29658,16 @@
       "runtimeSupport": "tracked-executable",
       "castingEconomy": "action",
       "targeting": {
-       "kind": "any",
-       "minTargets": 0,
-       "maxTargets": 0,
-       "directTarget": false
+       "kind": "creature",
+       "rangeFeet": 30,
+       "minTargets": 1,
+       "maxTargets": 11,
+       "allowedRelations": [
+        "self",
+        "ally"
+       ],
+       "requiresSight": false,
+       "directTarget": true
       },
       "primary": {
        "kind": "tracked-effect",
@@ -29062,7 +29678,7 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Caster and up to ten willing creatures gain resistance to bludgeoning, piercing and slashing for 8 hours. DM 판정 (넘어짐 면역 — 효과가 주는 상태 면역 문법 없음; 비행 300피트·공중 정지, 질주·변신 행동만 가능; 정상 형태로 돌아가는 1분 동안 충격 상태이고 정상 형태에서는 저항 없음; 주문 종료 시 하강·낙하).",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -29071,7 +29687,34 @@
        ]
       },
       "ritual": false,
-      "castingDurationSeconds": 60
+      "castingDurationSeconds": 60,
+      "trackedEffects": [
+       {
+        "summary": "구름 형태: 타격·관통·참격 저항 · 넘어짐 면역",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 8
+        },
+        "damageDefenses": [
+         {
+          "kind": "resistance",
+          "damageType": "bludgeoning"
+         },
+         {
+          "kind": "resistance",
+          "damageType": "piercing"
+         },
+         {
+          "kind": "resistance",
+          "damageType": "slashing"
+         }
+        ],
+        "conditionImmunities": [
+         "prone"
+        ]
+       }
+      ]
      }
     }
    ]
