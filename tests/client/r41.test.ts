@@ -68,7 +68,7 @@ test("operations: 자기 회복 is the end of the turn, from its contract (D181,
 test("operations: what the table has to decide is written on the log, not dropped (D181)", async () => {
   const cat = catalog();
   const made = build({ name: "b", classes: "barbarian", level: 11 });
-  // V4d (D266): 불굴의 격노 is a hold at 0 HP now; the line 마법 물건 사용 leaves for the table is the example.
+  // V4d (D266): 불굴의 격노 is a hold at 0 HP now; the line 마법 장치 사용 leaves for the table is the example.
   const thief = build({ name: "r", classes: "rogue", level: 13 }, { "class.2.subclass": ["dnd.srd521.subclass.rogue.thief"] });
   const feature = thief.derived.features.find((item) => featureRuleKey(item.id) === "rogue.thief.use-magic-device")!;
   assert.ok(feature, made.derived.features.map((item) => featureRuleKey(item.id)).join(","));

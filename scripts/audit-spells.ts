@@ -59,7 +59,8 @@ for (const spell of catalog.spells) {
   const exec = spellExec(spell.id);
   const text = spell.description ?? spell.summary ?? "";
   if (!exec) { note(spell, "no-exec", "—", "실행 정의 없음"); continue; }
-  const body = text.split("**상위 레벨")[0].split("**소마법 강화")[0];
+  // The body without its upcast paragraph (a source-built description is plain text, an older one markdown).
+  const body = text.split(/\*{0,2}상위 레벨 주문 슬롯 사용/)[0].split(/\*{0,2}소마법 강화/)[0];
   const kind = exec.primary.kind;
   const { dice, type } = diceOf(exec);
 

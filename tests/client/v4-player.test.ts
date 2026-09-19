@@ -246,7 +246,7 @@ test("V4c: 지속되는 격노 tops rage up at initiative and waives its upkeep;
   assert.equal((t.entry(1) as { runtime: CharacterRuntime }).runtime.hp.current, Math.min(3 + 25, t.made[1].derived.hp.max), "capped at the pool");
 });
 
-test("V4c: 선천 마법 raises the spell save DC, 우월한 방어 resists all but force, 방출술 전문가's spells can be prepared (D265)", () => {
+test("V4c: 선천 마법 raises the spell save DC, 우월한 방어 resists all but force, 방출학파 학자's spells can be prepared (D265)", () => {
   const cat = catalog();
   const effect = (key: string, name: string) => ({ key, name, source: "feature" as const, duration: "1분", concentration: false, rounds: 10, elapsed: 0, startedAt: "" });
   const sorcerer = build({ name: "소서러", classes: "sorcerer", level: 3 });
@@ -546,23 +546,23 @@ test("V4l: 날카로운 말 lowers somebody else's hit with the bard's own inspi
   const ask = t.host.archive.filter((message) => message.type === "prompt" && message.prompt?.kind === "rescue" && message.prompt.rescue?.interfere && !message.supersedes).at(-1)!;
   assert.ok(ask, JSON.stringify(t.host.archive.map((message) => [message.type, message.prompt?.kind, message.content?.slice(0, 40)])));
   assert.equal(ask.prompt!.reactor!.entryId, t.ref(1).entryId);
-  assert.deepEqual(ask.prompt!.rescue!.features, ["신랄한 말"]);
+  assert.deepEqual(ask.prompt!.rescue!.features, ["날카로운 말"]);
   assert.deepEqual(ask.prompt!.rescue!.facts?.map((fact) => fact.id), ["same-trigger", "trigger-distance", "source-sees-trigger"]);
 
   const before = t.host.archive.filter((message) => message.type === "action").at(-1)!;
-  t.dm.send({ type: "act.rescue", messageId: ask.id, feature: "신랄한 말" });
+  t.dm.send({ type: "act.rescue", messageId: ask.id, feature: "날카로운 말" });
   await tick();
   const after = t.host.archive.filter((message) => message.type === "action" && message.supersedes).at(-1)!;
   assert.ok(after, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
   assert.ok(after.content.includes("17 vs AC 15"), after.content);
   const answered = t.host.archive.filter((message) => message.supersedes === ask.id).at(-1)!;
-  assert.ok(answered.content.includes("신랄한 말"), answered.content);
+  assert.ok(answered.content.includes("날카로운 말"), answered.content);
   const bard = t.entry(1) as ReturnType<typeof newJournalCharacter>;
   assert.equal(bard.runtime.resourcesUsed["resource.bard.bardic-inspiration"], 1, "한 번 쓰면 영감 하나");
   void before;
 });
 
-test("V4m: species traits are rules — 용감함 gives advantage only against fear, 수완 hands inspiration after a long rest, 브레스 웨폰 asks for a save (D275)", async () => {
+test("V4m: species traits are rules — 용감함 gives advantage only against fear, 수완 hands inspiration after a long rest, 숨결 무기 asks for a save (D275)", async () => {
   const { pcStats } = await import("../../client/rules/actions");
   const { advantageFor } = await import("../../client/rules/actions");
   const cat = catalog();
@@ -585,7 +585,7 @@ test("V4m: species traits are rules — 용감함 gives advantage only against f
   const elf = build({ name: "엘프", species: "elf", classes: "fighter", level: 3 });
   assert.equal(longRest(initialRuntime(elf.derived), elf.derived).heroicInspiration, false);
 
-  // 브레스 웨폰: the line of the ancestry's damage type (D308), a Dexterity save for half at the dragonborn's own DC.
+  // 숨결 무기: the line of the ancestry's damage type (D308), a Dexterity save for half at the dragonborn's own DC.
   const dragonborn = build({ name: "용인", species: "dragonborn", classes: "paladin", level: 5, abilities: { con: 16 } }, { "origin.species.draconicAncestry": ["red"] });
   const breath = tableOutcome(dragonborn.derived, cat, "species.breath-weapon#fire")!;
   assert.deepEqual(breath.strikes?.map((strike) => [strike.formula, strike.damageType, strike.save?.ability, strike.save?.dc, strike.save?.success]), [["2d10", "화염", "dex", 8 + 3 + dragonborn.derived.proficiencyBonus, "half"]]);
@@ -1020,7 +1020,7 @@ test("V5i: 원소 친화 uses the sorcerer's own ability and 과부하 only maxi
   assert.equal(made.derived.damageTypeModifierClass, "sorcerer", JSON.stringify(made.derived.damageTypeModifier));
 
   // 과부하: the maximizing names the wizard, so it never reaches a sorcerer spell.
-  const evoker = build({ name: "방출술사", classes: ["wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "sorcerer"], abilities: { int: 18, cha: 12 }, choices: { "class.2.subclass": ["dnd.srd521.subclass.wizard.evoker"] } }, { "class.2.subclass": ["dnd.srd521.subclass.wizard.evoker"] });
+  const evoker = build({ name: "방출학파", classes: ["wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "wizard", "sorcerer"], abilities: { int: 18, cha: 12 }, choices: { "class.2.subclass": ["dnd.srd521.subclass.wizard.evoker"] } }, { "class.2.subclass": ["dnd.srd521.subclass.wizard.evoker"] });
   const under = deriveCharacter(evoker.source, cat, { effects: [{ key: "feature:wizard.evoker.overchannel", name: "과부하", source: "feature", duration: "다음 주문까지", concentration: false, elapsed: 0, startedAt: "", consumeOn: "cast" }] });
   assert.equal(under.spellDamageMaximizedClass, "wizard");
   const entry = newJournalCharacter("c", "p", evoker.source, initialRuntime(under));

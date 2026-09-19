@@ -6309,20 +6309,18 @@
    "fallback": "교활한 일격에 은신 공격(1d6 소비)이 추가됩니다: 숨은 상태에서 공격해도 그 턴 이동 속도의 절반 이하로만 움직이면 다음 턴이 끝날 때까지 투명 상태가 유지됩니다."
   },
   "dnd.srd521.feature.rogue.thief.use-magic-device": {
-   "heading": "마법 물건 사용",
+   "heading": "마법 장치 사용",
    "nameEn": "Use Magic Device",
    "classId": "dnd.srd521.class.rogue",
    "level": 13,
-   "fallback": "조율 슬롯이 하나 늘어나고, 마법 물건의 충전을 소비할 때 d6에서 6이 나오면 소비하지 않으며, 어느 클래스 목록의 주문 두루마리라도 지능(비전) 판정으로 시전을 시도할 수 있습니다.",
-   "sourceHeading": "마법 장치 사용"
+   "fallback": "조율 슬롯이 하나 늘어나고, 마법 물건의 충전을 소비할 때 d6에서 6이 나오면 소비하지 않으며, 어느 클래스 목록의 주문 두루마리라도 지능(비전) 판정으로 시전을 시도할 수 있습니다."
   },
   "dnd.srd521.feature.rogue.thief.thiefs-reflexes": {
-   "heading": "도둑의 반사신경",
+   "heading": "도둑의 반사 신경",
    "nameEn": "Thief's Reflexes",
    "classId": "dnd.srd521.class.rogue",
    "level": 17,
-   "fallback": "전투의 첫 라운드에 두 번의 턴을 갖습니다. 첫 턴은 원래 이니셔티브, 두 번째 턴은 이니셔티브 −10입니다.",
-   "sourceHeading": "도둑의 반사 신경"
+   "fallback": "전투의 첫 라운드에 두 번의 턴을 갖습니다. 첫 턴은 원래 이니셔티브, 두 번째 턴은 이니셔티브 −10입니다."
   },
   "dnd.srd521.feature.sorcerer.draconic.draconic-resilience": {
    "heading": "용의 회복력",
@@ -6339,12 +6337,11 @@
    "fallback": "용의 주문을 항상 준비합니다: 3레벨 Alter Self·Chromatic Orb·Command·Dragon's Breath, 5레벨 Fear·Fly, 7레벨 Arcane Eye·Charm Monster, 9레벨 Legend Lore·Summon Dragon."
   },
   "dnd.srd521.feature.sorcerer.draconic.elemental-affinity": {
-   "heading": "원소의 친화력",
+   "heading": "원소 친화",
    "nameEn": "Elemental Affinity",
    "classId": "dnd.srd521.class.sorcerer",
    "level": 6,
-   "fallback": "산성·냉기·화염·번개·독 중 하나를 골라 그 피해에 저항을 얻고, 그 유형의 피해를 주는 주문을 시전할 때 피해 굴림 하나에 매력 수정치를 더합니다.",
-   "sourceHeading": "원소 친화"
+   "fallback": "산성·냉기·화염·번개·독 중 하나를 골라 그 피해에 저항을 얻고, 그 유형의 피해를 주는 주문을 시전할 때 피해 굴림 하나에 매력 수정치를 더합니다."
   },
   "dnd.srd521.feature.sorcerer.draconic.dragon-wings": {
    "heading": "용의 날개",
@@ -6361,12 +6358,11 @@
    "fallback": "Summon Dragon을 슬롯 없이 시전할 수 있고(긴 휴식마다 1회), 이 주문에 집중하지 않아도 되며 1분간 지속됩니다."
   },
   "dnd.srd521.feature.wizard.evoker.evocation-savant": {
-   "heading": "방출술 전문가",
+   "heading": "방출학파 학자",
    "nameEn": "Evocation Savant",
    "classId": "dnd.srd521.class.wizard",
    "level": 3,
-   "fallback": "1레벨 이상 방출술 위저드 주문 두 개를 골라 주문서에 무료로 적습니다. 이후 위저드 레벨을 얻을 때마다 방출술 주문 하나를 무료로 더 적을 수 있습니다.",
-   "sourceHeading": "방출학파 학자"
+   "fallback": "1레벨 이상 방출술 위저드 주문 두 개를 골라 주문서에 무료로 적습니다. 이후 위저드 레벨을 얻을 때마다 방출술 주문 하나를 무료로 더 적을 수 있습니다."
   },
   "dnd.srd521.feature.wizard.evoker.potent-cantrip": {
    "heading": "강력한 소마법",
@@ -6383,12 +6379,11 @@
    "fallback": "방출술 주문을 시전할 때 1 + 주문 레벨명까지의 생물을 골라 그들이 내성에 자동 성공하고 피해를 받지 않게 합니다."
   },
   "dnd.srd521.feature.wizard.evoker.empowered-evocation": {
-   "heading": "강화된 방출술",
+   "heading": "강화된 방출",
    "nameEn": "Empowered Evocation",
    "classId": "dnd.srd521.class.wizard",
    "level": 10,
-   "fallback": "방출술 위저드 주문의 피해 굴림 하나에 지능 수정치를 더합니다.",
-   "sourceHeading": "강화된 방출"
+   "fallback": "방출술 위저드 주문의 피해 굴림 하나에 지능 수정치를 더합니다."
   },
   "dnd.srd521.feature.wizard.evoker.overchannel": {
    "heading": "과부하",
@@ -6426,36 +6421,32 @@
    "fallback": "추가 행동으로 30피트 안의 생물들에게 지혜 내성(DC 8 + 숙련 보너스 + 근력 수정치)을 요구합니다. 실패하면 1분 동안 자신에게 공포 상태가 됩니다. 긴 휴식마다 1회, 또는 격노 1회를 소비해 다시 씁니다."
   },
   "dnd.srd521.feature.monk.open-hand.open-hand-technique": {
-   "heading": "열린 손 기술",
+   "heading": "열린 손 기법",
    "nameEn": "Open Hand Technique",
    "classId": "dnd.srd521.class.monk",
    "level": 3,
-   "fallback": "폭풍 같은 공격의 맨손 타격이 명중할 때마다 효과 하나를 고릅니다: 흔들기(다음 턴 시작까지 반응 불가), 밀어내기(근력 내성 실패 시 15피트 밀어냄), 넘어뜨리기(민첩 내성 실패 시 넘어짐).",
-   "sourceHeading": "열린 손 기법"
+   "fallback": "폭풍 같은 공격의 맨손 타격이 명중할 때마다 효과 하나를 고릅니다: 흔들기(다음 턴 시작까지 반응 불가), 밀어내기(근력 내성 실패 시 15피트 밀어냄), 넘어뜨리기(민첩 내성 실패 시 넘어짐)."
   },
   "dnd.srd521.feature.monk.open-hand.wholeness-of-body": {
-   "heading": "심신의 완전함",
+   "heading": "신체 완성",
    "nameEn": "Wholeness of Body",
    "classId": "dnd.srd521.class.monk",
    "level": 6,
-   "fallback": "추가 행동으로 무예 주사위 + 지혜 수정치(최소 1)만큼 HP를 회복합니다. 긴 휴식마다 지혜 수정치(최소 1)회.",
-   "sourceHeading": "신체 완성"
+   "fallback": "추가 행동으로 무예 주사위 + 지혜 수정치(최소 1)만큼 HP를 회복합니다. 긴 휴식마다 지혜 수정치(최소 1)회."
   },
   "dnd.srd521.feature.monk.open-hand.fleet-step": {
-   "heading": "빠른 걸음",
+   "heading": "날랜 발걸음",
    "nameEn": "Fleet Step",
    "classId": "dnd.srd521.class.monk",
    "level": 11,
-   "fallback": "바람의 걸음이 아닌 추가 행동을 하면 그 직후 바람의 걸음을 기 점수 없이 함께 쓸 수 있습니다.",
-   "sourceHeading": "날랜 발걸음"
+   "fallback": "바람의 걸음이 아닌 추가 행동을 하면 그 직후 바람의 걸음을 기 점수 없이 함께 쓸 수 있습니다."
   },
   "dnd.srd521.feature.monk.open-hand.quivering-palm": {
-   "heading": "진동하는 손바닥",
+   "heading": "진동장",
    "nameEn": "Quivering Palm",
    "classId": "dnd.srd521.class.monk",
    "level": 17,
-   "fallback": "맨손 타격이 명중했을 때 기 점수 4점을 소비해 대상의 몸에 진동을 심습니다. 이후 행동으로 진동을 터뜨리면 대상은 건강 내성에 실패하면 10d12 역장 피해를, 성공하면 절반을 받습니다. 진동은 몽크 레벨만큼의 일수 동안 유지됩니다.",
-   "sourceHeading": "진동장"
+   "fallback": "맨손 타격이 명중했을 때 기 점수 4점을 소비해 대상의 몸에 진동을 심습니다. 이후 행동으로 진동을 터뜨리면 대상은 건강 내성에 실패하면 10d12 역장 피해를, 성공하면 절반을 받습니다. 진동은 몽크 레벨만큼의 일수 동안 유지됩니다."
   },
   "dnd.srd521.feature.paladin.oath-of-devotion.spells": {
    "heading": "헌신의 맹세 주문",
@@ -6500,12 +6491,11 @@
    "fallback": "적대적 생물의 HP를 0으로 만들면 매력 수정치 + 워락 레벨만큼 임시 HP를 얻습니다. 5피트 안에서 다른 이가 적을 쓰러뜨려도 얻습니다."
   },
   "dnd.srd521.feature.warlock.fiend.fiend-spells": {
-   "heading": "마귀 주문",
+   "heading": "악마 주문",
    "nameEn": "Fiend Spells",
    "classId": "dnd.srd521.class.warlock",
    "level": 3,
-   "fallback": "마귀 주문을 항상 준비합니다: 3레벨 Burning Hands·Command·Scorching Ray·Suggestion, 5레벨 Fireball·Stinking Cloud, 7레벨 Fire Shield·Wall of Fire, 9레벨 Geas·Insect Plague.",
-   "sourceHeading": "악마 주문"
+   "fallback": "마귀 주문을 항상 준비합니다: 3레벨 Burning Hands·Command·Scorching Ray·Suggestion, 5레벨 Fireball·Stinking Cloud, 7레벨 Fire Shield·Wall of Fire, 9레벨 Geas·Insect Plague."
   },
   "dnd.srd521.feature.warlock.fiend.dark-ones-own-luck": {
    "heading": "어둠의 존재의 행운",
@@ -6515,12 +6505,11 @@
    "fallback": "능력 판정이나 내성 굴림을 한 뒤 d10을 굴려 더할 수 있습니다. 긴 휴식마다 매력 수정치(최소 1)회."
   },
   "dnd.srd521.feature.warlock.fiend.fiendish-resilience": {
-   "heading": "마귀의 회복력",
+   "heading": "악마적 회복력",
    "nameEn": "Fiendish Resilience",
    "classId": "dnd.srd521.class.warlock",
    "level": 10,
-   "fallback": "짧은 휴식이나 긴 휴식을 마칠 때 피해 유형 하나를 골라 다음 휴식까지 그 피해에 저항을 얻습니다(마법 무기나 은 무기 제외).",
-   "sourceHeading": "악마적 회복력"
+   "fallback": "짧은 휴식이나 긴 휴식을 마칠 때 피해 유형 하나를 골라 다음 휴식까지 그 피해에 저항을 얻습니다(마법 무기나 은 무기 제외)."
   },
   "dnd.srd521.feature.warlock.fiend.hurl-through-hell": {
    "heading": "지옥으로 내던지기",
@@ -6537,12 +6526,11 @@
    "fallback": "원하는 기술 세 개에 숙련을 얻습니다."
   },
   "dnd.srd521.feature.bard.college-of-lore.cutting-words": {
-   "heading": "신랄한 말",
+   "heading": "날카로운 말",
    "nameEn": "Cutting Words",
    "classId": "dnd.srd521.class.bard",
    "level": 3,
-   "fallback": "60피트 안에서 볼 수 있는 생물이 피해 굴림을 하거나 능력 판정·공격 굴림에 성공했을 때 반응으로 바드의 영감 1회를 소비해 영감 주사위를 굴린 값만큼 그 굴림에서 뺍니다.",
-   "sourceHeading": "날카로운 말"
+   "fallback": "60피트 안에서 볼 수 있는 생물이 피해 굴림을 하거나 능력 판정·공격 굴림에 성공했을 때 반응으로 바드의 영감 1회를 소비해 영감 주사위를 굴린 값만큼 그 굴림에서 뺍니다."
   },
   "dnd.srd521.feature.bard.college-of-lore.magical-discoveries": {
    "heading": "마법 발견",
@@ -6552,12 +6540,11 @@
    "fallback": "클레릭·드루이드·위저드 주문 목록에서 주문 두 개를 골라 항상 준비합니다. 바드 레벨을 얻을 때 하나를 바꿀 수 있습니다."
   },
   "dnd.srd521.feature.bard.college-of-lore.peerless-skill": {
-   "heading": "탁월한 기술",
+   "heading": "비할 데 없는 기량",
    "nameEn": "Peerless Skill",
    "classId": "dnd.srd521.class.bard",
    "level": 14,
-   "fallback": "능력 판정이나 공격 굴림에 실패했을 때 바드의 영감 1회를 소비해 영감 주사위를 더할 수 있습니다. 그래도 실패하면 소비하지 않은 것으로 칩니다.",
-   "sourceHeading": "비할 데 없는 기량"
+   "fallback": "능력 판정이나 공격 굴림에 실패했을 때 바드의 영감 1회를 소비해 영감 주사위를 더할 수 있습니다. 그래도 실패하면 소비하지 않은 것으로 칩니다."
   },
   "dnd.srd521.feature.fighter.champion.improved-critical": {
    "heading": "향상된 치명타",
@@ -6901,7 +6888,7 @@
   },
   "dnd.srd521.subclass.sorcerer.draconic-sorcery": {
    "classId": "dnd.srd521.class.sorcerer",
-   "heading": "용혈 마법",
+   "heading": "용의 마법",
    "nameEn": "Draconic Sorcery",
    "summary": "용의 피가 흐르는 소서러 서브클래스다.",
    "definition": {
@@ -6989,12 +6976,11 @@
      "id": "dnd.srd521.feature.sorcerer.draconic.dragon-companion"
     }
    ],
-   "mechanics": [],
-   "sourceHeading": "용의 마법"
+   "mechanics": []
   },
   "dnd.srd521.subclass.wizard.evoker": {
    "classId": "dnd.srd521.class.wizard",
-   "heading": "방출술사",
+   "heading": "방출학파",
    "nameEn": "Evoker",
    "summary": "파괴적인 에너지를 다루는 위저드 서브클래스다.",
    "definition": {
@@ -7024,8 +7010,7 @@
      "id": "dnd.srd521.feature.wizard.evoker.overchannel"
     }
    ],
-   "mechanics": [],
-   "sourceHeading": "방출학파"
+   "mechanics": []
   },
   "dnd.srd521.subclass.barbarian.path-of-the-berserker": {
    "classId": "dnd.srd521.class.barbarian",
@@ -7527,10 +7512,9 @@
    "fallback": "120피트 안의 마법적·비마법적 어둠과 희미한 빛에서 정상적으로 볼 수 있습니다."
   },
   "invocation.devouring-blade": {
-   "heading": "포식하는 칼날",
+   "heading": "탐식하는 칼날",
    "nameEn": "Devouring Blade",
-   "fallback": "갈증 나는 칼날의 추가 공격이 두 번이 됩니다(공격 행동에 세 번 공격).",
-   "sourceHeading": "탐식하는 칼날"
+   "fallback": "갈증 나는 칼날의 추가 공격이 두 번이 됩니다(공격 행동에 세 번 공격)."
   },
   "invocation.eldritch-mind": {
    "heading": "섬뜩한 정신",
@@ -7548,10 +7532,9 @@
    "fallback": "사거리 10피트 이상인 피해 워락 소마법 하나의 사거리를 워락 레벨 × 30피트만큼 늘립니다."
   },
   "invocation.fiendish-vigor": {
-   "heading": "마귀의 활력",
+   "heading": "악마적 활력",
    "nameEn": "Fiendish Vigor",
-   "fallback": "주문 슬롯 없이 자신에게 False Life를 시전하며, 임시 HP 주사위는 최대값입니다.",
-   "sourceHeading": "악마적 활력"
+   "fallback": "주문 슬롯 없이 자신에게 False Life를 시전하며, 임시 HP 주사위는 최대값입니다."
   },
   "invocation.gaze-of-two-minds": {
    "heading": "두 정신의 시선",
@@ -7574,10 +7557,9 @@
    "fallback": "사역마가 비행·수영 속도 40피트를 얻고, 추가 행동으로 공격을 지시할 수 있으며, 사역마의 공격이 마법으로 취급되고 내성 DC에 자신의 주문 DC를 씁니다."
   },
   "invocation.lessons-of-the-first-ones": {
-   "heading": "태초의 존재의 가르침",
+   "heading": "태초의 교훈",
    "nameEn": "Lessons of the First Ones",
-   "fallback": "아직 갖지 않은 기원 재주 하나를 얻습니다.",
-   "sourceHeading": "태초의 교훈"
+   "fallback": "아직 갖지 않은 기원 재주 하나를 얻습니다."
   },
   "invocation.lifedrinker": {
    "heading": "생명 흡수자",
@@ -7590,16 +7572,14 @@
    "fallback": "주문 슬롯 없이 Disguise Self를 시전할 수 있습니다."
   },
   "invocation.master-of-myriad-forms": {
-   "heading": "무수한 형상의 지배자",
+   "heading": "무수한 형태의 대가",
    "nameEn": "Master of Myriad Forms",
-   "fallback": "주문 슬롯 없이 Alter Self를 시전할 수 있습니다.",
-   "sourceHeading": "무수한 형태의 대가"
+   "fallback": "주문 슬롯 없이 Alter Self를 시전할 수 있습니다."
   },
   "invocation.misty-visions": {
-   "heading": "안개 낀 환영",
+   "heading": "안개 환영",
    "nameEn": "Misty Visions",
-   "fallback": "주문 슬롯 없이 Silent Image를 시전할 수 있습니다.",
-   "sourceHeading": "안개 환영"
+   "fallback": "주문 슬롯 없이 Silent Image를 시전할 수 있습니다."
   },
   "invocation.one-with-shadows": {
    "heading": "그림자와 하나",
@@ -7627,22 +7607,19 @@
    "fallback": "그림자의 서를 얻습니다. 어느 목록에서든 소마법 셋과 의식 1레벨 주문 둘을 골라 항상 준비하고, 책은 주문 매개체가 됩니다."
   },
   "invocation.repelling-blast": {
-   "heading": "밀쳐내는 폭발",
+   "heading": "밀어내는 폭발",
    "nameEn": "Repelling Blast",
-   "fallback": "공격 굴림으로 피해를 주는 워락 소마법 하나를 골라, 명중 시 대형 이하 대상을 10피트 밀어낼 수 있습니다.",
-   "sourceHeading": "밀어내는 폭발"
+   "fallback": "공격 굴림으로 피해를 주는 워락 소마법 하나를 골라, 명중 시 대형 이하 대상을 10피트 밀어낼 수 있습니다."
   },
   "invocation.thirsting-blade": {
-   "heading": "갈증 나는 칼날",
+   "heading": "갈증의 칼날",
    "nameEn": "Thirsting Blade",
-   "fallback": "계약 무기로 공격 행동을 할 때 두 번 공격할 수 있습니다.",
-   "sourceHeading": "갈증의 칼날"
+   "fallback": "계약 무기로 공격 행동을 할 때 두 번 공격할 수 있습니다."
   },
   "invocation.visions-of-distant-realms": {
-   "heading": "먼 영역의 환영",
+   "heading": "먼 영역의 환시",
    "nameEn": "Visions of Distant Realms",
-   "fallback": "주문 슬롯 없이 Arcane Eye를 시전할 수 있습니다.",
-   "sourceHeading": "먼 영역의 환시"
+   "fallback": "주문 슬롯 없이 Arcane Eye를 시전할 수 있습니다."
   },
   "invocation.whispers-of-the-grave": {
    "heading": "무덤의 속삭임",
@@ -7675,10 +7652,9 @@
    "fallback": "지속시간이 1분 이상인 주문의 지속시간을 두 배(최대 24시간)로 하고, 집중 유지 내성 굴림에 유리를 받습니다."
   },
   "metamagic.heightened-spell": {
-   "heading": "고양 주문",
+   "heading": "고조 주문",
    "nameEn": "Heightened Spell",
-   "fallback": "내성 굴림을 요구하는 주문의 대상 하나가 그 주문의 첫 내성 굴림에 불리를 받게 합니다.",
-   "sourceHeading": "고조 주문"
+   "fallback": "내성 굴림을 요구하는 주문의 대상 하나가 그 주문의 첫 내성 굴림에 불리를 받게 합니다."
   },
   "metamagic.quickened-spell": {
    "heading": "신속 주문",
@@ -7691,10 +7667,9 @@
    "fallback": "주문 공격 굴림이 빗나갔을 때 d20을 다시 굴립니다. 다른 메타매직과 함께 쓸 수 있습니다."
   },
   "metamagic.subtle-spell": {
-   "heading": "은밀 주문",
+   "heading": "은밀한 주문",
    "nameEn": "Subtle Spell",
-   "fallback": "언어와 동작 구성요소 없이, 그리고 소모되지 않고 비용이 없는 물질 구성요소 없이 주문을 시전합니다.",
-   "sourceHeading": "은밀한 주문"
+   "fallback": "언어와 동작 구성요소 없이, 그리고 소모되지 않고 비용이 없는 물질 구성요소 없이 주문을 시전합니다."
   },
   "metamagic.transmuted-spell": {
    "heading": "변환 주문",

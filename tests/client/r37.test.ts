@@ -1,7 +1,7 @@
 /**
  * R37 (ROLL20_TABLE_SPEC.md D177): the `d20.roll` slot, finished.
  *
- * R35 opened it on saving throws, which gave 불굴 and 어둠의 존재의 행운 a seam. 전술적 사고 and 탁월한 기술 read
+ * R35 opened it on saving throws, which gave 불굴 and 어둠의 존재의 행운 a seam. 전술적 사고 and 비할 데 없는 기량 read
  * `families: ["ability-check"]`, and the app rolled ability checks with nowhere for a contract to reach them. Now an
  * official action's failed check asks its roller — the actor for their own check, the *target* for the saving throw
  * 붙잡기 and 밀치기 force — and the contract's `roll.modify` resolves the whole action again, marks and all.
@@ -127,7 +127,7 @@ test("rescue: no contract, no question (D177)", async () => {
   assert.equal(prompt(), undefined, "a wizard has no d20 rescue contract");
 });
 
-test("rescue: a missed attack is a failed d20 too, and 탁월한 기술 adds its d12 (D177)", async () => {
+test("rescue: a missed attack is a failed d20 too, and 비할 데 없는 기량 adds its d12 (D177)", async () => {
   const hub = new MemoryHub();
   const base = newCampaign("R37 명중", { userId: "dm", displayName: "DM" });
   const campaign = { ...base, joinCode: "R37BBB" };
@@ -173,9 +173,9 @@ test("rescue: a missed attack is a failed d20 too, and 탁월한 기술 adds its
   const before = ogreHp();
   const ask = prompt()!;
   assert.ok(ask, host.archive.map((message) => message.content).join("\n"));
-  assert.deepEqual(ask.prompt!.rescue!.features, ["탁월한 기술"]);
+  assert.deepEqual(ask.prompt!.rescue!.features, ["비할 데 없는 기량"]);
   dice.value = 0.95;
-  alice.send({ type: "act.rescue", messageId: ask.id, feature: "탁월한 기술" });
+  alice.send({ type: "act.rescue", messageId: ask.id, feature: "비할 데 없는 기량" });
   await tick();
   const landed = card()!;
   assert.equal(landed.supersedes, missed.id, "the new card replaces the old one, as the DM palette's edits do");

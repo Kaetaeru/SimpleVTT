@@ -4187,8 +4187,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "열린 손 기술",
-     "summary": "열린 손 기술이(가) 앱에서 하는 일"
+     "name": "열린 손 기법",
+     "summary": "열린 손 기법이(가) 앱에서 하는 일"
     }
    }
   },
@@ -4515,8 +4515,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "빠른 걸음",
-     "summary": "빠른 걸음이(가) 앱에서 하는 일"
+     "name": "날랜 발걸음",
+     "summary": "날랜 발걸음이(가) 앱에서 하는 일"
     }
    }
   },
@@ -4983,8 +4983,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "마법 물건 사용",
-     "summary": "마법 물건 사용이(가) 앱에서 하는 일"
+     "name": "마법 장치 사용",
+     "summary": "마법 장치 사용이(가) 앱에서 하는 일"
     }
    }
   },
@@ -5010,7 +5010,7 @@
          "property": "attunement.slots",
          "operation": "add",
          "value": 1,
-         "note": "마법 물건 사용"
+         "note": "마법 장치 사용"
         },
         {
          "kind": "adjudication.request",
@@ -5268,8 +5268,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "도둑의 반사신경",
-     "summary": "도둑의 반사신경이(가) 앱에서 하는 일"
+     "name": "도둑의 반사 신경",
+     "summary": "도둑의 반사 신경이(가) 앱에서 하는 일"
     }
    }
   },
@@ -5295,7 +5295,7 @@
          "property": "initiative.extra-turn",
          "operation": "set",
          "value": -10,
-         "note": "도둑의 반사신경"
+         "note": "도둑의 반사 신경"
         }
        ]
       }
@@ -5464,8 +5464,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "방출술 전문가",
-     "summary": "방출술 전문가이(가) 앱에서 하는 일"
+     "name": "방출학파 학자",
+     "summary": "방출학파 학자이(가) 앱에서 하는 일"
     }
    }
   },
@@ -5523,7 +5523,7 @@
          },
          "params": {
           "id": "evocation-savant",
-          "label": "방출술 전문가",
+          "label": "방출학파 학자",
           "school": "evocation"
          }
         }
@@ -5677,8 +5677,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "강화된 방출술",
-     "summary": "강화된 방출술이(가) 앱에서 하는 일"
+     "name": "강화된 방출",
+     "summary": "강화된 방출이(가) 앱에서 하는 일"
     }
    }
   },
@@ -8512,8 +8512,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "마귀 주문",
-     "summary": "마귀 주문이(가) 앱에서 하는 일"
+     "name": "악마 주문",
+     "summary": "악마 주문이(가) 앱에서 하는 일"
     }
    }
   },
@@ -8538,7 +8538,7 @@
          "kind": "property.modify",
          "property": "rule.applied-elsewhere",
          "operation": "set",
-         "note": "마귀 주문은 레벨마다 항상 준비 목록에 들어감"
+         "note": "악마 주문은 레벨마다 항상 준비 목록에 들어감"
         }
        ]
       }
@@ -8555,8 +8555,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "마귀의 회복력",
-     "summary": "마귀의 회복력이(가) 앱에서 하는 일"
+     "name": "악마적 회복력",
+     "summary": "악마적 회복력이(가) 앱에서 하는 일"
     }
    }
   },
@@ -8587,7 +8587,7 @@
       },
       {
        "id": "acid",
-       "label": "마귀의 회복력: 산성",
+       "label": "악마적 회복력: 산성",
        "invocation": "manual",
        "operations": [
         {
@@ -8663,7 +8663,7 @@
       },
       {
        "id": "cold",
-       "label": "마귀의 회복력: 냉기",
+       "label": "악마적 회복력: 냉기",
        "invocation": "manual",
        "operations": [
         {
@@ -8739,7 +8739,7 @@
       },
       {
        "id": "fire",
-       "label": "마귀의 회복력: 화염",
+       "label": "악마적 회복력: 화염",
        "invocation": "manual",
        "operations": [
         {
@@ -8815,7 +8815,7 @@
       },
       {
        "id": "lightning",
-       "label": "마귀의 회복력: 번개",
+       "label": "악마적 회복력: 번개",
        "invocation": "manual",
        "operations": [
         {
@@ -8891,7 +8891,7 @@
       },
       {
        "id": "necrotic",
-       "label": "마귀의 회복력: 괴저",
+       "label": "악마적 회복력: 괴저",
        "invocation": "manual",
        "operations": [
         {
@@ -8967,7 +8967,7 @@
       },
       {
        "id": "poison",
-       "label": "마귀의 회복력: 독",
+       "label": "악마적 회복력: 독",
        "invocation": "manual",
        "operations": [
         {
@@ -9043,7 +9043,7 @@
       },
       {
        "id": "psychic",
-       "label": "마귀의 회복력: 정신",
+       "label": "악마적 회복력: 정신",
        "invocation": "manual",
        "operations": [
         {
@@ -9119,7 +9119,7 @@
       },
       {
        "id": "radiant",
-       "label": "마귀의 회복력: 광휘",
+       "label": "악마적 회복력: 광휘",
        "invocation": "manual",
        "operations": [
         {
@@ -9195,7 +9195,7 @@
       },
       {
        "id": "thunder",
-       "label": "마귀의 회복력: 천둥",
+       "label": "악마적 회복력: 천둥",
        "invocation": "manual",
        "operations": [
         {
@@ -9271,7 +9271,7 @@
       },
       {
        "id": "bludgeoning",
-       "label": "마귀의 회복력: 타격",
+       "label": "악마적 회복력: 타격",
        "invocation": "manual",
        "operations": [
         {
@@ -9347,7 +9347,7 @@
       },
       {
        "id": "piercing",
-       "label": "마귀의 회복력: 관통",
+       "label": "악마적 회복력: 관통",
        "invocation": "manual",
        "operations": [
         {
@@ -9423,7 +9423,7 @@
       },
       {
        "id": "slashing",
-       "label": "마귀의 회복력: 참격",
+       "label": "악마적 회복력: 참격",
        "invocation": "manual",
        "operations": [
         {
@@ -14499,8 +14499,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "방출술사",
-     "summary": "방출술사이(가) 앱에서 하는 일"
+     "name": "방출학파",
+     "summary": "방출학파이(가) 앱에서 하는 일"
     }
    }
   },
@@ -17290,12 +17290,12 @@
   "id": "effect.feature.dnd.srd521.subclass.sorcerer.draconic-sorcery.subclass.elemental-affinity.acid",
   "category": "option",
   "presentation": {
-   "originalName": "원소의 친화력",
+   "originalName": "원소 친화",
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "원소의 친화력",
-     "summary": "원소의 친화력"
+     "name": "원소 친화",
+     "summary": "원소 친화"
     }
    }
   },
@@ -17361,12 +17361,12 @@
   "id": "effect.feature.dnd.srd521.subclass.sorcerer.draconic-sorcery.subclass.elemental-affinity.cold",
   "category": "option",
   "presentation": {
-   "originalName": "원소의 친화력",
+   "originalName": "원소 친화",
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "원소의 친화력",
-     "summary": "원소의 친화력"
+     "name": "원소 친화",
+     "summary": "원소 친화"
     }
    }
   },
@@ -17432,12 +17432,12 @@
   "id": "effect.feature.dnd.srd521.subclass.sorcerer.draconic-sorcery.subclass.elemental-affinity.fire",
   "category": "option",
   "presentation": {
-   "originalName": "원소의 친화력",
+   "originalName": "원소 친화",
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "원소의 친화력",
-     "summary": "원소의 친화력"
+     "name": "원소 친화",
+     "summary": "원소 친화"
     }
    }
   },
@@ -17503,12 +17503,12 @@
   "id": "effect.feature.dnd.srd521.subclass.sorcerer.draconic-sorcery.subclass.elemental-affinity.lightning",
   "category": "option",
   "presentation": {
-   "originalName": "원소의 친화력",
+   "originalName": "원소 친화",
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "원소의 친화력",
-     "summary": "원소의 친화력"
+     "name": "원소 친화",
+     "summary": "원소 친화"
     }
    }
   },
@@ -17574,12 +17574,12 @@
   "id": "effect.feature.dnd.srd521.subclass.sorcerer.draconic-sorcery.subclass.elemental-affinity.poison",
   "category": "option",
   "presentation": {
-   "originalName": "원소의 친화력",
+   "originalName": "원소 친화",
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "원소의 친화력",
-     "summary": "원소의 친화력"
+     "name": "원소 친화",
+     "summary": "원소 친화"
     }
    }
   },
@@ -17645,11 +17645,11 @@
   "id": "effect.feature.sorcerer.draconic.elemental-affinity",
   "category": "option",
   "presentation": {
-   "originalName": "원소의 친화력",
+   "originalName": "원소 친화",
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "원소의 친화력",
+     "name": "원소 친화",
      "summary": "고른 유형에 저항, 그 유형 주문 피해에 매력"
     }
    }
@@ -17692,8 +17692,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "브레스 무기",
-     "summary": "브레스 무기이(가) 앱에서 하는 일"
+     "name": "숨결 무기",
+     "summary": "숨결 무기이(가) 앱에서 하는 일"
     }
    }
   },
@@ -17723,7 +17723,7 @@
          },
          "params": {
           "id": "resource.species.breath-weapon",
-          "label": "브레스 웨폰",
+          "label": "숨결 무기",
           "recovery": "long-rest"
          }
         }
@@ -17731,7 +17731,7 @@
       },
       {
        "id": "acid",
-       "label": "브레스 웨폰 (산성)",
+       "label": "숨결 무기 (산성)",
        "invocation": "manual",
        "operations": [
         {
@@ -17837,7 +17837,7 @@
       },
       {
        "id": "cold",
-       "label": "브레스 웨폰 (냉기)",
+       "label": "숨결 무기 (냉기)",
        "invocation": "manual",
        "operations": [
         {
@@ -17906,7 +17906,7 @@
          "damageType": "냉기",
          "target": "targets",
          "save": {
-          "ability": "dex",
+          "ability": "con",
           "dc": {
            "op": "add",
            "args": [
@@ -17943,7 +17943,7 @@
       },
       {
        "id": "fire",
-       "label": "브레스 웨폰 (화염)",
+       "label": "숨결 무기 (화염)",
        "invocation": "manual",
        "operations": [
         {
@@ -18052,7 +18052,7 @@
       },
       {
        "id": "lightning",
-       "label": "브레스 웨폰 (번개)",
+       "label": "숨결 무기 (번개)",
        "invocation": "manual",
        "operations": [
         {
@@ -18158,7 +18158,7 @@
       },
       {
        "id": "poison",
-       "label": "브레스 웨폰 (독)",
+       "label": "숨결 무기 (독)",
        "invocation": "manual",
        "operations": [
         {
@@ -18227,7 +18227,7 @@
          "damageType": "독",
          "target": "targets",
          "save": {
-          "ability": "dex",
+          "ability": "con",
           "dc": {
            "op": "add",
            "args": [
@@ -19230,8 +19230,8 @@
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "고양 주문",
-     "summary": "고양 주문이(가) 앱에서 하는 일"
+     "name": "고조 주문",
+     "summary": "고조 주문이(가) 앱에서 하는 일"
     }
    }
   },
@@ -20693,12 +20693,12 @@
   "id": "effect.feature.invocation.fiendish-vigor",
   "category": "option",
   "presentation": {
-   "originalName": "마귀의 활력",
+   "originalName": "악마적 활력",
    "defaultLocale": "ko-KR",
    "locales": {
     "ko-KR": {
-     "name": "마귀의 활력",
-     "summary": "마귀의 활력"
+     "name": "악마적 활력",
+     "summary": "악마적 활력"
     }
    }
   },
@@ -20728,7 +20728,7 @@
          },
          "params": {
           "id": "resource.invocation.fiendish-vigor",
-          "label": "마귀의 활력 (거짓된 생명)",
+          "label": "악마적 활력 (거짓된 생명)",
           "spell": "dnd.srd521.spell.false-life",
           "atWill": true
          }

@@ -25,7 +25,7 @@ test("V3b: what the app already applies is not labelled 표에서 판단 (D256)"
   assert.equal(subclass.execution, "derived", JSON.stringify(subclass));
   assert.equal(fighter.features.find((feature) => feature.name === "행동 폭증 2회")?.execution, "derived");
   const sorcerer = build({ name: "소서러", classes: "sorcerer", level: 6 }).derived;
-  assert.equal(sorcerer.features.find((feature) => feature.name === "원소의 친화력")?.execution, "derived");
+  assert.equal(sorcerer.features.find((feature) => feature.name === "원소 친화")?.execution, "derived");
 });
 
 test("V3b: the champion asks for a second fighting style at 7, and 섬뜩한 대가 restores every pact slot (D256)", () => {
@@ -122,7 +122,7 @@ test("V3c: 믿음직한 재능 turns a proficient check's low d20 into 10 at the
   assert.equal(card.act!.check?.d20, 10, JSON.stringify(card.act!.check));
 });
 
-test("V3d: 몽크의 기 is three uses, each with its cost, economy and effect; 열린 손 기술 rides a 질풍 연타 hit (D258)", async () => {
+test("V3d: 몽크의 기 is three uses, each with its cost, economy and effect; 열린 손 기법 rides a 질풍 연타 hit (D258)", async () => {
   const { featureActivation } = await import("../../client/rules/activation");
   const { hitOffers } = await import("../../client/rules/attackSpec");
   const monk = build({ name: "몽크", classes: "monk", level: 10 }, { "class.2.subclass": ["dnd.srd521.subclass.monk.warrior-of-the-open-hand"] }).derived;
@@ -216,7 +216,7 @@ test("V3f: 전술 통달, 전술적 이동, 신성 변환의 사용, 회복의 �
   assert.ok(!resolveAttack(attacker, target, spec, { dice: diceFrom(() => 0.5) }).reasons.some((reason) => reason.includes("기회 공격")));
 });
 
-test("V3g: 주문 숙련 casts at will, 의식 숙련 casts spellbook rituals, 방출술 전문가 adds school picks, 과부하 maximizes the next spell (D261)", async () => {
+test("V3g: 주문 숙련 casts at will, 의식 숙련 casts spellbook rituals, 방출학파 학자 adds school picks, 과부하 maximizes the next spell (D261)", async () => {
   const { castSpell } = await import("../../client/character/play");
   const { castableSpells, pcSpell } = await import("../../client/rules/spellcast");
   const { castOptions } = await import("../../client/screens/SheetView");
@@ -231,7 +231,7 @@ test("V3g: 주문 숙련 casts at will, 의식 숙련 casts spellbook rituals, �
   let runtime: ReturnType<typeof initialRuntime> | null = initialRuntime(sage);
   for (let cast = 0; cast < 3; cast += 1) runtime = castSpell(runtime!, sage, spell, { kind: "resource", id: mastery.id });
   assert.equal(runtime?.resourcesUsed[mastery.id] ?? 0, 0);
-  // 방출술 전문가: an ask for free evocation spells, 2 + 1 for every two levels past 3.
+  // 방출학파 학자: an ask for free evocation spells, 2 + 1 for every two levels past 3.
   const savant = sage.choices.find((choice) => choice.id.endsWith(".evocation-savant"))!;
   assert.equal(savant.count, 9);
   assert.ok(savant.options.every((option) => cat.spellById(option.id)?.school === "evocation"));
@@ -266,19 +266,19 @@ test("V3g: 주문 숙련 casts at will, 의식 숙련 casts spellbook rituals, �
   const strike = pcAttackSpec(druidEntry, druid.derived, staff.id, { contracts: ["druid.elemental-fury.primal-strike#fire"] }, cat)!.spec;
   assert.ok(strike.riders?.some((part) => part.formula === "2d8"), JSON.stringify(strike.riders));
 
-  // 마귀의 회복력: a new type replaces the last one.
+  // 악마적 회복력: a new type replaces the last one.
   const fiend = build({ name: "워락", classes: "warlock", level: 10 }, { "class.2.subclass": ["dnd.srd521.subclass.warlock.fiend-patron"] });
   let sheet = initialRuntime(fiend.derived);
   const deps = { source: fiend.source, catalog: cat, derived: fiend.derived, get runtime() { return sheet; }, rollDice: async (spec: { label: string; formula: string }) => ({ id: "r", at: "", label: spec.label, formula: spec.formula, total: 0, dice: [], modifier: 0 }), save: (update: (current: typeof sheet) => typeof sheet) => { sheet = update(sheet); } };
-  for (const name of ["마귀의 회복력: 화염", "마귀의 회복력: 냉기"]) {
+  for (const name of ["악마적 회복력: 화염", "악마적 회복력: 냉기"]) {
     const feature = fiend.derived.features.find((item) => item.name === name)!;
     assert.ok(feature, fiend.derived.features.map((item) => item.name).join(", "));
     assert.equal(await activateFeature(feature, deps as Parameters<typeof activateFeature>[1]), "done");
   }
-  assert.deepEqual(sheet.effects.map((effect) => effect.name), ["마귀의 회복력: 냉기"]);
+  assert.deepEqual(sheet.effects.map((effect) => effect.name), ["악마적 회복력: 냉기"]);
 });
 
-test("V3h: 잔혹한 일격 trades advantage for dice, 강화된 타격 deals force, 다중 공격 방어, 도둑의 반사신경, 영웅적 전사, spell grants (D262)", async () => {
+test("V3h: 잔혹한 일격 trades advantage for dice, 강화된 타격 deals force, 다중 공격 방어, 도둑의 반사 신경, 영웅적 전사, spell grants (D262)", async () => {
   const { pcAttackSpec, pcCombatant } = await import("../../client/rules/attackSpec");
   const { resolveAttack, diceFrom } = await import("../../client/rules/resolve");
   const { deriveCharacter } = await import("../../client/character/derive");
@@ -308,7 +308,7 @@ test("V3h: 잔혹한 일격 trades advantage for dice, 강화된 타격 deals fo
   // 강화된 타격: the unarmed strike deals force.
   const unarmed = monk.derived.attacks.find((attack) => !attack.itemId)!;
   assert.equal(pcAttackSpec(monkEntry, monk.derived, unarmed.id, { contracts: ["monk.empowered-strikes#force"] }, cat)!.spec.damage[0].type, "역장");
-  // 마법 물건 사용, 창조의 언어, 마법의 발견.
+  // 마법 장치 사용, 창조의 언어, 마법의 발견.
   assert.equal(build({ name: "도둑", classes: "rogue", level: 13 }, { "class.2.subclass": ["dnd.srd521.subclass.rogue.thief"] }).derived.attunementBonus, 1);
   const bard = build({ name: "바드", classes: "bard", level: 20 }, { "class.2.subclass": ["dnd.srd521.subclass.bard.college-of-lore"] }).derived;
   const bardList = bard.spellcasting.find((entry) => entry.source === "class")!;
@@ -341,7 +341,7 @@ test("V3h: 잔혹한 일격 trades advantage for dice, 강화된 타격 deals fo
   const marks = (t.host as unknown as { pages: Map<string, { tokens: Array<{ id: string; markers: Array<{ name: string }> }> }> }).pages.get(t.scene.id)!.tokens.find((token) => token.id === t.token.id)!.markers;
   assert.ok(!marks.some((marker) => marker.name === "맞힌 뒤 불리"), "gone when the ogre's turn ended");
 
-  // 도둑의 반사신경: a second row at initiative − 10 for the first round only.
+  // 도둑의 반사 신경: a second row at initiative − 10 for the first round only.
   const thief = await soloTable("rogue", 17, { "class.2.subclass": ["dnd.srd521.subclass.rogue.thief"] }, () => 0.5);
   thief.dm.send({ type: "tracker.add", turn: { name: "도둑", tokenId: thief.token.id, pageId: thief.scene.id, entryId: thief.pc.id, initiative: 18 } });
   await tick();

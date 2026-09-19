@@ -1019,68 +1019,68 @@
        {
         "id": "species.draconicAncestry",
         "label": "용의 혈통",
-        "description": "브레스 무기와 저항의 피해 유형을 정합니다.",
+        "description": "숨결 무기와 저항의 피해 유형을 정합니다.",
         "count": 1,
         "options": [
          {
           "id": "black",
           "name": "흑룡",
           "nameEn": "Black",
-          "summary": "산성 피해 · 브레스 무기와 저항"
+          "summary": "산성 피해 · 숨결 무기와 저항"
          },
          {
           "id": "blue",
           "name": "청룡",
           "nameEn": "Blue",
-          "summary": "번개 피해 · 브레스 무기와 저항"
+          "summary": "번개 피해 · 숨결 무기와 저항"
          },
          {
           "id": "brass",
           "name": "황동룡",
           "nameEn": "Brass",
-          "summary": "화염 피해 · 브레스 무기와 저항"
+          "summary": "화염 피해 · 숨결 무기와 저항"
          },
          {
           "id": "bronze",
           "name": "청동룡",
           "nameEn": "Bronze",
-          "summary": "번개 피해 · 브레스 무기와 저항"
+          "summary": "번개 피해 · 숨결 무기와 저항"
          },
          {
           "id": "copper",
           "name": "구리룡",
           "nameEn": "Copper",
-          "summary": "산성 피해 · 브레스 무기와 저항"
+          "summary": "산성 피해 · 숨결 무기와 저항"
          },
          {
           "id": "gold",
           "name": "금룡",
           "nameEn": "Gold",
-          "summary": "화염 피해 · 브레스 무기와 저항"
+          "summary": "화염 피해 · 숨결 무기와 저항"
          },
          {
           "id": "green",
           "name": "녹룡",
           "nameEn": "Green",
-          "summary": "독 피해 · 브레스 무기와 저항"
+          "summary": "독 피해 · 숨결 무기와 저항"
          },
          {
           "id": "red",
           "name": "적룡",
           "nameEn": "Red",
-          "summary": "화염 피해 · 브레스 무기와 저항"
+          "summary": "화염 피해 · 숨결 무기와 저항"
          },
          {
           "id": "silver",
           "name": "은룡",
           "nameEn": "Silver",
-          "summary": "냉기 피해 · 브레스 무기와 저항"
+          "summary": "냉기 피해 · 숨결 무기와 저항"
          },
          {
           "id": "white",
           "name": "백룡",
           "nameEn": "White",
-          "summary": "냉기 피해 · 브레스 무기와 저항"
+          "summary": "냉기 피해 · 숨결 무기와 저항"
          }
         ]
        }
@@ -1095,7 +1095,7 @@
           {
            "name": "흑룡의 혈통",
            "nameEn": "Black Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 산성입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 산성입니다."
           }
          ]
         },
@@ -1107,7 +1107,7 @@
           {
            "name": "청룡의 혈통",
            "nameEn": "Blue Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 번개입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 번개입니다."
           }
          ]
         },
@@ -1119,7 +1119,7 @@
           {
            "name": "황동룡의 혈통",
            "nameEn": "Brass Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 화염입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 화염입니다."
           }
          ]
         },
@@ -1131,7 +1131,7 @@
           {
            "name": "청동룡의 혈통",
            "nameEn": "Bronze Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 번개입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 번개입니다."
           }
          ]
         },
@@ -1143,7 +1143,7 @@
           {
            "name": "구리룡의 혈통",
            "nameEn": "Copper Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 산성입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 산성입니다."
           }
          ]
         },
@@ -1155,7 +1155,7 @@
           {
            "name": "금룡의 혈통",
            "nameEn": "Gold Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 화염입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 화염입니다."
           }
          ]
         },
@@ -1167,7 +1167,7 @@
           {
            "name": "녹룡의 혈통",
            "nameEn": "Green Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 독입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 독입니다."
           }
          ]
         },
@@ -1179,7 +1179,7 @@
           {
            "name": "적룡의 혈통",
            "nameEn": "Red Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 화염입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 화염입니다."
           }
          ]
         },
@@ -1191,7 +1191,7 @@
           {
            "name": "은룡의 혈통",
            "nameEn": "Silver Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 냉기입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 냉기입니다."
           }
          ]
         },
@@ -1203,7 +1203,7 @@
           {
            "name": "백룡의 혈통",
            "nameEn": "White Ancestry",
-           "description": "브레스 무기와 피해 저항의 피해 유형이 냉기입니다."
+           "description": "숨결 무기와 피해 저항의 피해 유형이 냉기입니다."
           }
          ]
         }

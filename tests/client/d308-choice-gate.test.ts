@@ -40,10 +40,14 @@ test("D308: a green dragonborn breathes poison and nothing else", () => {
   const cat = createCatalog([]);
   const { derived } = build(cat, "dragonborn", { "origin.species.draconicAncestry": ["green"] });
   const breaths = derived.features.filter((feature) => feature.id.includes("breath-weapon#"));
-  assert.deepEqual(breaths.map((feature) => feature.name), ["브레스 웨폰 (독)"]);
+  assert.deepEqual(breaths.map((feature) => feature.name), ["숨결 무기 (독)"]);
   const key = featureRuleKey(breaths[0].id).replace(/#.*$/, "");
   assert.equal(tableOutcome(derived, cat, `${key}#acid`), null, "another ancestry's breath does nothing at the table");
   assert.equal(tableOutcome(derived, cat, `${key}#poison`)?.strikes?.[0]?.damageType, "독");
+  // D315: the source's ancestry table — green, silver and white breathe for a Constitution save, the rest Dexterity.
+  assert.equal(tableOutcome(derived, cat, `${key}#poison`)?.strikes?.[0]?.save?.ability, "con");
+  const red = build(cat, "dragonborn", { "origin.species.draconicAncestry": ["red"] }).derived;
+  assert.equal(tableOutcome(red, cat, `${key}#fire`)?.strikes?.[0]?.save?.ability, "dex");
 });
 
 test("D308: a goliath has the one giant power its ancestry gives", () => {

@@ -107,7 +107,7 @@ test("H3c: armour, speed and saves come from gain contracts — and 보호의 �
   assert.ok(sorcerer.hp.terms.some((term) => term.label.includes("용의 회복력") && term.value === 5), JSON.stringify(sorcerer.hp.terms));
 });
 
-test("H3d: option choices grant through contracts at their own level — 대지 유형 at 10, 원소의 친화력 at 6 (D242)", async () => {
+test("H3d: option choices grant through contracts at their own level — 대지 유형 at 10, 원소 친화 at 6 (D242)", async () => {
   const { build } = await import("./support");
   const land9 = build({ name: "드루이드", classes: "druid", level: 9 }, { "class.0.subclass": ["dnd.srd521.subclass.druid.circle-of-the-land"], "class.2.subclass.land-type": ["polar"] }).derived;
   const land10 = build({ name: "드루이드", classes: "druid", level: 10 }, { "class.0.subclass": ["dnd.srd521.subclass.druid.circle-of-the-land"], "class.2.subclass.land-type": ["polar"] }).derived;

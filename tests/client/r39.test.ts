@@ -45,7 +45,7 @@ test("effects: only until-duration gets a counter; the rest print their reason (
   const cat = catalog();
   const made = build({ name: "r", classes: "ranger", level: 20 });
   const scope = characterScope(made.derived);
-  // 마귀의 회복력 lasts until the next rest: a duration the table watches, with no countdown invented for it.
+  // 악마적 회복력 lasts until the next rest: a duration the table watches, with no countdown invented for it.
   const resilience = contractDurations(cat, characterScope(build({ name: "w", classes: "warlock", level: 10 }).derived))("warlock.fiend.fiendish-resilience#fire")!.duration!;
   assert.equal(resilience.text, "다음 휴식까지");
   assert.equal(resilience.rounds, undefined);

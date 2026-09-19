@@ -1,7 +1,7 @@
 /**
  * R35 (ROLL20_TABLE_SPEC.md D174–D175): the `d20.roll` slot is open.
  *
- * R34 could find the four rescue contracts (불굴, 전술적 사고, 탁월한 기술, 어둠의 존재의 행운) but nothing could
+ * R34 could find the four rescue contracts (불굴, 전술적 사고, 비할 데 없는 기량, 어둠의 존재의 행운) but nothing could
  * fire them: the host rolled a save, applied the damage and moved on. Now a player character whose save fails is
  * asked, and pressing the button runs the contract's own `roll.modify` — the die it names is rerolled, the dice it
  * adds are rolled, and the whole target row is resolved again from the new total, damage and all.
@@ -144,7 +144,7 @@ test("rescue: a rescue that fails costs nothing when the contract says so (D175)
   const payments = catalog().contractFor("bard.college-of-lore.peerless-skill")!.payments;
   assert.equal(payments[0].onlyOn, "success");
   const runtime = initialRuntime(bard.derived);
-  assert.equal(payContract(runtime, bard.derived, payments, "failure")!.resourcesUsed[pool] ?? 0, 0, "탁월한 기술 charges nothing for a rescue that did not work");
+  assert.equal(payContract(runtime, bard.derived, payments, "failure")!.resourcesUsed[pool] ?? 0, 0, "비할 데 없는 기량 charges nothing for a rescue that did not work");
   assert.equal(payContract(runtime, bard.derived, payments, "success")!.resourcesUsed[pool], 1);
   // 불굴 charges either way.
   const fighter = build({ name: "f", classes: "fighter", level: 9 });
