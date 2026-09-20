@@ -9,7 +9,7 @@
 import type { AbilityKey } from "../catalog/types";
 import type { DerivedAttack } from "../character/types";
 import type { EffectApplication } from "./effects";
-import { ATTACK_INVOCATIONS, evaluate, GAIN_INVOCATION, resourceIdOf, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, evaluate, GAIN_INVOCATION, resourceIdOf, type CommonPlayContract, type ContractOperation, type Expr, type Scope } from "./contract";
 
 /** Attack filters a `property.modify` may narrow itself to. */
 const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
@@ -111,18 +111,20 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
     // R61 (D196): advantage on one named skill (잠행자's 은신, 배우's 기만·공연).
     const skillAdvantage = /^skill\.([a-z-]+)\.advantage$/.exec(operation.property);
     if (skillAdvantage) { application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], skills: [skillAdvantage[1]] }]; continue; }
-    const filter = operation.scope ? SCOPES[operation.scope] : undefined;
+    // D340: `effect-weapon` is the one weapon this effect was cast on — the effect's own target when the cast
+    // named one, else the weapon in hand. Every other scope reads as it does anywhere else (D330's little filters).
+    const filter = operation.scope === EFFECT_WEAPON_SCOPE ? effectWeaponFilter(scope) : operation.scope ? attackScopeFilter(operation.scope) : undefined;
     if (operation.scope && !filter) { unknown.push(`scope ${operation.scope}`); continue; }
     switch (operation.property) {
       case "ac.bonus": application.ac = { ...application.ac, add: (application.ac?.add ?? 0) + (number(operation, scope) ?? 0) }; break;
       case "ac.unarmored-base": application.ac = { ...application.ac, unarmoredBase: number(operation, scope) }; break;
       case "ac.minimum": application.ac = { ...application.ac, min: number(operation, scope) }; break;
-      case "attack-roll.bonus": application.attack = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) }; break;
+      case "attack-roll.bonus": application.attack = { ...(operation.dice ? { dice: propertyDice(operation, scope) } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) }; break;
       // D339: with a damage type of its own the bonus is not added to the weapon's own damage — it is a part
       // beside it, so resistance and immunity are read against that type (성전사의 망토: +1d4 광휘).
       case "damage.bonus": {
         const typed = operation.damageTypes?.length ? operation.damageTypes[0] : undefined;
-        const body = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) };
+        const body = { ...(operation.dice ? { dice: propertyDice(operation, scope) } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) };
         if (typed) application.damageTyped = { ...body, type: typed };
         else application.damage = body;
         break;
@@ -250,6 +252,29 @@ export const attackScopes = () => Object.keys(SCOPES);
  * about without the engine knowing their names: `a|b` is either, `a+b` is both, and `items:<id>,<id>` names the
  * weapons themselves (장병기 달인: a quarterstaff or a spear, or a Heavy weapon with Reach).
  */
+/** D340: the weapon an effect was cast on — its own target, else whatever is in hand. */
+/**
+ * D340: the dice a property rolls. `dice` writes them outright; `diceCount` and `diceSides` let an expression
+ * decide how many and how big, which is how a spell scales with the slot it was cast at (원소 무기: 1d4 · 3d4).
+ */
+const propertyDice = (operation: { dice?: string; diceCount?: Expr; diceSides?: Expr }, scope: Scope) => {
+  const read = (value: Expr | undefined) => (value === undefined ? undefined : Math.floor(Number(evaluate(value, scope))));
+  const count = read(operation.diceCount);
+  const sides = read(operation.diceSides);
+  const base = /^(\d*)d(\d+)$/.exec(operation.dice?.trim() ?? "");
+  const finalCount = count && Number.isFinite(count) ? count : base ? Number(base[1] || 1) : undefined;
+  const finalSides = sides && Number.isFinite(sides) ? sides : base ? Number(base[2]) : undefined;
+  return finalCount && finalSides ? `${finalCount}d${finalSides}` : operation.dice;
+};
+
+export const EFFECT_WEAPON_SCOPE = "effect-weapon";
+const effectWeaponFilter = (scope: Scope) => {
+  const named = scope("effect.target");
+  const hand = scope("equipment.main-hand");
+  const wanted = typeof named === "string" && named ? named : typeof hand === "string" && hand ? hand : "";
+  return (attack: DerivedAttack) => Boolean(wanted) && (attack.itemId === wanted || attack.id === wanted || Boolean(attack.itemId?.endsWith(`.${wanted}`)));
+};
+
 export const attackScopeFilter = (scope: string): ((attack: DerivedAttack) => boolean) | undefined => {
   if (SCOPES[scope]) return SCOPES[scope];
   if (!/[|+]|^items:/.test(scope)) return undefined;

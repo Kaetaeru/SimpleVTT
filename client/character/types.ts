@@ -343,6 +343,8 @@ export interface DerivedCharacter {
    * <training> armour"; without this the expression grammar had no way to see the armour at all.
    */
   armor?: { name: string; training: string; /** The armour's Dexterity cap is actually costing this character AC. */ dexCapped: boolean; shield: boolean };
+  /** D340: the weapon in hand, for an effect that was cast on one weapon (원소 무기). */
+  equipment?: { mainHand?: string };
   /** R51 (D186): damage this character simply does not take, per type (중갑 달인). Reaches the resolver as `Combatant.reduction`. */
   damageReduction?: Array<{ types: string[]; amount: number; source: string }>;
   /** R51 (D186): damage types whose resistance this character's own damage ignores (원소 숙련자, 독 제조자). */

@@ -662,7 +662,9 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D337 빗나감에 여는 창 (V0.9 V8d, SRD 계획 §28)**: CLAUDE.md §1.1·§1.2·§2. `reaction.window`의 `attack.miss-self` — 나를 빗나간 공격에 창이 뜨고, 받으면 반격 창이 열린다(응수). 카드는 붙잡지 않고 그대로 나간다.
 - **D338 시전이 돌려주는 슬롯 (V0.9 V8e, SRD 계획 §29)**: CLAUDE.md §1.1·§2. `resource.change`의 `level`이 식이 된다 — 시전 항목에서 `spell.slot-level`을 읽어 `min(5, 슬롯−1)` 슬롯을 되돌려준다(전문 예지).
 - **D339 유형이 있는 추가 피해 (V0.9 V8f, SRD 계획 §30)**: CLAUDE.md §1.1·§2. `damage.bonus`에 `damageTypes`를 주면 무기 피해 옆에 그 유형의 별도 피해로 붙는다 — 저항은 그 유형으로 읽고 치명타에 두 배가 되지 않는다(성전사의 망토).
+- **D340 그 무기 하나 (V0.9 V8g, SRD 계획 §31)**: CLAUDE.md §1.1·§2. 효과 범위 `effect-weapon`(걸린 그 무기 — 효과의 target, 없으면 손에 든 무기), `property.modify`의 `diceCount` 식, 효과 범위가 그 시전의 슬롯·DC·수정치를 읽는다(원소 무기: +1/1d4 → +3/3d4).
 
+| V8g 그 무기 하나 (D340) ✔ | effect-weapon 범위, 슬롯이 정하는 주사위 수 | 게이트 통과(d340-effect-weapon 4개), PHB 표 검증 거절 0 |
 | V8f 유형이 있는 추가 피해 (D339) ✔ | damage.bonus의 damageTypes | 게이트 통과(d339-typed-damage 3개), PHB 표 검증 거절 0 |
 | V8e 시전이 돌려주는 슬롯 (D338) ✔ | resource.change의 level 식 | 게이트 통과(d338-slot-back 2개), PHB 표 검증 거절 0 |
 | V8d 빗나감에 여는 창 (D337) ✔ | attack.miss-self, 응수 반격 | 게이트 통과(d337-miss-window 2개), PHB 표 검증 거절 0 |

@@ -207,7 +207,9 @@ export function effectApplication(effect: ActiveEffect, derived: DerivedCharacte
     // R39: a contract that only says when the effect *ends* (`effect.apply`) says nothing about what it does, so it
     // must not stand in for a hand-written rule that does. Only `property.modify` makes it the source of truth.
     const names = [...running, ...derived.activeEffects.map((item) => item.name)];
-    const extra = { ...(effect.target ? { "effect.target": effect.target } : {}), ...Object.fromEntries(names.map((name) => [`effect.running:${name}`, true])) };
+    // D340: the numbers of the cast that started this effect, so a standing property may scale with the slot it
+    // was cast at (원소 무기: +1 and 1d4 up to +3 and 3d4). D321 already carries them on the effect.
+    const extra = { ...(effect.target ? { "effect.target": effect.target } : {}), ...(effect.cast ? { "spell.slot-level": effect.cast.level, "spell.save-dc": effect.cast.saveDc, "spell.modifier": effect.cast.modifier } : {}), ...(effect.level !== undefined ? { "spell.slot-level": effect.level } : {}), ...Object.fromEntries(names.map((name) => [`effect.running:${name}`, true])) };
     const { application, unknown, hasProperties } = contractEffect(contract, characterScope(derived, extra));
     if (hasProperties && !unknown.length) return application;
   }

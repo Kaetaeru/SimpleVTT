@@ -344,6 +344,8 @@ function finalize(ledger: Ledger): DerivedCharacter {
       conditionImmunities: [...ledger.conditionImmunities].map((condition) => CONDITION_KO[condition] ?? condition),
     },
     inventory: ledger.inventory,
+    // D340: the weapon in hand, so an effect cast on one weapon knows which attack it belongs to.
+    equipment: { mainHand: ledger.inventory.find((item) => item.equipped && item.kind === "weapon")?.itemId },
     // R51 (D186): what is worn, so a contract may say "while wearing medium armour" without the engine hardcoding it.
     ...(armorView?.armor
       ? { armor: { name: armorView.name, training: armorView.armor.training, dexCapped: armorView.armor.dexMax !== undefined && dex > armorView.armor.dexMax, shield: Boolean(shieldView) } }

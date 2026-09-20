@@ -87,7 +87,7 @@ export type ContractOperation =
    * by how much. `scope` narrows it to some attacks, `abilities` to some saves, and `note` carries the part of the
    * rule that is not a number.
    */
-  | { kind: "property.modify"; property: string; operation: string; value?: Expr; /** H2 (D239): the spell a property is about (`marked-spell.die`), as a content id in the data. */ spell?: string; /** H2 (D239): the spell school a property is about. */ school?: string; /** H3 (D240): the named parameters of a gain-time property (`choice.skills` and its kin). */ params?: Record<string, unknown>; dice?: string; /** D302: the die size an expression decides, where a property rolls dice (보호장의 사이오닉 주사위). */ diceSides?: Expr; scope?: string; abilities?: string[]; /** R51 (D186): the damage types a `damage-taken.reduce` applies to. */ damageTypes?: string[]; note?: string; when?: Expr }
+  | { kind: "property.modify"; property: string; operation: string; value?: Expr; /** H2 (D239): the spell a property is about (`marked-spell.die`), as a content id in the data. */ spell?: string; /** H2 (D239): the spell school a property is about. */ school?: string; /** H3 (D240): the named parameters of a gain-time property (`choice.skills` and its kin). */ params?: Record<string, unknown>; dice?: string; /** D302: the die size an expression decides, where a property rolls dice (보호장의 사이오닉 주사위). */ diceSides?: Expr; /** D340: how many of them, when the slot the effect was cast at decides it (원소 무기: 1d4 · 2d4 · 3d4). */ diceCount?: Expr; scope?: string; abilities?: string[]; /** R51 (D186): the damage types a `damage-taken.reduce` applies to. */ damageTypes?: string[]; note?: string; when?: Expr }
   /**
    * R39 (D179): the standing effect a use starts. `template` carries what the sheet needs to show and count it;
    * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
@@ -396,7 +396,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
       // A bare number, string or boolean is the literal it looks like; only an object is read as an expression.
       const literal = operation.value;
       const value = isExpr(literal) ? literal : literal === undefined ? undefined : { value: literal };
-      out.push({ kind, property, operation: op, value, ...(operation.spell ? { spell: String(operation.spell) } : {}), ...(operation.school ? { school: String(operation.school) } : {}), ...(operation.params && typeof operation.params === "object" ? { params: operation.params as Record<string, unknown> } : {}), dice: operation.dice ? String(operation.dice) : undefined, ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, damageTypes: Array.isArray(operation.damageTypes) ? operation.damageTypes.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, property, operation: op, value, ...(operation.spell ? { spell: String(operation.spell) } : {}), ...(operation.school ? { school: String(operation.school) } : {}), ...(operation.params && typeof operation.params === "object" ? { params: operation.params as Record<string, unknown> } : {}), dice: operation.dice ? String(operation.dice) : undefined, ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), ...(isExpr(operation.diceCount) ? { diceCount: operation.diceCount } : {}), scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, damageTypes: Array.isArray(operation.damageTypes) ? operation.damageTypes.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     const mode = String(operation.mode ?? "");
@@ -560,6 +560,8 @@ export interface ScopeCharacter {
   level?: number;
   /** R51 (D186): what is worn, for a feat written as "while wearing <training> armour". */
   armor?: { training: string; dexCapped: boolean; shield: boolean };
+  /** D340: the weapon in hand, for an effect cast on one weapon (원소 무기). */
+  equipment?: { mainHand?: string };
   /** R78 (D213): Pact Magic, for "half your Pact Magic slots". */
   pactMagic?: { count: number; level: number };
   /** V4a (D263): the die a marked spell rolls on this sheet (적 학살자's d10). */
@@ -607,6 +609,7 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     if (ref === "armor.training") return character.armor?.training ?? "none";
     if (ref === "armor.dex-capped") return Boolean(character.armor?.dexCapped);
     if (ref === "equipment.shield") return Boolean(character.armor?.shield);
+    if (ref === "equipment.main-hand") return character.equipment?.mainHand ?? "";
     if (ref === "actor.pact-slots") return character.pactMagic?.count ?? 0;
     // V4z (D288): `actor.has-feature:<rule key>` — true when this sheet carries that feature (향상된 축복받은 일격).
     const feature = /^actor\.has-feature:(.+)$/.exec(ref);
