@@ -376,6 +376,12 @@ function FloatingMenu({ at, className, label, onClose, ignore, children }: { at:
   );
 }
 
+/** D332: whether this use's own action is charged once a turn, however many times its button is pressed. */
+const featureOncePerTurnEconomy = (catalog: ReturnType<typeof useClient>["catalog"], feature: DerivedFeature) => {
+  const contract = catalog.contractFor(featureRuleKey(feature.id));
+  return (contract?.entryPoints ?? []).some((entry) => entry.payments?.some((payment) => payment.kind === "economy" && payment.oncePerTurn));
+};
+
 /** R65 (D200): one thing the turn panel can press — a row button or a menu entry. */
 interface PanelItem { key: string; label: string; hint?: string; uses?: string; disabled?: boolean; onSelect: () => void }
 
@@ -524,7 +530,9 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (outcome === "refused") alert("남은 횟수가 없습니다.");
     if (outcome !== "done") return;
     c.say(`/em ${token.name}: ${feature.name} 사용`);
-    if (bonus) c.spendEconomy(me, "bonus");
+    // D332: a use that spends several of its own dice in one action pays that action once a turn, however many
+    // times the button is pressed (천상체의 치유의 빛, 열광자의 격노 주사위).
+    if (bonus) c.spendEconomy(me, "bonus", featureOncePerTurnEconomy(catalog, feature) ? { once: featureRuleKey(feature.id) } : {});
     // R58 (D193): the half of the contract that belongs to the board. R42 built it and the host has answered it ever
     // since; nothing called it, so a feature that puts a condition on somebody or hands out temporary hit points did
     // its sheet half and stopped. When it needs people, the targeting mode asks for them first.

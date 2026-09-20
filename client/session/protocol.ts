@@ -165,7 +165,7 @@ export type ClientCommand =
   /** R12 (DM): a monster spends Legendary Resistance on a failed save in a spell card — that row is re-applied as a success. */
   /** R19: use one of an NPC's traits — spends a use when the DM gave that trait a per-day count. */
   /** R23: something on the sheet (a feature with a 추가 행동 note) spent this turn's action or bonus action. */
-  | { type: "act.spend"; actor: ActorRef; which: "action" | "bonus"; /** R34 (D171): give the bucket back instead of spending it — a contract's `economy.modify` with a positive amount (행동 폭증). */ grant?: boolean; /** What granted it, for the log. */ source?: string }
+  | { type: "act.spend"; actor: ActorRef; which: "action" | "bonus"; /** D332: the use this belongs to, charged once a turn however many times it is pressed (치유의 빛). */ once?: string; /** R34 (D171): give the bucket back instead of spending it — a contract's `economy.modify` with a positive amount (행동 폭증). */ grant?: boolean; /** What granted it, for the log. */ source?: string }
   | { type: "act.trait"; actor: ActorRef; name: string }
   /**
    * R42 (D182): run a feature's contract at the table. The sheet already applies what a sheet can answer; this is

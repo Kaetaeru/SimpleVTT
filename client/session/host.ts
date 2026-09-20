@@ -1108,6 +1108,15 @@ export class TableHost {
           this.say({ type: "system", who: "", content: `${actor.entry.name}: ${command.source ?? "특성"} — 이번 턴에 ${command.which === "bonus" ? "추가 행동" : "행동"} 하나를 더 씁니다` });
           return;
         }
+        // D332: a use that spends several of its dice in one action pays the action once, however many presses
+        // it takes to spend them (천상체의 치유의 빛, 열광자의 격노 주사위).
+        if (command.once) {
+          const key = `economy:${command.once}:${command.which}`;
+          const used = this.turnUses.get(actor.entry.id);
+          const spent = used && used.mark === this.turnMark() ? used.keys : [];
+          if (spent.includes(key)) return;
+          this.useThisTurn(actor.entry.id, [key]);
+        }
         this.markUsed(command.actor, command.which === "bonus" ? "bonus" : "action");
         return;
       }

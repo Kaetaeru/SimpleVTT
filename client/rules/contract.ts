@@ -70,6 +70,8 @@ export interface ContractPayment {
   amount: number;
   consumeAt: string;
   onlyOn?: "success" | "failure";
+  /** D332: this economy is charged once a turn, however many times the use is pressed (치유의 빛). */
+  oncePerTurn?: boolean;
   refundOnCancel: boolean;
   actionKind?: string;
 }
@@ -415,7 +417,7 @@ function parsePayments(list: unknown, at: string, unsupported: string[]): Contra
     if (typeof amount !== "number") { unsupported.push(`${at}[${index}].amount: 고정 숫자가 아닙니다`); continue; }
     payments.push({
       kind, amount, consumeAt: String(payment.consumeAt ?? "commit"),
-      ...(kind === "resource" ? { resourceId: resourceIdOf(String(payment.resource ?? "")) } : { bucket: String(payment.bucket ?? "") }),
+      ...(kind === "resource" ? { resourceId: resourceIdOf(String(payment.resource ?? "")) } : { bucket: String(payment.bucket ?? ""), ...(payment.oncePerTurn === true ? { oncePerTurn: true } : {}) }),
       ...(condition?.kind === "d20-result" && (condition.outcome === "success" || condition.outcome === "failure") ? { onlyOn: condition.outcome } : {}),
       refundOnCancel: payment.refundOnCancel === true,
       ...(payment.actionKind ? { actionKind: String(payment.actionKind) } : {}),
