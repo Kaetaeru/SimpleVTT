@@ -19,6 +19,7 @@ import { payContract, pcRescues } from "../rules/contractUse";
 import { itemUse } from "../rules/items";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
 import { formula as contractFormula, metamagicOptions } from "../rules/contractActivation";
+import { rollGuard } from "../rules/contractReactions";
 import { CAST_INVOCATION, characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
@@ -158,10 +159,12 @@ export function pcHostOptions(catalog: () => ContentCatalog, /** D334: the host'
       return { runtime, die, rolled, healed: runtime.hp.current - before };
     },
     // D324: a die the sheet rolls as it casts (주문 회상의 은총: a d4 that keeps the slot when it matches its level).
-    pcCastRolls: (entry, level, random) => {
+    pcCastRolls: (entry, level, random, spellId) => {
       const derived = derivedOf(entry, catalog());
-      const scope = characterScope(derived, { "spell.slot-level": level });
-      const rolls: Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; damage?: { formula: string; type: string } }> = [];
+      // D336: what was cast, not only how big the slot was — 비전 방호 answers abjuration spells and nothing else.
+      const school = spellId ? catalog().spellById(spellId)?.school : undefined;
+      const scope = characterScope(derived, { "spell.slot-level": level, ...(school ? { "spell.school": school } : {}) });
+      const rolls: Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; damage?: { formula: string; type: string }; tempHp?: { amount: number; maximum?: number; accumulate?: boolean } }> = [];
       // D326: an effect the sheet is under may also answer a cast (소원's price: damage every time you cast).
       const sources = [
         ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)), cast: undefined as ActiveEffect["cast"] })),
@@ -171,11 +174,23 @@ export function pcHostOptions(catalog: () => ContentCatalog, /** D334: the host'
         const contract = feature.contract;
         const inner = castScope(scope, feature.cast);
         for (const point of (contract?.entryPoints ?? []).filter((item) => item.invocation === CAST_INVOCATION)) {
+          // D336: an entry point may put its condition on itself rather than on each operation (방호술 주문일 때만).
+          if (point.when && evaluate(point.when, inner) !== true) continue;
           for (const operation of point.operations) {
             if ("when" in operation && operation.when && evaluate(operation.when, inner) !== true) continue;
             if (operation.kind === "damage.apply") {
               const formula = contractFormula(operation.dice, operation.amount, inner, operation.diceCount, operation.diceSides);
               if (formula) rolls.push({ label: feature.label, die: formula, rolled: 0, keepsSlot: false, note: `${formula} ${operation.damageType}`, damage: { formula, type: operation.damageType } });
+              continue;
+            }
+            // D336: the cast tops a ward up (비전 방호: twice the slot level, never past the ward's own maximum).
+            if (operation.kind === "temp-hp.grant") {
+              const formula = contractFormula(operation.dice, operation.amount, inner, operation.diceCount, operation.diceSides);
+              const amount = formula ? rollGuard(formula, random) : 0;
+              if (amount > 0) {
+                const maximum = operation.maximum === undefined ? undefined : Number(evaluate(operation.maximum, inner));
+                rolls.push({ label: feature.label, die: formula ?? "", rolled: amount, keepsSlot: false, note: `임시 HP +${amount}`, tempHp: { amount, ...(Number.isFinite(maximum) ? { maximum: maximum as number } : {}), ...(operation.accumulate ? { accumulate: true } : {}) } });
+              }
               continue;
             }
             if (operation.kind !== "resource.recharge") continue;

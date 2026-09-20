@@ -152,7 +152,7 @@ export interface TableHostOptions {
   /** D324: spend one of the sheet's Hit Point Dice and heal by it (생명 흡수자's bite). */
   pcSpendHitDie?: (entry: JournalCharacter, random: () => number) => { runtime: CharacterRuntime; die: string; rolled: number; healed: number } | null;
   /** D324: what a sheet's contracts do as a spell is cast (주문 회상의 은총: a d4 that may keep the slot). */
-  pcCastRolls?: (entry: JournalCharacter, level: number, random: () => number) => Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; /** D326: damage the cast itself costs (소원의 대가). */ damage?: { formula: string; type: string } }>;
+  pcCastRolls?: (entry: JournalCharacter, level: number, random: () => number, /** D336: what was cast, for a rule that answers a school of magic (비전 방호). */ spellId?: string) => Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; /** D326: damage the cast itself costs (소원의 대가). */ damage?: { formula: string; type: string }; /** D336: temporary hit points the cast tops up (비전 방호), with the most the ward may hold. */ tempHp?: { amount: number; maximum?: number; accumulate?: boolean } }>;
   /**
    * D321: the same turn-start and turn-end rules for a monster carrying a spell effect (속박 강타's piercing damage
    * at the start of its turns). A monster has no sheet, so the numbers come from the cast the effect remembers.
@@ -1007,6 +1007,8 @@ export class TableHost {
         const resolution = resolveSpell({ ...(meta?.saveDisadvantage ? { saveDisadvantage: meta.saveDisadvantage } : {}), caster: casterCombatant, casterStats: prepared.casterStats, spec: prepared.spec, targets: rows.map((row) => ({ combatant: row.combatant!, stats: row.stats! })), dice: diceFrom(this.options.random ?? Math.random), overrides, apply: !waits });
         // The cost is paid on casting (a slot, concentration on the caster) even when the DM still has to confirm the result.
         const casterBefore = caster.entry;
+        // D336: temporary hit points a rule adds because of this cast (비전 방호), applied after the spell resolves.
+        const wards: Array<{ label: string; note: string; amount: number; maximum?: number; accumulate?: boolean }> = [];
         let spent: CharacterRuntime | null = null;
         if (casterBefore.kind === "character") { const withMeta = meta ? meta.spend(casterBefore.runtime) : casterBefore.runtime; if (!withMeta) return refuse("마법 점수가 없습니다"); const next = prepared.spend(withMeta); if (!next) return refuse("슬롯이나 횟수가 없습니다");
           // D302: a spell whose repeat belongs to the creature it first caught (마녀 화살) writes that creature on the
@@ -1015,9 +1017,12 @@ export class TableHost {
           spent = bound ? { ...next, effects: (next.effects ?? []).map((effect) => (effect.key === `spell:${prepared.spec.spellId}` ? { ...effect, target: bound } : effect)) } : next;
           this.storeEntry({ ...casterBefore, runtime: { ...spent, updatedAt: this.now() }, updatedAt: this.now() });
           // D324: a die the sheet rolls as it casts may hand the slot straight back (주문 회상의 은총).
-          if (command.method?.kind === "slot" && command.method.level > 0) for (const roll of this.options.pcCastRolls?.(casterBefore, command.method.level, this.options.random ?? Math.random) ?? []) {
+          if (command.method?.kind === "slot" && command.method.level > 0) for (const roll of this.options.pcCastRolls?.(casterBefore, command.method.level, this.options.random ?? Math.random, command.spellId) ?? []) {
             // D326: a cast may cost the caster something of their own (소원의 대가: damage on every spell).
             if (roll.damage) { const actor = this.resolveActor({ entryId: casterBefore.id }); if (actor) this.contractStrike(actor, [actor], roll.label, { formula: roll.damage.formula, damageType: roll.damage.type }, this.options.hostUserId, ""); continue; }
+            // D336: a ward the cast tops up. The spell itself writes the caster's sheet as it resolves, so the ward
+            // waits until that is done and is applied below.
+            if (roll.tempHp) { wards.push({ label: roll.label, note: roll.note, ...roll.tempHp }); continue; }
             this.say({ type: "system", who: "", content: `${casterBefore.name}: ${roll.label} — ${roll.note}${roll.keepsSlot ? " → 슬롯이 소모되지 않습니다" : ""}` });
             if (!roll.keepsSlot) continue;
             const live = this.journalEntries.get(casterBefore.id);
@@ -1033,6 +1038,12 @@ export class TableHost {
         // V4w (D285): 신속 주문 makes this one cast a bonus action instead of an action.
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, meta?.bonusAction || exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
+        for (const ward of wards) {
+          const actor = this.resolveActor({ entryId: casterBefore.id });
+          const already = actor?.entry.kind === "character" ? actor.entry.runtime.hp.temp : 0;
+          if (actor) this.grantTempHp(actor, ward.accumulate ? already + ward.amount : ward.amount, ward.maximum);
+          this.say({ type: "system", who: "", content: `${casterBefore.name}: ${ward.label} — ${ward.note}` });
+        }
         // V3g (D261): an effect spent by the next cast (과부하).
         if (!exec.repeat) this.consumeOnUse(caster.entry.id, "cast");
         if (caster.entry.kind === "character" && !exec.repeat) {
@@ -2208,8 +2219,9 @@ export class TableHost {
   private refOf(actor: { entry: JournalEntry; token?: Token; page?: Page }): ActorRef { return { entryId: actor.entry.id, pageId: actor.page?.id, tokenId: actor.token?.id }; }
 
   /** R58 (D193): temporary hit points do not stack — the larger pool wins, as 2024 says. */
-  private grantTempHp(target: { entry: JournalEntry; token?: Token; page?: Page }, amount: number) {
+  private grantTempHp(target: { entry: JournalEntry; token?: Token; page?: Page }, wanted: number, /** D336: the most a topped-up ward may hold. */ maximum?: number) {
     const entry = target.entry;
+    const amount = maximum === undefined ? wanted : Math.min(wanted, maximum);
     if (entry.kind === "handout" || amount <= 0 || entry.runtime.hp.temp >= amount) return;
     if (entry.kind === "character") this.storeEntry({ ...entry, runtime: { ...entry.runtime, hp: { ...entry.runtime.hp, temp: amount }, updatedAt: this.now() }, updatedAt: this.now() });
     else this.storeEntry({ ...entry, runtime: { ...entry.runtime, hp: { ...entry.runtime.hp, temp: amount }, updatedAt: this.now() }, updatedAt: this.now() });
