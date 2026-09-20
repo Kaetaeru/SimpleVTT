@@ -30,7 +30,7 @@ import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type
 import { CONDITION_KO, countedSaveOf, onHitOf, spellExec, sustainedExec, sustainOf, targetCountOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
 import type { ConditionDuration, TargetMark } from "../rules/contract";
 import type { ZeroHold } from "../character/types";
-import { summonMonster } from "../compendium/summonTemplate";
+import { evaluateExpression, summonMonster } from "../compendium/summonTemplate";
 import { restoreSpellSlot, startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
@@ -1214,6 +1214,7 @@ export class TableHost {
         if (!page) return refuse("소환할 장면이 없습니다");
         // R84 (D219): a summon spell with its own creature fills in its template at the level the spell was cast.
         const template = command.spellId ? spellExec(command.spellId)?.summon : undefined;
+        let templateCount = 1;
         let monster = template ? undefined : monsterById(command.monsterId);
         if (template) {
           const form = template.forms[Math.max(0, Math.min(template.forms.length - 1, Math.floor(Number(command.form) || 0)))];
@@ -1222,13 +1223,16 @@ export class TableHost {
           const level = going?.level ?? spellExec(command.spellId!)!.baseLevel;
           const cast = this.options.pcSpell?.(summoner.entry, command.spellId!, { kind: "slot", level });
           if (!cast) return refuse("시전자가 이 주문을 쓸 수 없습니다");
-          const made = summonMonster(form, { level, attack: cast.casterStats.attackBonus, dc: cast.casterStats.saveDc, mod: cast.casterStats.modifier });
+          const vars = { level, attack: cast.casterStats.attackBonus, dc: cast.casterStats.saveDc, mod: cast.casterStats.modifier };
+          const made = summonMonster(form, vars);
           if ("error" in made) return refuse(`소환물을 만들 수 없습니다: ${made.error}`);
           monster = made.monster;
+          // D328: how many the spell places may be an expression (물체 조종: the caster's spellcasting modifier).
+          if (template.count) templateCount = Math.max(1, Math.floor(evaluateExpression(template.count, vars)));
         }
         if (!monster) return refuse("그 괴물을 컴펜디움에서 찾을 수 없습니다");
         const rule = command.spellId && !template ? summonRule(command.spellId) : undefined;
-        const most = template ? 1 : rule?.count ?? 8;
+        const most = template ? templateCount : rule?.count ?? 8;
         const count = Math.max(1, Math.min(most, command.count ?? 1));
         if (rule && rule.choices.length && !rule.choices.includes(command.monsterId)) return refuse(`${rule.spellId.split(".").pop()}은(는) 그 크리처를 소환하지 않습니다`);
         const summonerName = summoner.token?.name ?? summoner.entry.name;

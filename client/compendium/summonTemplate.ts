@@ -11,7 +11,9 @@ import { parseCustomMonster } from "./customMonster";
 import type { MonsterView } from "./monsters";
 
 export interface SummonForm { name: string; template: Record<string, unknown> }
-export interface SpellSummon { forms: SummonForm[]; note?: string }
+export interface SpellSummon { forms: SummonForm[]; note?: string;
+  /** D328: how many the cast places, as an expression of `level`·`mod`·`attack`·`dc` (물체 조종: the spellcasting modifier). */
+  count?: string }
 export interface SummonVars { level: number; attack: number; dc: number; mod: number }
 
 /** `+ - * /`, parentheses, numbers, the four names and floor — nothing else is read. */

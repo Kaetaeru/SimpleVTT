@@ -810,12 +810,171 @@
        }
       },
       "concentration": true,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Authored (D328): the spell places animated objects — as many as the caster's spellcasting modifier, each of the size chosen, with the stat block the SRD gives (AC 15, 10/20/40 hit points, a Slam that uses the caster's spell attack bonus). Counting a Large object as two and a Huge as three, and the extra slam dice above 5th level, are the table's.",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "summon": {
+       "note": "물체 하나당 중형 이하 1, 대형 2, 거대형 3으로 센다 — 크기는 고르고 개수는 표에서 맞춘다",
+       "count": "mod",
+       "forms": [
+        {
+         "name": "중형 이하",
+         "template": {
+          "name": "조종된 물체 (중형 이하)",
+          "size": "medium",
+          "type": "구조물",
+          "creatureType": "construct",
+          "alignment": "중립",
+          "ac": 15,
+          "hp": 10,
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 10,
+           "con": 10,
+           "int": 3,
+           "wis": 3,
+           "cha": 1
+          },
+          "cr": 0,
+          "senses": "맹안시야 30피트",
+          "damageImmunities": [
+           "poison",
+           "psychic"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "exhaustion",
+           "frightened",
+           "paralyzed",
+           "poisoned"
+          ],
+          "languages": "시전자가 아는 언어를 이해한다",
+          "actions": [
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "rangeFeet": 5,
+             "damage": [
+              {
+               "formula": "1d4+3",
+               "type": "force"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "대형",
+         "template": {
+          "name": "조종된 물체 (대형)",
+          "size": "large",
+          "type": "구조물",
+          "creatureType": "construct",
+          "alignment": "중립",
+          "ac": 15,
+          "hp": 20,
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 10,
+           "con": 10,
+           "int": 3,
+           "wis": 3,
+           "cha": 1
+          },
+          "cr": 0,
+          "senses": "맹안시야 30피트",
+          "damageImmunities": [
+           "poison",
+           "psychic"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "exhaustion",
+           "frightened",
+           "paralyzed",
+           "poisoned"
+          ],
+          "languages": "시전자가 아는 언어를 이해한다",
+          "actions": [
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "rangeFeet": 5,
+             "damage": [
+              {
+               "formula": "2d6+{3+mod}",
+               "type": "force"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "name": "거대형",
+         "template": {
+          "name": "조종된 물체 (거대형)",
+          "size": "huge",
+          "type": "구조물",
+          "creatureType": "construct",
+          "alignment": "중립",
+          "ac": 15,
+          "hp": 40,
+          "speed": 30,
+          "abilities": {
+           "str": 16,
+           "dex": 10,
+           "con": 10,
+           "int": 3,
+           "wis": 3,
+           "cha": 1
+          },
+          "cr": 0,
+          "senses": "맹안시야 30피트",
+          "damageImmunities": [
+           "poison",
+           "psychic"
+          ],
+          "conditionImmunities": [
+           "charmed",
+           "exhaustion",
+           "frightened",
+           "paralyzed",
+           "poisoned"
+          ],
+          "languages": "시전자가 아는 언어를 이해한다",
+          "actions": [
+           {
+            "name": "강타",
+            "attack": {
+             "mode": "melee",
+             "bonus": "{attack}",
+             "rangeFeet": 5,
+             "damage": [
+              {
+               "formula": "2d12+{3+mod}",
+               "type": "force"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
      }
     }
    ]
@@ -13507,14 +13666,13 @@
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "나중에 마법 효과를 방출할 문양을 새긴다. 탁자나 바닥 같은 표면 또는 책이나 상자처럼 닫을 수 있는 물체 안에 문양을 새긴다. 문양은 지름 10피트보다 넓은 구역을 덮을 수 없다. 표면이나 물체가 시전한 장소에서 10피트보다 멀리 이동하면 문양이 깨지고 발동하지 않은 채 주문이 끝난다.",
+       "summary": "문양을 새긴다. 발동 조건과 폭발 룬(산성·냉기·화염·번개·천둥) 또는 주문 문양 중 하나를 고른다. 발동은 ↻ 버튼으로.",
        "duration": {
-        "kind": "special",
-        "key": "spell-duration:dnd.srd521.spell.glyph-of-warding"
+        "kind": "special"
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Authored (D328): the glyph is inscribed with its rune chosen at the cast, and the ↻ button sets it off — explosive runes roll their 5d8 (one more d8 per slot above the third) with a Dexterity save for half, and the spell glyph says which spell to cast in its place. The trigger condition is the table's.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -13527,7 +13685,188 @@
        ]
       },
       "ritual": false,
-      "castingDurationSeconds": 3600
+      "castingDurationSeconds": 3600,
+      "trackedEffects": [
+       {
+        "summary": "새겨 둔 문양 — 조건이 맞으면 ↻로 발동한다 (조건은 표에서)",
+        "trigger": "always",
+        "duration": {
+         "kind": "special"
+        }
+       }
+      ],
+      "sustain": {
+       "economy": "none",
+       "target": "new",
+       "note": "문양이 발동합니다 (구역 안의 대상을 고르세요)",
+       "primary": {
+        "kind": "save-damage",
+        "saveAbility": "dex",
+        "damageType": "fire",
+        "dice": {
+         "count": 5,
+         "sides": 8,
+         "dicePerSlotAboveBase": 1
+        },
+        "successDamage": "half"
+       }
+      },
+      "variants": [
+       {
+        "id": "acid",
+        "label": "산성",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-damage",
+           "saveAbility": "dex",
+           "damageType": "acid",
+           "dice": {
+            "count": 5,
+            "sides": 8,
+            "dicePerSlotAboveBase": 1
+           },
+           "successDamage": "half"
+          }
+         },
+         "trackedEffects": [
+          {
+           "summary": "폭발 룬 (산성) — 발동하면 반경 20피트, 민첩 내성 절반",
+           "trigger": "always",
+           "duration": {
+            "kind": "special"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "cold",
+        "label": "냉기",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-damage",
+           "saveAbility": "dex",
+           "damageType": "cold",
+           "dice": {
+            "count": 5,
+            "sides": 8,
+            "dicePerSlotAboveBase": 1
+           },
+           "successDamage": "half"
+          }
+         },
+         "trackedEffects": [
+          {
+           "summary": "폭발 룬 (냉기) — 발동하면 반경 20피트, 민첩 내성 절반",
+           "trigger": "always",
+           "duration": {
+            "kind": "special"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "fire",
+        "label": "화염",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-damage",
+           "saveAbility": "dex",
+           "damageType": "fire",
+           "dice": {
+            "count": 5,
+            "sides": 8,
+            "dicePerSlotAboveBase": 1
+           },
+           "successDamage": "half"
+          }
+         },
+         "trackedEffects": [
+          {
+           "summary": "폭발 룬 (화염) — 발동하면 반경 20피트, 민첩 내성 절반",
+           "trigger": "always",
+           "duration": {
+            "kind": "special"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "lightning",
+        "label": "번개",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-damage",
+           "saveAbility": "dex",
+           "damageType": "lightning",
+           "dice": {
+            "count": 5,
+            "sides": 8,
+            "dicePerSlotAboveBase": 1
+           },
+           "successDamage": "half"
+          }
+         },
+         "trackedEffects": [
+          {
+           "summary": "폭발 룬 (번개) — 발동하면 반경 20피트, 민첩 내성 절반",
+           "trigger": "always",
+           "duration": {
+            "kind": "special"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "thunder",
+        "label": "천둥",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-damage",
+           "saveAbility": "dex",
+           "damageType": "thunder",
+           "dice": {
+            "count": 5,
+            "sides": 8,
+            "dicePerSlotAboveBase": 1
+           },
+           "successDamage": "half"
+          }
+         },
+         "trackedEffects": [
+          {
+           "summary": "폭발 룬 (천둥) — 발동하면 반경 20피트, 민첩 내성 절반",
+           "trigger": "always",
+           "duration": {
+            "kind": "special"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "spell-glyph",
+        "label": "주문 문양 (주문을 저장)",
+        "patch": {
+         "sustain": {
+          "economy": "none",
+          "note": "저장한 주문을 그 자리에서 시전하세요 (문양은 끝납니다)",
+          "primary": {
+           "kind": "tracked-effect",
+           "summary": "저장해 둔 3레벨 이하 주문이 발동한다 — 그 주문을 따로 시전하세요"
+          }
+         }
+        }
+       }
+      ]
      }
     }
    ]
@@ -27430,14 +27769,13 @@
       },
       "primary": {
        "kind": "tracked-effect",
-       "summary": "표면이나 닫을 수 있는 물체 안에 해로운 문양을 새긴다. 문양은 지름 10피트보다 큰 영역을 덮을 수 없다. 물체를 선택했다면 시전한 곳에 남아 있어야 하며, 10피트보다 멀리 옮기면 발동하지 않고 주문이 끝난다.",
+       "summary": "해로운 문양을 새긴다. 발동 조건과 죽음·불화·공포·고통·수면·충격 중 하나를 고른다. 발동은 ↻ 버튼으로.",
        "duration": {
-        "kind": "special",
-        "key": "spell-duration:dnd.srd521.spell.symbol"
+        "kind": "special"
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Authored (D328): the symbol is inscribed with its effect chosen at the cast, and the ↻ button sets it off on the creatures in the 60-foot sphere — death rolls its 10d10, the others ask for their save and leave their condition. The trigger condition and the glowing symbol itself are the table's.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -27450,7 +27788,157 @@
        ]
       },
       "ritual": false,
-      "castingDurationSeconds": 60
+      "castingDurationSeconds": 60,
+      "trackedEffects": [
+       {
+        "summary": "새겨 둔 문양 — 조건이 맞으면 ↻로 발동한다 (조건은 표에서)",
+        "trigger": "always",
+        "duration": {
+         "kind": "special"
+        }
+       }
+      ],
+      "sustain": {
+       "economy": "none",
+       "target": "new",
+       "note": "문양이 발동합니다 (반경 60피트 구체 안의 대상을 고르세요)",
+       "primary": {
+        "kind": "save-damage",
+        "saveAbility": "con",
+        "damageType": "necrotic",
+        "dice": {
+         "count": 10,
+         "sides": 10
+        },
+        "successDamage": "half"
+       }
+      },
+      "variants": [
+       {
+        "id": "death",
+        "label": "죽음 (10d10 사령)",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-damage",
+           "saveAbility": "con",
+           "damageType": "necrotic",
+           "dice": {
+            "count": 10,
+            "sides": 10
+           },
+           "successDamage": "half"
+          }
+         }
+        }
+       },
+       {
+        "id": "discord",
+        "label": "불화 (1분)",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-effect",
+           "saveAbility": "wis",
+           "summary": "실패하면 1분 동안 말다툼한다 — 명중 굴림과 능력 판정에 불리 (의사소통 불가)"
+          }
+         },
+         "effects": []
+        }
+       },
+       {
+        "id": "fear",
+        "label": "공포 (1분)",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-effect",
+           "saveAbility": "wis",
+           "summary": "실패하면 1분 동안 공포 — 매 턴 문양에서 30피트 이상 멀어져야 한다"
+          }
+         },
+         "effects": [
+          {
+           "conditionId": "frightened",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "minutes",
+            "amount": 1
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "pain",
+        "label": "고통 (1분)",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-effect",
+           "saveAbility": "con",
+           "summary": "실패하면 1분 동안 행동불능"
+          }
+         },
+         "effects": [
+          {
+           "conditionId": "incapacitated",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "minutes",
+            "amount": 1
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "sleep",
+        "label": "수면 (10분)",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-effect",
+           "saveAbility": "wis",
+           "summary": "실패하면 10분 동안 무의식 — 피해를 받거나 흔들면 깨어난다"
+          }
+         },
+         "effects": [
+          {
+           "conditionId": "unconscious",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "minutes",
+            "amount": 1
+           }
+          }
+         ]
+        }
+       },
+       {
+        "id": "stunning",
+        "label": "충격 (1분)",
+        "patch": {
+         "sustain": {
+          "primary": {
+           "kind": "save-effect",
+           "saveAbility": "wis",
+           "summary": "실패하면 1분 동안 충격"
+          }
+         },
+         "effects": [
+          {
+           "conditionId": "stunned",
+           "trigger": "failed-save",
+           "duration": {
+            "kind": "minutes",
+            "amount": 1
+           }
+          }
+         ]
+        }
+       }
+      ]
      }
     }
    ]
