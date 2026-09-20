@@ -655,7 +655,9 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D330 선행 조건과 무기 범위 (V0.9 V7w, SRD 계획 §21)**: CLAUDE.md §1.3·§2. `feat-definition.requires`에 `armor-training:<등급>`·`shield-training`(중갑 달인 등 다섯 재주가 이유와 함께 잠긴다), `attack.scope`가 식이 된다 — `a|b`·`a+b`·`items:<id>,<id>`(장병기 달인이 육척봉·창과 중량+간격 무기만 잡는다).
 - **D331 좁은 규칙 (V0.9 V7x, SRD 계획 §22)**: CLAUDE.md §1.1·§2. `spell.attack-roll.ignore-cover`(주문 저격수는 주문만), `attack.oncePerTurnPerTarget`(요정 방랑자는 대상마다 턴당 한 번), `primary.healing.hitDice`(비전 활력이 시전자의 히트 다이스를 써서 회복).
 - **D332 한 행동에 여러 개 (V0.9 V7y, SRD 계획 §23)**: CLAUDE.md §1.1·§1.3. 경제 결제의 `oncePerTurn` — 주사위를 여러 개 쓰는 사용(치유의 빛·격노 주사위·이형의 혜택)은 눌린 횟수와 상관없이 그 행동을 턴에 한 번만 낸다(`act.spend`의 `once`).
+- **D333 남의 d20에 여는 창 (V0.9 V7z, SRD 계획 §24)**: CLAUDE.md §1.1·§1.2·§2. 계약이 `slot: "any"`로 쓴 개입(운명 굽히기·우주의 징조)을 시트가 제안하고, 호스트가 능력 판정과 빗나간 명중 굴림에도 방관자 창을 연다. 잘 나온 판정에는 깎는 창이 열리고 그 계약은 `success` 쪽으로 읽힌다.
 
+| V7z 남의 d20에 여는 창 (D333) ✔ | slot: any 개입, 판정·명중의 방관자 창 | 게이트 통과(d333-other-peoples-rolls 3개) |
 | V7y 한 행동에 여러 개 (D332) ✔ | 경제 결제의 oncePerTurn | 게이트 통과(d332 2개) |
 | V7x 좁은 규칙 (D331) ✔ | 주문 전용 엄폐 무시, 대상별 턴당 1회, 히트 다이스 치유 | 게이트 통과(d331 3개) |
 | V7w 선행 조건·무기 범위 (D330) ✔ | 재주 선행 조건, scope 식 | 게이트 통과(d330 2개), PHB 표 검증 거절 0 |

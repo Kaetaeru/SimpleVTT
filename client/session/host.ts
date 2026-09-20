@@ -895,6 +895,8 @@ export class TableHost {
           // A natural 1 misses whatever is added to the roll (2024), so there is nothing to rescue there.
           if (missed && missed.resolution.outcome === "miss") {
             this.offerRescue(firstCardId, attackerEntry, "attack-roll", `${missed.resolution.attackTotal} vs AC ${missed.resolution.targetAc}`, `${prepared!.spec.name} 명중 굴림`, missed.resolution.advantage === "advantage" ? Math.max(...missed.resolution.d20s) : missed.resolution.advantage === "disadvantage" ? Math.min(...missed.resolution.d20s) : missed.resolution.d20s[0]);
+            // D333: and a bystander whose contract answers somebody else's failed roll is asked too.
+            this.offerHelpers(firstCardId, attackerEntry, "attack-roll", `${prepared!.spec.name} 명중 굴림`);
           }
         }
         return;
@@ -1419,7 +1421,14 @@ export class TableHost {
         // official action rolls the actor's own ability check.
         const rolledBy = command.kind === "grapple" || command.kind === "shove" ? target : actor;
         const family: RollFamily = command.kind === "grapple" || command.kind === "shove" ? "saving-throw" : "ability-check";
-        if (result.check && result.check.success === false && rolledBy) this.offerRescue(actId, rolledBy, family, `${result.check.label} ${result.check.d20}${result.check.bonus >= 0 ? "+" : "-"}${Math.abs(result.check.bonus)} = ${result.check.total}${result.check.dc === undefined ? "" : ` vs DC ${result.check.dc}`}`, result.name, result.check.d20);
+        const rolled = result.check ? `${result.check.label} ${result.check.d20}${result.check.bonus >= 0 ? "+" : "-"}${Math.abs(result.check.bonus)} = ${result.check.total}${result.check.dc === undefined ? "" : ` vs DC ${result.check.dc}`}` : "";
+        if (result.check && result.check.success === false && rolledBy) this.offerRescue(actId, rolledBy, family, rolled, result.name, result.check.d20);
+        // D333: a d20 somebody else rolled. Until now only a saving throw against a spell opened a window for the rest
+        // of the scene, so a contract that answers any creature's check (운명 굽히기, 우주의 징조) never came up.
+        if (result.check && rolledBy) {
+          if (result.check.success === false) this.offerHelpers(actId, rolledBy, family, result.name);
+          else this.offerInterfere(actId, rolledBy, family, rolled, result.name);
+        }
         return;
       }
       case "act.provoke": {
@@ -1472,7 +1481,9 @@ export class TableHost {
         if (act) {
           const isSave = act.command.kind === "grapple" || act.command.kind === "shove";
           const family: RollFamily = isSave ? "saving-throw" : "ability-check";
-          const pick = (this.options.pcRescues?.(reactor.entry, family, "failure") ?? []).find((item) => item.feature === command.feature);
+          // D333: an interfering sheet answers a roll that went *well*, so its own contract is read that way.
+          const spoiling = promptMessage.prompt.rescue.interfere === true && act.result.check?.success === true;
+          const pick = (this.options.pcRescues?.(reactor.entry, family, spoiling ? "success" : "failure") ?? []).find((item) => item.feature === command.feature);
           if (!pick) return refuse("그 특성으로는 다시 굴릴 수 없습니다");
           const actActor = this.resolveActor(act.command.actor);
           if (!actActor) return refuse("행동한 쪽을 찾을 수 없습니다");

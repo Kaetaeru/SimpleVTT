@@ -45,7 +45,8 @@ export function pcRescues(entry: JournalCharacter, derived: DerivedCharacter, ca
     const ruleKey = featureRuleKey(feature.id);
     const contract = featureContract(catalog, ruleKey);
     if (!contract) continue;
-    const matching = interceptorsFor(contract, "d20.outcome-determined", family, outcome).filter((item) => item.slot === "d20.roll" && item.operations.some((operation) => operation.kind === "roll.modify") && (item.naturalOnly === undefined || d20 === undefined || item.naturalOnly === d20));
+    const matching = interceptorsFor(contract, "d20.outcome-determined", family, outcome)// D333: `any` is the same slot as far as a d20 is concerned — 운명 굽히기 and 우주의 징조 write it that way.
+      .filter((item) => (item.slot === "d20.roll" || item.slot === "any") && item.operations.some((operation) => operation.kind === "roll.modify") && (item.naturalOnly === undefined || d20 === undefined || item.naturalOnly === d20));
     if (!matching.length) continue;
     // Facts about where everyone is standing cannot be answered here, so those interceptors stay the table's call.
     // V4l (D274): unless the contract says to ask the player that fact — then the window carries the question.
