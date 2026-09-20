@@ -90,10 +90,11 @@ export function contractBonusActions(derived: { features: Array<{ id: string; na
         if (kind && !out.some((item) => item.kind === kind)) out.push({ kind, source: feature.name });
         // R61 (D196): one more swing as a bonus action, narrowed to the weapons it covers.
         const weapons = economyBonusAttack(operation.bucket);
-        if (weapons && !out.some((item) => item.attackScope === weapons && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: weapons });
         // V4p (D278): a swing that costs nothing of the turn (무리 파괴자) — the menu offers it without spending.
         const free = economyFreeAttack(operation.bucket);
         const swings = Math.max(1, Number((operation.amount as { value?: number } | undefined)?.value ?? 1) || 1);
+        // D342: the bonus action may be worth more than one swing (신속한 화살통: two shots for the one bonus action).
+        if (weapons && !out.some((item) => item.attackScope === weapons && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: weapons, ...(swings > 1 ? { count: swings } : {}) });
         if (free && !out.some((item) => item.attackScope === free && item.source === feature.name)) out.push({ kind: "attack", source: feature.name, attackScope: free, free: true, ...(swings > 1 ? { count: swings } : {}) });
       }
     }
