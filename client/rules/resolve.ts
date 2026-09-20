@@ -92,6 +92,8 @@ export interface Combatant {
   hitDefenseFrom?: string[];
   /** V4b (D264): what the next attack against this creature gets, from a mark on it; `except` is the marker's token when only others benefit. */
   nextAttackAgainst?: Array<{ label: string; advantage?: boolean; bonus?: number; except?: string }>;
+  /** D329: dice whoever attacks this creature adds to (or subtracts from) their roll (칼날 방호: −1d4). */
+  d20DiceAgainst?: Array<{ dice: string; label: string }>;
   /** R90 (D225): dice a spell it is under adds to its own attack rolls or saves (축복 +1d4, 액운 −1d4). */
   d20Dice?: Array<{ on: "attack" | "save"; dice: string; label: string }>;
   /** R90 (D225): advantage or disadvantage on its own attack rolls or saves, from a spell it is under. */
@@ -433,7 +435,9 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const targetAc = target.ac + cover;
   const exhausted = 2 * Math.max(0, attacker.exhaustion ?? 0);
   // R90 (D225): the dice a spell adds to this creature's attack rolls, kept on a re-resolution like the d20.
-  const bonusDice = (attacker.d20Dice ?? []).filter((item) => item.on === "attack").map((item, index) => ({ label: item.label, dice: item.dice, total: options.fixed?.bonusDice?.[index] ?? rollFormula(item.dice, options.dice) }));
+  // D329: what the attacker's own spells add, and what the target's take away (칼날 방호: −1d4 on the roll).
+  const againstDice = (target.d20DiceAgainst ?? []).map((item) => ({ on: "attack" as const, dice: item.dice, label: `대상 ${item.label}` }));
+  const bonusDice = [...(attacker.d20Dice ?? []).filter((item) => item.on === "attack"), ...againstDice].map((item, index) => ({ label: item.label, dice: item.dice, total: options.fixed?.bonusDice?.[index] ?? rollFormula(item.dice, options.dice) }));
   for (const item of bonusDice) reasons.push(`${item.label} ${item.total >= 0 ? "+" : ""}${item.total} (${item.dice})`);
   // V4b (D264): a mark on the target that adds to the next attack against it (무너뜨리는 일격).
   const marked = (target.nextAttackAgainst ?? []).filter((mark) => mark.bonus && (!mark.except || mark.except !== attacker.tokenId));

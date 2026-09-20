@@ -308,7 +308,8 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
       }
       case "grant.half-proficiency": ledger.halfProficiency = label; break;
       case "grant.martial-arts": ledger.martialArts = { classId: cls.id, column: String(p.column ?? ""), ability: String(p.ability ?? "dex") as AbilityKey }; break;
-      case "grant.proficiency": for (const weapon of strings(p.weapons)) ledger.weapons.add(weapon as WeaponTraining); for (const armor of strings(p.armor)) ledger.armor.add(armor as ArmorTraining); break;
+      // D329: tools travel the same way weapons and armour do (요리사의 조리 도구, 장인의 도구, 악기).
+      case "grant.proficiency": for (const weapon of strings(p.weapons)) ledger.weapons.add(weapon as WeaponTraining); for (const armor of strings(p.armor)) ledger.armor.add(armor as ArmorTraining); for (const tool of strings(p.tools)) { const id = resolveToolId(ledger, tool); ledger.tools.set(id, toolName(catalog, id)); } break;
       case "grant.cantrips": ledger.bonusCantrips.set(cls.id, (ledger.bonusCantrips.get(cls.id) ?? 0) + amount); break;
       case "grant.skill-ability-bonus": for (const skill of strings(p.skills)) ledger.skillAbilityBonuses.push({ skill, ability: String(p.ability ?? "wis") as AbilityKey, min: Number(p.min ?? 0), label }); break;
       case "grant.resistance": for (const type of strings(p.types)) ledger.resistances.add(type); break;

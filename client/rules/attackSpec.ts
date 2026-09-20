@@ -28,7 +28,7 @@ import type { CasterStats, SpellCastSpec } from "./spellcast";
 
 const diceOf = (terms: Array<{ dice?: string }>) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
 
-type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "grantsDisadvantageFrom" | "consumable" | "markedBy" | "bearerDamage">;
+type BearerRolls = Pick<Combatant, "d20Dice" | "d20DiceAgainst" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "grantsDisadvantageFrom" | "consumable" | "markedBy" | "bearerDamage">;
 /**
  * R90 (D225): the spell effects a creature is under, as what they do at the table — 축복·액운's d4 on its attack rolls
  * and saves, 요정 불꽃·유도 화살's advantage for whoever attacks it, 사냥꾼의 표식·주술's dice for the caster who marked
@@ -70,13 +70,15 @@ export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: str
 }
 
 export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): BearerRolls {
-  const out: Required<BearerRolls> = { d20Dice: [], rollStates: [], grantsAdvantage: [], grantsDisadvantage: [], grantsDisadvantageFrom: [], consumable: [], markedBy: [], bearerDamage: [] };
+  const out: Required<BearerRolls> = { d20Dice: [], d20DiceAgainst: [], rollStates: [], grantsAdvantage: [], grantsDisadvantage: [], grantsDisadvantageFrom: [], consumable: [], markedBy: [], bearerDamage: [] };
   for (const effect of effects) {
     if (!effect.key.startsWith("spell:") || !(effect.bearer || effect.from)) continue;
     for (const part of bearerPartsOf(effect.key.slice("spell:".length), effect.variant)) {
       const modifier = part.modifier;
       const on = modifier?.family === "attack-roll" ? "attack" : modifier?.family === "saving-throw" ? "save" : null;
       if (modifier && on && modifier.scope === "target") {
+        // D329: dice the attacker subtracts from its roll against this creature (칼날 방호: −1d4).
+        if (on === "attack" && modifier.bonus?.dice) out.d20DiceAgainst = [...(out.d20DiceAgainst ?? []), { dice: `${(modifier.bonus.sign ?? -1) < 0 ? "-" : ""}${modifier.bonus.dice.count}d${modifier.bonus.dice.sides}`, label: effect.name }];
         // D323: only attacks by these creature types are hindered (선악 보호, 성스러운 오라) — the host knows the attacker.
         if (on === "attack" && modifier.rollState === "disadvantage" && modifier.creatureTypes?.length) out.grantsDisadvantageFrom.push({ label: `대상 ${effect.name}`, creatureTypes: modifier.creatureTypes });
         else if (on === "attack" && modifier.rollState) (modifier.rollState === "advantage" ? out.grantsAdvantage : out.grantsDisadvantage).push(`대상 ${effect.name}`);

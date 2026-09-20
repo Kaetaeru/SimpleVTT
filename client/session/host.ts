@@ -178,7 +178,7 @@ export interface TableHostOptions {
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; /** V4u (D283): the creatures it reaches stop dying (죽음 방비). */ stabilizes?: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4d (D266): effects the chosen creatures carry. */ effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end"; also?: string[] }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; /** V4p (D278): the healing rolls at its maximum (최상급 치유). */ healMaximized?: boolean; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" }; healPoints?: number } } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; selfMarks?: string[]; deathSave: boolean; /** V4u (D283): the creatures it reaches stop dying (죽음 방비). */ stabilizes?: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** V4d (D266): effects the chosen creatures carry. */ effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>; /** V4b (D264): conditions the chosen creatures save against. */ conditionSaves?: Array<{ condition: string; ability: string; dc: number; duration?: ConditionDuration; repeatSave?: "turn-end"; also?: string[] }>; /** V4a (D263): damage the use deals to the chosen creatures. */ strikes?: Array<{ formula: string; damageType: string; save?: { ability: string; dc: number; success: "half" | "none" } }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; /** D329: one pool of temporary hit points shared among the chosen (고무하는 강타). */ tempHpPool?: string; heal?: string; /** V4p (D278): the healing rolls at its maximum (최상급 치유). */ healMaximized?: boolean; grants: string[]; max?: number; healPool?: { amount: number; cap: "half-max" }; healPoints?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R83 (D217): the content modules this table is played with (the host's installed ones), offered to players. */
@@ -1164,6 +1164,18 @@ export class TableHost {
         // R58 (D193): the half aimed at other people. Temporary hit points, healing and an item in the bag all need
         // a target, which is why none of them could be settled on the user's own sheet.
         const party = outcome.party;
+        // D329: one pool of temporary hit points shared evenly among the chosen (고무하는 강타).
+        if (party.tempHpPool && targets.length) {
+          const total = rollGuard(party.tempHpPool, this.options.random ?? Math.random);
+          const capped = party.max ? targets.slice(0, party.max) : targets;
+          const share = Math.floor(total / capped.length);
+          for (const [index, target] of capped.entries()) {
+            const amount = share + (index === 0 ? total - share * capped.length : 0);
+            this.grantTempHp(target, amount);
+            lines.push(`${target.token?.name ?? target.entry.name}: 임시 HP ${amount}`);
+          }
+          lines.push(`임시 HP ${total}을(를) ${capped.length}명이 나눴습니다 (DM 판정: 다르게 나눌 수 있습니다)`);
+        } else if (party.tempHpPool) lines.push("대상을 고르지 않았습니다");
         if (targets.length && (party.tempHp || party.heal || party.grants.length)) {
           const dice = this.options.random ?? Math.random;
           const capped = party.max ? targets.slice(0, party.max) : targets;

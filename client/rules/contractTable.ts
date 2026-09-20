@@ -26,7 +26,7 @@ export interface TableOutcome {
    */
   /** V4u (D283): the creatures it is aimed at stop dying (죽음 방비). */
   stabilizes?: boolean;
-  party: { tempHp?: string; heal?: string; /** V4p (D278): the healing rolls its dice at maximum (최상급 치유). */ healMaximized?: boolean; grants: string[]; max?: number; /** V4a (D263): an amount shared out among the chosen creatures, none past half its maximum. */ healPool?: { amount: number; cap: "half-max" }; /** V4c (D265): the use heals its target by the points chosen on the sheet, at most this many (안수). */ healPoints?: number };
+  party: { tempHp?: string; /** D329: one pool of temporary hit points shared evenly among the chosen (고무하는 강타). */ tempHpPool?: string; heal?: string; /** V4p (D278): the healing rolls its dice at maximum (최상급 치유). */ healMaximized?: boolean; grants: string[]; max?: number; /** V4a (D263): an amount shared out among the chosen creatures, none past half its maximum. */ healPool?: { amount: number; cap: "half-max" }; /** V4c (D265): the use heals its target by the points chosen on the sheet, at most this many (안수). */ healPoints?: number };
   /** V4d (D266): effects the chosen creatures carry, with the rescue die they may spend (바드의 영감). */
   effects?: Array<{ name: string; duration: string; rounds?: number; rescueDice?: string }>;
   /** V4b (D264): conditions the chosen creatures save against (언데드 퇴치, 적 퇴치). */
@@ -78,7 +78,9 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
       // R58 (D193): the half aimed at other people. The sheet cannot answer any of it — it does not know who.
       if (!("target" in operation) || !atOthers(operation.target)) continue;
       if (operation.kind === "damage.apply") { const rolled = useFormula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides); if (rolled) strikes.push({ formula: rolled, damageType: operation.damageType, ...(operation.save ? { save: { ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10, success: operation.save.success } } : {}) }); continue; }
-      if (operation.kind === "temp-hp.grant") party.tempHp = formula(operation);
+      // D329: one pool shared among the chosen creatures (고무하는 강타: 2d8 + level split as they like).
+      if (operation.kind === "temp-hp.grant" && operation.pool === "share") party.tempHpPool = formula(operation);
+      else if (operation.kind === "temp-hp.grant") party.tempHp = formula(operation);
       else if (operation.kind === "healing.apply" && operation.pool) party.healPool = { amount: Number(evaluate(operation.amount, scope)) || 0, cap: operation.pool };
       else if (operation.kind === "healing.apply") { party.heal = formula(operation); if (derived.healingMaximized) party.healMaximized = true; }
       else if (operation.kind === "content.grant") party.grants.push(operation.contentId);
@@ -102,6 +104,6 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     ...(effects.length ? { effects } : {}),
   };
   const asks = table.conditionsApplied.length || table.conditionsRemoved.length || table.selfMarks.length || table.deathSave || table.notes.length || table.artifacts.length
-    || party.tempHp || party.heal || party.healPool || party.healPoints || party.grants.length || strikes.length || conditionSaves.length || effects.length;
+    || party.tempHp || party.tempHpPool || party.heal || party.healPool || party.healPoints || party.grants.length || strikes.length || conditionSaves.length || effects.length;
   return asks ? table : null;
 }
