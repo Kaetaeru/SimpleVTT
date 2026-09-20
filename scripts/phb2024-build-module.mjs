@@ -452,7 +452,15 @@ if (patchesPath) {
   const byEntry = new Map(content.map((entry) => [entry.id, entry]));
   for (const patch of patches) {
     const entry = byEntry.get(patch.entryId);
-    if (!entry) { problems.push(`패치: ${patch.entryId} 항목이 없다`); continue; }
+    if (!entry) {
+      // D341: a correction may carry a whole new entry (a spell whose effect contract the source has no entry for).
+      // Without `presentation` it is still a mistake: a patch that names nothing is a typo, not a new rule.
+      if (!patch.presentation) { problems.push(`패치: ${patch.entryId} 항목이 없다`); continue; }
+      const made = { id: patch.entryId, category: patch.category ?? "option", presentation: patch.presentation, tags: patch.tags ?? ["effect", "common-play", "phb-2024"], mechanics: [{ kind: patch.kind, config: patch.config }] };
+      content.push(made);
+      byEntry.set(made.id, made);
+      continue;
+    }
     const at = (entry.mechanics ?? []).findIndex((item) => item.kind === patch.kind);
     if (at >= 0) entry.mechanics[at] = { ...entry.mechanics[at], config: patch.config };
     else entry.mechanics = [...(entry.mechanics ?? []), { kind: patch.kind, config: patch.config }];

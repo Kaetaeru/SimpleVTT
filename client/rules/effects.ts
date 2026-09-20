@@ -169,7 +169,10 @@ export function castHook(spell: { id: string }, slotLevel: number, derived: Deri
 
 export function effectRuleKey(effect: ActiveEffect, catalog: ContentCatalog): string {
   if (effect.source === "feature") return qualifyRuleKey(featureRuleKey(effect.key.replace(/^feature:/, "")));
-  const spellId = effect.key.replace(/^spell:/, "");
+  // D341: a creature standing in a spell's zone carries `zone:<caster>:<spell id>` — the rules it lives under while
+  // it stands there are that spell's own (권능의 원: advantage on saves against magic inside the circle).
+  const zone = /^zone:[^:]*:(.+)$/.exec(effect.key);
+  const spellId = zone ? zone[1] : effect.key.replace(/^spell:/, "");
   // H6c (D250): a spell's effect contract is keyed by the spell's id, not a slug of its English name. An effect saved
   // before ids were used (`spell:bless`) still finds its spell by the id's last segment.
   const spell = catalog.spellById(spellId) ?? (spellId.includes(".") ? undefined : catalog.spells.find((item) => item.id.split(".").pop() === spellId));
