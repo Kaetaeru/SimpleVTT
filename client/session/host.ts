@@ -151,7 +151,7 @@ export interface TableHostOptions {
   /** D324: spend one of the sheet's Hit Point Dice and heal by it (생명 흡수자's bite). */
   pcSpendHitDie?: (entry: JournalCharacter, random: () => number) => { runtime: CharacterRuntime; die: string; rolled: number; healed: number } | null;
   /** D324: what a sheet's contracts do as a spell is cast (주문 회상의 은총: a d4 that may keep the slot). */
-  pcCastRolls?: (entry: JournalCharacter, level: number, random: () => number) => Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string }>;
+  pcCastRolls?: (entry: JournalCharacter, level: number, random: () => number) => Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; /** D326: damage the cast itself costs (소원의 대가). */ damage?: { formula: string; type: string } }>;
   /**
    * D321: the same turn-start and turn-end rules for a monster carrying a spell effect (속박 강타's piercing damage
    * at the start of its turns). A monster has no sheet, so the numbers come from the cast the effect remembers.
@@ -993,6 +993,8 @@ export class TableHost {
           this.storeEntry({ ...casterBefore, runtime: { ...spent, updatedAt: this.now() }, updatedAt: this.now() });
           // D324: a die the sheet rolls as it casts may hand the slot straight back (주문 회상의 은총).
           if (command.method?.kind === "slot" && command.method.level > 0) for (const roll of this.options.pcCastRolls?.(casterBefore, command.method.level, this.options.random ?? Math.random) ?? []) {
+            // D326: a cast may cost the caster something of their own (소원의 대가: damage on every spell).
+            if (roll.damage) { const actor = this.resolveActor({ entryId: casterBefore.id }); if (actor) this.contractStrike(actor, [actor], roll.label, { formula: roll.damage.formula, damageType: roll.damage.type }, this.options.hostUserId, ""); continue; }
             this.say({ type: "system", who: "", content: `${casterBefore.name}: ${roll.label} — ${roll.note}${roll.keepsSlot ? " → 슬롯이 소모되지 않습니다" : ""}` });
             if (!roll.keepsSlot) continue;
             const live = this.journalEntries.get(casterBefore.id);

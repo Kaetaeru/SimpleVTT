@@ -648,7 +648,9 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D323 효과가 굴림에 붙이는 조건 (V0.9 V7p, SRD 계획 §14)**: CLAUDE.md §1.1·§2. `modifier.conditions`(독으로부터의 보호 — 중독 내성에만 이점), `modifier.creatureTypes`(선악 보호·성스러운 오라 — 그 종류의 공격에만 불리), `deathSaveAdvantage`·`healingMaximized`(희망의 봉화), `countedSave`(육신 석화 — 3회 성공이면 끝, 3회 실패면 석화; 횟수는 효과의 `tally`).
 - **D324 쓰는 순간에 내고 돌려받는 것 (V0.9 V7q, SRD 계획 §15)**: CLAUDE.md §1.1·§2. 명중 창의 `healing.apply`(+`hitDice`로 히트 다이스 소모 — 생명 흡수자), 시전 순간의 진입점 `invocation: "cast"`와 `resource.recharge.succeedsOnValue`(주문 회상의 은총: 1d4가 슬롯 레벨과 같으면 슬롯 유지), 자원의 `params.maximized`(악마적 활력의 무료 거짓 생명은 임시 HP 최대값), 지옥으로 내던지기의 8d10에 매력 내성.
 - **D325 피해를 받는 순간 (V0.9 V7r, SRD 계획 §16)**: CLAUDE.md §1.1·§1.2·§2. 호스트가 HP를 쓰는 모든 자리를 한 문으로 모아 `termination.targetTakesDamage`를 실제로 실행한다(수면·매혹 계열이 피해에 끝난다). 지배 계열과 끔찍한 웃음은 끝나는 게 아니라 내성을 다시 굴린다(`repeatSaveOnDamage`) — 그동안 즉시 끝으로 잘못 적혀 있었다. 보복은 명중 반응 창 + 명중 아닌 피해용 버튼.
+- **D326 표를 읽는 주사위와 계속 무는 대가 (V0.9 V7s, SRD 계획 §17)**: CLAUDE.md §1.1·§1.4·§2. `rayTable`(무지개 분사 — 대상마다 d8로 광선을 골라 피해 유형을 바꾼다), `outcomeTable`(순간이동 — d100을 굴려 그 줄을 카드에 적는다), 그리고 효과가 여는 `invocation: "cast"`(소원의 대가 — 이후 시전마다 주문 레벨당 1d10 사령).
 
+| V7s 표와 대가 (D326) ✔ | 광선표·결과표·시전마다 무는 피해 | 게이트 통과(d326-tables-and-price 3개) |
 | V7r 피해를 받는 순간 (D325) ✔ | 한 문으로 모은 피해 종료·피해 시 내성 반복 | 게이트 통과(d325-damage-taken 3개) |
 | V7q 쓰는 순간 (D324) ✔ | 명중 창 회복·히트 다이스, 시전 굴림, 최대값 무료 시전 | 게이트 통과(d324-cast-and-hit 3개) |
 | V7p 조건부 효과 (D323) ✔ | 조건·종류 한정, 죽음 내성·치유 최대화, 누적 내성 | 게이트 통과(d323-conditional-effects 4개) |

@@ -161,18 +161,29 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     pcCastRolls: (entry, level, random) => {
       const derived = derivedOf(entry, catalog());
       const scope = characterScope(derived, { "spell.slot-level": level });
-      const rolls: Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string }> = [];
-      for (const feature of derived.features) {
-        const contract = featureContract(catalog(), featureRuleKey(feature.id));
+      const rolls: Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; damage?: { formula: string; type: string } }> = [];
+      // D326: an effect the sheet is under may also answer a cast (소원's price: damage every time you cast).
+      const sources = [
+        ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)), cast: undefined as ActiveEffect["cast"] })),
+        ...(entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").map((effect) => ({ label: effect.name, contract: catalog().contractFor(effect.key), cast: effect.cast })),
+      ];
+      for (const feature of sources) {
+        const contract = feature.contract;
+        const inner = castScope(scope, feature.cast);
         for (const point of (contract?.entryPoints ?? []).filter((item) => item.invocation === CAST_INVOCATION)) {
           for (const operation of point.operations) {
-            if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
+            if ("when" in operation && operation.when && evaluate(operation.when, inner) !== true) continue;
+            if (operation.kind === "damage.apply") {
+              const formula = contractFormula(operation.dice, operation.amount, inner, operation.diceCount, operation.diceSides);
+              if (formula) rolls.push({ label: feature.label, die: formula, rolled: 0, keepsSlot: false, note: `${formula} ${operation.damageType}`, damage: { formula, type: operation.damageType } });
+              continue;
+            }
             if (operation.kind !== "resource.recharge") continue;
             const sides = Number(/d(\d+)/.exec(operation.die)?.[1] ?? 6);
             const rolled = 1 + Math.floor(random() * sides);
-            const wanted = operation.succeedsOnValue !== undefined ? Number(evaluate(operation.succeedsOnValue, scope)) : undefined;
+            const wanted = operation.succeedsOnValue !== undefined ? Number(evaluate(operation.succeedsOnValue, inner)) : undefined;
             const keepsSlot = wanted !== undefined ? rolled === wanted : operation.succeedsOn.includes(rolled);
-            rolls.push({ label: feature.name, die: operation.die, rolled, keepsSlot, note: wanted !== undefined ? `${operation.die} = ${rolled} vs 슬롯 ${wanted}` : `${operation.die} = ${rolled}` });
+            rolls.push({ label: feature.label, die: operation.die, rolled, keepsSlot, note: wanted !== undefined ? `${operation.die} = ${rolled} vs 슬롯 ${wanted}` : `${operation.die} = ${rolled}` });
           }
         }
       }

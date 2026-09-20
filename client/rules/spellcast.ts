@@ -266,13 +266,19 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant, stats } of all) {
         const row = base(combatant);
         row.mode = "save";
+        // D326: a spell whose colour is rolled for every target (무지개 분사's eight rays).
+        const rayRoll = exec.rayTable ? dice.d(exec.rayTable.die) : 0;
+        const ray = exec.rayTable?.rows.find((item) => item.value === rayRoll);
         row.save = save(combatant, stats, primary.saveAbility);
         // R95 (D230): 회피술 — on a Dexterity save that halves, nothing on a success and half on a failure, unless incapacitated.
         const evades = Boolean(combatant.evasion) && row.save.ability === "dex" && primary.successDamage === "half" && !CANNOT_ACT.some((name) => combatant.conditions.includes(name));
         // R98 (D233): 강력한 소마법 turns a cantrip success-for-nothing into half.
         const noneOnSuccess = primary.successDamage === "none" && !potent;
+        const rayParts = ray?.damageType ? areaParts.map((part) => ({ ...part, type: ray.damageType!, label: `${spec.name} · ${ray.name}` })) : areaParts;
+        if (ray && !ray.damageType) { row.mode = "note"; row.note = `${exec.rayTable?.label ?? "표"} — ${ray.name}: ${ray.note ?? "DM 판정"}`; targets.push(row); continue; }
         if (row.save.success && (noneOnSuccess || evades)) afterDamage(row, noDamage(combatant));
-        else afterDamage(row, applyDamage(combatant, areaParts, dice, { fixed: rolled, half: row.save.success || evades }));
+        else afterDamage(row, applyDamage(combatant, rayParts, dice, { fixed: rolled, half: row.save.success || evades }));
+        if (ray) row.note = [row.note, `${exec.rayTable?.label ?? "광선"}: ${ray.name}`].filter(Boolean).join(" · ");
         if (!row.save.success) { row.marks = conditionMarks("failed-save", combatant); if (exec.effects?.length || exec.trackedEffects?.some((effect) => effect.trigger === "failed-save")) row.effect = effectStart(exec.effects?.[0]?.duration ?? exec.trackedEffects?.find((effect) => effect.trigger === "failed-save")?.duration); }
         targets.push(row);
       }
@@ -513,6 +519,13 @@ export function resolveSpell(input: CastInput): SpellResolution {
     const entry = all.find((item) => item.combatant.id === row.target.id);
     const missed = entry ? missedThreshold(entry.combatant) : [];
     if (missed.length) row.note = [row.note, ...missed].filter(Boolean).join(" · ");
+  }
+  // D326: a table the cast rolls on once (순간이동's mishap table) — the row it lands on is the card's line.
+  if (exec.outcomeTable) {
+    const rolled = dice.d(exec.outcomeTable.die);
+    const row = exec.outcomeTable.rows.find((item) => rolled >= item.min && rolled <= item.max);
+    const line = `${exec.outcomeTable.label ?? "표"} d${exec.outcomeTable.die} = ${rolled}${row ? ` — ${row.text}` : ""}`;
+    note = [note, line].filter(Boolean).join(" · ");
   }
   // V4u (D283): the caster drinks part of what the spell dealt (흡혈의 손길: half the necrotic damage).
   const dealt = targets.reduce((sum, row) => sum + Math.max(0, row.attack?.damageTotal ?? row.damage?.damageTotal ?? 0), 0);

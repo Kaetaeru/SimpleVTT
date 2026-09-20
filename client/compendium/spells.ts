@@ -65,6 +65,12 @@ export interface SpellExec {
   /** D325: the target repeats that save whenever it takes damage (지배 계열, 끔찍한 웃음). */
   repeatSaveOnDamage?: boolean;
   /**
+   * D326: a table the cast rolls on. `outcomeTable` rolls once and writes the row it lands on (순간이동's mishap
+   * table); `rayTable` rolls for every target and swaps the damage the row names in (무지개 분사's eight rays).
+   */
+  outcomeTable?: { die: number; label?: string; rows: Array<{ min: number; max: number; text: string }> };
+  rayTable?: { die: number; label?: string; rows: Array<{ value: number; name: string; damageType?: string; note?: string }> };
+  /**
    * D323: the repeated save is counted (육신 석화): three successes end the spell, three failures turn the target
    * to stone. They need not run together — the tally rides on the effect.
    */

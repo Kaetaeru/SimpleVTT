@@ -24400,5 +24400,72 @@
     }
    }
   ]
+ },
+ "effect.spell.dnd.srd521.spell.wish": {
+  "id": "effect.spell.dnd.srd521.spell.wish",
+  "category": "option",
+  "presentation": {
+   "originalName": "Wish",
+   "defaultLocale": "ko-KR",
+   "locales": {
+    "ko-KR": {
+     "name": "소원",
+     "summary": "소원의 대가 — 주문을 시전할 때마다 받는 피해"
+    }
+   }
+  },
+  "tags": [
+   "effect",
+   "common-play",
+   "srd-5.2.1"
+  ],
+  "mechanics": [
+   {
+    "kind": "common-play",
+    "config": {
+     "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+     "schemaVersion": "0.2-draft",
+     "id": "spell:dnd.srd521.spell.wish",
+     "entryPoints": [
+      {
+       "id": "cast",
+       "invocation": "cast",
+       "operations": [
+        {
+         "kind": "damage.apply",
+         "diceCount": {
+          "op": "max",
+          "args": [
+           {
+            "value": 1
+           },
+           {
+            "ref": "spell.slot-level"
+           }
+          ]
+         },
+         "diceSides": {
+          "value": 10
+         },
+         "damageType": "사령",
+         "target": "self",
+         "note": "소원의 대가 — 주문 레벨당 1d10"
+        }
+       ]
+      },
+      {
+       "id": "rule",
+       "invocation": "manual",
+       "operations": [
+        {
+         "kind": "adjudication.request",
+         "question": "소원의 대가: 근력이 3으로 떨어지고 2d4일 동안 쇠약, 33% 확률로 다시는 소원을 시전할 수 없음 — DM 판정"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  ]
  }
 }

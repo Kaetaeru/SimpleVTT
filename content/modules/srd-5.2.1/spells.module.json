@@ -21745,20 +21745,68 @@
        "directTarget": false
       },
       "primary": {
-       "kind": "save-effect",
+       "kind": "save-damage",
        "saveAbility": "dex",
-       "summary": "당신에게서 60피트 원뿔로 여덟 색의 광선이 번쩍인다. 원뿔 안의 각 크리처는 민첩 내성 굴림을 한다. 각 대상마다 1d8을 굴려 다음 표에서 영향을 주는 광선을 정한다.",
-       "duration": {
-        "kind": "instant"
-       }
+       "damageType": "fire",
+       "dice": {
+        "count": 12,
+        "sides": 6
+       },
+       "successDamage": "half"
       },
       "concentration": false,
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "Authored (D326): every creature in the cone makes one Dexterity save, and a d8 for each of them picks the ray — the five coloured rays deal their 12d6 (half on a success), and the indigo, violet and double rays are the table's.",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "rayTable": {
+       "die": 8,
+       "label": "광선",
+       "rows": [
+        {
+         "value": 1,
+         "name": "빨강",
+         "damageType": "fire"
+        },
+        {
+         "value": 2,
+         "name": "주황",
+         "damageType": "acid"
+        },
+        {
+         "value": 3,
+         "name": "노랑",
+         "damageType": "lightning"
+        },
+        {
+         "value": 4,
+         "name": "초록",
+         "damageType": "poison"
+        },
+        {
+         "value": 5,
+         "name": "파랑",
+         "damageType": "cold"
+        },
+        {
+         "value": 6,
+         "name": "남색",
+         "note": "실패하면 포박 — 매 턴 끝 건강 내성, 3회 성공이면 끝, 3회 실패면 석화 (DM 판정)"
+        },
+        {
+         "value": 7,
+         "name": "보라",
+         "note": "실패하면 실명 — 다음 턴 끝에 지혜 내성, 실패하면 다른 차원으로 (DM 판정)"
+        },
+        {
+         "value": 8,
+         "name": "특수",
+         "note": "광선 둘을 굴린다 (8은 다시 굴리지 않음) — DM 판정"
+        }
+       ]
+      }
      }
     }
    ]
@@ -27511,12 +27559,38 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Authored (D326): the card rolls the d100 and writes the row for a very familiar destination; the DM reads the column their destination deserves (permanent circle, associated object, seen once, description, false).",
       "components": {
        "verbal": true,
        "somatic": false
       },
-      "ritual": false
+      "ritual": false,
+      "outcomeTable": {
+       "die": 100,
+       "label": "순간이동 표 (친숙함에 따라 다름)",
+       "rows": [
+        {
+         "min": 1,
+         "max": 5,
+         "text": "사고 — 3d10 역장 피해를 받고 다시 굴린다 (매우 익숙함 기준)"
+        },
+        {
+         "min": 6,
+         "max": 13,
+         "text": "비슷한 지역 — 다른 비슷한 곳에 도착"
+        },
+        {
+         "min": 14,
+         "max": 24,
+         "text": "목표 이탈 — 목적지에서 멀리 떨어진 곳"
+        },
+        {
+         "min": 25,
+         "max": 100,
+         "text": "정확히 도착"
+        }
+       ]
+      }
      }
     }
    ]
@@ -29930,12 +30004,21 @@
        }
       },
       "concentration": false,
-      "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+      "executionScope": "Authored (D326): copying a spell of 8th level or lower is the basic use. A wish beyond that carries its price: the caster takes 1d10 necrotic per spell level whenever they cast a spell, until a long rest ends it. What the wish itself does, and the one-in-three chance of never casting it again, are the table's.",
       "components": {
        "verbal": true,
        "somatic": false
       },
-      "ritual": false
+      "ritual": false,
+      "trackedEffects": [
+       {
+        "summary": "소원의 대가 — 주문을 시전할 때마다 1d10 사령 피해(주문 레벨당), 긴 휴식까지. 33% 확률로 다시는 소원을 못 쓴다 (DM 판정)",
+        "trigger": "always",
+        "duration": {
+         "kind": "special"
+        }
+       }
+      ]
      }
     }
    ]
