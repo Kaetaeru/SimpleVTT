@@ -50,6 +50,8 @@ export interface Combatant {
   exhaustion?: number;
   /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
   evasion?: boolean;
+  /** D321: an effect on it says it regains no hit points (서리 손길) — the label the card shows. */
+  noHealing?: string;
   /** D318: rolls its concentration saves with advantage. */
   concentrationAdvantage?: boolean;
   /** R96 (D231): 포착 불가 — attacks against it cannot have advantage while it is not incapacitated. */
@@ -92,6 +94,8 @@ export interface Combatant {
   consumable?: Array<{ key: string; on: "attack" | "attacked" }>;
   /** R90 (D225): damage the caster who marked this creature adds when they hit it (사냥꾼의 표식, 주술). */
   markedBy?: Array<{ from: string; formula: string; type: string; label: string; spellId: string }>;
+  /** D321: damage a lasting effect adds to every hit this creature lands (하급 원소 소환), already scaled by its slot. */
+  bearerDamage?: Array<{ formula: string; type: string; label: string }>;
   /** R98 (D233): this attacker hunter mark rolls this die (적 학살자) and gives advantage (정밀한 사냥꾼). */
   markedSpellDice?: Record<string, number>;
   markedSpellAdvantage?: string[];

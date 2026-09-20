@@ -23,6 +23,23 @@ import { characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } 
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
 import type { TableHostOptions } from "./host";
+import type { ActiveEffect } from "../character/types";
+import type { Scope } from "../rules/contract";
+
+/**
+ * D321: while a spell effect's own contract runs, the numbers belong to the cast that started it — the slot level,
+ * the caster's save DC and their spellcasting modifier. Without this a save at the start of a turn used the bearer's
+ * own DC (or none at all) and nothing could scale with the slot the spell was cast at.
+ */
+const castScope = (base: Scope, cast: ActiveEffect["cast"]): Scope => (cast
+  ? (ref) => (ref === "spell.save-dc" ? cast.saveDc : ref === "spell.modifier" ? cast.modifier : ref === "spell.slot-level" ? cast.level : base(ref))
+  : base);
+
+/** An effect saved before D321 carries no cast: fall back to the sheet's own spellcasting, as the table did then. */
+const ownCast = (derived: ReturnType<typeof derivedOf>): ActiveEffect["cast"] => {
+  const entry = derived.spellcasting[0];
+  return entry ? { level: 0, saveDc: entry.saveDc, modifier: derived.abilities[entry.ability].modifier } : undefined;
+};
 
 /** Token bar links (D78): what a character attribute is worth right now. */
 export function attributeOf(entry: JournalCharacter, link: string, catalog: ContentCatalog): { value?: number; max?: number } | undefined {
@@ -85,16 +102,18 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     // V3c (D257): turn-start contracts — healing whose `when` holds against the sheet's hit points right now.
     pcTurnStart: (entry) => {
       const derived = derivedOf(entry, catalog());
-      const scope = characterScope(derived, { "actor.hp.current": entry.runtime.hp.current, "actor.hp.max": derived.hp.max });
+      const baseScope = characterScope(derived, { "actor.hp.current": entry.runtime.hp.current, "actor.hp.max": derived.hp.max });
       // V4t (D282): a spell's own contract may carry a turn-start rule too, for the effects this sheet is under.
-      const sources: Array<{ label: string; contract: ReturnType<typeof featureContract> }> = [
+      const sources: Array<{ label: string; contract: ReturnType<typeof featureContract>; cast?: ActiveEffect["cast"] }> = [
         ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)) })),
-        ...(entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").map((effect) => ({ label: effect.name, contract: catalog().contractFor(effect.key) })),
+        ...(entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").map((effect) => ({ label: effect.name, contract: catalog().contractFor(effect.key), cast: effect.cast })),
       ];
-      return sources.flatMap(({ label, contract }) => (contract?.entryPoints ?? [])
+      return sources.flatMap(({ label, contract, cast }) => (contract?.entryPoints ?? [])
         .filter((point) => point.invocation === TURN_START_INVOCATION)
         .flatMap((point) => point.operations)
         .flatMap((operation) => {
+          // D321: inside a spell effect, the numbers are the caster's — the slot it was cast at, their DC, their modifier.
+          const scope = castScope(baseScope, cast ?? ownCast(derived));
           if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) return [];
           if (operation.kind === "healing.apply") return [{ label, amount: Number(evaluate(operation.amount, scope)) || 0, max: derived.hp.max }];
           if (operation.kind === "temp-hp.grant") return [{ label, amount: 0, max: derived.hp.max, tempHp: Number(evaluate(operation.amount, scope)) || 0 }];
@@ -110,12 +129,13 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
     pcTurnEnd: (entry) => {
       const derived = derivedOf(entry, catalog());
       // V5c (D291): the effects this sheet is under carry turn-end rules too, and one of them may be damage.
-      const scope = characterScope(derived, { "actor.hp.current": entry.runtime.hp.current, "actor.hp.max": derived.hp.max });
+      const baseScope = characterScope(derived, { "actor.hp.current": entry.runtime.hp.current, "actor.hp.max": derived.hp.max });
       const sources = [
-        ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)) })),
-        ...(entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").map((effect) => ({ label: effect.name, contract: catalog().contractFor(effect.key) })),
+        ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)), cast: undefined as ActiveEffect["cast"] })),
+        ...(entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").map((effect) => ({ label: effect.name, contract: catalog().contractFor(effect.key), cast: effect.cast })),
       ];
-      return sources.flatMap(({ label, contract }) => {
+      return sources.flatMap(({ label, contract, cast }) => {
+        const scope = castScope(baseScope, cast ?? ownCast(derived));
         const operations = (contract?.entryPoints ?? []).filter((point) => point.invocation === TURN_END_INVOCATION).flatMap((point) => point.operations);
         const conditions = operations.flatMap((operation) => (operation.kind === "condition.remove" ? [operation.condition] : []));
         const hurt = operations.find((operation) => operation.kind === "damage.apply");
@@ -124,6 +144,25 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
           if (rolled) return [{ label, conditions: [], damage: { formula: rolled, type: hurt.damageType, ...(hurt.save ? { save: { ability: hurt.save.ability, dc: Number(evaluate(hurt.save.dc, scope)) || 10 } } : {}) } }];
         }
         return conditions.length ? [{ label, conditions }] : [];
+      });
+    },
+    // D321: a monster under a spell effect gets the same turn rules a character does; its numbers are the cast's.
+    npcEffectTurn: (entry, boundary) => {
+      const invocation = boundary === "start" ? TURN_START_INVOCATION : TURN_END_INVOCATION;
+      return (entry.runtime.effects ?? []).filter((effect) => effect.source === "spell").flatMap((effect) => {
+        const contract = catalog().contractFor(effect.key);
+        const scope = castScope((ref) => (ref === "actor.hp.current" ? entry.runtime.hp.current : ref === "actor.hp.max" ? entry.runtime.hp.max : undefined), effect.cast);
+        type EffectTurnRule = { label: string; tempHp?: number; conditions?: string[]; damage?: { formula: string; type: string; save?: { ability: string; dc: number } } };
+        return (contract?.entryPoints ?? []).filter((point) => point.invocation === invocation).flatMap((point) => point.operations).flatMap((operation): EffectTurnRule[] => {
+          if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) return [];
+          if (operation.kind === "temp-hp.grant") return [{ label: effect.name, tempHp: Number(evaluate(operation.amount, scope)) || 0 }];
+          if (operation.kind === "condition.remove") return [{ label: effect.name, conditions: [operation.condition] }];
+          if (operation.kind === "damage.apply") {
+            const rolled = contractFormula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides);
+            return rolled ? [{ label: effect.name, damage: { formula: rolled, type: operation.damageType, ...(operation.save ? { save: { ability: operation.save.ability, dc: Number(evaluate(operation.save.dc, scope)) || 10 } } : {}) } }] : [];
+          }
+          return [];
+        });
       });
     },
     pcZeroHolds: (entry) => {

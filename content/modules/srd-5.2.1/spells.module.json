@@ -3918,7 +3918,8 @@
          "amount": 1,
          "anchorActorId": "$source",
          "boundary": "end"
-        }
+        },
+        "noHealing": true
        }
       ],
       "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
@@ -5555,7 +5556,7 @@
       "concentration": true,
       "trackedEffects": [
        {
-        "summary": "명중 시 화염 2d8 추가 (15피트 방출 안)",
+        "summary": "명중 시 화염 2d8 추가 (4레벨 위 슬롯마다 +2d8, 15피트 방출 안)",
         "trigger": "always",
         "duration": {
          "kind": "concentration"
@@ -5565,7 +5566,8 @@
          "dice": {
           "count": 2,
           "sides": 8
-         }
+         },
+         "dicePerSlotAboveBase": 2
         }
        }
       ],
@@ -5595,7 +5597,8 @@
             "dice": {
              "count": 2,
              "sides": 8
-            }
+            },
+            "dicePerSlotAboveBase": 2
            }
           }
          ]
@@ -5617,7 +5620,8 @@
             "dice": {
              "count": 2,
              "sides": 8
-            }
+            },
+            "dicePerSlotAboveBase": 2
            }
           }
          ]
@@ -5639,7 +5643,8 @@
             "dice": {
              "count": 2,
              "sides": 8
-            }
+            },
+            "dicePerSlotAboveBase": 2
            }
           }
          ]
@@ -5661,7 +5666,8 @@
             "dice": {
              "count": 2,
              "sides": 8
-            }
+            },
+            "dicePerSlotAboveBase": 2
            }
           }
          ]
@@ -5839,11 +5845,10 @@
       "concentration": false,
       "trackedEffects": [
        {
-        "summary": "실패하면 긴 휴식이 끝날 때까지 행동불능 — 긴 휴식 뒤 해제(수동 처리 필요) · 성공하면 질문 다섯 개(DM 판정)",
-        "trigger": "always",
+        "summary": "실패하면 긴 휴식이 끝날 때까지 행동불능 · 성공하면 질문 다섯 개(DM 판정)",
+        "trigger": "failed-save",
         "duration": {
-         "kind": "minutes",
-         "amount": 1
+         "kind": "special"
         }
        }
       ],
@@ -14534,9 +14539,20 @@
          "scope": "actor",
          "ability": "dex"
         }
+       },
+       {
+        "summary": "주문이 끝나면 다음 턴이 끝날 때까지 행동불능",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        },
+        "endConditions": [
+         "incapacitated"
+        ],
+        "endDuration": "다음 턴이 끝날 때까지"
        }
       ],
-      "executionScope": "Authored (C1-03): the target has +2 AC and advantage on DEX saving throws while the caster concentrates (up to 1 minute). The doubled speed, the extra limited action each turn, and the lethargy when the spell ends are left to the DM.",
+      "executionScope": "Authored (D321): +2 AC, advantage on Dexterity saves, doubled speed while the caster concentrates, and the lethargy when it ends (Incapacitated until the end of the target's next turn). The extra limited action each turn is the table's.",
       "components": {
        "verbal": true,
        "somatic": true,

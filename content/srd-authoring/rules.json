@@ -843,7 +843,7 @@
         {
          "kind": "temp-hp.grant",
          "amount": {
-          "ref": "ability.cha.modifier"
+          "ref": "spell.modifier"
          },
          "target": "self"
         }
@@ -966,13 +966,6 @@
          "operation": "multiply",
          "value": 2,
          "note": "추가 행동 하나: 공격(1회)·질주·이탈·숨기·사용"
-        },
-        {
-         "kind": "property.modify",
-         "property": "ac.bonus",
-         "operation": "add",
-         "value": 0,
-         "note": "끝나면 한 턴 행동 불가"
         }
        ]
       }
@@ -22553,7 +22546,20 @@
        "operations": [
         {
          "kind": "damage.apply",
-         "dice": "1d6",
+         "diceCount": {
+          "op": "max",
+          "args": [
+           {
+            "value": 1
+           },
+           {
+            "ref": "spell.slot-level"
+           }
+          ]
+         },
+         "diceSides": {
+          "value": 6
+         },
          "damageType": "관통",
          "target": "self"
         }

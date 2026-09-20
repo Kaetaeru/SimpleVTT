@@ -13,7 +13,7 @@ import type { Page, Token } from "../campaign/page";
 import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken, tokenForNpc } from "../campaign/page";
 import type { Tracker } from "../campaign/tracker";
 import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../campaign/tracker";
-import { advanceRound, ageEffects, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
+import { advanceRound, afterEffectsOf, ageEffects, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
 import { npcAttackSpec, npcCombatant, npcSaveExec , bearerDefenses } from "../rules/attackSpec";
@@ -26,7 +26,7 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { bearerRolls, monsterAuras, splitHitOffers, versusParts, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { onHitOf, spellExec, sustainedExec, sustainOf, targetCountOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
+import { CONDITION_KO, onHitOf, spellExec, sustainedExec, sustainOf, targetCountOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
 import type { ConditionDuration, TargetMark } from "../rules/contract";
 import type { ZeroHold } from "../character/types";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -148,6 +148,11 @@ export interface TableHostOptions {
   /** V4h (D270): conditions this sheet sheds at the end of its turn — one of each list (자기 회복). */
   pcTurnEnd?: (entry: JournalCharacter) => Array<{ label: string; conditions: string[]; /** V5c (D291): damage the effect deals when that turn ends, with the save that avoids it. */ damage?: { formula: string; type: string; save?: { ability: string; dc: number } } }>;
   /** V4d (D266): what may keep this sheet up when it drops to 0 hit points, with the DC already grown by earlier uses. */
+  /**
+   * D321: the same turn-start and turn-end rules for a monster carrying a spell effect (속박 강타's piercing damage
+   * at the start of its turns). A monster has no sheet, so the numbers come from the cast the effect remembers.
+   */
+  npcEffectTurn?: (entry: JournalNpc, boundary: "start" | "end") => Array<{ label: string; tempHp?: number; conditions?: string[]; damage?: { formula: string; type: string; save?: { ability: string; dc: number } } }>;
   pcZeroHolds?: (entry: JournalCharacter) => ZeroHold[];
   /**
    * V4c (D265): the sheet's effects that end at the bearer's turn end unless it attacked, forced a save or took damage
@@ -696,7 +701,7 @@ export class TableHost {
         // R18: a long rest also gives the monsters their day back — per-day spells and traits, legendary resistance, recharges.
         if (long) for (const entry of [...this.journalEntries.values()]) {
           if (entry.kind !== "npc") continue;
-          this.storeEntry({ ...entry, runtime: { ...entry.runtime, uses: {}, spent: {}, legendaryUsed: 0, legendaryResistanceUsed: 0, endSaves: [], updatedAt: this.now() }, updatedAt: this.now() });
+          this.storeEntry({ ...entry, runtime: { ...entry.runtime, uses: {}, spent: {}, legendaryUsed: 0, legendaryResistanceUsed: 0, endSaves: [], effects: [], updatedAt: this.now() }, updatedAt: this.now() });
         }
         this.passTime(long ? 8 * 60 : 60);
         this.say({ type: "system", who: "", content: `${long ? "긴 휴식" : "짧은 휴식"} — ${rested.length ? rested.join(", ") : "쉰 캐릭터 없음"}${long ? " · NPC의 하루 횟수도 돌아왔습니다" : ""} · ${clockText(this.clock)}` });
@@ -1768,12 +1773,14 @@ export class TableHost {
   private perTargetRiders(spec: AttackSpec, attacker: { entry: JournalEntry }, target: { entry: JournalEntry }, targetCombatant: Combatant, attackerCombatant?: Combatant): AttackSpec {
     const versus = target.entry.kind === "npc" ? versusParts(spec, target.entry.statBlock.creatureType) : [];
     const mine = (targetCombatant.markedBy ?? []).filter((mark) => mark.from === attacker.entry.id);
+    // D321: damage a lasting effect adds to every hit its bearer lands (하급 원소 소환), already scaled by the slot.
+    const bearer: DamagePart[] = (attackerCombatant?.bearerDamage ?? []).map((part) => ({ formula: part.formula, type: part.type, label: part.label, critDoubles: true }));
     // H2 (D239): the attacker's sheet may change the mark's die (적 학살자) or give advantage against it (정밀한 사냥꾼), per marking spell.
     const marks = mine.map((mark): DamagePart => { const die = attackerCombatant?.markedSpellDice?.[mark.spellId]; return { formula: die ? mark.formula.replace(/d[0-9]+/, `d${die}`) : mark.formula, type: mark.type, label: mark.label }; });
     const precise = mine.filter((mark) => attackerCombatant?.markedSpellAdvantage?.includes(mark.spellId)).map((mark) => `${mark.label} 대상`);
     // R99 (D234): 연구된 공격 — the attack after a miss against this creature has advantage.
     if (attackerCombatant?.studiedAttacks && this.studied.get(attacker.entry.id) === target.entry.id) precise.push("연구된 공격");
-    return versus.length || marks.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...versus, ...marks], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
+    return versus.length || marks.length || bearer.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...versus, ...marks, ...bearer], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
   }
 
   /**
@@ -2138,6 +2145,29 @@ export class TableHost {
    * `advanceRound` (which keeps its log), a monster through the same arithmetic, and the conditions an effect
    * carried come off with it (on the sheet and on its token).
    */
+  /** D321: the turn-start and turn-end rules of the spell effects a monster is under (damage, temporary HP, conditions). */
+  private runEffectTurn(entryId: string, boundary: "start" | "end") {
+    const entry = this.journalEntries.get(entryId);
+    if (entry?.kind !== "npc") return;
+    for (const rule of this.options.npcEffectTurn?.(entry, boundary) ?? []) {
+      const live = this.journalEntries.get(entryId);
+      if (live?.kind !== "npc") return;
+      if (rule.damage) {
+        const actor = this.resolveActor({ entryId });
+        if (actor) this.contractStrike(actor, [actor], rule.label, { formula: rule.damage.formula, damageType: rule.damage.type, ...(rule.damage.save ? { save: { ability: rule.damage.save.ability as AbilityKey, dc: rule.damage.save.dc, success: "none" as const } } : {}) }, this.options.hostUserId, "");
+        continue;
+      }
+      if (rule.tempHp !== undefined) {
+        if ((live.runtime.hp.temp ?? 0) < rule.tempHp) { this.storeEntry({ ...live, runtime: { ...live.runtime, hp: { ...live.runtime.hp, temp: rule.tempHp }, updatedAt: this.now() }, updatedAt: this.now() }); this.say({ type: "system", who: "", content: `${live.name}: ${rule.label} — 임시 HP ${rule.tempHp}` }); }
+        continue;
+      }
+      const gone = (rule.conditions ?? []).map((condition) => CONDITION_KO[condition] ?? condition).find((name) => live.runtime.conditions.includes(name));
+      if (!gone) continue;
+      this.storeEntry({ ...live, runtime: { ...live.runtime, conditions: live.runtime.conditions.filter((name) => name !== gone), updatedAt: this.now() }, updatedAt: this.now() });
+      this.say({ type: "system", who: "", content: `${live.name}: ${rule.label} — ${gone} 해제` });
+    }
+  }
+
   private ageEffectsOf(entry: JournalEntry, rounds: number) {
     if (entry.kind === "character") {
       const runtime = advanceRound(entry.runtime, rounds);
@@ -2150,9 +2180,12 @@ export class TableHost {
     const keys = aged.ended.map((effect) => effect.key);
     const names = aged.ended.map((effect) => effect.name);
     const shed = [...names, ...aged.ended.flatMap((effect) => effect.endSave?.conditions ?? [])];
+    // D321: an effect that leaves conditions behind (가속) lays them on as it ends.
+    const after = afterEffectsOf(aged.ended, this.now(), (condition) => CONDITION_KO[condition] ?? condition);
     this.storeEntry({ ...entry, runtime: {
       ...aged.runtime,
-      conditions: entry.runtime.conditions.filter((name) => !shed.includes(name)),
+      effects: [...(aged.runtime.effects ?? []), ...after.effects],
+      conditions: [...entry.runtime.conditions.filter((name) => !shed.includes(name)), ...after.conditions.filter((name) => !entry.runtime.conditions.includes(name))],
       endSaves: (entry.runtime.endSaves ?? []).filter((item) => !keys.includes(item.key)),
       updatedAt: this.now(),
     }, updatedAt: this.now() });
@@ -2707,7 +2740,7 @@ export class TableHost {
       // A lasting effect on a target: on the caster's own sheet castSpell already started it (with concentration); others get it without.
       // R90 (D225): the creature is now under the spell — a caster who targeted themselves too, whose effect castSpell started.
       if (row.effect && (runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = { ...runtime, effects: runtime.effects.map((effect) => (effect.key === row.effect!.key ? { ...effect, bearer: true, ...(row.effect!.variant ? { variant: row.effect!.variant } : {}) } : effect)) };
-      else if (row.effect) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", bearer: true, ...(row.effect.variant ? { variant: row.effect.variant } : {}), ...(row.effect.consumeOn ? { consumeOn: row.effect.consumeOn } : {}), duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
+      else if (row.effect) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", bearer: true, ...(row.effect.variant ? { variant: row.effect.variant } : {}), ...(row.effect.consumeOn ? { consumeOn: row.effect.consumeOn } : {}), duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(resolution.caster.id !== before.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}), ...(row.effect.cast ? { cast: row.effect.cast } : {}), ...(row.effect.endConditions?.length ? { endConditions: row.effect.endConditions, ...(row.effect.endDuration ? { endDuration: row.effect.endDuration } : {}) } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed === "unconscious") this.holdAtZero(before.id);
       if (downed) this.releaseGrapples(target.page, target.token?.id);
@@ -2735,7 +2768,7 @@ export class TableHost {
     if (row.effect) {
       const key = row.effect.key;
       const already = (npcBefore.runtime.effects ?? []).some((effect) => effect.key === key);
-      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", bearer: true, ...(row.effect.variant ? { variant: row.effect.variant } : {}), ...(row.effect.consumeOn ? { consumeOn: row.effect.consumeOn } : {}), duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(resolution.caster.id !== npcBefore.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
+      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", bearer: true, ...(row.effect.variant ? { variant: row.effect.variant } : {}), ...(row.effect.consumeOn ? { consumeOn: row.effect.consumeOn } : {}), duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(resolution.caster.id !== npcBefore.id ? { from: resolution.caster.id, ...(row.effect.concentration ? { fromConcentration: true } : {}), ...(row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.marks.length ? { conditions: row.marks } : {}), ...(this.castOnOwnTurn(row.effect, resolution.caster.id) ? { rounds: (row.effect.rounds ?? 0) + 1 } : {}) } : row.effect.anchor ? { anchor: row.effect.anchor } : {}), ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}), ...(row.effect.cast ? { cast: row.effect.cast } : {}), ...(row.effect.endConditions?.length ? { endConditions: row.effect.endConditions, ...(row.effect.endDuration ? { endDuration: row.effect.endDuration } : {}) } : {}) };
       const endSaves = row.effect.endSave
         ? [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== key), { key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }]
         : npcBefore.runtime.endSaves;
@@ -3104,6 +3137,8 @@ export class TableHost {
       }
       runtime = { ...runtime, updatedAt: this.now() };
       this.storeEntry({ ...started, runtime, updatedAt: this.now() });
+      // D321: a monster under a spell effect takes what the effect does at the start of its turn (속박 강타).
+      this.runEffectTurn(started.id, "start");
     }
     // Turn-scoped marks (D97): 이탈·질주 end with the turn; 회피·도움·준비 last until the bearer's next turn starts.
     // R85 (D220): effects counted on a turn boundary — the caster (유도 화살, 잔혹한 모욕) or the bearer.
@@ -3145,6 +3180,8 @@ export class TableHost {
     }
     // V3h (D262): the disadvantage 다중 공격 방어 gave lasts until the end of the hitter's turn.
     if (endedActor?.token && endedActor.page) { const page = this.pages.get(endedActor.page.id); if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(marker.name === HIT_DEFENSE_MARK && marker.from === endedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); } }
+    // D321: and what it does when that turn ends.
+    if (endedActor?.entry.kind === "npc") this.runEffectTurn(endedActor.entry.id, "end");
     if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }
     // R28 (D151): the rage is judged at the end of its bearer's turn, on what happened since their last one.
     if (endedActor && this.rageOf(endedActor.entry) && !this.rageOf(endedActor.entry)!.waived && !result.ended?.ragingDeed) this.endRage(this.journalEntries.get(endedActor.entry.id) ?? endedActor.entry, "그 사이 공격도 피해도 없었음");
@@ -3408,6 +3445,12 @@ export class TableHost {
       if (token.represents !== entry.id) continue;
       const markers = token.markers.filter((marker) => !shed.includes(marker.name));
       if (markers.length !== token.markers.length) this.storeToken(page, { ...token, markers });
+    }
+    // D321: conditions the ending effects leave behind (가속) go on now, carried by their own short effect.
+    const after = afterEffectsOf(gone, now, (condition) => CONDITION_KO[condition] ?? condition);
+    if (after.conditions.length) {
+      const back = this.journalEntries.get(entry.id);
+      if (back && back.kind !== "handout") this.storeEntry({ ...back, runtime: { ...back.runtime, effects: [...(back.runtime.effects ?? []), ...after.effects], conditions: [...back.runtime.conditions, ...after.conditions.filter((name) => !back.runtime.conditions.includes(name))], updatedAt: now } } as JournalEntry);
     }
     this.say({ type: "system", who: "", content: `${entry.name}: ${names.join(", ")} 끝남 (${why})` });
   }

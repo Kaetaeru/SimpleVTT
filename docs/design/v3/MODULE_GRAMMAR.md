@@ -145,6 +145,7 @@
 **식**: `{"value":3}` · `{"ref":"proficiency.bonus"}` · `{"op":"add","args":[…]}`.
 연산자: `add sub mul floor-div ceil-div min max eq ne lt lte gt gte all any not if`.
 참조: `proficiency.bonus`, `actor.level`, `ability.<x>.modifier`, `ability.<x>.score`, `save.<x>.modifier`, `actor.class-level:<classId>`, `armor.training`, `armor.dex-capped`, `equipment.shield`, `actor.pact-slots`, `actor.has-feature:<규칙 키>`, `actor.chose:<선택 id>:<옵션 id>`(D308 — 만들기·레벨업에서 그 옵션을 골랐는가; 선택 id는 전체(`origin.species.draconicAncestry`)나 마지막 조각(`draconicAncestry`)), `effect.running:<효과 이름>`, `fact:<id>`.
+주문 효과의 계약(`spell:<주문 id>`) 안에서는 그 효과를 건 시전의 값도 읽는다(D321): `spell.slot-level`(시전한 슬롯 레벨), `spell.save-dc`(시전자의 주문 내성 DC), `spell.modifier`(시전자의 주문 시전 능력치 수정치).
 
 지속시간: `{"kind":"rounds"|"minutes"|"hours"|"permanent","amount":1,"boundary":"start"|"end","anchor":"source"|"bearer"}`.
 효과 수명(`lifetime`): `until-duration`(라운드를 센다) · `until-state` · `until-event` · `until-consumed` · `until-source-recast` · `with-parent` · `durable`.
@@ -263,7 +264,7 @@
 - `primary.kind`: `attack-damage` `save-damage` `save-compound-damage` `save-effect` `healing` `temporary-hp` `automatic-projectiles` `multi-attack-damage` `tracked-effect` `area-damage` `maximum-hp` `dispel` `full-healing` `power-word-kill` `revive`
 - 내성 DC: 시전자 DC가 기본, `primary.saveDc`(숫자)면 그 DC(D318 — 이계 접촉 15)
 - 주사위: `count/sides/flat`, 상위 슬롯은 `dicePerSlotAboveBase`·`flatPerSlotAboveBase`, 소마법은 `cantripScaling`, 시전 능력치는 `addSpellcastingModifier`
-- `effects[]`(상태), `trackedEffects[]`(지속 효과가 굴림에 주는 것 — `modifier`, `attackDamage`, `damageDefenses`, D316 `conditionImmunities`), `removesConditions[]`(D316: 주문 종류와 상관없이, 내성에 성공한 대상만 빼고 적용)
+- `effects[]`(상태), `trackedEffects[]`(지속 효과가 굴림에 주는 것 — `modifier`, `attackDamage`(D321: `dicePerSlotAboveBase`로 슬롯마다 주사위가 늘고, `againstTargetOnly`가 없으면 보유자가 명중시킬 때마다 붙는다), `damageDefenses`, D316 `conditionImmunities`, D321 `noHealing`(보유자가 HP를 회복하지 못한다)·`endConditions`+`endDuration`(효과가 끝날 때 남기는 상태)), `removesConditions[]`(D316: 주문 종류와 상관없이, 내성에 성공한 대상만 빼고 적용)
 - `sustain`: `economy`(`action`/`bonus-action`/`none`) · `primary` · `note` · `move` · `target: "bound"`(처음 겨눈 대상에게만 — 빗나가도 묶인다) · `endWhen`(사람이 누르는 종료 버튼)
 - `onHit`: 무기 명중 직후 시전하는 강타류 (`weapon`, `damage`, `inflicts`, `save`, `versus`, `mark`)
 - `summon`: 소환 템플릿(`forms[].template`, 치환값 `{level}` `{attack}` `{dc}`)

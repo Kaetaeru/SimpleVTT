@@ -28,7 +28,7 @@ import type { CasterStats, SpellCastSpec } from "./spellcast";
 
 const diceOf = (terms: Array<{ dice?: string }>) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
 
-type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "consumable" | "markedBy">;
+type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "consumable" | "markedBy" | "bearerDamage">;
 /**
  * R90 (D225): the spell effects a creature is under, as what they do at the table — 축복·액운's d4 on its attack rolls
  * and saves, 요정 불꽃·유도 화살's advantage for whoever attacks it, 사냥꾼의 표식·주술's dice for the caster who marked
@@ -40,8 +40,8 @@ type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" 
  * V4f (D268): what the spell effects a creature is under do to its defenses — resistances, immunities and
  * vulnerabilities by damage type, a bonus to AC, a strike back at melee attackers, holding at 1 HP instead of dropping.
  */
-export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: string[]; immunities: string[]; vulnerabilities: string[]; conditionImmunities: string[]; acBonus: number; retaliation: Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>; preventsDeath: string[] } {
-  const out = { resistances: [] as string[], immunities: [] as string[], vulnerabilities: [] as string[], conditionImmunities: [] as string[], acBonus: 0, retaliation: [] as Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>, preventsDeath: [] as string[] };
+export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: string[]; immunities: string[]; vulnerabilities: string[]; conditionImmunities: string[]; acBonus: number; retaliation: Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>; preventsDeath: string[]; noHealing: string[] } {
+  const out = { resistances: [] as string[], immunities: [] as string[], vulnerabilities: [] as string[], conditionImmunities: [] as string[], acBonus: 0, retaliation: [] as Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>, preventsDeath: [] as string[], noHealing: [] as string[] };
   for (const effect of effects) {
     if (!effect.key.startsWith("spell:") || !(effect.bearer || effect.from)) continue;
     for (const part of bearerPartsOf(effect.key.slice("spell:".length), effect.variant) as Array<Record<string, unknown>>) {
@@ -49,6 +49,8 @@ export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: str
         const list = defense.kind === "immunity" ? out.immunities : defense.kind === "vulnerability" ? out.vulnerabilities : out.resistances;
         list.push(`${damageTypeKo(defense.damageType)} (${effect.name.replace(/\s*\(.*$/, "")})`);
       }
+      // D321: an effect that stops its bearer regaining hit points (서리 손길).
+      if (part.noHealing) out.noHealing.push(effect.name.replace(/\s*\(.*$/, ""));
       // D315: a condition the effect keeps off its bearer (영웅심's fear), labelled with the effect like the sheet does.
       for (const condition of (part.conditionImmunities as string[] | undefined) ?? []) out.conditionImmunities.push(`${CONDITION_KO[condition] ?? condition} (${effect.name.replace(/\s*\(.*$/, "")})`);
       const armor = part.armorClass as { bonus?: number } | undefined;
@@ -62,7 +64,7 @@ export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: str
 }
 
 export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): BearerRolls {
-  const out: Required<BearerRolls> = { d20Dice: [], rollStates: [], grantsAdvantage: [], grantsDisadvantage: [], consumable: [], markedBy: [] };
+  const out: Required<BearerRolls> = { d20Dice: [], rollStates: [], grantsAdvantage: [], grantsDisadvantage: [], consumable: [], markedBy: [], bearerDamage: [] };
   for (const effect of effects) {
     if (!effect.key.startsWith("spell:") || !(effect.bearer || effect.from)) continue;
     for (const part of bearerPartsOf(effect.key.slice("spell:".length), effect.variant)) {
@@ -79,6 +81,13 @@ export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): Bearer
         if (on === "attack" && modifier.consumeOnUse) out.consumable.push({ key: effect.key, on: "attack" });
       }
       const damage = part.attackDamage;
+      // D321: an effect that adds damage to its bearer's own hits, with the dice its slot bought (하급 원소 소환).
+      if (damage && !damage.againstTargetOnly && (damage.dice || damage.flat)) {
+        const spellId = effect.key.slice("spell:".length);
+        const baseLevel = spellExec(spellId)?.baseLevel ?? effect.cast?.level ?? 0;
+        const extra = Math.max(0, (effect.cast?.level ?? baseLevel) - baseLevel) * (damage.dicePerSlotAboveBase ?? 0);
+        out.bearerDamage.push({ formula: damage.dice ? `${damage.dice.count + extra}d${damage.dice.sides}` : String(damage.flat), type: damageTypeKo(damage.damageType), label: effect.name });
+      }
       if (damage?.againstTargetOnly && effect.from && (damage.dice || damage.flat)) out.markedBy.push({ from: effect.from, formula: damage.dice ? `${damage.dice.count}d${damage.dice.sides}` : String(damage.flat), type: damageTypeKo(damage.damageType), label: effect.name, spellId: effect.key.slice("spell:".length) });
     }
   }
@@ -94,7 +103,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
   return {
     // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
     id: entry.id, name: entry.name, kind: "pc", ac: derived.ac.value, /* a sheet takes flat AC from the effect contracts already (방패) */ hp: { current: runtime.hp.current, max: derived.hp.max, temp: runtime.hp.temp },
-    conditions: runtime.conditions, defenses: { ...derived.defenses, resistances: [...derived.defenses.resistances, ...shielded.resistances], immunities: [...derived.defenses.immunities, ...shielded.immunities], vulnerabilities: [...derived.defenses.vulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...derived.defenses.conditionImmunities, ...shielded.conditionImmunities] }, conSave: derived.saves.con.bonus, concentration: concentration?.name, effects: (runtime.effects ?? []).map((effect) => effect.name),
+    conditions: runtime.conditions, defenses: { ...derived.defenses, resistances: [...derived.defenses.resistances, ...shielded.resistances], immunities: [...derived.defenses.immunities, ...shielded.immunities], vulnerabilities: [...derived.defenses.vulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...derived.defenses.conditionImmunities, ...shielded.conditionImmunities] }, conSave: derived.saves.con.bonus, concentration: concentration?.name, ...(shielded.noHealing.length ? { noHealing: shielded.noHealing[0] } : {}), effects: (runtime.effects ?? []).map((effect) => effect.name),
     // R28 (D147): exhaustion reaches the dice at last.
     exhaustion: runtime.exhaustion,
     ...(derived.evasion ? { evasion: true } : {}),
@@ -144,6 +153,7 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
     id: entry.id, name: token?.name ?? entry.name, kind: "npc", ac: block.ac + shielded.acBonus, hp,
     // H1 (D238): 마법 저항, 재생, 흡수 and the rest come from the stat block's trait rules, never from its words.
     ...traitCombatant(block),
+    ...(shielded.noHealing.length ? { noHealing: shielded.noHealing[0] } : {}),
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: [...block.damageResistances, ...shielded.resistances], immunities: [...block.damageImmunities, ...shielded.immunities], vulnerabilities: [...block.damageVulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...block.conditionImmunities, ...shielded.conditionImmunities] },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),

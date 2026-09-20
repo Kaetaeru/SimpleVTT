@@ -125,6 +125,15 @@ export interface ActiveEffect {
   rescue?: { dice: string };
   /** V4f (D268): the variant of the spell this effect was cast with (에너지 보호's damage type). */
   variant?: string;
+  /**
+   * D321: the numbers of the cast that started this effect — the slot it was cast at, the caster's save DC and
+   * their spellcasting modifier. What the effect does later (a save at the start of a turn, temporary hit points,
+   * dice per slot above the spell's level) belongs to the caster, not to the bearer, so it travels with the effect.
+   */
+  cast?: { level: number; saveDc: number; modifier: number };
+  /** D321: conditions the bearer takes when this effect ends, lasting `endDuration` (가속). */
+  endConditions?: string[];
+  endDuration?: string;
   /** V4k (D273): the creature whose stat block the bearer took on while this effect runs (야생 변신의 형태). */
   form?: string;
   /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */

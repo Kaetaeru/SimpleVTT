@@ -32,7 +32,9 @@ export interface SpellExec {
   /** V4u (D283): the caster heals by this share of the damage the spell dealt (흡혈의 손길: half). */
   casterHealing?: { mode: "half-damage" };
   effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ termination?: { targetTakesDamage?: boolean; bearerAttacksOrCasts?: boolean } }>;
-  trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration } & SpellBearerPart>;
+  trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration;
+    /** D321: conditions the bearer takes when the effect ends, and for how long (가속's lethargy). */
+    endConditions?: string[]; endDuration?: string } & SpellBearerPart>;
   ritual?: boolean;
   /** R77 (D212): how the spell is used again while it lasts, when that differs from the default (see `sustainOf`). */
   sustain?: Partial<SpellSustain> | false;
@@ -120,11 +122,14 @@ export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => 
  */
 export interface SpellBearerPart {
   modifier?: { family: string; scope?: "actor" | "target"; rollState?: "advantage" | "disadvantage"; bonus?: { dice?: { count: number; sides: number }; flat?: number; sign?: number }; consumeOnUse?: boolean; ability?: string };
-  attackDamage?: { damageType: string; dice?: { count: number; sides: number }; flat?: number; againstTargetOnly?: boolean; sourceKinds?: string[] };
+  attackDamage?: { damageType: string; dice?: { count: number; sides: number }; flat?: number; againstTargetOnly?: boolean; sourceKinds?: string[];
+    /** D321: dice added per slot level above the spell's own level (하급 원소 소환). */ dicePerSlotAboveBase?: number };
   /** V4f (D268): resistances, immunities and vulnerabilities the effect gives its bearer. */
   damageDefenses?: Array<{ kind: "resistance" | "immunity" | "vulnerability"; damageType: string }>;
   /** D315: conditions the bearer cannot be given while the effect lasts (영웅심: 공포). English condition ids. */
   conditionImmunities?: string[];
+  /** D321: the bearer regains no hit points while the effect lasts (서리 손길). */
+  noHealing?: boolean;
 }
 /** R90 (D225): the lasting-effect parts of a spell (유도 화살's advantage), with the variant it was cast with. */
 export const bearerPartsOf = (spellId: string, /** V4f (D268): the variant the effect was cast with. */ variant?: string): SpellBearerPart[] => { const exec = spellExec(spellId); return (exec ? withVariant(exec, variant).exec : undefined)?.trackedEffects ?? []; };

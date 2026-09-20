@@ -9,6 +9,7 @@ import type { ActiveEffect, CharacterRuntime } from "./runtime";
 import { emptyInventoryPatch } from "./runtime";
 import type { DerivedCharacter } from "./types";
 import { scrollSpellId } from "../rules/scrolls";
+import { CONDITION_KO } from "../compendium/spells";
 import { PACT_SLOT_RESOURCE } from "../rules/contract";
 import type { CustomItem } from "./customItem";
 
@@ -301,6 +302,22 @@ export function endEffect(runtime: CharacterRuntime, key: string, reason?: strin
   return stamp({ ...runtime, effects: runtime.effects.filter((item) => item.key !== key) }, `${effect.source === "spell" ? "주문 종료" : "종료"}: ${effect.name}${reason ? ` (${reason})` : ""}`);
 }
 
+/**
+ * D321: what an effect leaves on its bearer when it ends — 가속's lethargy. The conditions go on the sheet and an
+ * aftermath effect carries them, so they come off by themselves once its own duration runs out.
+ */
+export function afterEffectsOf(ended: ActiveEffect[], now: string, nameOf: (condition: string) => string): { effects: ActiveEffect[]; conditions: string[] } {
+  const effects: ActiveEffect[] = [];
+  const conditions: string[] = [];
+  for (const effect of ended) {
+    const names = (effect.endConditions ?? []).map(nameOf);
+    if (!names.length) continue;
+    conditions.push(...names);
+    effects.push({ key: `${effect.key}:after`, name: `${effect.name} 여파`, source: effect.source, duration: effect.endDuration ?? "다음 턴이 끝날 때까지", concentration: false, rounds: 1, elapsed: 0, startedAt: now, conditions: names, anchor: { who: "bearer", boundary: "end" } });
+  }
+  return { effects, conditions };
+}
+
 /** One round passes: every counted effect advances; those that reach their duration end. */
 /**
  * R30 (D156): ageing timed effects is the same arithmetic for a character sheet and for a monster's runtime, so it
@@ -324,6 +341,9 @@ export function advanceRound(runtime: CharacterRuntime, rounds = 1): CharacterRu
   if (!(runtime.effects ?? []).length || rounds <= 0) return runtime;
   const aged = ageEffects(runtime, rounds);
   let next = aged.runtime;
+  // D321: an effect that leaves conditions behind (가속) puts them on as it goes.
+  const after = afterEffectsOf(aged.ended, new Date().toISOString(), (condition) => CONDITION_KO[condition] ?? condition);
+  if (after.conditions.length) next = { ...next, effects: [...(next.effects ?? []), ...after.effects], conditions: [...next.conditions, ...after.conditions.filter((name) => !next.conditions.includes(name))] };
   for (const effect of aged.ended) next = stamp(next, `${effect.source === "spell" ? "주문 종료" : "종료"}: ${effect.name} (지속 시간 끝)`);
   const running = aged.running.map((effect) => `${effect.name} ${remainingText(effect.rounds, effect.elapsed)}`);
   return stamp(next, `${rounds === 1 ? "라운드 진행" : `${rounds}라운드 지남`} (${running.join(", ") || "진행 중인 효과 없음"})`);

@@ -78,7 +78,9 @@ export interface SpellCastSpec {
 }
 
 export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; /** R90 (D225): rolled with disadvantage, and why. */ disadvantage?: string; /** R90 (D225): spell dice in the bonus ("액운 −2"). */ dice?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
-export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ consumeOn?: "attack" | "cast" | "attack-or-cast"; /** R85 (D220): whose turn boundary counts the rounds. */ anchor?: { who: "source" | "bearer"; boundary: "start" | "end" }; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number }; /** V4f (D268): the variant it was cast with. */ variant?: string }
+export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ consumeOn?: "attack" | "cast" | "attack-or-cast"; /** R85 (D220): whose turn boundary counts the rounds. */ anchor?: { who: "source" | "bearer"; boundary: "start" | "end" }; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number }; /** V4f (D268): the variant it was cast with. */ variant?: string;
+  /** D321: the cast's own numbers, kept on the effect so what it does later is the caster's, not the bearer's. */ cast?: { level: number; saveDc: number; modifier: number };
+  /** D321: conditions the bearer takes when the effect ends, for this long (가속). */ endConditions?: string[]; endDuration?: string }
 
 /** R10: a target repeats the save at the end of each of its turns. H6c (D250): read from the spell's data, not its summary text. */
 export const repeatsSaveAtTurnEnd = (exec: SpellExec) => repeatSaveOf(exec) === "turn-end";
@@ -162,7 +164,13 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const endSave = repeatsSaveAtTurnEnd(exec) && "saveAbility" in primary ? { ability: ((primary as { saveAbility: string }).saveAbility in ABILITY_KO ? (primary as { saveAbility: string }).saveAbility : "wis") as AbilityKey, dc: casterStats.saveDc } : undefined;
   // V4s (D281): a spell whose data says so ends when its bearer next attacks or casts (투명화).
   const endsOnUse = (exec.effects ?? []).some((effect) => effect.termination?.bearerAttacksOrCasts) || undefined;
-  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(endsOnUse ? { consumeOn: "attack-or-cast" as const } : {}), ...(duration?.anchorActorId ? { anchor: { who: duration.anchorActorId === "$target" ? "bearer" as const : "source" as const, boundary: duration.boundary === "start" ? "start" as const : "end" as const } } : {}), ...(endSave ? { endSave } : {}), ...(spec.variant ? { variant: spec.variant } : {}) });
+  // D321: what the spell's own data says its effect leaves on the bearer when it ends (가속: 무력화 for a turn).
+  const ending = (exec.trackedEffects ?? []).flatMap((part) => part.endConditions ?? []);
+  const endingFor = (exec.trackedEffects ?? []).find((part) => part.endConditions?.length)?.endDuration;
+  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(endsOnUse ? { consumeOn: "attack-or-cast" as const } : {}), ...(duration?.anchorActorId ? { anchor: { who: duration.anchorActorId === "$target" ? "bearer" as const : "source" as const, boundary: duration.boundary === "start" ? "start" as const : "end" as const } } : {}), ...(endSave ? { endSave } : {}), ...(spec.variant ? { variant: spec.variant } : {}),
+    // D321: the cast's numbers ride along, and what the effect leaves behind when it ends.
+    cast: { level: spec.level, saveDc: casterStats.saveDc, modifier: casterStats.modifier },
+    ...(ending.length ? { endConditions: ending, ...(endingFor ? { endDuration: endingFor } : {}) } : {}) });
   // R51 (D186): 원소 숙련자 — "your spells ignore resistance to the chosen damage type". Applied where the parts are
   // built, so every shape of spell damage (attack, save, projectiles, components) goes through the same door.
   // R98 (D233): 강화된 방출 — one flat part, added to the first damage roll only.
@@ -274,9 +282,10 @@ export function resolveSpell(input: CastInput): SpellResolution {
         row.mode = "heal";
         const extra = casterStats.healingSlotBonus && spec.level > 0 ? 2 + spec.level : 0;
         const amount = rollFormula(formula, casterStats.healingMaximized ? { d: (sides) => sides } : dice) + extra;
-        row.healed = Math.min(amount, Math.max(0, combatant.hp.max - combatant.hp.current));
+        // D321: an effect may stop its bearer regaining hit points (서리 손길) — the roll still shows, none of it lands.
+        row.healed = combatant.noHealing ? 0 : Math.min(amount, Math.max(0, combatant.hp.max - combatant.hp.current));
         row.hpAfter = combatant.hp.current + row.healed;
-        row.note = `${formula}${casterStats.healingMaximized ? " (최대값)" : ""}${extra ? ` +${extra} (생명의 제자)` : ""} = ${amount}`;
+        row.note = `${formula}${casterStats.healingMaximized ? " (최대값)" : ""}${extra ? ` +${extra} (생명의 제자)` : ""} = ${amount}${combatant.noHealing ? ` — ${combatant.noHealing}: 회복 불가` : ""}`;
         targets.push(row);
       }
       break;
@@ -355,8 +364,8 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "heal";
-        row.healed = Math.max(0, combatant.hp.max - combatant.hp.current);
-        row.hpAfter = combatant.hp.max;
+        row.healed = combatant.noHealing ? 0 : Math.max(0, combatant.hp.max - combatant.hp.current);
+        row.hpAfter = combatant.hp.current + row.healed;
         // D315: the conditions it ends are the spell's own list (`removesConditions`), laid on below like any spell's.
         row.note = `HP 전부 회복${primary.summary ? ` · ${String(primary.summary)}` : ""}`;
         targets.push(row);
