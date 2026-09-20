@@ -886,10 +886,12 @@ test("V5a: the spells that ask what they do now have their choices — 명령, �
   assert.equal(grovel.label, "엎드려");
   assert.deepEqual(grovel.exec.effects?.map((effect) => effect.conditionId), ["prone"]);
 
-  // 용의 숨결: the damage type is the caster's to choose, and the save halves it.
+  // 용의 숨결: the damage type is the caster's to choose, and the save halves it. D327: the breath itself is the
+  // repeat the creature it was cast on presses, so the type rides on the sustain.
   const fire = withVariant(spellExec("dnd.srd521.spell.dragon-s-breath")!, "fire");
-  assert.equal(fire.exec.primary.kind, "save-damage");
-  assert.equal("damageType" in fire.exec.primary ? fire.exec.primary.damageType : undefined, "fire");
+  const breath = fire.exec.sustain && typeof fire.exec.sustain === "object" ? fire.exec.sustain.primary : undefined;
+  assert.equal(breath?.kind, "save-damage");
+  assert.equal(breath && "damageType" in breath ? breath.damageType : undefined, "fire");
 
   // At the table: the cast carries the variant into the card.
   const t = await table([{ classes: "wizard", level: 5, abilities: { int: 16 } }], [dummy("좀비", 40)], () => 0.5);

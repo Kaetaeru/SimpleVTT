@@ -268,6 +268,7 @@
 - D322: `healing`·`temporary-hp`의 `pool`(`flat`/`dice`, 치유는 `cap: "half-max"`)은 한 뭉치를 대상들이 나눠 받는다 — 치유는 많이 다친 쪽부터, 임시 HP는 고르게. `maximum-hp`는 `dice`로 올릴 수 있다.
 - D322: `secondary`는 첫 효과 뒤에 오는 두 번째 굴림(`save-damage`·`save-effect`, `appliesTo: "all"|"damaged"`, `conditions[]`, `note`).
 - D323: `trackedEffects[].modifier`의 `conditions`(그 상태를 걸려는 내성에만)·`creatureTypes`(그 종류의 공격에만), 조각의 `deathSaveAdvantage`·`healingMaximized`(받는 치유가 최대값).
+- D327: `trackedEffects[].decoys: {count, die, succeedsOn}`(분신이 대신 맞는다), `sustain.target: "new"`(반복마다 대상을 새로 고른다), 갈래가 있는 주문은 반복에서도 갈래를 묻는다.
 - D326: `rayTable: {die, label, rows[{value, name, damageType?, note?}]}`는 대상마다 굴려 피해 유형을 바꾸고(유형이 없는 줄은 DM 판정 줄), `outcomeTable: {die, label, rows[{min, max, text}]}`는 시전마다 한 번 굴려 카드에 줄을 적는다.
 - D325: `effects[].termination.targetTakesDamage`는 피해를 받으면 효과를 끝내고, 주문의 `repeatSaveOnDamage`는 끝내는 대신 내성을 다시 굴리게 한다(지배 계열).
 - D323: `countedSave: {successes, failures, onFailures[], note}` — 반복 내성을 세어 세 번이면 끝나거나 상태가 굳는다(육신 석화).

@@ -664,7 +664,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     }
     let overrides: AttackOverrides | undefined;
     if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, gm: true }); if (answer === null) return; overrides = answer.overrides; }
-    const variant = forced?.kind === "sustain" ? undefined : await requestSpellVariant(spellId, name);
+    // D327: a repeat may choose again (비전의 손: which hand it makes this turn); one that cannot keeps what it was cast with.
+    const variant = forced?.kind === "sustain" && !variantsOf(spellId).length ? undefined : await requestSpellVariant(spellId, name);
     if (variant === null) return;
     // V4r (D280): the metamagics this sheet knows and can pay for, offered once the method is settled.
     let metamagic: string[] | undefined;

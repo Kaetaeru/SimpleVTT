@@ -4597,12 +4597,27 @@
     }
    },
    "concentration": false,
-   "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+   "executionScope": "Authored (D327): three duplicates. Every hit rolls a d6 for each one still standing and a 3 or better makes it take the hit instead, destroying it; the spell ends when all three are gone. A creature that is Blinded or has Blindsight or Truesight ignores the spell — the table says so.",
    "components": {
     "verbal": true,
     "somatic": true
    },
-   "ritual": false
+   "ritual": false,
+   "trackedEffects": [
+    {
+     "summary": "분신 셋 — 명중할 때마다 남은 분신 수만큼 d6, 하나라도 3 이상이면 분신이 대신 맞고 파괴된다",
+     "trigger": "always",
+     "duration": {
+      "kind": "minutes",
+      "amount": 1
+     },
+     "decoys": {
+      "count": 3,
+      "die": 6,
+      "succeedsOn": 3
+     }
+    }
+   ]
   }
  },
  "dnd.srd521.spell.heat-metal": {
@@ -5954,7 +5969,7 @@
     }
    },
    "concentration": true,
-   "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+   "executionScope": "Authored (D327): the surface thought is read with no save; probing deeper asks the target for a Wisdom save, which the ↻ button rolls against a creature chosen afresh each time. What is read is the table's.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -5962,7 +5977,17 @@
      {}
     ]
    },
-   "ritual": false
+   "ritual": false,
+   "sustain": {
+    "economy": "action",
+    "target": "new",
+    "note": "다른 마음을 읽습니다 (대상을 고르세요)",
+    "primary": {
+     "kind": "save-effect",
+     "saveAbility": "wis",
+     "summary": "더 깊이 파고들면 대상은 지혜 내성을 한다. 성공하면 주문이 끝나고, 실패하면 감정과 기억을 읽는다 (내용은 DM 판정)."
+    }
+   }
   }
  },
  "dnd.srd521.spell.blindness-deafness": {
@@ -6348,20 +6373,17 @@
    "targeting": {
     "kind": "creature",
     "minTargets": 1,
-    "maxTargets": 64,
+    "maxTargets": 1,
+    "rangeFeet": 5,
     "allowedRelations": [
      "self",
-     "ally",
-     "enemy",
-     "neutral"
+     "ally"
     ],
-    "requiresSight": false,
-    "directTarget": false
+    "requiresSight": true
    },
    "primary": {
-    "kind": "save-effect",
-    "saveAbility": "dex",
-    "summary": "주문을 받으려는 크리처 하나에 접촉하고 산성, 냉기, 화염, 번개 또는 독 중 하나를 선택한다. 주문이 끝날 때까지 대상은 마법 행동을 사용해 15피트 원뿔로 숨결을 내뿜을 수 있다. 구역 안의 각 크리처는 민첩 내성 굴림을 한다. 실패하면 선택한 유형의 3d6 피해를 받고, 성공하면 절반의 피해를 받는다.",
+    "kind": "tracked-effect",
+    "summary": "주문을 받으려는 크리처 하나에 접촉하고 산성·냉기·화염·번개·독 중 하나를 고른다. 주문이 끝날 때까지 그 크리처는 마법 행동으로 15피트 원뿔에 숨결을 내뿜는다.",
     "duration": {
      "kind": "concentration"
     }
@@ -6369,14 +6391,14 @@
    "concentration": true,
    "trackedEffects": [
     {
-     "summary": "주문을 받으려는 크리처 하나에 접촉하고 산성, 냉기, 화염, 번개 또는 독 중 하나를 선택한다. 주문이 끝날 때까지 대상은 마법 행동을 사용해 15피트 원뿔로 숨결을 내뿜을 수 있다. 구역 안의 각 크리처는 민첩 내성 굴림을 한다. 실패하면 선택한 유형의 3d6 피해를 받고, 성공하면 절반의 피해를 받는다.",
-     "trigger": "failed-save",
+     "summary": "마법 행동으로 15피트 원뿔 숨결 (3d6, 민첩 내성 절반) — 숨결을 뿜는 쪽의 ↻ 버튼",
+     "trigger": "always",
      "duration": {
       "kind": "concentration"
      }
     }
    ],
-   "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+   "executionScope": "Authored (D327): the spell is put on one willing creature; that creature's own sheet carries the ↻ button and breathes 3d6 (one more d6 per slot above the second) in a 15-foot cone, Dexterity save for half, against the caster's spell save DC. Who stands in the cone is the table's.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -6390,88 +6412,119 @@
      "id": "acid",
      "label": "산성",
      "patch": {
-      "primary": {
-       "kind": "save-damage",
-       "saveAbility": "dex",
-       "damageType": "acid",
-       "dice": {
-        "count": 3,
-        "sides": 6,
-        "dicePerSlotAboveBase": 1
-       },
-       "successDamage": "half"
-      }
+      "sustain": {
+       "primary": {
+        "damageType": "acid"
+       }
+      },
+      "trackedEffects": [
+       {
+        "summary": "마법 행동으로 15피트 원뿔 숨결 (산성 3d6, 민첩 내성 절반)",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ]
      }
     },
     {
      "id": "cold",
      "label": "냉기",
      "patch": {
-      "primary": {
-       "kind": "save-damage",
-       "saveAbility": "dex",
-       "damageType": "cold",
-       "dice": {
-        "count": 3,
-        "sides": 6,
-        "dicePerSlotAboveBase": 1
-       },
-       "successDamage": "half"
-      }
+      "sustain": {
+       "primary": {
+        "damageType": "cold"
+       }
+      },
+      "trackedEffects": [
+       {
+        "summary": "마법 행동으로 15피트 원뿔 숨결 (냉기 3d6, 민첩 내성 절반)",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ]
      }
     },
     {
      "id": "fire",
      "label": "화염",
      "patch": {
-      "primary": {
-       "kind": "save-damage",
-       "saveAbility": "dex",
-       "damageType": "fire",
-       "dice": {
-        "count": 3,
-        "sides": 6,
-        "dicePerSlotAboveBase": 1
-       },
-       "successDamage": "half"
-      }
+      "sustain": {
+       "primary": {
+        "damageType": "fire"
+       }
+      },
+      "trackedEffects": [
+       {
+        "summary": "마법 행동으로 15피트 원뿔 숨결 (화염 3d6, 민첩 내성 절반)",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ]
      }
     },
     {
      "id": "lightning",
      "label": "번개",
      "patch": {
-      "primary": {
-       "kind": "save-damage",
-       "saveAbility": "dex",
-       "damageType": "lightning",
-       "dice": {
-        "count": 3,
-        "sides": 6,
-        "dicePerSlotAboveBase": 1
-       },
-       "successDamage": "half"
-      }
+      "sustain": {
+       "primary": {
+        "damageType": "lightning"
+       }
+      },
+      "trackedEffects": [
+       {
+        "summary": "마법 행동으로 15피트 원뿔 숨결 (번개 3d6, 민첩 내성 절반)",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ]
      }
     },
     {
      "id": "poison",
      "label": "독",
      "patch": {
-      "primary": {
-       "kind": "save-damage",
-       "saveAbility": "dex",
-       "damageType": "poison",
-       "dice": {
-        "count": 3,
-        "sides": 6,
-        "dicePerSlotAboveBase": 1
-       },
-       "successDamage": "half"
-      }
+      "sustain": {
+       "primary": {
+        "damageType": "poison"
+       }
+      },
+      "trackedEffects": [
+       {
+        "summary": "마법 행동으로 15피트 원뿔 숨결 (독 3d6, 민첩 내성 절반)",
+        "trigger": "always",
+        "duration": {
+         "kind": "concentration"
+        }
+       }
+      ]
      }
     }
-   ]
+   ],
+   "sustain": {
+    "economy": "action",
+    "target": "new",
+    "note": "숨결을 내뿜습니다 (원뿔 안의 대상을 고르세요)",
+    "primary": {
+     "kind": "save-damage",
+     "saveAbility": "dex",
+     "damageType": "fire",
+     "dice": {
+      "count": 3,
+      "sides": 6,
+      "dicePerSlotAboveBase": 1
+     },
+     "successDamage": "half"
+    }
+   }
   }
  },
  "dnd.srd521.spell.hold-person": {
@@ -12190,7 +12243,7 @@
     }
    },
    "concentration": true,
-   "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+   "executionScope": "Authored (D327): the hand is cast, and each bonus action afterwards chooses one of its four effects — the fist rolls its 5d8 force attack, the forceful and grasping hands ask for a Strength save, the interposing hand is a line the table reads. The hand's own AC and hit points, and where it stands, are the table's.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -12198,7 +12251,82 @@
      {}
     ]
    },
-   "ritual": false
+   "ritual": false,
+   "sustain": {
+    "economy": "bonus-action",
+    "target": "new",
+    "note": "손을 60피트까지 움직이고 효과 하나를 고릅니다",
+    "primary": {
+     "kind": "attack-damage",
+     "damageType": "force",
+     "dice": {
+      "count": 5,
+      "sides": 8,
+      "dicePerSlotAboveBase": 2
+     }
+    }
+   },
+   "variants": [
+    {
+     "id": "clenched-fist",
+     "label": "움켜쥔 주먹 (5d8 역장)",
+     "patch": {
+      "sustain": {
+       "primary": {
+        "kind": "attack-damage",
+        "damageType": "force",
+        "dice": {
+         "count": 5,
+         "sides": 8,
+         "dicePerSlotAboveBase": 2
+        }
+       },
+       "note": "5피트 안의 대상 하나를 칩니다"
+      }
+     }
+    },
+    {
+     "id": "forceful-hand",
+     "label": "강력한 손 (밀치기)",
+     "patch": {
+      "sustain": {
+       "primary": {
+        "kind": "save-effect",
+        "saveAbility": "str",
+        "summary": "근력 내성에 실패하면 5피트 + 시전 능력치 수정치 × 5피트만큼 밀려난다 (거리는 표에서)"
+       },
+       "note": "거대형 이하 하나를 밉니다"
+      }
+     }
+    },
+    {
+     "id": "grasping-hand",
+     "label": "움켜쥐는 손 (붙잡기)",
+     "patch": {
+      "sustain": {
+       "primary": {
+        "kind": "save-effect",
+        "saveAbility": "str",
+        "summary": "근력 내성에 실패하면 붙잡힘 상태가 된다 (탈출 DC는 시전자의 주문 DC)"
+       },
+       "note": "거대형 이하 하나를 붙잡습니다"
+      }
+     }
+    },
+    {
+     "id": "interposing-hand",
+     "label": "가로막는 손 (엄폐)",
+     "patch": {
+      "sustain": {
+       "primary": {
+        "kind": "tracked-effect",
+        "summary": "손이 사이를 막아 그 크리처의 이동을 막고 반엄폐를 준다 (위치는 표에서)"
+       },
+       "note": "한 크리처와 당신 사이를 막습니다"
+      }
+     }
+    }
+   ]
   }
  },
  "dnd.srd521.spell.geas": {

@@ -52,6 +52,8 @@ export interface Combatant {
   evasion?: boolean;
   /** D321: an effect on it says it regains no hit points (서리 손길) — the label the card shows. */
   noHealing?: string;
+  /** D327: illusory duplicates that may take the hit instead (거울 분신). */
+  decoys?: { key: string; label: string; left: number; die: number; min: number };
   /** D318: rolls its concentration saves with advantage. */
   concentrationAdvantage?: boolean;
   /** R96 (D231): 포착 불가 — attacks against it cannot have advantage while it is not incapacitated. */
@@ -228,6 +230,8 @@ export interface AttackResolution {
   tempAfter: number;
   /** Concentration check made because damage landed on a concentrating target. */
   concentration?: { effect: string; dc: number; d20: number; total: number; success: boolean };
+  /** D327: a duplicate took the hit and was destroyed (거울 분신) — the dice it was found with. */
+  decoy?: { key: string; label: string; rolls: number[] };
   /** R12: what the weapon mastery did (graze damage, topple save, marks). */
   mastery?: MasteryResult;
   /** R12: how this attack was asked for, so a card can offer the Cleave follow-up. */
@@ -441,6 +445,16 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   let outcome: AttackResolution["outcome"] = kept >= critRange ? "crit" : kept === 1 ? "fumble" : attackTotal >= targetAc ? "hit" : "miss";
   if (outcome === "hit" && autoCrit(target, spec)) { outcome = "crit"; reasons.push(`대상 ${target.conditions.includes("마비") ? "마비" : "무의식"}: 5ft 안의 적중은 치명타`); }
   if (overrides.outcome) outcome = overrides.outcome;
+  // D327: 거울 분신 — a hit finds a duplicate instead when any of its dice comes up high enough, and destroys it.
+  let decoy: AttackResolution["decoy"];
+  if ((outcome === "hit" || outcome === "crit") && target.decoys && target.decoys.left > 0) {
+    const rolls = Array.from({ length: target.decoys.left }, () => options.dice.d(target.decoys!.die));
+    if (rolls.some((value) => value >= target.decoys!.min)) {
+      decoy = { key: target.decoys.key, label: target.decoys.label, rolls };
+      outcome = "miss";
+      reasons.push(`${target.decoys.label}: 분신이 대신 맞음 (${rolls.join(", ")})`);
+    }
+  }
   const hit = outcome === "hit" || outcome === "crit";
   // R12: weapon mastery — Graze deals the ability modifier on a miss; on a hit Topple asks for a CON save, Vex/Sap/Slow mark the target, Push is a note.
   let mastery: MasteryResult | undefined;
@@ -467,7 +481,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   return {
     attacker: { id: attacker.id, name: attacker.name, kind: attacker.kind }, target: { id: target.id, name: target.name, kind: target.kind },
     attack: { name: spec.name, source: spec.source, mode: spec.mode, bonus: spec.attackBonus },
-    advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures, ...(bonusDice.length ? { bonusDice } : {}),
+    advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures, ...(decoy ? { decoy } : {}), ...(bonusDice.length ? { bonusDice } : {}),
     inflicted, mastery, overrides: Object.keys(overrides).length ? overrides : undefined, applied: options.apply ?? true,
   };
 }

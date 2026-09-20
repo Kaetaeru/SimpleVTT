@@ -167,6 +167,11 @@ export interface SpellBearerPart {
   conditionImmunities?: string[];
   /** D321: the bearer regains no hit points while the effect lasts (서리 손길). */
   noHealing?: boolean;
+  /**
+   * D327: illusory duplicates that take the hit instead (거울 분신): roll `die` for each one left, and on `succeedsOn`
+   * or better one of them is hit and destroyed.
+   */
+  decoys?: { count: number; die: number; succeedsOn: number };
 }
 /** R90 (D225): the lasting-effect parts of a spell (유도 화살's advantage), with the variant it was cast with. */
 export const bearerPartsOf = (spellId: string, /** V4f (D268): the variant the effect was cast with. */ variant?: string): SpellBearerPart[] => { const exec = spellExec(spellId); return (exec ? withVariant(exec, variant).exec : undefined)?.trackedEffects ?? []; };

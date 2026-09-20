@@ -17,6 +17,7 @@ import { advanceRound, afterEffectsOf, ageEffects, endEffect, noteLog, recordDea
 import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
 import { npcAttackSpec, npcCombatant, npcSaveExec , bearerDefenses } from "../rules/attackSpec";
+import { bearerPartsOf } from "../compendium/spells";
 import { diceParts, traitRule, type TraitRule } from "../compendium/monsterTraits";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant, DamagePart } from "../rules/resolve";
 import { carryDice, damageTypeKey, describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
@@ -2182,6 +2183,21 @@ export class TableHost {
    * `advanceRound` (which keeps its log), a monster through the same arithmetic, and the conditions an effect
    * carried come off with it (on the sheet and on its token).
    */
+  /** D327: a duplicate took the hit (거울 분신) — count it, and end the spell once none are left. */
+  private spendDecoy(entryId: string, key: string, label: string) {
+    const entry = this.journalEntries.get(entryId);
+    if (!entry || entry.kind === "handout") return;
+    const effect = (entry.runtime.effects ?? []).find((item) => item.key === key);
+    if (!effect) return;
+    const part = bearerPartsOf(key.slice("spell:".length), effect.variant).find((item) => (item as { decoys?: { count: number } }).decoys);
+    const count = (part as { decoys?: { count: number } } | undefined)?.decoys?.count ?? 0;
+    const destroyed = (effect.tally?.failure ?? 0) + 1;
+    const now = this.now();
+    if (destroyed >= count) { this.shedEffects(entry, [effect], "분신이 모두 파괴됨"); return; }
+    this.storeEntry({ ...entry, runtime: { ...entry.runtime, effects: (entry.runtime.effects ?? []).map((item) => (item.key === key ? { ...item, tally: { success: item.tally?.success ?? 0, failure: destroyed } } : item)), updatedAt: now }, updatedAt: now } as JournalEntry);
+    this.say({ type: "system", who: "", content: `${entry.name}: ${label} — 분신 하나가 파괴됨 (${count - destroyed}개 남음)` });
+  }
+
   /**
    * D325: damage ends the effects whose spells say so (눈빛, 각성, 수면 …). Every path that writes hit points comes
    * through here, so it does not matter whether the damage came from a swing, a spell, a contract strike or an aura.
@@ -3056,6 +3072,8 @@ export class TableHost {
 
   private applyResolutionNow(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
     const restores: Array<() => void> = [];
+    // D327: the swing found a duplicate instead of the caster (거울 분신).
+    if (resolution.decoy && target.entry.kind !== "handout") this.spendDecoy(target.entry.id, resolution.decoy.key, resolution.decoy.label);
     const hit = resolution.outcome === "hit" || resolution.outcome === "crit" || Boolean(resolution.mastery?.grazed);
     if (hit && target.entry.kind === "character") {
       const before = target.entry;
