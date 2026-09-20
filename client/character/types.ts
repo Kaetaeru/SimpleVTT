@@ -68,7 +68,8 @@ export interface ChoiceRequest {
   optional?: boolean;
 }
 
-export type FeatureSource = "class" | "subclass" | "species" | "background" | "feat" | "invocation" | "metamagic";
+/** D345: `spell` is a button that belongs to a spell in play, not to the character (타샤의 가마솥: 물약 꺼내기). */
+export type FeatureSource = "class" | "subclass" | "species" | "background" | "feat" | "invocation" | "metamagic" | "spell";
 
 export interface DerivedFeature {
   id: string;

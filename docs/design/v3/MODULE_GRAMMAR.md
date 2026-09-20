@@ -222,6 +222,7 @@
 
 - `families`: `attack-roll` · `saving-throw` · `ability-check` · `death-save` (비우면 전부)
 - `outcomes`: `failure`(내 실패를 구제) · `success`(남의 성공을 깎는다 — 그 창은 다른 시트에 뜬다)
+- 돌고 있는 주문이 버튼을 가질 수 있다(D345): 주문 효과 계약의 **라벨 붙은 수동 항목**은 그 효과가 도는 동안 시트의 버튼이 된다(열쇠는 `spell:<주문 id>#<항목 id>`). 물건을 건네는 `content.grant`처럼 버튼 경로에만 있는 연산을 주문이 쓸 수 있다.
 - 구역 안에 서 있는 동안(D341): 구역 소속 효과 `zone:<시전자>:<주문 id>`는 **그 주문의 효과 계약**을 읽는다. 구역 안에서만 바뀌는 값(내성 이점 등)을 그 주문의 `effect.spell.<id>` 계약에 적으면 들어갔다 나올 때 자동으로 붙고 떨어진다.
 - 효과의 `scope`: 무기 범위 식(D330)에 더해 **`effect-weapon`**(D340 — 이 효과가 걸린 그 무기 하나: 효과의 `target`, 없으면 손에 든 무기).
 - `roll.modify` 모드: `add-die`(`dice` 또는 `diceSides` 식) · `add-flat` · `subtract-die` · `reroll` · `reroll-keep-lower` · `reroll-keep-higher` · `set-die` · `force-success` · `cancel-roll-state`(D335 — 그 굴림의 이점·불리점을 없앤다; 창이 주사위 뒤에 열리므로 **먼저 굴린 주사위**가 남는다)

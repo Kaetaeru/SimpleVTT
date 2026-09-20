@@ -28,7 +28,7 @@ const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "clas
  */
 const featRule = (feature: DerivedFeature): string | null => (feature.rules?.length ? feature.rules.join(" · ") : null);
 
-const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직" };
+const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직", spell: "주문" };
 
 export interface SheetActions {
   useSlot: (level: number) => void;

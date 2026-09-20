@@ -10,6 +10,7 @@ import { applyHealing, endEffect, noteLog, useFeature, type FeatureUseExtras } f
 import type { CharacterRuntime } from "./runtime";
 import type { CharacterSource, DerivedCharacter, DerivedFeature } from "./types";
 import { featureActivation, featureRuleKey } from "../rules/activation";
+import { effectRuleKey } from "../rules/effects";
 import { characterScope } from "../rules/contract";
 import { CHOSEN_POINTS_REF, contractDurations, contractOutcome, contractRemovals, featureContract } from "../rules/contractActivation";
 import { applyContractOutcome } from "./contractOutcome";
@@ -140,7 +141,15 @@ export function featureEconomy(bucket: string | undefined): FeatureEconomy {
 /** Features the turn panel offers: those with a rule to activate, with their remaining uses. */
 export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRuntime, catalog?: ContentCatalog) {
   const durations = catalog ? contractDurations(catalog, characterScope(derived)) : undefined;
-  return derived.features.flatMap((feature) => {
+  // D345: a spell in play may carry its own buttons (타샤의 가마솥: 물약 한 병 꺼내기). The sheet's features are the
+  // character's own, so a use that belongs to a running effect is read from the effects rather than the features.
+  const running: DerivedFeature[] = catalog
+    ? (runtime.effects ?? []).flatMap((effect) => {
+        const key = effectRuleKey(effect, catalog);
+        return catalog.contractUses(key).map((use) => ({ id: `${key}#${use.id}`, name: use.label, source: "spell" as const, sourceLabel: effect.name }));
+      })
+    : [];
+  return [...derived.features, ...running].flatMap((feature) => {
     const activation = featureActivation(feature, derived, durations);
     if (!activation) return [];
     const pool = activation.resourceId ? derived.resources.find((resource) => resource.id === activation.resourceId) : undefined;
