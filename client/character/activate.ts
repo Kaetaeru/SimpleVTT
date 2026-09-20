@@ -11,7 +11,7 @@ import type { CharacterRuntime } from "./runtime";
 import type { CharacterSource, DerivedCharacter, DerivedFeature } from "./types";
 import { featureActivation, featureRuleKey } from "../rules/activation";
 import { characterScope } from "../rules/contract";
-import { contractDurations, contractOutcome, contractRemovals, featureContract } from "../rules/contractActivation";
+import { CHOSEN_POINTS_REF, contractDurations, contractOutcome, contractRemovals, featureContract } from "../rules/contractActivation";
 import { applyContractOutcome } from "./contractOutcome";
 import { effectApplication, formOptions } from "../rules/effects";
 import { contractEffect } from "../rules/contractEffects";
@@ -60,11 +60,13 @@ export type ActivateOutcome = "done" | "refused" | "cancelled" | "none";
 
 export async function activateFeature(feature: DerivedFeature, deps: ActivateDeps): Promise<ActivateOutcome> {
   const { derived, runtime, rollDice } = deps;
-  const activation = featureActivation(feature, derived, contractDurations(deps.catalog, characterScope(derived)));
-  if (!activation) return "none";
+  const first = featureActivation(feature, derived, contractDurations(deps.catalog, characterScope(derived)));
+  if (!first) return "none";
+  let activation = first;
   const extras: FeatureUseExtras = {};
   if (activation.points && activation.resourceId) {
-    const pool = derived.resources.find((resource) => resource.id === activation.resourceId);
+    const resourceId = activation.resourceId;
+    const pool = derived.resources.find((resource) => resource.id === resourceId);
     const left = pool ? pool.max - (runtime.resourcesUsed[pool.id] ?? 0) : 0;
     const ask = deps.askPoints ?? ((name, max) => { const answer = prompt(`${name}: 몇 점을 쓸까요? (남은 ${max})`, String(Math.min(max, 5))); if (answer === null) return null; const points = Number(answer); if (!Number.isInteger(points) || points < 1 || points > max) { alert("1 이상, 남은 점수 이하의 정수를 넣어 주세요."); return null; } return points; });
     const points = await ask(feature.name, left);
@@ -73,6 +75,9 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
     const self = await (deps.confirmSelfHeal ?? ((count: number) => confirm(`${count}점을 자신에게 써서 HP를 ${count} 회복할까요? (취소: 다른 대상)`)))(points);
     if (self) extras.healRoll = points;
     deps.onChosenPoints?.(points, self);
+    // D344: the number chosen is part of what the use rolls — a rule that spends dice rather than points writes its
+    // dice as `use.points` of them (치유의 빛: 1d4 each), so the activation is read again knowing the answer.
+    activation = featureActivation(feature, derived, contractDurations(deps.catalog, characterScope(derived, { [CHOSEN_POINTS_REF]: points }))) ?? activation;
   }
   // V4k (D273): a use that turns its user into something asks which form before anything is spent (야생 변신).
   const formContract = featureContract(deps.catalog, featureRuleKey(feature.id));

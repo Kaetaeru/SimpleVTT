@@ -145,7 +145,7 @@
 
 **식**: `{"value":3}` · `{"ref":"proficiency.bonus"}` · `{"op":"add","args":[…]}`.
 연산자: `add sub mul floor-div ceil-div min max eq ne lt lte gt gte all any not if`.
-참조: `proficiency.bonus`, `actor.level`, `ability.<x>.modifier`, `ability.<x>.score`, `save.<x>.modifier`, `actor.class-level:<classId>`, `armor.training`, `armor.dex-capped`, `equipment.shield`, `actor.pact-slots`, `actor.has-feature:<규칙 키>`, `actor.chose:<선택 id>:<옵션 id>`(D308 — 만들기·레벨업에서 그 옵션을 골랐는가; 선택 id는 전체(`origin.species.draconicAncestry`)나 마지막 조각(`draconicAncestry`)), `effect.running:<효과 이름>`, `fact:<id>`.
+참조: `proficiency.bonus`, `actor.level`, `ability.<x>.modifier`, `ability.<x>.score`, `save.<x>.modifier`, `actor.class-level:<classId>`, `armor.training`, `armor.dex-capped`, `equipment.shield`, `actor.pact-slots`, `actor.has-feature:<규칙 키>`, `actor.chose:<선택 id>:<옵션 id>`(D308 — 만들기·레벨업에서 그 옵션을 골랐는가; 선택 id는 전체(`origin.species.draconicAncestry`)나 마지막 조각(`draconicAncestry`)), `effect.running:<효과 이름>`, `fact:<id>`, `use.points`(D344 — 그 사용에서 플레이어가 고른 개수: 풀에서 그만큼 빠지고, 같은 사용의 주사위도 그만큼 굴린다).
 주문 효과의 계약(`spell:<주문 id>`) 안에서는 그 효과를 건 시전의 값도 읽는다(D321): `spell.slot-level`(시전한 슬롯 레벨), `spell.save-dc`(시전자의 주문 내성 DC), `spell.modifier`(시전자의 주문 시전 능력치 수정치).
 
 지속시간: `{"kind":"rounds"|"minutes"|"hours"|"permanent","amount":1,"boundary":"start"|"end","anchor":"source"|"bearer"}`.
