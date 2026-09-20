@@ -45,6 +45,8 @@ export interface GuardOffer {
   miss?: boolean;
   /** V4e (D267): taking it opens an attack back at the attacker, which spends the reaction (보복). */
   strikeBack?: boolean;
+  /** D343: the reactor's own temporary hit points take the damage instead of its target (투사 방호막). */
+  absorb?: boolean;
   /** V4h (D270): the damage it sends back at the attacker, with the save that halves it (공격 흘리기의 되돌리기). */
   /** D308: `save` is absent when the rule gives the attacker none (`params.save: "none"` — 폭풍의 천둥). */
   redirect?: { formula: string; damageType: string; save?: { ability: string; dc: number } };
@@ -94,6 +96,8 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
           offer.halve = true;
         } else if (operation.kind === "property.modify" && operation.property === "reaction.auto-miss") {
           offer.miss = true;
+        } else if (operation.kind === "property.modify" && operation.property === "reaction.absorb") {
+          offer.absorb = true;
         } else if (operation.kind === "property.modify" && operation.property === "reaction.strike-back") {
           offer.strikeBack = true;
         } else if (operation.kind === "property.modify" && operation.property === "reaction.redirect") {
@@ -113,7 +117,7 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
           else offer.notes.push(operation.question);
         }
       }
-      if (offer.acBonus === undefined && !offer.reduce && !offer.halve && !offer.miss && !offer.strikeBack && !offer.redirect && !offer.notes.length && !offer.facts.length) continue;
+      if (offer.acBonus === undefined && !offer.reduce && !offer.halve && !offer.miss && !offer.strikeBack && !offer.absorb && !offer.redirect && !offer.notes.length && !offer.facts.length) continue;
       const payable = offer.payments.every((payment) => payment.kind !== "resource" || !payment.resourceId || poolLeft(derived, entry.runtime, payment.resourceId) > 0);
       if (payable) offers.push(offer);
     }
@@ -123,7 +127,7 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
 
 /** One line for the prompt, so the player can choose without opening their sheet. */
 export const guardHint = (offer: GuardOffer) =>
-  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}${offer.damageTypes?.length ? ` (${offer.damageTypes.map(damageTypeKo).join("·")} 피해에만)` : ""}` : "", offer.halve ? "피해 절반" : "", offer.strikeBack ? "공격자에게 반격" : "", offer.redirect ? `공격자에게 ${offer.redirect.formula}${offer.redirect.save ? ` (내성 DC ${offer.redirect.save.dc})` : ""}` : "", ...offer.notes, ...offer.facts.map((fact) => fact.question)].filter(Boolean).join(" · ");
+  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}${offer.damageTypes?.length ? ` (${offer.damageTypes.map(damageTypeKo).join("·")} 피해에만)` : ""}` : "", offer.halve ? "피해 절반" : "", offer.strikeBack ? "공격자에게 반격" : "", offer.absorb ? "방호막이 대신 받음" : "", offer.redirect ? `공격자에게 ${offer.redirect.formula}${offer.redirect.save ? ` (내성 DC ${offer.redirect.save.dc})` : ""}` : "", ...offer.notes, ...offer.facts.map((fact) => fact.question)].filter(Boolean).join(" · ");
 
 /** Roll a plain `NdX+M` formula with the host's own roller, so a reaction's number is as reproducible as any other. */
 export function rollGuard(formula: string, random: () => number): number {

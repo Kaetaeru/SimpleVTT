@@ -242,6 +242,7 @@
 | `property.modify damage-taken.halve` | 피해 절반 |
 | `property.modify reaction.auto-miss` | 그 공격을 빗나가게 한다 |
 | `property.modify reaction.strike-back` | 반격 창을 연다 |
+| `property.modify reaction.absorb` | D343 — **반응자 자신의 임시 HP**가 그 피해를 대신 받는다. 남는 피해는 맞은 쪽이 받는다 (투사 방호막) |
 | `property.modify reaction.redirect` (`dice`, `params.dc/damageType`; 내성이 없으면 `params.save: "none"` — D308) | 공격자에게 되돌려준다 |
 | `adjudication.request` | 창에 뜨는 줄(또는 `fact.at: "reaction"` 체크박스) |
 

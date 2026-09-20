@@ -1660,8 +1660,18 @@ export class TableHost {
         if (paid) this.storeEntry({ ...reactor.entry, runtime: { ...paid, updatedAt: this.now() }, updatedAt: this.now() });
         // V4e (D267): a strike back spends the reaction when the attack is made, from the window it opens.
         if (!offer.strikeBack) this.markReactionUsed(promptMessage.prompt.reactor);
-        const rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
-        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
+        let rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
+        // D343: a ward that takes the blow for somebody else — the reactor's own temporary hit points pay for what
+        // it takes off, and once they are gone the rest reaches whoever was hit (투사 방호막).
+        let absorbed = 0;
+        if (offer.absorb) {
+          const ward = reactor.entry.kind === "character" ? this.journalEntries.get(reactor.entry.id) : undefined;
+          const temp = ward?.kind === "character" ? ward.runtime.hp.temp : 0;
+          absorbed = Math.max(0, Math.min(temp, this.held.get(command.messageId)?.resolution.damageTotal ?? 0));
+          if (ward?.kind === "character" && absorbed > 0) this.storeEntry({ ...ward, runtime: { ...ward.runtime, hp: { ...ward.runtime.hp, temp: temp - absorbed }, updatedAt: this.now() }, updatedAt: this.now() });
+          rolled += absorbed;
+        }
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled - absorbed})` : ""}${absorbed ? ` (방호막이 ${absorbed} 흡수)` : ""}` });
         // D337: a window on a miss holds no card — there is nothing to resolve again, only the reaction itself.
         if (trigger !== "attack.miss-self") this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}), ...(offer.miss ? { miss: true } : {}) });
         // V4h (D270): the deflected attack sent back at whoever made it.
@@ -1952,14 +1962,15 @@ export class TableHost {
     // so 공격 비껴내기 and the Shield spell are one question rather than one question and a house rule.
     // H6b (D249): the first reaction spell for "an attack hit me" the target can cast, from the spell data.
     const targetCharacter = target.entry.kind === "character" ? target.entry : undefined;
-    const shieldSpell = targetCharacter && !waits && resolution.outcome === "hit" && !fixed && !this.reactionUsed(targetRef) ? reactionSpellIds("attack.hit-self").find((spellId) => Boolean(this.options.pcReactionSpell?.(targetCharacter, spellId))) : undefined;
+    const landed = resolution.outcome === "hit" || resolution.outcome === "crit";
+    const shieldSpell = targetCharacter && !waits && landed && !fixed && !this.reactionUsed(targetRef) ? reactionSpellIds("attack.hit-self").find((spellId) => Boolean(this.options.pcReactionSpell?.(targetCharacter, spellId))) : undefined;
     const canShield = Boolean(shieldSpell);
-    const guards = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef)
+    const guards = !waits && landed && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef)
       ? (this.options.pcGuards?.(target.entry, "attack.hit-self") ?? []).filter((guard) => !guard.damageTypes?.length || prepared.spec.damage.some((part) => guard.damageTypes!.map(damageTypeKey).includes(damageTypeKey(part.type)))) : [];
     // R57 (D192): if the creature that was hit has nothing to answer with, a bystander whose contract declares
     // `attack.hit-ally` is asked instead. The target is always asked first — it is their skin — and only one window
     // opens per swing, because the card is held once and a second holder would fight the first over it.
-    const bystander = !waits && resolution.outcome === "hit" && !fixed && !canShield && !guards.length ? this.bystanderGuard(target, attacker) : undefined;
+    const bystander = !waits && landed && !fixed && !canShield && !guards.length ? this.bystanderGuard(target, attacker) : undefined;
     // D337: a swing that missed. 응수 answers that moment, and nothing about the card changes — the window is a
     // message of its own rather than a hold, so the miss is posted as usual while the reactor decides.
     if (!waits && resolution.outcome === "miss" && !fixed && target.entry.kind === "character" && !this.reactionUsed(targetRef)) {

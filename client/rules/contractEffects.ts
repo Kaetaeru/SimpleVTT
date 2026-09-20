@@ -50,7 +50,7 @@ export const PROPERTIES = [
   // R51 (D186): what the PHB feats needed and the vocabulary did not have.
   "damage-taken.reduce", "damage.ignore-resistance",
   // R95 (D230): 회피술 on a sheet, and 기묘한 회피 inside a reaction window.
-  "saving-throw.evasion", "damage-taken.halve", "reaction.auto-miss", "reaction.strike-back", "reaction.redirect", "spell.attack-roll.ignore-cover",
+  "saving-throw.evasion", "damage-taken.halve", "reaction.auto-miss", "reaction.strike-back", "reaction.redirect", "reaction.absorb", "spell.attack-roll.ignore-cover",
   // R96 (D231): 강력한 주문 시전, 생명의 제자, 최상급 치유, 포착 불가.
   "spell.cantrip-damage.ability-modifier", "healing.spell-slot-bonus", "healing.maximize", "spell.damage.maximize", "attack-roll.against-me.no-advantage", "initiative.advantage",
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
@@ -142,7 +142,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       // R60 (D195): the weapon's own damage dice — read by the rider and critical paths, never as a standing property.
       case "damage.extra-die": case "damage.reroll-lowest": case "damage.die-minimum": break;
       // R54 (D189), D302: what a reaction window does, read by contractReactions rather than by the sheet.
-      case "reaction.auto-miss": case "reaction.strike-back": case "reaction.redirect": case "damage-taken.halve": break;
+      // D343: `reaction.absorb` belongs to the window that offers it, not to the sheet it sits on.
+      case "reaction.auto-miss": case "reaction.strike-back": case "reaction.redirect": case "reaction.absorb": case "damage-taken.halve": break;
       // V4s (D281): the spell names the weapons it arms and the die they roll — neither is in the code.
       case "weapon.shillelagh": { const p = operation.params ?? {}; const itemIds = Array.isArray(p.items) ? p.items.map(String) : []; if (itemIds.length && operation.dice) application.shillelagh = { itemIds, dice: operation.dice }; break; }
       case "hp.maximum": application.hpMax = (application.hpMax ?? 0) + (number(operation, scope) ?? 0); break;

@@ -301,6 +301,9 @@ test("V4d: 불굴의 격노 holds a raging barbarian at twice their level; 끈�
   const t = await table([{ classes: "barbarian", level: 11, runtime: raging }, { classes: "fighter", level: 5, runtime: (runtime) => ({ ...runtime, hp: { ...runtime.hp, current: 10 } }) }], [hit("거인", "80")], () => 0.95);
   t.dm.send({ type: "act.attack", attacker: t.ref(2), targets: [t.ref(0)], attack: { source: "npc", actionName: "강타" } });
   await tick();
+  // D343: a critical hit opens the same reaction window a plain hit does; nobody takes it here, so the card lands.
+  const window = [...t.host.archive].reverse().find((message) => message.prompt?.kind === "guard" && !message.prompt.outcome);
+  if (window) { t.dm.send({ type: "act.decline", messageId: window.id }); await tick(); }
   const barbarian = t.entry(0) as ReturnType<typeof newJournalCharacter>;
   assert.equal(barbarian.runtime.hp.current, 22, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
   assert.equal(barbarian.runtime.resourcesUsed["resource.barbarian.relentless-rage"], 1, "the next DC is 15");
