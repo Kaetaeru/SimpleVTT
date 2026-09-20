@@ -79,6 +79,10 @@ export interface Combatant {
   grantsAdvantage?: string[];
   /** R90 (D225): reasons attacks against this creature are at disadvantage (흐림). */
   grantsDisadvantage?: string[];
+  /** D323: the same, but only from attackers of these creature types (선악 보호, 성스러운 오라). */
+  grantsDisadvantageFrom?: Array<{ label: string; creatureTypes: string[] }>;
+  /** D323: healing this creature receives rolls at its maximum (희망의 봉화) — the label the card shows. */
+  healingMaximized?: string;
   /** V3f (D260): reasons an opportunity attack against this creature is at disadvantage (기회 공격 회피). */
   opportunityDisadvantage?: string[];
   /** V3h (D262): a creature that hit this one has disadvantage on its other attacks against it this turn (다중 공격 방어) — the rule's name, and who hit. */
@@ -89,7 +93,7 @@ export interface Combatant {
   /** R90 (D225): dice a spell it is under adds to its own attack rolls or saves (축복 +1d4, 액운 −1d4). */
   d20Dice?: Array<{ on: "attack" | "save"; dice: string; label: string }>;
   /** R90 (D225): advantage or disadvantage on its own attack rolls or saves, from a spell it is under. */
-  rollStates?: Array<{ on: "attack" | "save"; state: "advantage" | "disadvantage"; label: string; ability?: string }>;
+  rollStates?: Array<{ on: "attack" | "save"; state: "advantage" | "disadvantage"; label: string; ability?: string; /** D323: only saves against these conditions (독으로부터의 보호). */ conditions?: string[] }>;
   /** R90 (D225): effects that end once used — by attacking (잔혹한 조롱) or by being attacked (유도 화살). */
   consumable?: Array<{ key: string; on: "attack" | "attacked" }>;
   /** R90 (D225): damage the caster who marked this creature adds when they hit it (사냥꾼의 표식, 주술). */
@@ -154,6 +158,8 @@ export interface AttackSpec {
   ignoresCover?: boolean;
   /** R55 (D190): reasons *this* swing is advantaged, already narrowed to the weapon by whatever declared them. */
   advantageOn?: string[];
+  /** D323: reasons *this* swing is hindered, narrowed by whoever is swinging (선악 보호 against a fiend). */
+  disadvantageOn?: string[];
   /** V3h (D262): the attacker gave up any advantage on this swing, and the rule that asked it to (잔혹한 일격). */
   forgoAdvantage?: string;
   /**
@@ -283,6 +289,7 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   for (const mark of target.nextAttackAgainst ?? []) if (mark.advantage && (!mark.except || mark.except !== attacker.tokenId)) plus.push(mark.label);
   // R55 (D190): whatever the two sheets' own contracts declared, on either side of the swing.
   for (const reason of spec.advantageOn ?? []) plus.push(reason);
+  for (const reason of spec.disadvantageOn ?? []) minus.push(reason);
   for (const reason of target.grantsAdvantage ?? []) plus.push(reason);
   // R90 (D225): spells on either side — 흐림 on the target, 액운·잔혹한 조롱·예지 on the attacker.
   for (const reason of target.grantsDisadvantage ?? []) minus.push(reason);

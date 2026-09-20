@@ -26,7 +26,7 @@ import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { bearerRolls, monsterAuras, splitHitOffers, versusParts, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
-import { CONDITION_KO, onHitOf, spellExec, sustainedExec, sustainOf, targetCountOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
+import { CONDITION_KO, countedSaveOf, onHitOf, spellExec, sustainedExec, sustainOf, targetCountOf, withVariant, type SpellDuration, type SpellExec } from "../compendium/spells";
 import type { ConditionDuration, TargetMark } from "../rules/contract";
 import type { ZeroHold } from "../character/types";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -1778,6 +1778,9 @@ export class TableHost {
   private perTargetRiders(spec: AttackSpec, attacker: { entry: JournalEntry }, target: { entry: JournalEntry }, targetCombatant: Combatant, attackerCombatant?: Combatant): AttackSpec {
     const versus = target.entry.kind === "npc" ? versusParts(spec, target.entry.statBlock.creatureType) : [];
     const mine = (targetCombatant.markedBy ?? []).filter((mark) => mark.from === attacker.entry.id);
+    // D323: an effect that hinders only some attackers (선악 보호: aberrations, fiends, undead and their kin).
+    const attackerType = attacker.entry.kind === "npc" ? attacker.entry.statBlock.creatureType : "humanoid";
+    const typed = (targetCombatant.grantsDisadvantageFrom ?? []).filter((item) => item.creatureTypes.includes(attackerType)).map((item) => item.label);
     // D321: damage a lasting effect adds to every hit its bearer lands (하급 원소 소환), already scaled by the slot.
     const bearer: DamagePart[] = (attackerCombatant?.bearerDamage ?? []).map((part) => ({ formula: part.formula, type: part.type, label: part.label, critDoubles: true }));
     // H2 (D239): the attacker's sheet may change the mark's die (적 학살자) or give advantage against it (정밀한 사냥꾼), per marking spell.
@@ -1785,7 +1788,7 @@ export class TableHost {
     const precise = mine.filter((mark) => attackerCombatant?.markedSpellAdvantage?.includes(mark.spellId)).map((mark) => `${mark.label} 대상`);
     // R99 (D234): 연구된 공격 — the attack after a miss against this creature has advantage.
     if (attackerCombatant?.studiedAttacks && this.studied.get(attacker.entry.id) === target.entry.id) precise.push("연구된 공격");
-    return versus.length || marks.length || bearer.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...versus, ...marks, ...bearer], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
+    return versus.length || marks.length || bearer.length || precise.length || typed.length ? { ...spec, riders: [...(spec.riders ?? []), ...versus, ...marks, ...bearer], ...(typed.length ? { disadvantageOn: [...(spec.disadvantageOn ?? []), ...typed] } : {}), ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
   }
 
   /**
@@ -2078,7 +2081,9 @@ export class TableHost {
     if (entry?.kind !== "character" || !this.needsDeathSave(entry)) return false;
     const runtime = entry.runtime;
     // V3c (D257): a contract may give advantage on death saves (생존자, 튼튼함): two dice, the better kept.
-    const lucky = this.options.pcStats ? advantageFor(this.options.pcStats(entry), "death-save") : undefined;
+    // D323: 희망의 봉화 — an effect on the sheet may hand the same advantage a contract does.
+    const beacon = bearerDefenses(runtime.effects).deathSaveAdvantage[0];
+    const lucky = beacon ?? (this.options.pcStats ? advantageFor(this.options.pcStats(entry), "death-save") : undefined);
     const rolls = Array.from({ length: lucky ? 2 : 1 }, () => 1 + Math.floor((this.options.random ?? Math.random)() * 20));
     const die = Math.max(...rolls);
     let next = runtime;
@@ -2818,6 +2823,24 @@ export class TableHost {
         const bonus = stats.saves[effect.endSave.ability] ?? 0;
         const success = die + bonus >= effect.endSave.dc;
         report(effect.name, effect.endSave.ability, effect.endSave.dc, die, bonus, success);
+        // D323: a counted save (육신 석화) — three of either, in any order, decide it.
+        const counted = countedSaveOf(effect.key, effect.variant);
+        if (counted) {
+          const tally = { success: (effect.tally?.success ?? 0) + (success ? 1 : 0), failure: (effect.tally?.failure ?? 0) + (success ? 0 : 1) };
+          changed = true;
+          if (tally.success >= counted.successes) {
+            runtime = endEffect(runtime, effect.key, `내성 ${counted.successes}회 성공`);
+            runtime = { ...runtime, conditions: runtime.conditions.filter((condition) => !effect.endSave!.conditions.includes(condition)) };
+          } else if (tally.failure >= counted.failures) {
+            const taken = counted.onFailures.map((id) => CONDITION_KO[id] ?? id);
+            runtime = { ...runtime, effects: (runtime.effects ?? []).map((item) => (item.key === effect.key ? { ...item, tally, conditions: [...new Set([...(item.conditions ?? []), ...taken])], endSave: undefined } : item)), conditions: [...new Set([...runtime.conditions, ...taken])] };
+            this.say({ type: "system", who: "", content: `${name}: ${effect.name} — 내성 ${counted.failures}회 실패, ${taken.join(", ")}${counted.note ? ` (${counted.note})` : ""}` });
+          } else {
+            runtime = { ...runtime, effects: (runtime.effects ?? []).map((item) => (item.key === effect.key ? { ...item, tally } : item)) };
+            this.say({ type: "system", who: "", content: `${name}: ${effect.name} — 성공 ${tally.success}/${counted.successes} · 실패 ${tally.failure}/${counted.failures}` });
+          }
+          continue;
+        }
         if (!success) continue;
         runtime = endEffect(runtime, effect.key, "내성 성공");
         runtime = { ...runtime, conditions: runtime.conditions.filter((condition) => !effect.endSave!.conditions.includes(condition)) };

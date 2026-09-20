@@ -131,6 +131,8 @@ export interface ActiveEffect {
    * dice per slot above the spell's level) belongs to the caster, not to the bearer, so it travels with the effect.
    */
   cast?: { level: number; saveDc: number; modifier: number };
+  /** D323: how many of the repeated saves have been made and missed so far (육신 석화: three of either ends it). */
+  tally?: { success: number; failure: number };
   /** D321: conditions the bearer takes when this effect ends, lasting `endDuration` (가속). */
   endConditions?: string[];
   endDuration?: string;

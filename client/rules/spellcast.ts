@@ -190,7 +190,10 @@ export function resolveSpell(input: CastInput): SpellResolution {
     // 튼튼함's death saves). The reason rides on the row, as 회피 and 마법 저항 already do.
     const declared = advantageFor(stats, "saving-throw", { ability: key, conditions: conditionMarks("failed-save") });
     // R90 (D225): a spell the target is under — 축복·액운's d4, 신속's advantage on Dexterity saves, 저주's disadvantage.
-    const states = (target.rollStates ?? []).filter((item) => item.on === "save" && (!item.ability || item.ability === key));
+    // D323: an effect whose advantage is only against certain conditions (독으로부터의 보호) counts when this spell
+    // is trying to inflict one of them — or to make the bearer keep one.
+    const asked = new Set((exec.effects ?? []).map((effect) => effect.conditionId));
+    const states = (target.rollStates ?? []).filter((item) => item.on === "save" && (!item.ability || item.ability === key) && (!item.conditions?.length || item.conditions.some((condition) => asked.has(condition))));
     // H1 (D238): bloodied-advantage on saves (피투성이 광분).
     const bloodied = target.bloodied?.rolls.includes("save") && target.hp.current <= Math.floor(target.hp.max / 2) ? target.bloodied.label : undefined;
     const upBy = dodging ? "회피" : resistant ? "마법 저항" : declared ? declared.reason : bloodied ?? states.find((item) => item.state === "advantage")?.label;
@@ -309,11 +312,12 @@ export function resolveSpell(input: CastInput): SpellResolution {
         const row = base(combatant);
         row.mode = "heal";
         const extra = casterStats.healingSlotBonus && spec.level > 0 ? 2 + spec.level : 0;
-        const amount = rollFormula(formula, casterStats.healingMaximized ? { d: (sides) => sides } : dice) + extra;
+        // D323: 희망의 봉화 — the healing this creature receives rolls at its maximum, as 최상급 치유 does for the caster.
+        const amount = rollFormula(formula, casterStats.healingMaximized || combatant.healingMaximized ? { d: (sides) => sides } : dice) + extra;
         // D321: an effect may stop its bearer regaining hit points (서리 손길) — the roll still shows, none of it lands.
         row.healed = combatant.noHealing ? 0 : Math.min(amount, Math.max(0, combatant.hp.max - combatant.hp.current));
         row.hpAfter = combatant.hp.current + row.healed;
-        row.note = `${formula}${casterStats.healingMaximized ? " (최대값)" : ""}${extra ? ` +${extra} (생명의 제자)` : ""} = ${amount}${combatant.noHealing ? ` — ${combatant.noHealing}: 회복 불가` : ""}`;
+        row.note = `${formula}${casterStats.healingMaximized || combatant.healingMaximized ? ` (최대값${combatant.healingMaximized ? ` · ${combatant.healingMaximized}` : ""})` : ""}${extra ? ` +${extra} (생명의 제자)` : ""} = ${amount}${combatant.noHealing ? ` — ${combatant.noHealing}: 회복 불가` : ""}`;
         targets.push(row);
       }
       break;

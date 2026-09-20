@@ -28,7 +28,7 @@ import type { CasterStats, SpellCastSpec } from "./spellcast";
 
 const diceOf = (terms: Array<{ dice?: string }>) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
 
-type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "consumable" | "markedBy" | "bearerDamage">;
+type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "grantsDisadvantageFrom" | "consumable" | "markedBy" | "bearerDamage">;
 /**
  * R90 (D225): the spell effects a creature is under, as what they do at the table — 축복·액운's d4 on its attack rolls
  * and saves, 요정 불꽃·유도 화살's advantage for whoever attacks it, 사냥꾼의 표식·주술's dice for the caster who marked
@@ -40,8 +40,8 @@ type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" 
  * V4f (D268): what the spell effects a creature is under do to its defenses — resistances, immunities and
  * vulnerabilities by damage type, a bonus to AC, a strike back at melee attackers, holding at 1 HP instead of dropping.
  */
-export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: string[]; immunities: string[]; vulnerabilities: string[]; conditionImmunities: string[]; acBonus: number; retaliation: Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>; preventsDeath: string[]; noHealing: string[] } {
-  const out = { resistances: [] as string[], immunities: [] as string[], vulnerabilities: [] as string[], conditionImmunities: [] as string[], acBonus: 0, retaliation: [] as Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>, preventsDeath: [] as string[], noHealing: [] as string[] };
+export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: string[]; immunities: string[]; vulnerabilities: string[]; conditionImmunities: string[]; acBonus: number; retaliation: Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>; preventsDeath: string[]; noHealing: string[]; deathSaveAdvantage: string[]; healingMaximized: string[] } {
+  const out = { resistances: [] as string[], immunities: [] as string[], vulnerabilities: [] as string[], conditionImmunities: [] as string[], acBonus: 0, retaliation: [] as Array<{ key: string; label: string; formula: string; damageType: string; meleeOnly: boolean }>, preventsDeath: [] as string[], noHealing: [] as string[], deathSaveAdvantage: [] as string[], healingMaximized: [] as string[] };
   for (const effect of effects) {
     if (!effect.key.startsWith("spell:") || !(effect.bearer || effect.from)) continue;
     for (const part of bearerPartsOf(effect.key.slice("spell:".length), effect.variant) as Array<Record<string, unknown>>) {
@@ -58,26 +58,32 @@ export function bearerDefenses(effects: ActiveEffect[] = []): { resistances: str
       const back = part.retaliation as { damageType: string; dice?: { count: number; sides: number }; flat?: number; meleeOnly?: boolean } | undefined;
       if (back && (back.dice || back.flat)) out.retaliation.push({ key: effect.key, label: effect.name, formula: back.dice ? `${back.dice.count}d${back.dice.sides}` : String(back.flat), damageType: damageTypeKo(back.damageType), meleeOnly: back.meleeOnly !== false });
       if (part.preventsDeath) out.preventsDeath.push(effect.key);
+      // D323: 희망의 봉화 — death saves with advantage and healing received at its maximum.
+      if (part.deathSaveAdvantage) out.deathSaveAdvantage.push(effect.name.replace(/\s*\(.*$/, ""));
+      if (part.healingMaximized) out.healingMaximized.push(effect.name.replace(/\s*\(.*$/, ""));
     }
   }
   return out;
 }
 
 export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): BearerRolls {
-  const out: Required<BearerRolls> = { d20Dice: [], rollStates: [], grantsAdvantage: [], grantsDisadvantage: [], consumable: [], markedBy: [], bearerDamage: [] };
+  const out: Required<BearerRolls> = { d20Dice: [], rollStates: [], grantsAdvantage: [], grantsDisadvantage: [], grantsDisadvantageFrom: [], consumable: [], markedBy: [], bearerDamage: [] };
   for (const effect of effects) {
     if (!effect.key.startsWith("spell:") || !(effect.bearer || effect.from)) continue;
     for (const part of bearerPartsOf(effect.key.slice("spell:".length), effect.variant)) {
       const modifier = part.modifier;
       const on = modifier?.family === "attack-roll" ? "attack" : modifier?.family === "saving-throw" ? "save" : null;
       if (modifier && on && modifier.scope === "target") {
-        if (on === "attack" && modifier.rollState) (modifier.rollState === "advantage" ? out.grantsAdvantage : out.grantsDisadvantage).push(`대상 ${effect.name}`);
+        // D323: only attacks by these creature types are hindered (선악 보호, 성스러운 오라) — the host knows the attacker.
+        if (on === "attack" && modifier.rollState === "disadvantage" && modifier.creatureTypes?.length) out.grantsDisadvantageFrom.push({ label: `대상 ${effect.name}`, creatureTypes: modifier.creatureTypes });
+        else if (on === "attack" && modifier.rollState) (modifier.rollState === "advantage" ? out.grantsAdvantage : out.grantsDisadvantage).push(`대상 ${effect.name}`);
         if (on === "attack" && modifier.consumeOnUse) out.consumable.push({ key: effect.key, on: "attacked" });
       } else if (modifier && on) {
         const sign = (modifier.bonus?.sign ?? 1) < 0 ? "-" : "";
         const dice = modifier.bonus?.dice ? `${sign}${modifier.bonus.dice.count}d${modifier.bonus.dice.sides}` : flat && modifier.bonus?.flat ? `${sign}${modifier.bonus.flat}` : "";
         if (dice) out.d20Dice.push({ on, dice, label: effect.name });
-        if (modifier.rollState) out.rollStates.push({ on, state: modifier.rollState, label: effect.name, ...(modifier.ability ? { ability: modifier.ability } : {}) });
+        // D323: a save only against certain conditions (독으로부터의 보호: 중독을 피하거나 끝내는 내성).
+        if (modifier.rollState) out.rollStates.push({ on, state: modifier.rollState, label: effect.name, ...(modifier.ability ? { ability: modifier.ability } : {}), ...(modifier.conditions?.length ? { conditions: modifier.conditions } : {}) });
         if (on === "attack" && modifier.consumeOnUse) out.consumable.push({ key: effect.key, on: "attack" });
       }
       const damage = part.attackDamage;
@@ -103,7 +109,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
   return {
     // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
     id: entry.id, name: entry.name, kind: "pc", ac: derived.ac.value, /* a sheet takes flat AC from the effect contracts already (방패) */ hp: { current: runtime.hp.current, max: derived.hp.max, temp: runtime.hp.temp },
-    conditions: runtime.conditions, defenses: { ...derived.defenses, resistances: [...derived.defenses.resistances, ...shielded.resistances], immunities: [...derived.defenses.immunities, ...shielded.immunities], vulnerabilities: [...derived.defenses.vulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...derived.defenses.conditionImmunities, ...shielded.conditionImmunities] }, conSave: derived.saves.con.bonus, concentration: concentration?.name, ...(shielded.noHealing.length ? { noHealing: shielded.noHealing[0] } : {}), effects: (runtime.effects ?? []).map((effect) => effect.name),
+    conditions: runtime.conditions, defenses: { ...derived.defenses, resistances: [...derived.defenses.resistances, ...shielded.resistances], immunities: [...derived.defenses.immunities, ...shielded.immunities], vulnerabilities: [...derived.defenses.vulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...derived.defenses.conditionImmunities, ...shielded.conditionImmunities] }, conSave: derived.saves.con.bonus, concentration: concentration?.name, ...(shielded.noHealing.length ? { noHealing: shielded.noHealing[0] } : {}), ...(shielded.healingMaximized.length ? { healingMaximized: shielded.healingMaximized[0] } : {}), effects: (runtime.effects ?? []).map((effect) => effect.name),
     // R28 (D147): exhaustion reaches the dice at last.
     exhaustion: runtime.exhaustion,
     ...(derived.evasion ? { evasion: true } : {}),
@@ -153,7 +159,7 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
     id: entry.id, name: token?.name ?? entry.name, kind: "npc", ac: block.ac + shielded.acBonus, hp,
     // H1 (D238): 마법 저항, 재생, 흡수 and the rest come from the stat block's trait rules, never from its words.
     ...traitCombatant(block),
-    ...(shielded.noHealing.length ? { noHealing: shielded.noHealing[0] } : {}),
+    ...(shielded.noHealing.length ? { noHealing: shielded.noHealing[0] } : {}), ...(shielded.healingMaximized.length ? { healingMaximized: shielded.healingMaximized[0] } : {}),
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: [...block.damageResistances, ...shielded.resistances], immunities: [...block.damageImmunities, ...shielded.immunities], vulnerabilities: [...block.damageVulnerabilities, ...shielded.vulnerabilities], conditionImmunities: [...block.conditionImmunities, ...shielded.conditionImmunities] },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),

@@ -62,6 +62,11 @@ export interface SpellExec {
   reaction?: SpellReaction;
   /** H6c (D250): the target repeats the save at the end of each of its turns (see `repeatSaveOf`). */
   repeatSave?: "turn-end";
+  /**
+   * D323: the repeated save is counted (육신 석화): three successes end the spell, three failures turn the target
+   * to stone. They need not run together — the tally rides on the effect.
+   */
+  countedSave?: { successes: number; failures: number; onFailures: string[]; note?: string };
   /** V4g (D269): the conditions the spell ends on its targets (하급 회복). */
   removesConditions?: string[];
   /** V4f (D268): what the caster chooses when casting (a module spell's own list). */
@@ -122,6 +127,12 @@ export const reactionSpellIds = (trigger: SpellReaction["trigger"]): string[] =>
 
 /** H6c (D250): when the target of this spell repeats its save, from the spell's mechanics. */
 export const repeatSaveOf = (exec: SpellExec): "turn-end" | undefined => exec.repeatSave;
+/** D323: the counted save of the spell behind an effect key (육신 석화: three successes end it, three failures petrify). */
+export const countedSaveOf = (effectKey: string, variant?: string): SpellExec["countedSave"] => {
+  if (!effectKey.startsWith("spell:")) return undefined;
+  const exec = spellExec(effectKey.slice("spell:".length));
+  return exec ? withVariant(exec, variant).exec.countedSave : undefined;
+};
 
 /** H6a (D248): the spell's creature rule, from its mechanics. */
 export const creaturesOf = (spellId: string): SpellCreatures | undefined => spellExec(spellId)?.creatures;
@@ -133,7 +144,13 @@ export const onHitOf = (exec: SpellExec | undefined): SpellOnHit | undefined => 
  * attacks it (`scope: "target"`), and the damage its caster adds against it (`againstTargetOnly`).
  */
 export interface SpellBearerPart {
-  modifier?: { family: string; scope?: "actor" | "target"; rollState?: "advantage" | "disadvantage"; bonus?: { dice?: { count: number; sides: number }; flat?: number; sign?: number }; consumeOnUse?: boolean; ability?: string };
+  modifier?: { family: string; scope?: "actor" | "target"; rollState?: "advantage" | "disadvantage"; bonus?: { dice?: { count: number; sides: number }; flat?: number; sign?: number }; consumeOnUse?: boolean; ability?: string;
+    /** D323: only saves against these conditions (독으로부터의 보호: 중독). English condition ids. */ conditions?: string[];
+    /** D323: only attacks made by creatures of these types (선악 보호, 성스러운 오라). */ creatureTypes?: string[] };
+  /** D323: the bearer rolls death saves with advantage (희망의 봉화). */
+  deathSaveAdvantage?: boolean;
+  /** D323: healing the bearer receives rolls its dice at their maximum (희망의 봉화). */
+  healingMaximized?: boolean;
   attackDamage?: { damageType: string; dice?: { count: number; sides: number }; flat?: number; againstTargetOnly?: boolean; sourceKinds?: string[];
     /** D321: dice added per slot level above the spell's own level (하급 원소 소환). */ dicePerSlotAboveBase?: number };
   /** V4f (D268): resistances, immunities and vulnerabilities the effect gives its bearer. */

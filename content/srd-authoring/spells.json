@@ -3135,11 +3135,19 @@
      "modifier": {
       "family": "attack-roll",
       "rollState": "disadvantage",
-      "scope": "target"
+      "scope": "target",
+      "creatureTypes": [
+       "aberration",
+       "celestial",
+       "elemental",
+       "fey",
+       "fiend",
+       "undead"
+      ]
      }
     }
    ],
-   "executionScope": "Authored (C1-03): attack rolls against the touched creature have disadvantage while the caster concentrates. The SRD limits this to aberrations, celestials, elementals, fey, fiends and undead; the runtime applies it to every attacker, so the DM lifts it for other creatures. Immunity to possession and the advantage on saves against charm and fear from those creatures are not enforced.",
+   "executionScope": "Authored (D323): attack rolls against the touched creature have disadvantage while the caster concentrates, but only from aberrations, celestials, elementals, fey, fiends and undead. Charm, fright and possession by those creatures are the table's.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -4950,7 +4958,7 @@
    },
    "trackedEffects": [
     {
-     "summary": "내성 굴림에 이점 (독 관련)",
+     "summary": "중독을 피하거나 끝내는 내성에 이점 · 독 피해 저항",
      "trigger": "always",
      "duration": {
       "kind": "hours",
@@ -4959,7 +4967,10 @@
      "modifier": {
       "family": "saving-throw",
       "rollState": "advantage",
-      "scope": "actor"
+      "scope": "actor",
+      "conditions": [
+       "poisoned"
+      ]
      },
      "damageDefenses": [
       {
@@ -4972,7 +4983,7 @@
    "removesConditions": [
     "poisoned"
    ],
-   "executionScope": "Authored (C1-03): the Poisoned condition on the touched creature ends, and for 1 hour it has advantage on saving throws. The SRD limits the advantage to saves against being poisoned and grants resistance to poison damage; the runtime applies the advantage to every save; the poison resistance is granted.",
+   "executionScope": "Authored (D323): the Poisoned condition ends, and for an hour the target has advantage on saves against being poisoned and resistance to poison damage.",
    "components": {
     "verbal": true,
     "somatic": true
@@ -9859,9 +9870,18 @@
       "scope": "actor",
       "ability": "wis"
      }
+    },
+    {
+     "summary": "죽음 내성에 이점 · 받는 치유는 최대값",
+     "trigger": "always",
+     "duration": {
+      "kind": "concentration"
+     },
+     "deathSaveAdvantage": true,
+     "healingMaximized": true
     }
    ],
-   "executionScope": "V4g (D269): the chosen creatures get advantage on Wisdom saves while the caster concentrates, with no save. Death-save advantage and maximized healing are the DM's.",
+   "executionScope": "Authored (D323): advantage on Wisdom saves and death saves, and every healing die the target receives counts as its maximum, while the caster concentrates.",
    "components": {
     "verbal": true,
     "somatic": true
@@ -14536,7 +14556,7 @@
      }
     }
    ],
-   "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+   "executionScope": "Authored (D323): a failed Constitution save leaves the target Restrained; it repeats the save at the end of each of its turns and three successes end the spell, three failures turn it to stone. Keeping concentration for the whole minute (and the Greater Restoration that undoes it) is the table's.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -14544,7 +14564,16 @@
      {}
     ]
    },
-   "ritual": false
+   "ritual": false,
+   "repeatSave": "turn-end",
+   "countedSave": {
+    "successes": 3,
+    "failures": 3,
+    "onFailures": [
+     "petrified"
+    ],
+    "note": "지속시간 동안 석화 (집중을 끝까지 유지하면 상급 회복까지)"
+   }
   }
  },
  "dnd.srd521.spell.planar-ally": {
@@ -16388,7 +16417,7 @@
      }
     },
     {
-     "summary": "대상을 향한 명중 굴림에 불리점",
+     "summary": "악마·언데드의 명중 굴림에 불리",
      "trigger": "always",
      "duration": {
       "kind": "concentration"
@@ -16396,11 +16425,15 @@
      "modifier": {
       "family": "attack-roll",
       "rollState": "disadvantage",
-      "scope": "target"
+      "scope": "target",
+      "creatureTypes": [
+       "fiend",
+       "undead"
+      ]
      }
     }
    ],
-   "executionScope": "Authored (C1-03): chosen allies within the 30-foot emanation have advantage on saving throws and attack rolls against them have disadvantage while the caster concentrates. The blinding CON save for fiends and undead that hit an ally is not enforced.",
+   "executionScope": "Authored (D323): chosen creatures in the 30-foot emanation have advantage on every save, and fiends and undead have disadvantage on attack rolls against them. A fiend or undead that hits one in melee makes a Constitution save or is Blinded — the table asks for that save.",
    "components": {
     "verbal": true,
     "somatic": true,
