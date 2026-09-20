@@ -118,7 +118,15 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "ac.unarmored-base": application.ac = { ...application.ac, unarmoredBase: number(operation, scope) }; break;
       case "ac.minimum": application.ac = { ...application.ac, min: number(operation, scope) }; break;
       case "attack-roll.bonus": application.attack = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) }; break;
-      case "damage.bonus": application.damage = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) }; break;
+      // D339: with a damage type of its own the bonus is not added to the weapon's own damage — it is a part
+      // beside it, so resistance and immunity are read against that type (성전사의 망토: +1d4 광휘).
+      case "damage.bonus": {
+        const typed = operation.damageTypes?.length ? operation.damageTypes[0] : undefined;
+        const body = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(filter ? { filter } : {}) };
+        if (typed) application.damageTyped = { ...body, type: typed };
+        else application.damage = body;
+        break;
+      }
       case "saving-throw.bonus": application.saves = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(operation.abilities ? { keys: operation.abilities as AbilityKey[] } : {}) }; break;
       case "ability-check.bonus": application.checks = { ...(operation.dice ? { dice: operation.dice } : { value: number(operation, scope) }), ...(operation.abilities?.length ? { keys: operation.abilities as AbilityKey[] } : {}) }; break;
 

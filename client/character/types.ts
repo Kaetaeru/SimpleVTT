@@ -173,6 +173,8 @@ export interface DerivedAttack {
   masteryKey?: string;
   masteryActive: boolean;
   range?: string;
+  /** D339: extra damage of its own type that an effect put on this attack (성전사의 망토: +1d4 광휘). */
+  extraDamage?: Array<{ label: string; formula: string; type: string }>;
 }
 
 export interface DerivedSpellcasting {

@@ -224,6 +224,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const ignores = (type: string) => (derived.ignoresResistance ?? []).includes(type);
   const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : offHand ? `${attack.name} (보조 손)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}), ...(ignores(attack.damageType) ? { ignoresResistance: true } : {}) }];
   const extra: DamagePart[] = [];
+  // D339: damage of its own type an effect put on this weapon — a part beside it, so resistance reads that type.
+  for (const part of attack.extraDamage ?? []) extra.push({ formula: part.formula, type: damageTypeKo(part.type), label: part.label, critDoubles: false });
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   const strikeDice = strike?.rule.extraDice?.filter((step) => derived.level >= step.level).at(-1);
   if (strike && strikeDice) extra.push({ formula: strikeDice.dice, type: damageTypeKo(strike.rule.damageType ?? attack.damageType), label: strikeName });
