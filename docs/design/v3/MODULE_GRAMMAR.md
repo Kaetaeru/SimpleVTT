@@ -263,7 +263,10 @@
 
 - `primary.kind`: `attack-damage` `save-damage` `save-compound-damage` `save-effect` `healing` `temporary-hp` `automatic-projectiles` `multi-attack-damage` `tracked-effect` `area-damage` `maximum-hp` `dispel` `full-healing` `power-word-kill` `revive`
 - 내성 DC: 시전자 DC가 기본, `primary.saveDc`(숫자)면 그 DC(D318 — 이계 접촉 15)
-- 주사위: `count/sides/flat`, 상위 슬롯은 `dicePerSlotAboveBase`·`flatPerSlotAboveBase`, 소마법은 `cantripScaling`, 시전 능력치는 `addSpellcastingModifier`
+- 주사위: `count/sides/flat`, 상위 슬롯은 `dicePerSlotAboveBase`·`flatPerSlotAboveBase`, 소마법은 `cantripScaling`, 시전 능력치는 `addSpellcastingModifier`, 기다린 라운드마다 커지는 것은 `dicePerRoundElapsed`(D322)
+- D322: `healing`·`temporary-hp`의 `pool`(`flat`/`dice`, 치유는 `cap: "half-max"`)은 한 뭉치를 대상들이 나눠 받는다 — 치유는 많이 다친 쪽부터, 임시 HP는 고르게. `maximum-hp`는 `dice`로 올릴 수 있다.
+- D322: `secondary`는 첫 효과 뒤에 오는 두 번째 굴림(`save-damage`·`save-effect`, `appliesTo: "all"|"damaged"`, `conditions[]`, `note`).
+- D322: `effects[]`의 `requiresHpAtMost`는 그 HP 이하인 대상에게만 상태를 걸고, `elseNote`는 그보다 센 대상의 줄에 남길 말이다.
 - `effects[]`(상태), `trackedEffects[]`(지속 효과가 굴림에 주는 것 — `modifier`, `attackDamage`(D321: `dicePerSlotAboveBase`로 슬롯마다 주사위가 늘고, `againstTargetOnly`가 없으면 보유자가 명중시킬 때마다 붙는다), `damageDefenses`, D316 `conditionImmunities`, D321 `noHealing`(보유자가 HP를 회복하지 못한다)·`endConditions`+`endDuration`(효과가 끝날 때 남기는 상태)), `removesConditions[]`(D316: 주문 종류와 상관없이, 내성에 성공한 대상만 빼고 적용)
 - `sustain`: `economy`(`action`/`bonus-action`/`none`) · `primary` · `note` · `move` · `target: "bound"`(처음 겨눈 대상에게만 — 빗나가도 묶인다) · `endWhen`(사람이 누르는 종료 버튼)
 - `onHit`: 무기 명중 직후 시전하는 강타류 (`weapon`, `damage`, `inflicts`, `save`, `versus`, `mark`)

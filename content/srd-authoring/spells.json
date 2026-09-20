@@ -3317,7 +3317,7 @@
    "targeting": {
     "kind": "creature",
     "minTargets": 1,
-    "maxTargets": 1,
+    "maxTargets": 8,
     "rangeFeet": 60,
     "requiresSight": true
    },
@@ -3329,7 +3329,7 @@
      "sides": 10
     }
    },
-   "executionScope": "V5e (D293): the shard is a ranged spell attack for 1d10 piercing. The 2d6 cold burst it leaves (Dexterity save, +1d6 per slot above 1st, five feet around the target) is an area a scene without positions cannot pick out, so the table rolls it.",
+   "executionScope": "Authored (D322): the ranged spell attack deals 1d10 piercing, and the shard bursts whatever it did — every creature picked (the target and those within 5 feet) makes a Dexterity save or takes 2d6 cold, one more d6 per slot above the first. Who stands within 5 feet is the table's.",
    "components": {
     "verbal": false,
     "somatic": true,
@@ -3337,7 +3337,20 @@
      {}
     ]
    },
-   "ritual": false
+   "ritual": false,
+   "secondary": {
+    "kind": "save-damage",
+    "saveAbility": "dex",
+    "damageType": "cold",
+    "dice": {
+     "count": 2,
+     "sides": 6,
+     "dicePerSlotAboveBase": 1
+    },
+    "successDamage": "none",
+    "appliesTo": "all",
+    "note": "파편 폭발"
+   }
   }
  },
  "dnd.srd521.spell.heroism": {
@@ -4610,7 +4623,7 @@
     "projectilesPerSlotAboveBase": 1
    },
    "concentration": true,
-   "executionScope": "Authored (C1-03): the creature holding or wearing the heated object takes 2d8 fire damage with no roll to avoid it, +1d8 per slot level above 2nd. Repeating the damage with a bonus action, and the CON save to avoid dropping the object or suffer disadvantage, are left to the DM.",
+   "executionScope": "Authored (D322): the metal deals 2d8 fire (one more d8 per slot above the second) with no save, and a creature holding or wearing it then makes a Constitution save or drops it. Holding on for the disadvantage is the table's.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -4622,6 +4635,13 @@
    "sustain": {
     "economy": "bonus-action",
     "note": "추가 행동으로 다시 피해"
+   },
+   "secondary": {
+    "kind": "save-effect",
+    "saveAbility": "con",
+    "appliesTo": "damaged",
+    "note": "쥔 물체를 놓음",
+    "summary": "실패하면 물체를 떨어뜨린다 (떨어뜨리지 않으면 시전자의 다음 턴이 시작될 때까지 명중 굴림과 능력 판정에 불리 — DM 판정)"
    }
   }
  },
@@ -14368,15 +14388,15 @@
     "directTarget": true
    },
    "primary": {
-    "kind": "tracked-effect",
-    "summary": "연회에 참여한 최대 열두 크리처는 1시간 식사가 끝난 뒤 24시간 동안 독 피해 저항. 공포·중독 면역과 HP 최대치 2d10 증가(같은 수만큼 회복)는 수동 처리 필요.",
-    "duration": {
-     "kind": "hours",
-     "amount": 24
-    }
+    "kind": "maximum-hp",
+    "dice": {
+     "count": 2,
+     "sides": 10
+    },
+    "summary": "연회에 참여한 크리처의 HP 최대치와 현재 HP가 2d10 늘어나고, 24시간 동안 독 저항과 공포·중독 면역을 얻는다."
    },
    "concentration": false,
-   "executionScope": "Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+   "executionScope": "Authored (D322): the feast rolls 2d10 once, raising every diner's maximum and current hit points, and the 24-hour resistance and immunities ride as a tracked effect. The hour it takes and the food it needs are the table's.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -15692,7 +15712,7 @@
      }
     }
    ],
-   "executionScope": "V4g (D269): the bead is placed; its 12d6 fire (+1d6 per slot above 7th, half on a Dexterity save) is the repeat when it explodes. The 1d6 it gains each turn is the DM's (palette).",
+   "executionScope": "Authored (D322): the bead is placed; when it goes off it deals 12d6 fire (+1d6 per slot above 7th and +1d6 for every round it waited), half on a Dexterity save.",
    "components": {
     "verbal": true,
     "somatic": true,
@@ -15710,11 +15730,12 @@
      "dice": {
       "count": 12,
       "sides": 6,
-      "dicePerSlotAboveBase": 1
+      "dicePerSlotAboveBase": 1,
+      "dicePerRoundElapsed": 1
      },
      "successDamage": "half"
     },
-    "note": "구슬이 터질 때 · 기다린 턴마다 +1d6은 DM 팔레트"
+    "note": "구슬이 터질 때 — 기다린 턴마다 +1d6"
    }
   }
  },
@@ -15934,10 +15955,12 @@
      "duration": {
       "kind": "special",
       "key": "spell-condition:dnd.srd521.spell.power-word-stun:stunned"
-     }
+     },
+     "requiresHpAtMost": 150,
+     "elseNote": "HP 150 초과 — 시전자의 다음 턴이 시작될 때까지 이동 속도 0"
     }
    ],
-   "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+   "executionScope": "Authored (D322): a target at 150 hit points or fewer is Stunned (repeating a Constitution save at the end of each of its turns); above that the card says its speed is 0 until the caster's next turn.",
    "components": {
     "verbal": true,
     "somatic": false
@@ -16971,7 +16994,9 @@
     "kind": "healing",
     "dice": {
      "count": 0,
-     "sides": 4,
+     "sides": 4
+    },
+    "pool": {
      "flat": 700
     }
    },
@@ -16980,7 +17005,7 @@
     "deafened",
     "poisoned"
    ],
-   "executionScope": "V4s (D281): the 700-hit-point pool is shared among up to six creatures the caster picks; how it is divided is the table's, and each one it reaches loses Blinded, Deafened and Poisoned.",
+   "executionScope": "Authored (D322): the 700-hit-point pool is shared out among the chosen creatures, the most hurt first; the DM may divide it differently. Each one it reaches loses Blinded, Deafened and Poisoned.",
    "components": {
     "verbal": true,
     "somatic": true

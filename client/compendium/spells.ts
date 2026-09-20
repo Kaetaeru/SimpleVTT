@@ -6,15 +6,20 @@
 import srdSpellsJson from "../../content/modules/srd-5.2.1/spells.module.json";
 import type { SpellSummon } from "./summonTemplate";
 
-export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
+export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean;
+  /** D322: one more die for every round the spell has been waiting (지연 폭발 화염구). */ dicePerRoundElapsed?: number }
 export interface SpellDuration { kind: "concentration" | "rounds" | "minutes" | "hours" | "instant" | "special" | "permanent"; amount?: number; anchorActorId?: string; boundary?: "start" | "end" }
 export type SpellPrimary =
   | { kind: "attack-damage"; damageType: string; dice: SpellDice }
   | { kind: "save-damage"; saveAbility: string; damageType: string; dice: SpellDice; successDamage: "none" | "half"; ignoresCoverForSave?: boolean }
   | { kind: "save-compound-damage"; saveAbility: string; components: Array<{ damageType: string; dice: SpellDice }>; successDamage: "none" | "half" }
   | { kind: "save-effect"; saveAbility: string; summary?: string; duration?: SpellDuration }
-  | { kind: "healing"; dice: SpellDice }
-  | { kind: "temporary-hp"; dice: SpellDice }
+  | { kind: "healing"; dice: SpellDice;
+      /** D322: one pool shared out among the targets, the most hurt first (대량 치유: 700). */
+      pool?: { flat?: number; dice?: SpellDice; cap?: "half-max" } }
+  | { kind: "temporary-hp"; dice: SpellDice;
+      /** D322: one pool of temporary hit points shared out evenly among the targets. */
+      pool?: { flat?: number; dice?: SpellDice } }
   | { kind: "automatic-projectiles"; damageType: string; projectileDice: { sides: number; flat?: number }; baseProjectiles: number; projectilesPerSlotAboveBase?: number }
   | { kind: "multi-attack-damage"; damageType: string; dicePerAttack: { count: number; sides: number }; baseAttacks: number; attacksPerSlotAboveBase?: number; cantripAttackScaling?: boolean }
   | { kind: "tracked-effect"; summary?: string; duration?: SpellDuration }
@@ -31,7 +36,14 @@ export interface SpellExec {
   concentration?: boolean;
   /** V4u (D283): the caster heals by this share of the damage the spell dealt (흡혈의 손길: half). */
   casterHealing?: { mode: "half-damage" };
-  effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ termination?: { targetTakesDamage?: boolean; bearerAttacksOrCasts?: boolean } }>;
+  effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ termination?: { targetTakesDamage?: boolean; bearerAttacksOrCasts?: boolean };
+    /** D322: the condition lands only on a target at or below this many hit points (권능어: 충격 — 150). */ requiresHpAtMost?: number;
+    /** D322: what happens to a target over that many hit points instead, as a line on its row. */ elseNote?: string }>;
+  /**
+   * D322: a second thing the spell does after its primary, whatever the first did — 얼음 칼's shard bursting on a
+   * Dexterity save whether the attack hit or missed, 금속 가열's Constitution save after its damage lands.
+   */
+  secondary?: SpellPrimary & { appliesTo?: "all" | "damaged"; note?: string; conditions?: string[] };
   trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration;
     /** D321: conditions the bearer takes when the effect ends, and for how long (가속's lethargy). */
     endConditions?: string[]; endDuration?: string } & SpellBearerPart>;

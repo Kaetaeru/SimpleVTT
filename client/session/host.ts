@@ -900,8 +900,13 @@ export class TableHost {
         if (!isGm && !this.mayAct(userId, command.caster, caster.entry)) return refuse("자기 캐릭터로만 시전할 수 있습니다");
         const blocked = cannotAct(this.conditionsOf(caster));
         if (blocked) return refuse(`${blocked} 상태라 시전할 수 없습니다`);
-        const preparedBase = this.prepareSpell(caster, command.spellId, command.method);
-        if (!preparedBase) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
+        const preparedRaw = this.prepareSpell(caster, command.spellId, command.method);
+        if (!preparedRaw) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
+        // D322: a spell that has been waiting grows with the wait (지연 폭발 화염구: one more d6 each round).
+        const waited = command.method?.kind === "sustain" && caster.entry.kind !== "handout"
+          ? (caster.entry.runtime.effects ?? []).find((effect) => effect.key === `spell:${command.spellId}`)?.elapsed ?? 0
+          : 0;
+        const preparedBase = waited ? { ...preparedRaw, casterStats: { ...preparedRaw.casterStats, roundsElapsed: waited } } : preparedRaw;
         // V4f (D268): the variant chosen when casting patches the execution; the card names it.
         // V4r (D280): the metamagics chosen for this cast — their points, their name on the card, what they change.
         const meta = caster.entry.kind === "character" && Array.isArray(command.metamagic) && command.metamagic.length

@@ -63,6 +63,8 @@ export interface CasterStats {
   potentCantrip?: boolean;
   /** R98 (D233): added once to the spell damage (강화된 방출). */
   damageBonusOnce?: number;
+  /** D322: how many rounds a waiting spell has been waiting (지연 폭발 화염구's extra die per round). */
+  roundsElapsed?: number;
 }
 
 export interface SpellCastSpec {
@@ -121,7 +123,8 @@ export interface SpellResolution {
 }
 
 const cantripDice = (level: number) => (level >= 17 ? 4 : level >= 11 ? 3 : level >= 5 ? 2 : 1);
-const scaledCount = (dice: SpellDice, castLevel: number, exec: SpellExec, caster: CasterStats) => dice.cantripScaling ? dice.count * cantripDice(caster.level) : dice.count + Math.max(0, castLevel - exec.baseLevel) * (dice.dicePerSlotAboveBase ?? 0);
+// D322: a spell that waits grows by a die for every round it waited (지연 폭발 화염구); the host counts the rounds.
+const scaledCount = (dice: SpellDice, castLevel: number, exec: SpellExec, caster: CasterStats) => (dice.cantripScaling ? dice.count * cantripDice(caster.level) : dice.count + Math.max(0, castLevel - exec.baseLevel) * (dice.dicePerSlotAboveBase ?? 0)) + (caster.roundsElapsed ?? 0) * (dice.dicePerRoundElapsed ?? 0);
 const scaledFlat = (dice: SpellDice, castLevel: number, exec: SpellExec, caster: CasterStats) => (dice.flat ?? 0) + Math.max(0, castLevel - exec.baseLevel) * (dice.flatPerSlotAboveBase ?? 0) + (dice.addSpellcastingModifier || caster.damageModifier ? caster.modifier : 0);
 const formulaOf = (dice: SpellDice, castLevel: number, exec: SpellExec, caster: CasterStats) => { const flat = scaledFlat(dice, castLevel, exec, caster); return `${scaledCount(dice, castLevel, exec, caster)}d${dice.sides}${flat ? `${flat > 0 ? "+" : "-"}${Math.abs(flat)}` : ""}`; };
 const rollFormula = (formula: string, dice: DiceSource) => { const match = /^(\d+)d(\d+)([+-]\d+)?$/.exec(formula)!; let total = Number(match[3] ?? 0); for (let n = 0; n < Number(match[1]); n += 1) total += dice.d(Number(match[2])); return Math.max(0, total); };
@@ -202,8 +205,14 @@ export function resolveSpell(input: CastInput): SpellResolution {
   // R28 (D150): a condition the target is immune to never lands, whoever asked for it.
   const conditionMarks = (trigger: "failed-save" | "hit" | "always", target?: Combatant) => (exec.effects ?? [])
     .filter((effect) => effect.trigger === trigger || effect.trigger === "always")
+    // D322: a condition that only lands on a target weak enough (권능어: 충격 — 150 hit points or fewer).
+    .filter((effect) => !target || effect.requiresHpAtMost === undefined || target.hp.current <= effect.requiresHpAtMost)
     .map((effect) => CONDITION_KO[effect.conditionId] ?? effect.conditionId)
     .filter((condition) => !target || !immuneToCondition(target.defenses, condition));
+  /** D322: what the spell says about a target too strong for its condition ("이동 속도 0" instead of 충격). */
+  const missedThreshold = (target: Combatant) => (exec.effects ?? [])
+    .filter((effect) => effect.requiresHpAtMost !== undefined && target.hp.current > effect.requiresHpAtMost && effect.elseNote)
+    .map((effect) => effect.elseNote!);
   const afterDamage = (row: SpellTargetResult, outcome: DamageOutcome) => { row.damage = outcome; row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter; if (outcome.trait) row.note = [row.note, outcome.trait].filter(Boolean).join(" · "); };
   const targets: SpellTargetResult[] = [];
   let note: string | undefined;
@@ -277,6 +286,25 @@ export function resolveSpell(input: CastInput): SpellResolution {
     }
     case "healing": {
       const formula = formulaOf(primary.dice, spec.level, exec, casterStats);
+      // D322: one pool shared out instead of a roll each (대량 치유: 700 hit points among the chosen).
+      if (primary.pool) {
+        let left = (primary.pool.flat ?? 0) + (primary.pool.dice ? rollFormula(formulaOf(primary.pool.dice, spec.level, exec, casterStats), dice) : 0);
+        const total = left;
+        const room = (combatant: Combatant) => Math.max(0, (primary.pool!.cap === "half-max" ? Math.floor(combatant.hp.max / 2) : combatant.hp.max) - combatant.hp.current);
+        // The most hurt first, as the DM would hand it out; nobody takes more than they can hold.
+        const order = [...all].sort((a, b) => a.combatant.hp.current / Math.max(1, a.combatant.hp.max) - b.combatant.hp.current / Math.max(1, b.combatant.hp.max));
+        const given = new Map<string, number>();
+        for (const { combatant } of order) { const share = combatant.noHealing ? 0 : Math.min(left, room(combatant)); given.set(combatant.id, share); left -= share; }
+        for (const { combatant } of all) {
+          const row = base(combatant);
+          row.mode = "heal";
+          row.healed = given.get(combatant.id) ?? 0;
+          row.hpAfter = combatant.hp.current + row.healed;
+          row.note = `${total}의 회복을 나눠 받습니다${combatant.noHealing ? ` — ${combatant.noHealing}: 회복 불가` : ""}${left > 0 && combatant === order[order.length - 1].combatant ? ` · ${left} 남음 (DM 판정: 다시 나누기)` : ""}`;
+          targets.push(row);
+        }
+        break;
+      }
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "heal";
@@ -292,6 +320,21 @@ export function resolveSpell(input: CastInput): SpellResolution {
     }
     case "temporary-hp": {
       const formula = formulaOf(primary.dice, spec.level, exec, casterStats);
+      // D322: one pool of temporary hit points shared out evenly (PHB 활력의 권능어: 120 among six).
+      if (primary.pool) {
+        const total = (primary.pool.flat ?? 0) + (primary.pool.dice ? rollFormula(formulaOf(primary.pool.dice, spec.level, exec, casterStats), dice) : 0);
+        const share = all.length ? Math.floor(total / all.length) : 0;
+        for (const [index, { combatant }] of all.entries()) {
+          const amount = share + (index === 0 ? total - share * all.length : 0);
+          const row = base(combatant);
+          row.mode = "temp";
+          row.tempHp = Math.max(combatant.hp.temp, amount);
+          row.tempAfter = row.tempHp;
+          row.note = `임시 HP ${total}을(를) ${all.length}명이 나눔 = ${amount} (DM 판정: 다르게 나눌 수 있습니다)`;
+          targets.push(row);
+        }
+        break;
+      }
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "temp";
@@ -348,13 +391,15 @@ export function resolveSpell(input: CastInput): SpellResolution {
     case "maximum-hp": {
       // 원조: the target's HP maximum and current HP both rise. The card applies the current-HP half; the new
       // maximum is the table's to keep, because it lasts eight hours and the sheet derives its own maximum.
-      const amount = (primary.amount as number ?? 5) + (primary.amountPerSlotAboveBase as number ?? 0) * Math.max(0, spec.level - (exec.baseLevel ?? spec.level));
+      // D322: the rise may be dice (영웅 연회: 2d10), rolled once for everyone at the feast.
+      const rise = primary.dice ? formulaOf(primary.dice as SpellDice, spec.level, exec, casterStats) : "";
+      const amount = rise ? rollFormula(rise, dice) : (primary.amount as number ?? 5) + (primary.amountPerSlotAboveBase as number ?? 0) * Math.max(0, spec.level - (exec.baseLevel ?? spec.level));
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "heal";
         row.healed = amount;
         row.hpAfter = combatant.hp.current + amount;
-        row.note = `최대 HP와 현재 HP가 ${amount} 늘어납니다 (8시간)`;
+        row.note = `최대 HP와 현재 HP가 ${amount} 늘어납니다${rise ? ` (${rise})` : ""}`;
         targets.push(row);
       }
       break;
@@ -427,6 +472,40 @@ export function resolveSpell(input: CastInput): SpellResolution {
   if (exec.removesConditions?.length) {
     const ended = exec.removesConditions.map((id) => CONDITION_KO[id] ?? id);
     for (const row of targets) if (!row.save?.success) row.clears = [...new Set([...(row.clears ?? []), ...ended])];
+  }
+  // D322: the spell's second act — 얼음 칼's shard bursting whether the attack hit or missed, 금속 가열's save
+  // after its damage. Its own dice are rolled once for everyone it reaches, as an area's are.
+  const secondary = exec.secondary;
+  if (secondary) {
+    const reached = targets.filter((row) => secondary.appliesTo !== "damaged" || (row.attack?.damageTotal ?? row.damage?.damageTotal ?? 0) > 0);
+    const seconds = new Map(all.map((entry) => [entry.combatant.id, entry]));
+    const parts: DamagePart[] = secondary.kind === "save-damage" ? [{ formula: formulaOf(secondary.dice, spec.level, exec, casterStats), type: secondary.damageType, label: secondary.note ?? spec.name }] : [];
+    const rolled = parts.map((part) => { const match = /^(\d+)d(\d+)/.exec(part.formula); return match ? Array.from({ length: Number(match[1]) }, () => dice.d(Number(match[2]))) : []; });
+    for (const row of reached) {
+      const entry = seconds.get(row.target.id);
+      if (!entry || !("saveAbility" in secondary)) continue;
+      const live = { ...entry.combatant, hp: { ...entry.combatant.hp, current: row.hpAfter, temp: row.tempAfter } };
+      const second = save(live, entry.stats, String(secondary.saveAbility));
+      const failed = !second.success;
+      if (secondary.kind === "save-damage" && failed) {
+        const outcome = applyDamage(live, parts, dice, { fixed: rolled, half: secondary.successDamage === "half" && second.success });
+        row.damage = row.damage ? { ...outcome, damage: [...row.damage.damage, ...outcome.damage], damageTotal: row.damage.damageTotal + outcome.damageTotal } : outcome;
+        row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter;
+      } else if (secondary.kind === "save-damage" && second.success && secondary.successDamage === "half") {
+        const outcome = applyDamage(live, parts, dice, { fixed: rolled, half: true });
+        row.damage = row.damage ? { ...outcome, damage: [...row.damage.damage, ...outcome.damage], damageTotal: row.damage.damageTotal + outcome.damageTotal } : outcome;
+        row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter;
+      }
+      if (failed && secondary.conditions?.length) row.marks = [...new Set([...row.marks, ...secondary.conditions.map((id) => CONDITION_KO[id] ?? id).filter((name) => !immuneToCondition(live.defenses, name))])];
+      row.note = [row.note, `${secondary.note ?? "두 번째 효과"}: ${ABILITY_KO[second.ability]} 내성 ${second.total} vs DC ${second.dc} — ${second.success ? "성공" : "실패"}`].filter(Boolean).join(" · ");
+      if (!row.save) row.save = second;
+    }
+  }
+  // D322: a condition its target was too strong for says what happened instead.
+  for (const row of targets) {
+    const entry = all.find((item) => item.combatant.id === row.target.id);
+    const missed = entry ? missedThreshold(entry.combatant) : [];
+    if (missed.length) row.note = [row.note, ...missed].filter(Boolean).join(" · ");
   }
   // V4u (D283): the caster drinks part of what the spell dealt (흡혈의 손길: half the necrotic damage).
   const dealt = targets.reduce((sum, row) => sum + Math.max(0, row.attack?.damageTotal ?? row.damage?.damageTotal ?? 0), 0);
