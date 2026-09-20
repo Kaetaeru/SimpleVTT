@@ -8520,9 +8520,6 @@
         "trigger": "failed-save",
         "duration": {
          "kind": "concentration"
-        },
-        "termination": {
-         "targetTakesDamage": true
         }
        }
       ],
@@ -8541,12 +8538,13 @@
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle. D325: damage brings the save round again instead of ending the spell outright.",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "repeatSaveOnDamage": true
      }
     }
    ]
@@ -8626,9 +8624,6 @@
         "trigger": "failed-save",
         "duration": {
          "kind": "concentration"
-        },
-        "termination": {
-         "targetTakesDamage": true
         }
        }
       ],
@@ -8647,12 +8642,13 @@
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle. D325: damage brings the save round again instead of ending the spell outright.",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "repeatSaveOnDamage": true
      }
     }
    ]
@@ -8731,9 +8727,6 @@
         "trigger": "failed-save",
         "duration": {
          "kind": "concentration"
-        },
-        "termination": {
-         "targetTakesDamage": true
         }
        }
       ],
@@ -8752,12 +8745,13 @@
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle. D325: damage brings the save round again instead of ending the spell outright.",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "repeatSaveOnDamage": true
      }
     }
    ]
@@ -15509,7 +15503,7 @@
         }
        }
       ],
-      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.",
+      "executionScope": "Catalog-derived roll, health, save, condition, and authoritative cast lifecycle. D325: the target repeats the save at the end of each of its turns and whenever it takes damage.",
       "components": {
        "verbal": true,
        "somatic": true,
@@ -15518,7 +15512,8 @@
        ]
       },
       "ritual": false,
-      "repeatSave": "turn-end"
+      "repeatSave": "turn-end",
+      "repeatSaveOnDamage": true
      }
     }
    ]
@@ -20137,9 +20132,6 @@
         "trigger": "failed-save",
         "duration": {
          "kind": "concentration"
-        },
-        "termination": {
-         "targetTakesDamage": true
         }
        },
        {
@@ -20147,19 +20139,17 @@
         "trigger": "failed-save",
         "duration": {
          "kind": "concentration"
-        },
-        "termination": {
-         "targetTakesDamage": true
         }
        }
       ],
       "trackedEffects": [],
-      "executionScope": "지혜 내성 실패 시 집중 동안 매혹+행동불능(피해를 받으면 끝). DM 판정: 당신과 전투 중이면 첫 내성에 이점, 다른 주문의 대상이 되면 종료, 기억 내용과 상위 슬롯의 시간 범위.",
+      "executionScope": "지혜 내성 실패 시 집중 동안 매혹+행동불능(피해를 받으면 끝). DM 판정: 당신과 전투 중이면 첫 내성에 이점, 다른 주문의 대상이 되면 종료, 기억 내용과 상위 슬롯의 시간 범위. D325: damage brings the save round again instead of ending the spell outright.",
       "components": {
        "verbal": true,
        "somatic": true
       },
-      "ritual": false
+      "ritual": false,
+      "repeatSaveOnDamage": true
      }
     }
    ]

@@ -268,6 +268,7 @@
 - D322: `healing`·`temporary-hp`의 `pool`(`flat`/`dice`, 치유는 `cap: "half-max"`)은 한 뭉치를 대상들이 나눠 받는다 — 치유는 많이 다친 쪽부터, 임시 HP는 고르게. `maximum-hp`는 `dice`로 올릴 수 있다.
 - D322: `secondary`는 첫 효과 뒤에 오는 두 번째 굴림(`save-damage`·`save-effect`, `appliesTo: "all"|"damaged"`, `conditions[]`, `note`).
 - D323: `trackedEffects[].modifier`의 `conditions`(그 상태를 걸려는 내성에만)·`creatureTypes`(그 종류의 공격에만), 조각의 `deathSaveAdvantage`·`healingMaximized`(받는 치유가 최대값).
+- D325: `effects[].termination.targetTakesDamage`는 피해를 받으면 효과를 끝내고, 주문의 `repeatSaveOnDamage`는 끝내는 대신 내성을 다시 굴리게 한다(지배 계열).
 - D323: `countedSave: {successes, failures, onFailures[], note}` — 반복 내성을 세어 세 번이면 끝나거나 상태가 굳는다(육신 석화).
 - D322: `effects[]`의 `requiresHpAtMost`는 그 HP 이하인 대상에게만 상태를 걸고, `elseNote`는 그보다 센 대상의 줄에 남길 말이다.
 - `effects[]`(상태), `trackedEffects[]`(지속 효과가 굴림에 주는 것 — `modifier`, `attackDamage`(D321: `dicePerSlotAboveBase`로 슬롯마다 주사위가 늘고, `againstTargetOnly`가 없으면 보유자가 명중시킬 때마다 붙는다), `damageDefenses`, D316 `conditionImmunities`, D321 `noHealing`(보유자가 HP를 회복하지 못한다)·`endConditions`+`endDuration`(효과가 끝날 때 남기는 상태)), `removesConditions[]`(D316: 주문 종류와 상관없이, 내성에 성공한 대상만 빼고 적용)

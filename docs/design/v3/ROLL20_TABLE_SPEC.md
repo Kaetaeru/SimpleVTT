@@ -647,7 +647,9 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D322 나뉘거나 자라거나 조건이 붙는 수 (V0.9 V7o, SRD 계획 §13)**: CLAUDE.md §1.1·§2. `primary.pool`(대량 치유의 700을 가장 다친 쪽부터, 임시 HP 풀은 고르게), `maximum-hp`의 `dice`(영웅 연회 2d10), `dice.dicePerRoundElapsed`(지연 폭발 화염구가 기다린 라운드마다 +1d6), `secondary`(얼음 칼의 파편은 명중과 무관하게 터지고, 금속 가열은 피해 뒤 건강 내성), `effects[].requiresHpAtMost`·`elseNote`(권능어: 충격은 150 이하만).
 - **D323 효과가 굴림에 붙이는 조건 (V0.9 V7p, SRD 계획 §14)**: CLAUDE.md §1.1·§2. `modifier.conditions`(독으로부터의 보호 — 중독 내성에만 이점), `modifier.creatureTypes`(선악 보호·성스러운 오라 — 그 종류의 공격에만 불리), `deathSaveAdvantage`·`healingMaximized`(희망의 봉화), `countedSave`(육신 석화 — 3회 성공이면 끝, 3회 실패면 석화; 횟수는 효과의 `tally`).
 - **D324 쓰는 순간에 내고 돌려받는 것 (V0.9 V7q, SRD 계획 §15)**: CLAUDE.md §1.1·§2. 명중 창의 `healing.apply`(+`hitDice`로 히트 다이스 소모 — 생명 흡수자), 시전 순간의 진입점 `invocation: "cast"`와 `resource.recharge.succeedsOnValue`(주문 회상의 은총: 1d4가 슬롯 레벨과 같으면 슬롯 유지), 자원의 `params.maximized`(악마적 활력의 무료 거짓 생명은 임시 HP 최대값), 지옥으로 내던지기의 8d10에 매력 내성.
+- **D325 피해를 받는 순간 (V0.9 V7r, SRD 계획 §16)**: CLAUDE.md §1.1·§1.2·§2. 호스트가 HP를 쓰는 모든 자리를 한 문으로 모아 `termination.targetTakesDamage`를 실제로 실행한다(수면·매혹 계열이 피해에 끝난다). 지배 계열과 끔찍한 웃음은 끝나는 게 아니라 내성을 다시 굴린다(`repeatSaveOnDamage`) — 그동안 즉시 끝으로 잘못 적혀 있었다. 보복은 명중 반응 창 + 명중 아닌 피해용 버튼.
 
+| V7r 피해를 받는 순간 (D325) ✔ | 한 문으로 모은 피해 종료·피해 시 내성 반복 | 게이트 통과(d325-damage-taken 3개) |
 | V7q 쓰는 순간 (D324) ✔ | 명중 창 회복·히트 다이스, 시전 굴림, 최대값 무료 시전 | 게이트 통과(d324-cast-and-hit 3개) |
 | V7p 조건부 효과 (D323) ✔ | 조건·종류 한정, 죽음 내성·치유 최대화, 누적 내성 | 게이트 통과(d323-conditional-effects 4개) |
 | V7o 나뉘거나 자라는 수 (D322) ✔ | 치유 풀, 최대 HP 주사위, 대기 주사위, 두 번째 효과, HP 문턱 | 게이트 통과(d322-pools-and-growth 5개) |

@@ -2180,6 +2180,26 @@ export class TableHost {
    * `advanceRound` (which keeps its log), a monster through the same arithmetic, and the conditions an effect
    * carried come off with it (on the sheet and on its token).
    */
+  /**
+   * D325: damage ends the effects whose spells say so (눈빛, 각성, 수면 …). Every path that writes hit points comes
+   * through here, so it does not matter whether the damage came from a swing, a spell, a contract strike or an aura.
+   */
+  private endOnDamage(entryId: string, damage: number) {
+    if (damage <= 0) return;
+    const entry = this.journalEntries.get(entryId);
+    if (!entry || entry.kind === "handout") return;
+    const execOf = (effect: ActiveEffect) => (effect.key.startsWith("spell:") && (effect.bearer || effect.from) ? spellExec(effect.key.slice("spell:".length)) : undefined);
+    const gone = (entry.runtime.effects ?? []).filter((effect) => (execOf(effect)?.effects ?? []).some((item) => item.termination?.targetTakesDamage));
+    if (gone.length) this.shedEffects(entry, gone, "피해를 받음");
+    // D325: and the ones whose save comes round again when their bearer is hurt (지배 계열, 끔찍한 웃음).
+    const again = (this.journalEntries.get(entryId) as typeof entry)?.runtime.effects ?? [];
+    for (const effect of again) {
+      if (!effect.endSave || !execOf(effect)?.repeatSaveOnDamage) continue;
+      const actor = this.resolveActor({ entryId });
+      if (actor) this.rollEffectSave(actor, effect, "피해를 받아");
+    }
+  }
+
   /** D321: the turn-start and turn-end rules of the spell effects a monster is under (damage, temporary HP, conditions). */
   private runEffectTurn(entryId: string, boundary: "start" | "end") {
     const entry = this.journalEntries.get(entryId);
@@ -2779,6 +2799,8 @@ export class TableHost {
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed === "unconscious") this.holdAtZero(before.id);
       if (downed) this.releaseGrapples(target.page, target.token?.id);
+      // D325: damage ends the effects whose spells say so (수면, 각성 …), wherever it came from.
+      this.endOnDamage(before.id, before.runtime.hp.current - row.hpAfter);
       // R26 (D136): reverse this row, not the sheet as it was — healing, damage, marks and the effect it started.
       const delta = {
         hp: before.runtime.hp.current - row.hpAfter,
@@ -2821,6 +2843,8 @@ export class TableHost {
       const markers = [...live.markers.filter((marker) => !clears.includes(marker.name)), ...added.map((name) => ({ name }))];
       this.storeToken(page, { ...live, bars: [{ ...bar!, value: row.hpAfter }, live.bars[1], live.bars[2]], markers });
       if (downed) this.releaseGrapples(page, token.id);
+      // D325: the hit points are on the token, the effects on the sheet — the damage still reaches them.
+      if (live.represents) this.endOnDamage(live.represents, (bar!.value ?? 0) - row.hpAfter);
       const delta = { bar: (bar!.value ?? 0) - row.hpAfter, markers: added };
       return () => { restoreEndSaves(); this.undoOnToken(page.id, before.id, delta); };
     }
@@ -2828,11 +2852,26 @@ export class TableHost {
     const added = marks.filter((name) => !before.runtime.conditions.includes(name));
     const conditions = [...before.runtime.conditions.filter((name) => !clears.includes(name)), ...added];
     this.storeEntry({ ...before, runtime: { ...before.runtime, hp: { ...before.runtime.hp, current: row.hpAfter, temp: row.tempHp ?? row.tempAfter }, conditions, updatedAt: now }, updatedAt: now });
+    this.endOnDamage(before.id, before.runtime.hp.current - row.hpAfter);
     const delta = { hp: before.runtime.hp.current - row.hpAfter, temp: before.runtime.hp.temp - (row.tempHp ?? row.tempAfter), conditions: added, endSaveKeys: row.effect?.endSave ? [row.effect.key] : [], effectKeys: row.effect ? [row.effect.key] : [] };
     return () => this.undoOnNpc(before.id, delta);
   }
 
   /** R10: at the end of a creature's turn it repeats the saves its effects allow; a success ends the effect and its conditions. */
+  /** D325: one effect's own save, rolled outside the turn boundary (damage brings the save round again). */
+  private rollEffectSave(actor: { entry: JournalEntry; token?: Token; page?: Page }, effect: ActiveEffect, why: string) {
+    const stats = this.statsOf(actor);
+    if (!stats || !effect.endSave || actor.entry.kind === "handout") return;
+    const die = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
+    const bonus = stats.saves[effect.endSave.ability] ?? 0;
+    const success = die + bonus >= effect.endSave.dc;
+    const name = actor.token?.name ?? actor.entry.name;
+    this.say({ type: "rollresult", who: "", content: `${name} · ${effect.name} ${why} 내성 (${ABILITY_KO[effect.endSave.ability]}) ${die}${bonus >= 0 ? "+" : ""}${bonus} = ${die + bonus} vs DC ${effect.endSave.dc} — ${success ? "성공, 효과 끝" : "실패"}`, roll: { formula: `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`, total: die + bonus, dice: [{ sides: 20, value: die }], modifier: bonus, label: `${name} · ${effect.name} ${why} 내성 — ${success ? "성공, 효과 끝" : "실패"} (DC ${effect.endSave.dc})` } });
+    if (!success) return;
+    const live = this.journalEntries.get(actor.entry.id);
+    if (live && live.kind !== "handout") this.shedEffects(live, [effect], `${why} 내성 성공`);
+  }
+
   private rollEndSaves(actor: { entry: JournalEntry; token?: Token; page?: Page }) {
     const stats = this.statsOf(actor);
     if (!stats) return;
@@ -3028,6 +3067,7 @@ export class TableHost {
       runtime = this.takeDeathFailures(runtime, resolution.deathFailures, resolution.target.name, resolution.attack.name);
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
       if (resolution.downed === "unconscious") this.holdAtZero(before.id);
+      this.endOnDamage(before.id, before.runtime.hp.current - resolution.hpAfter);
       // R26 (D136): the undo is this card's own change, not a photograph of the sheet before it.
       const delta = { hp: before.runtime.hp.current - resolution.hpAfter, temp: before.runtime.hp.temp - resolution.tempAfter, conditions: runtime.conditions.filter((name) => !before.runtime.conditions.includes(name)), deathFailures: resolution.deathFailures, restore: dropped ? [dropped] : [], note: `되돌림: ${resolution.attacker.name}의 ${resolution.attack.name}` };
       restores.push(() => this.undoOnCharacter(before.id, delta));
@@ -3042,6 +3082,8 @@ export class TableHost {
         this.storeToken(page, { ...token, bars: [{ ...bar!, value: resolution.hpAfter }, token.bars[1], token.bars[2]], markers: [...markers, ...inflicted] });
         const added = [...(resolution.downed && !beforeToken.markers.some((marker) => marker.name === "사망") ? ["사망"] : []), ...inflicted.map((marker) => marker.name)];
         const delta = { bar: (bar!.value ?? 0) - resolution.hpAfter, markers: added };
+        // D325: the hit points live on the token, the effects on the sheet — the damage still ends what it ends.
+        if (token.represents) this.endOnDamage(token.represents, (bar!.value ?? 0) - resolution.hpAfter);
         restores.push(() => this.undoOnToken(page.id, beforeToken.id, delta));
       } else {
         const before = target.entry;
@@ -3049,6 +3091,7 @@ export class TableHost {
         const conditions = [...before.runtime.conditions, ...added];
         this.storeEntry({ ...before, runtime: { ...before.runtime, hp: { ...before.runtime.hp, current: resolution.hpAfter, temp: resolution.tempAfter }, conditions, updatedAt: this.now() }, updatedAt: this.now() });
         const delta = { hp: before.runtime.hp.current - resolution.hpAfter, temp: before.runtime.hp.temp - resolution.tempAfter, conditions: added };
+        this.endOnDamage(before.id, before.runtime.hp.current - resolution.hpAfter);
         restores.push(() => this.undoOnNpc(before.id, delta));
       }
     }

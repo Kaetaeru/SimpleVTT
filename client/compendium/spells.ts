@@ -62,6 +62,8 @@ export interface SpellExec {
   reaction?: SpellReaction;
   /** H6c (D250): the target repeats the save at the end of each of its turns (see `repeatSaveOf`). */
   repeatSave?: "turn-end";
+  /** D325: the target repeats that save whenever it takes damage (지배 계열, 끔찍한 웃음). */
+  repeatSaveOnDamage?: boolean;
   /**
    * D323: the repeated save is counted (육신 석화): three successes end the spell, three failures turn the target
    * to stone. They need not run together — the tally rides on the effect.

@@ -19281,14 +19281,22 @@
      "id": "feature:barbarian.berserker.retaliation",
      "entryPoints": [
       {
-       "id": "rule",
+       "id": "retaliate",
+       "label": "보복 (근접 공격)",
        "invocation": "manual",
        "operations": [
         {
-         "kind": "property.modify",
-         "property": "rule.applied-elsewhere",
-         "operation": "set",
-         "note": "공격에 맞으면 뜨는 반응 창에서"
+         "kind": "economy.modify",
+         "bucket": "free.attack:weapon-or-unarmed",
+         "amount": {
+          "value": 1
+         },
+         "target": "self",
+         "note": "5피트 안에서 나를 다치게 한 크리처에게"
+        },
+        {
+         "kind": "adjudication.request",
+         "question": "나를 다치게 한 크리처가 5피트 안에 있을 때 누릅니다 (장면에 위치가 없어 표에서 확인)"
         }
        ]
       }
