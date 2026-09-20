@@ -907,11 +907,31 @@ export class TableHost {
         if (blocked) return refuse(`${blocked} 상태라 시전할 수 없습니다`);
         const preparedRaw = this.prepareSpell(caster, command.spellId, command.method);
         if (!preparedRaw) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
+        // D331: a spell that heals on the caster's own Hit Point Dice spends them before it rolls (비전 활력).
+        let spentDice: { total: number; note: string } | undefined;
+        const healsWithDice = preparedRaw.spec.exec.primary.kind === "healing" ? (preparedRaw.spec.exec.primary as { hitDice?: { count: number; perSlotAboveBase?: number } }).hitDice : undefined;
+        if (healsWithDice && caster.entry.kind === "character") {
+          const asked = healsWithDice.count + Math.max(0, preparedRaw.spec.level - preparedRaw.spec.exec.baseLevel) * (healsWithDice.perSlotAboveBase ?? 0);
+          const rolls: string[] = [];
+          let total = 0;
+          for (let at = 0; at < asked; at += 1) {
+            const live = this.journalEntries.get(caster.entry.id);
+            if (live?.kind !== "character") break;
+            const spend = this.options.pcSpendHitDie?.(live, this.options.random ?? Math.random);
+            if (!spend) break;
+            // The die is spent here; the healing itself lands with the spell's card.
+            this.storeEntry({ ...live, runtime: { ...spend.runtime, hp: { ...spend.runtime.hp, current: live.runtime.hp.current }, updatedAt: this.now() }, updatedAt: this.now() });
+            rolls.push(`${spend.die} ${spend.rolled}`);
+            total += spend.rolled;
+          }
+          if (rolls.length) spentDice = { total, note: `히트 다이스 ${rolls.join(", ")}` };
+          else this.say({ type: "system", who: "", content: `${caster.entry.name}: 남은 히트 다이스가 없습니다` });
+        }
         // D322: a spell that has been waiting grows with the wait (지연 폭발 화염구: one more d6 each round).
         const waited = command.method?.kind === "sustain" && caster.entry.kind !== "handout"
           ? (caster.entry.runtime.effects ?? []).find((effect) => effect.key === `spell:${command.spellId}`)?.elapsed ?? 0
           : 0;
-        const preparedBase = waited ? { ...preparedRaw, casterStats: { ...preparedRaw.casterStats, roundsElapsed: waited } } : preparedRaw;
+        const preparedBase = waited || spentDice ? { ...preparedRaw, casterStats: { ...preparedRaw.casterStats, ...(waited ? { roundsElapsed: waited } : {}), ...(spentDice ? { hitDiceRolled: spentDice } : {}) } } : preparedRaw;
         // V4f (D268): the variant chosen when casting patches the execution; the card names it.
         // V4r (D280): the metamagics chosen for this cast — their points, their name on the card, what they change.
         const meta = caster.entry.kind === "character" && Array.isArray(command.metamagic) && command.metamagic.length
@@ -1831,8 +1851,12 @@ export class TableHost {
     const spent = used && used.mark === this.turnMark() ? used.keys : [];
     // H2 (D239): a fact the table computes (`auto`) is never asked — the offer drops when it is false, and shows
     // without the checkbox when it is true (거상 학살자 only against a wounded creature).
+    // D331: "once per turn against each creature" counts the creature too (요정 방랑자), so the same swing at
+    // somebody else still offers it.
+    const perTargetKey = (key: string) => `${key}@${target.entry.id}`;
     return (this.options.pcHitOffers?.(entry, attackId, riders) ?? [])
-      .filter((offer) => !(offer.oncePerTurn && spent.includes(offer.key)))
+      .filter((offer) => !(offer.oncePerTurn && !offer.oncePerTurnPerTarget && spent.includes(offer.key)))
+      .filter((offer) => !(offer.oncePerTurnPerTarget && spent.includes(perTargetKey(offer.key))))
       // V4h (D270): a computed fact that came out false drops the offer, unless it says to ask instead.
       .filter((offer) => (offer.facts ?? []).every((fact) => !fact.auto || fact.orAsk || this.targetFact(fact.auto, target, resolution)))
       .map((offer) => { const facts = offer.facts?.filter((fact) => !fact.auto || (fact.orAsk && !this.targetFact(fact.auto, target, resolution))); return facts?.length === offer.facts?.length ? offer : { ...offer, facts: facts?.length ? facts : undefined }; });
@@ -1944,7 +1968,10 @@ export class TableHost {
   private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; spellSmite?: { spellId: string; slot: number } }, auto: HitOffer[]): string {
     const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], spellSmite: answer.spellSmite };
     if (!all.choices.length) { const card = this.finishAttack(held); this.hitRiderCards(held.spec, held.attacker, held.target, held.resolution, card, Boolean(held.waits), held.inputs.by); return card; }
-    this.useThisTurn(held.attacker.entry.id, all.choices);
+    // D331: a per-target rider is remembered against the creature it was used on, not against the turn as a whole.
+    const perTarget = new Set((this.options.pcHitOffers && held.attacker.entry.kind === "character" && held.inputs.attack.source === "weapon"
+      ? this.options.pcHitOffers(held.attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) : []).filter((offer) => offer.oncePerTurnPerTarget).map((offer) => offer.key));
+    this.useThisTurn(held.attacker.entry.id, all.choices.map((key) => (perTarget.has(key) ? `${key}@${held.target.entry.id}` : key)));
     // H2 (D239): the computed facts of what was chosen count as confirmed.
     if (held.attacker.entry.kind === "character" && held.inputs.attack.source === "weapon") {
       for (const offer of this.options.pcHitOffers?.(held.attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []) {

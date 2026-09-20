@@ -50,7 +50,7 @@ export const PROPERTIES = [
   // R51 (D186): what the PHB feats needed and the vocabulary did not have.
   "damage-taken.reduce", "damage.ignore-resistance",
   // R95 (D230): 회피술 on a sheet, and 기묘한 회피 inside a reaction window.
-  "saving-throw.evasion", "damage-taken.halve", "reaction.auto-miss", "reaction.strike-back", "reaction.redirect",
+  "saving-throw.evasion", "damage-taken.halve", "reaction.auto-miss", "reaction.strike-back", "reaction.redirect", "spell.attack-roll.ignore-cover",
   // R96 (D231): 강력한 주문 시전, 생명의 제자, 최상급 치유, 포착 불가.
   "spell.cantrip-damage.ability-modifier", "healing.spell-slot-bonus", "healing.maximize", "spell.damage.maximize", "attack-roll.against-me.no-advantage", "initiative.advantage",
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
@@ -151,6 +151,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.advantage": application.advantageOn = [...(application.advantageOn ?? []), { reason: operation.note ?? "", ...(operation.scope ? { scope: operation.scope } : {}) }]; break;
       case "attack-roll.against-me.advantage": application.grantsAdvantage = [...(application.grantsAdvantage ?? []), operation.note ?? ""]; break;
       case "attack-roll.ignore-cover": application.ignoresCover = true; break;
+      // D331: 주문 저격수 — only the caster's spell attacks ignore cover, not every swing they make.
+      case "spell.attack-roll.ignore-cover": application.ignoresCoverForSpells = true; break;
       case "saving-throw.evasion": application.evasion = true; break;
       // D318: advantage on the Constitution save that keeps concentration (섬뜩한 정신, 전쟁 시전자).
       case "saving-throw.concentration-advantage": application.concentrationAdvantage = true; break;

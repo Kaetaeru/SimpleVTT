@@ -338,7 +338,7 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
   if (savage) offers.push({ key: "savage", label: savage, oncePerTurn: true, hint: "무기 피해 주사위를 한 번 더 굴려 높은 쪽 · 턴당 한 번" });
   const runtime = entry.runtime;
   const riders = offeredRiders(derived, attack, { moment: "on-hit", effects: (runtime.effects ?? []).map((effect) => effect.name), left: (resourceId) => (resourceId === PACT_SLOT_RESOURCE ? (derived.pactMagic?.count ?? 0) - runtime.pactSlotsUsed : (derived.resources.find((item) => item.id === resourceId)?.max ?? 0) - (runtime.resourcesUsed[resourceId] ?? 0)) });
-  for (const rider of riders) if (!(already.contracts ?? []).includes(rider.key)) offers.push({ key: rider.key, label: rider.label, hint: rider.hint, ...(rider.oncePerTurn ? { oncePerTurn: true } : {}), ...(rider.facts.length ? { facts: rider.facts } : {}) });
+  for (const rider of riders) if (!(already.contracts ?? []).includes(rider.key)) offers.push({ key: rider.key, label: rider.label, hint: rider.hint, ...(rider.oncePerTurn ? { oncePerTurn: true } : {}), ...(rider.oncePerTurnPerTarget ? { oncePerTurnPerTarget: true } : {}), ...(rider.facts.length ? { facts: rider.facts } : {}) });
   return offers;
 }
 

@@ -38,6 +38,8 @@ export interface ContractRider {
   /** Weapon filter, in the same vocabulary `property.modify` uses (`heavy`, `strength-melee`, `unarmed` …). */
   scope?: string;
   oncePerTurn: boolean;
+  /** D331: once per turn against each creature (요정 방랑자), not once in all. */
+  oncePerTurnPerTarget?: boolean;
   /** Effects that must already be running for this to be offered (광란 needs 격노 and 무모한 공격). */
   requiresEffects: string[];
   /**
@@ -96,7 +98,7 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
     const moment = entry.invocation === "on-hit" ? "on-hit" : "pre-roll";
     const rider: ContractRider = {
       key, label, hint: "", moment, ...(entry.attack.scope ? { scope: entry.attack.scope } : {}),
-      oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], dice: [], saves: [], cost: 0,
+      oncePerTurn: entry.attack.oncePerTurn, ...(entry.attack.oncePerTurnPerTarget ? { oncePerTurnPerTarget: true } : {}), requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], dice: [], saves: [], cost: 0,
     };
     const hints: string[] = [];
     // R57 (D192): a fact this entry point declares is a checkbox, not prose; an operation gated on one carries the

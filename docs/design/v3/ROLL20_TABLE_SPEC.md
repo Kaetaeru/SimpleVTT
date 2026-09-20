@@ -653,7 +653,9 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D328 소환 개수와 저장한 문양 (V0.9 V7u, SRD 계획 §19)**: CLAUDE.md §1.1·§1.3·§2. `summon.count`(물체 조종 — 시전 능력치 수정치만큼, 크기별 스탯블록), 수호 문양·상징은 새길 때 고른 갈래가 `sustain`을 정하고 발동은 값이 들지 않는 ↻다. **이로써 SRD 문법 공백 표가 비었다.**
 - **D329 PHB 공백 1차 (V0.9 V7v, SRD 계획 §20)**: CLAUDE.md §1.1·§1.6·§2. `grant.proficiency`의 `tools`(요리사·제작자·음악가), `temp-hp.grant`의 `pool: "share"`(고무하는 강타), 대상 효과가 공격자 굴림에서 빼는 주사위(칼날 방호 −1d4). PHB 교정 87건으로 다시 빌드 — 재주 계약은 `effect.feat.phb2024.*` 항목에 있어서 1차 검토의 재주 교정 7건이 안 먹고 있었고, 대상 id를 옮겨 살렸다. 표 검증 거절 0.
 - **D330 선행 조건과 무기 범위 (V0.9 V7w, SRD 계획 §21)**: CLAUDE.md §1.3·§2. `feat-definition.requires`에 `armor-training:<등급>`·`shield-training`(중갑 달인 등 다섯 재주가 이유와 함께 잠긴다), `attack.scope`가 식이 된다 — `a|b`·`a+b`·`items:<id>,<id>`(장병기 달인이 육척봉·창과 중량+간격 무기만 잡는다).
+- **D331 좁은 규칙 (V0.9 V7x, SRD 계획 §22)**: CLAUDE.md §1.1·§2. `spell.attack-roll.ignore-cover`(주문 저격수는 주문만), `attack.oncePerTurnPerTarget`(요정 방랑자는 대상마다 턴당 한 번), `primary.healing.hitDice`(비전 활력이 시전자의 히트 다이스를 써서 회복).
 
+| V7x 좁은 규칙 (D331) ✔ | 주문 전용 엄폐 무시, 대상별 턴당 1회, 히트 다이스 치유 | 게이트 통과(d331 3개) |
 | V7w 선행 조건·무기 범위 (D330) ✔ | 재주 선행 조건, scope 식 | 게이트 통과(d330 2개), PHB 표 검증 거절 0 |
 | V7v PHB 공백 1차 (D329) ✔ | 도구 숙련, 임시 HP 풀, 공격자 굴림 감산 | 게이트 통과(d329-phb-grammar 3개), PHB 표 검증 거절 0 |
 | V7u 소환 개수·문양 (D328) ✔ | SRD 공백 표를 비움 | 게이트 통과(d328-summons-and-glyphs 3개) |

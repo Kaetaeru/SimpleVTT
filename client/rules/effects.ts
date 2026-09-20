@@ -118,6 +118,8 @@ export interface EffectApplication {
   grantsAdvantage?: string[];
   /** R55 (D190): this character's attacks ignore half and three-quarters cover. */
   ignoresCover?: boolean;
+  /** D331: only this caster's spell attacks ignore cover (주문 저격수). */
+  ignoresCoverForSpells?: boolean;
   /** R61 (D196): reasons this character's checks and saves are advantaged. */
   rollAdvantage?: RollAdvantage[];
   /** R56 (D191): armour and weapon training a feat hands out, and skills it makes expert. */
@@ -395,6 +397,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
       notes.push(`이 캐릭터를 향한 공격 유리 (${named.join(", ")})`);
     }
     if (application.ignoresCover) { next = { ...next, ignoresCover: true }; notes.push("엄폐 무시"); }
+    if (application.ignoresCoverForSpells) { next = { ...next, ignoresCoverForSpells: true }; notes.push("주문 공격의 엄폐 무시"); }
     if (application.rollAdvantage?.length) {
       const named = application.rollAdvantage.map((item) => ({ ...item, reason: item.reason ? `${label}: ${item.reason}` : label }));
       next = { ...next, rollAdvantage: [...(next.rollAdvantage ?? []), ...named] };

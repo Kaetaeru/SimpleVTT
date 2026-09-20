@@ -146,7 +146,7 @@ export interface ContractEntryPoint {
    * pressed on the sheet. `scope` is the weapon filter it applies to (the same vocabulary `property.modify` uses),
    * `requiresEffects` the effects that must already be running, and `oncePerTurn` the budget the player keeps.
    */
-  attack?: { scope?: string; oncePerTurn: boolean; requiresEffects: string[] };
+  attack?: { scope?: string; oncePerTurn: boolean; /** D331: once per turn against each creature (요정 방랑자). */ oncePerTurnPerTarget?: boolean; requiresEffects: string[] };
   /** V3d (D258): the name of this use when a feature has several — the sheet gets a line and a button per use. */
   label?: string;
   /** V4a (D263): a kill entry point also answers another creature's kill, when the owner confirms they were close (어둠의 존재의 축복). */
@@ -436,7 +436,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
     // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
     if (invocation !== "manual" && invocation !== GAIN_INVOCATION && invocation !== TURN_START_INVOCATION && invocation !== TURN_END_INVOCATION && invocation !== CAST_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
-    const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
+    const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; oncePerTurnPerTarget?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;
     if (rawTest) {
@@ -458,7 +458,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
       ...(Array.isArray(entry.payments) ? { payments: parsePayments(entry.payments, `entryPoints[${index}].payments`, unsupported) } : {}),
       ...(targeting ? { targeting: { from: String(targeting.from ?? "targets"), min: targeting.min ?? 1, max: targeting.max ?? 1 } } : {}),
       ...(test ? { test } : {}),
-      ...(ATTACK_INVOCATIONS.has(invocation) ? { attack: { ...(attack?.scope ? { scope: String(attack.scope) } : {}), oncePerTurn: attack?.oncePerTurn !== false, requiresEffects: Array.isArray(attack?.requiresEffects) ? attack!.requiresEffects.map(String) : [] } } : {}),
+      ...(ATTACK_INVOCATIONS.has(invocation) ? { attack: { ...(attack?.scope ? { scope: String(attack.scope) } : {}), oncePerTurn: attack?.oncePerTurn !== false, ...(attack?.oncePerTurnPerTarget === true ? { oncePerTurnPerTarget: true } : {}), requiresEffects: Array.isArray(attack?.requiresEffects) ? attack!.requiresEffects.map(String) : [] } } : {}),
       operations: parseOperations(entry.operations, `entryPoints[${index}].operations`, unsupported),
     });
   }

@@ -16,7 +16,9 @@ export type SpellPrimary =
   | { kind: "save-effect"; saveAbility: string; summary?: string; duration?: SpellDuration }
   | { kind: "healing"; dice: SpellDice;
       /** D322: one pool shared out among the targets, the most hurt first (대량 치유: 700). */
-      pool?: { flat?: number; dice?: SpellDice; cap?: "half-max" } }
+      pool?: { flat?: number; dice?: SpellDice; cap?: "half-max" };
+      /** D331: the healing is rolled on the caster's own unspent Hit Point Dice (비전 활력), one more per slot. */
+      hitDice?: { count: number; perSlotAboveBase?: number } }
   | { kind: "temporary-hp"; dice: SpellDice;
       /** D322: one pool of temporary hit points shared out evenly among the targets. */
       pool?: { flat?: number; dice?: SpellDice } }

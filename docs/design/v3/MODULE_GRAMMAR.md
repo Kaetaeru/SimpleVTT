@@ -268,6 +268,7 @@
 - D322: `healing`·`temporary-hp`의 `pool`(`flat`/`dice`, 치유는 `cap: "half-max"`)은 한 뭉치를 대상들이 나눠 받는다 — 치유는 많이 다친 쪽부터, 임시 HP는 고르게. `maximum-hp`는 `dice`로 올릴 수 있다.
 - D322: `secondary`는 첫 효과 뒤에 오는 두 번째 굴림(`save-damage`·`save-effect`, `appliesTo: "all"|"damaged"`, `conditions[]`, `note`).
 - D323: `trackedEffects[].modifier`의 `conditions`(그 상태를 걸려는 내성에만)·`creatureTypes`(그 종류의 공격에만), 조각의 `deathSaveAdvantage`·`healingMaximized`(받는 치유가 최대값).
+- D331: `spell.attack-roll.ignore-cover`(주문 공격만), 진입점의 `attack.oncePerTurnPerTarget`(대상마다 턴당 한 번), 주문 `primary.healing`의 `hitDice: {count, perSlotAboveBase}`(시전자의 히트 다이스를 써서 회복).
 - D330: `feat-definition.requires`는 `spellcasting-feature`·`fighting-style-feature` 말고도 `armor-training:light|medium|heavy`·`shield-training`을 받는다. `attack.scope`는 식이 된다: `a|b`(둘 중 하나), `a+b`(둘 다), `items:<무기 id>,<무기 id>`(무기 지목).
 - D329: `grant.proficiency`의 `tools`(도구 id 목록), `temp-hp.grant`의 `pool: "share"`(한 뭉치를 나눠 줌), `modifier.scope: "target"`의 `bonus.dice`(공격자가 자기 굴림에서 빼는 주사위).
 - D328: `summon.count`는 몇 마리를 놓는지의 식(`level`·`mod`·`attack`·`dc`, 예: `"mod"`). 갈래가 `sustain`을 바꾸면 "새겨 두었다가 나중에 터지는" 주문이 된다(수호 문양·상징: 발동은 economy `none`).

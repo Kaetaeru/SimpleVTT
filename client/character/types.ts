@@ -353,6 +353,8 @@ export interface DerivedCharacter {
   grantsAdvantage?: string[];
   /** R55 (D190): this character's attacks ignore half and three-quarters cover (명사수, 주문 저격수). */
   ignoresCover?: boolean;
+  /** D331: only this character's spell attacks ignore cover (주문 저격수). */
+  ignoresCoverForSpells?: boolean;
   /** R61 (D196): reasons this character's ability checks and saving throws are advantaged. */
   rollAdvantage?: RollAdvantage[];
   /**

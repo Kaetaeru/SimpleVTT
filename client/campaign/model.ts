@@ -152,6 +152,8 @@ export interface HitOffer {
   slots?: Array<{ level: number; free: number }>;
   /** R91 (D226): usable once per turn (암습, 야만적 공격자, a contract rider) — not offered again until the turn changes. */
   oncePerTurn?: boolean;
+  /** D331: once per turn *against each creature* (요정 방랑자의 정신 피해), not once per turn in all. */
+  oncePerTurnPerTarget?: boolean;
 }
 
 export interface ChatMessage {
