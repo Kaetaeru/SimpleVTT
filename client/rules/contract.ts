@@ -311,7 +311,7 @@ export const PACT_SLOT_RESOURCE = "resource.pact-slot";
  * D300: `reroll-keep-lower` and `reroll-keep-higher` are disadvantage and advantage imposed *after* the die has
  * spoken — the second die is rolled and the worse (or better) of the two stands (수호의 섬광, 그림자 회피).
  */
-const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "reroll-keep-lower", "reroll-keep-higher", "set-die", "subtract-die", "force-success"]);
+const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "reroll-keep-lower", "reroll-keep-higher", "set-die", "subtract-die", "force-success", "cancel-roll-state"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
   const list = Array.isArray(raw) ? raw : [];
@@ -700,6 +700,14 @@ export function planRollModify(operations: ContractOperation[], scope: Scope, di
         if (!Number.isFinite(value)) break;
         plan.d20 = value;
         plan.parts.push(`d20 → ${value}`);
+        break;
+      }
+      // D335: the advantage and the disadvantage both go away (균형 회복). The window opens after the dice, so the
+      // die that was rolled first is the one that stands — which is what rolling a single die would have given.
+      case "cancel-roll-state": {
+        if (current === undefined) break;
+        plan.d20 = current;
+        plan.parts.push(`이점·불리점 없음 → ${current}`);
         break;
       }
       case "force-success": { plan.forceSuccess = true; plan.parts.push("성공으로"); break; }

@@ -138,7 +138,7 @@ export const unarmedDc = (stats: ActorStats) => 8 + stats.abilities.str + stats.
 /** The target chooses the save; the app takes the better bonus. */
 export const bestOf = <K extends string>(pairs: Array<[K, number]>): [K, number] => pairs.reduce((best, pair) => (pair[1] > best[1] ? pair : best));
 
-export interface ActCheck { label: string; d20: number; bonus: number; total: number; dc?: number; success?: boolean; /** R37 (D177): a contract was paid to redo this roll, and what paid for it. */ rescue?: string; /** R61 (D196): how many dice were rolled, the one dropped, and the rule that asked for the second. */ advantage?: number; dropped?: number; reason?: string }
+export interface ActCheck { label: string; d20: number; bonus: number; total: number; dc?: number; success?: boolean; /** R37 (D177): a contract was paid to redo this roll, and what paid for it. */ rescue?: string; /** R61 (D196): how many dice were rolled, the one dropped, and the rule that asked for the second. */ advantage?: number; dropped?: number; reason?: string; /** D335: the dice in the order they were rolled, so a rule that takes the advantage away knows which one came first. */ rolls?: number[] }
 export interface ActResult {
   kind: ActionKind;
   name: string;
@@ -204,7 +204,7 @@ export function resolveAction(input: ActInput): ActResult {
     const checkAbility = covers.ability ?? (covers.skill ? SKILL_ABILITY_OF[covers.skill] : undefined);
     const least = checkAbility ? input.actor.stats.minimumCheckScore?.[checkAbility] ?? 0 : 0;
     const total = Math.max(die + bonus + (input.rollDelta ?? 0), least);
-    return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc, ...(rolls.length > 1 ? { advantage: rolls.length, dropped: Math.min(...rolls), reason: lucky!.reason } : {}), ...(input.rescue ? { rescue: input.rescue } : {}) };
+    return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc, ...(rolls.length > 1 ? { advantage: rolls.length, dropped: Math.min(...rolls), reason: lucky!.reason, rolls: [...rolls] } : {}), ...(input.rescue ? { rescue: input.rescue } : {}) };
   };
   const skillCheck = (skill: string, dc?: number) => check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill] ?? "int"]}(${SKILL_KO[skill] ?? skill})`, skillBonus(input.actor.stats, skill), dc, { skill, ability: SKILL_ABILITY_OF[skill] });
   switch (input.kind) {

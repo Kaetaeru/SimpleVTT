@@ -1493,7 +1493,8 @@ export class TableHost {
           const targetStats = actTarget ? this.statsOf(actTarget) : null;
           if (actTarget && !targetStats) return refuse("대상의 능력치를 알 수 없습니다");
           const dice = diceFrom(this.options.random ?? Math.random);
-          const plan = planRollModify(pick.interceptor.operations, pick.scope, dice);
+          // D335: the die this check rolled first, for a rule that takes an advantage or a disadvantage away.
+          const plan = planRollModify(pick.interceptor.operations, pick.scope, dice, undefined, act.result.check?.rolls?.[0] ?? act.result.check?.d20);
           if (plan.d20 === undefined && !plan.delta) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
           // Take the old result off before rolling again, so a grapple that now fails leaves no 붙잡힘 behind.
           this.mark(actActor, act.result.actorMarks, false);
