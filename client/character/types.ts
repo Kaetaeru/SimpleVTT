@@ -213,6 +213,8 @@ export interface DerivedResource {
   freeCastMaxLevel?: number;
   /** V4q (D279): the pool casts any one of these spells for free (자연 회복의 회합 주문). */
   freeCastSpellIds?: string[];
+  /** D324: the free cast rolls its dice at their maximum (악마적 활력: 거짓 생명의 임시 HP). */
+  freeCastMaximized?: boolean;
 }
 
 export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean }

@@ -646,7 +646,9 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D321 지속 효과가 보유자에게 하는 일 (V0.9 V7n, SRD 계획 §12)**: CLAUDE.md §1.1·§2. 효과가 자기를 건 시전의 숫자(슬롯·DC·수정치)를 지니고 다닌다 — 계약 식의 `spell.slot-level`·`spell.save-dc`·`spell.modifier`. 속박 강타의 턴 시작 피해가 슬롯대로 늘고 괴물 보유자에게도 돌아간다(`npcEffectTurn`), 영웅심의 임시 HP가 시전자 값, 서리 손길은 회복을 막고(`noHealing`), 가속은 끝나면 행동불능을 남기며(`endConditions`·`endDuration`), 하급 원소 소환의 추가 주사위가 슬롯대로 늘고(`attackDamage.dicePerSlotAboveBase`), 이계 접촉은 긴 휴식까지 간다. 덤으로 환영 살인마의 턴 끝 내성이 DC 10이 아니라 시전자 DC가 됐다.
 - **D322 나뉘거나 자라거나 조건이 붙는 수 (V0.9 V7o, SRD 계획 §13)**: CLAUDE.md §1.1·§2. `primary.pool`(대량 치유의 700을 가장 다친 쪽부터, 임시 HP 풀은 고르게), `maximum-hp`의 `dice`(영웅 연회 2d10), `dice.dicePerRoundElapsed`(지연 폭발 화염구가 기다린 라운드마다 +1d6), `secondary`(얼음 칼의 파편은 명중과 무관하게 터지고, 금속 가열은 피해 뒤 건강 내성), `effects[].requiresHpAtMost`·`elseNote`(권능어: 충격은 150 이하만).
 - **D323 효과가 굴림에 붙이는 조건 (V0.9 V7p, SRD 계획 §14)**: CLAUDE.md §1.1·§2. `modifier.conditions`(독으로부터의 보호 — 중독 내성에만 이점), `modifier.creatureTypes`(선악 보호·성스러운 오라 — 그 종류의 공격에만 불리), `deathSaveAdvantage`·`healingMaximized`(희망의 봉화), `countedSave`(육신 석화 — 3회 성공이면 끝, 3회 실패면 석화; 횟수는 효과의 `tally`).
+- **D324 쓰는 순간에 내고 돌려받는 것 (V0.9 V7q, SRD 계획 §15)**: CLAUDE.md §1.1·§2. 명중 창의 `healing.apply`(+`hitDice`로 히트 다이스 소모 — 생명 흡수자), 시전 순간의 진입점 `invocation: "cast"`와 `resource.recharge.succeedsOnValue`(주문 회상의 은총: 1d4가 슬롯 레벨과 같으면 슬롯 유지), 자원의 `params.maximized`(악마적 활력의 무료 거짓 생명은 임시 HP 최대값), 지옥으로 내던지기의 8d10에 매력 내성.
 
+| V7q 쓰는 순간 (D324) ✔ | 명중 창 회복·히트 다이스, 시전 굴림, 최대값 무료 시전 | 게이트 통과(d324-cast-and-hit 3개) |
 | V7p 조건부 효과 (D323) ✔ | 조건·종류 한정, 죽음 내성·치유 최대화, 누적 내성 | 게이트 통과(d323-conditional-effects 4개) |
 | V7o 나뉘거나 자라는 수 (D322) ✔ | 치유 풀, 최대 HP 주사위, 대기 주사위, 두 번째 효과, HP 문턱 | 게이트 통과(d322-pools-and-growth 5개) |
 | V7n 지속 효과 (D321) ✔ | 효과가 시전값을 지님, 회복 불가·끝날 때 상태·슬롯 비례 | 게이트 통과(d321-lasting-effects 4개) |

@@ -65,6 +65,8 @@ export interface ContractRider {
   forgoAdvantage?: boolean;
   /** V3h (D262): the weapon's own damage deals this type instead (강화된 타격). */
   damageType?: string;
+  /** D324: what the hit gives back to whoever landed it — a formula, or Hit Point Dice to spend (생명 흡수자). */
+  heal?: { formula?: string; hitDice?: number };
 }
 
 const SAVE_KO: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
@@ -127,6 +129,10 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);
         if (rule) rider.dice.push(rule);
+      } else if (operation.kind === "healing.apply" && !hitTarget(operation.target)) {
+        // D324: the hit heals whoever swung — a formula, or a Hit Point Die they choose to spend (생명 흡수자).
+        const formula = formulaOf(operation, scope);
+        if (operation.hitDice || formula) { rider.heal = { ...(formula ? { formula } : {}), ...(operation.hitDice ? { hitDice: operation.hitDice } : {}) }; hints.push(operation.hitDice ? `히트 다이스 ${operation.hitDice}개를 써서 회복` : `회복 ${formula}`); }
       } else if (operation.kind === "condition.apply" && !operation.save && hitTarget(operation.target)) {
         // V4i (D271): no save at all — the condition simply lands (마력의 강타 knocks it prone).
         rider.conditions = [...(rider.conditions ?? []), operation.condition];

@@ -30,7 +30,7 @@ import { CONDITION_KO, countedSaveOf, onHitOf, spellExec, sustainedExec, sustain
 import type { ConditionDuration, TargetMark } from "../rules/contract";
 import type { ZeroHold } from "../character/types";
 import { summonMonster } from "../compendium/summonTemplate";
-import { startEffect } from "../character/play";
+import { restoreSpellSlot, startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
 import type { Campaign, CampaignClock, ChatMessage, HitOffer, PlayerRole, TriggerOffer } from "../campaign/model";
@@ -148,6 +148,10 @@ export interface TableHostOptions {
   /** V4h (D270): conditions this sheet sheds at the end of its turn — one of each list (자기 회복). */
   pcTurnEnd?: (entry: JournalCharacter) => Array<{ label: string; conditions: string[]; /** V5c (D291): damage the effect deals when that turn ends, with the save that avoids it. */ damage?: { formula: string; type: string; save?: { ability: string; dc: number } } }>;
   /** V4d (D266): what may keep this sheet up when it drops to 0 hit points, with the DC already grown by earlier uses. */
+  /** D324: spend one of the sheet's Hit Point Dice and heal by it (생명 흡수자's bite). */
+  pcSpendHitDie?: (entry: JournalCharacter, random: () => number) => { runtime: CharacterRuntime; die: string; rolled: number; healed: number } | null;
+  /** D324: what a sheet's contracts do as a spell is cast (주문 회상의 은총: a d4 that may keep the slot). */
+  pcCastRolls?: (entry: JournalCharacter, level: number, random: () => number) => Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string }>;
   /**
    * D321: the same turn-start and turn-end rules for a monster carrying a spell effect (속박 강타's piercing damage
    * at the start of its turns). A monster has no sheet, so the numbers come from the cast the effect remembers.
@@ -986,7 +990,14 @@ export class TableHost {
           // caster's own effect, so the ↻ does not ask again and cannot wander to somebody else.
           const bound = !exec.repeat && sustainOf(exec)?.target === "bound" ? targets[0]?.entry.id : undefined;
           spent = bound ? { ...next, effects: (next.effects ?? []).map((effect) => (effect.key === `spell:${prepared.spec.spellId}` ? { ...effect, target: bound } : effect)) } : next;
-          this.storeEntry({ ...casterBefore, runtime: { ...spent, updatedAt: this.now() }, updatedAt: this.now() }); }
+          this.storeEntry({ ...casterBefore, runtime: { ...spent, updatedAt: this.now() }, updatedAt: this.now() });
+          // D324: a die the sheet rolls as it casts may hand the slot straight back (주문 회상의 은총).
+          if (command.method?.kind === "slot" && command.method.level > 0) for (const roll of this.options.pcCastRolls?.(casterBefore, command.method.level, this.options.random ?? Math.random) ?? []) {
+            this.say({ type: "system", who: "", content: `${casterBefore.name}: ${roll.label} — ${roll.note}${roll.keepsSlot ? " → 슬롯이 소모되지 않습니다" : ""}` });
+            if (!roll.keepsSlot) continue;
+            const live = this.journalEntries.get(casterBefore.id);
+            if (live?.kind === "character") { const back = restoreSpellSlot(live.runtime, command.method.level); this.storeEntry({ ...live, runtime: { ...back, updatedAt: this.now() }, updatedAt: this.now() }); }
+          } }
         else if (resolution.concentration && !exec.repeat) { this.mark(caster, ["집중"], true); this.startNpcConcentration(caster.entry.id, prepared.spec.spellId, prepared.spec.name, prepared.spec.level); }
         const restoreNpcUse = casterBefore.kind === "npc" && prepared.npcSpend ? prepared.npcSpend() : undefined;
         // R26 (D136): undoing an old cast used to write the caster's whole pre-cast ledger back, refunding every
@@ -1959,6 +1970,20 @@ export class TableHost {
     }
     const live = this.resolveActor(this.refOf(target)) ?? target;
     for (const hit of spec.hitMarks ?? []) { const undo = this.markTarget(live, attacker.token?.id, hit.mark); this.childOf(undo, card); }
+    // D324: what the hit gives back to whoever landed it — a formula, or a Hit Point Die they spend (생명 흡수자).
+    for (const heal of spec.hitHeals ?? []) {
+      const sheet = this.journalEntries.get(attacker.entry.id);
+      if (sheet?.kind !== "character") continue;
+      if (heal.hitDice) {
+        const spent = this.options.pcSpendHitDie?.(sheet, this.options.random ?? Math.random);
+        if (!spent) { this.say({ type: "system", who: "", content: `${sheet.name}: ${heal.label} — 남은 히트 다이스가 없습니다` }); continue; }
+        this.storeEntry({ ...sheet, runtime: { ...spent.runtime, updatedAt: this.now() }, updatedAt: this.now() });
+        this.say({ type: "system", who: "", content: `${sheet.name}: ${heal.label} — 히트 다이스 ${spent.die} (${spent.rolled}) 소모, 회복 ${spent.healed}` });
+        continue;
+      }
+      const amount = heal.formula ? rollGuard(heal.formula, this.options.random ?? Math.random) : 0;
+      if (amount > 0) { this.healActor({ entry: sheet }, amount); this.say({ type: "system", who: "", content: `${sheet.name}: ${heal.label} — 회복 ${amount}` }); }
+    }
   }
 
   /**

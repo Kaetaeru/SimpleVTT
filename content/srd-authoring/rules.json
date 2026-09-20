@@ -9686,11 +9686,29 @@
          "kind": "damage.apply",
          "dice": "8d10",
          "damageType": "정신",
-         "target": "attack-target"
+         "target": "attack-target",
+         "save": {
+          "ability": "cha",
+          "dc": {
+           "op": "add",
+           "args": [
+            {
+             "value": 8
+            },
+            {
+             "ref": "ability.cha.modifier"
+            },
+            {
+             "ref": "proficiency.bonus"
+            }
+           ]
+          },
+          "success": "none"
+         }
         },
         {
          "kind": "adjudication.request",
-         "question": "악마에게는 피해 없음 · 매력 내성에 성공하면 8d10 피해도 없음 — 피해 되돌리기 (DM 판정)"
+         "question": "대상이 악마라면 8d10 정신 피해는 없습니다 — 피해 되돌리기"
         }
        ]
       }
@@ -21132,7 +21150,8 @@
           "id": "resource.invocation.fiendish-vigor",
           "label": "악마적 활력 (거짓된 생명)",
           "spell": "dnd.srd521.spell.false-life",
-          "atWill": true
+          "atWill": true,
+          "maximized": true
          }
         }
        ]
@@ -21808,12 +21827,12 @@
         },
         {
          "kind": "healing.apply",
-         "dice": "1d6",
+         "hitDice": 1,
          "target": "self"
         },
         {
          "kind": "adjudication.request",
-         "question": "히트 다이스 대신 1d6으로 계산 — 실제 히트 다이스를 쓰려면 시트에서"
+         "question": "추가 피해 유형은 사령·정신·광휘 중 하나 — 다른 유형이면 표에서"
         }
        ]
       }
@@ -23798,14 +23817,29 @@
      "id": "feat:epic.spell-recall",
      "entryPoints": [
       {
-       "id": "rule",
-       "invocation": "manual",
+       "id": "cast",
+       "invocation": "cast",
+       "when": {
+        "op": "lte",
+        "args": [
+         {
+          "ref": "spell.slot-level"
+         },
+         {
+          "value": 4
+         }
+        ]
+       },
        "operations": [
         {
-         "kind": "property.modify",
-         "property": "rule.applied-elsewhere",
-         "operation": "set",
-         "note": "시전 창에서 — 4레벨 이하 주문 하나를 슬롯 없이"
+         "kind": "resource.recharge",
+         "resource": "resource:spell-slot",
+         "die": "1d4",
+         "succeedsOn": [],
+         "succeedsOnValue": {
+          "ref": "spell.slot-level"
+         },
+         "note": "1d4가 슬롯 레벨과 같으면 슬롯이 소모되지 않는다"
         }
        ]
       }

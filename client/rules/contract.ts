@@ -77,7 +77,7 @@ export interface ContractPayment {
 export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr; when?: Expr }
   | { kind: "condition.apply"; condition: string; target: string; when?: Expr; /** R94 (D229): resisted with this save (기절 타격). */ save?: { ability: string; dc: Expr }; /** V4b (D264): how long it lasts (default: until the start of the source's next turn). */ duration?: ConditionDuration; /** V4b (D264): the bearer repeats the save at the end of each of its turns. */ repeatSave?: "turn-end"; /** V4b (D264): what a successful save still leaves on the target (충격의 일격). */ successMark?: TargetMark }
-  | { kind: "healing.apply"; dice?: string; /** D300: the dice an expression decides (바드의 영감 주사위로 주는 회복). */ diceCount?: Expr; diceSides?: Expr; amount?: Expr; target: string; when?: Expr; /** V4a (D263): one amount shared out among the chosen creatures, none past half its maximum (생명 보존). */ pool?: "half-max" }
+  | { kind: "healing.apply"; dice?: string; /** D300: the dice an expression decides (바드의 영감 주사위로 주는 회복). */ diceCount?: Expr; diceSides?: Expr; amount?: Expr; target: string; when?: Expr; /** V4a (D263): one amount shared out among the chosen creatures, none past half its maximum (생명 보존). */ pool?: "half-max"; /** D324: spend this many of the sheet's Hit Point Dice and heal by what they roll plus Constitution (생명 흡수자). */ hitDice?: number }
   | { kind: "roll.modify"; mode: string; dice?: string; /** V4l (D274): the die size an expression decides (바드의 영감 주사위: 레벨별 d6~d12). */ diceSides?: Expr; value?: Expr; diceResourceId?: string; when?: Expr }
   /**
    * R38 (D178): the general modifier. `property` names what changes in this engine's vocabulary (`ac.bonus`,
@@ -109,7 +109,7 @@ export type ContractOperation =
   | { kind: "hp.maximum.change"; amount: Expr; target: string; when?: Expr }
   | { kind: "life.stabilize"; target: string; when?: Expr }
   | { kind: "life.death-save"; when?: Expr }
-  | { kind: "resource.recharge"; resourceId: string; die: string; succeedsOn: number[]; when?: Expr }
+  | { kind: "resource.recharge"; resourceId: string; die: string; succeedsOn: number[]; /** D324: the die must come up exactly this (주문 회상의 은총: the slot level it was cast with). */ succeedsOnValue?: Expr; when?: Expr }
   | { kind: "movement.stand"; target: string; when?: Expr }
   | { kind: "movement.relocate"; mode: string; target: string; distance?: Expr; note?: string; when?: Expr }
   | { kind: "movement.grant"; target: string; distance: Expr; note?: string; when?: Expr }
@@ -277,6 +277,8 @@ export const FACT_MOMENTS = new Set(["pre-roll", "reaction", "on-hit"]);
  * declared before the dice; `on-hit` is chosen once the swing has landed — most 2024 riders say "when you hit".
  */
 export const ATTACK_INVOCATIONS = new Set(["pre-roll-attack", "on-hit"]);
+/** D324: what runs as a spell is cast (주문 회상의 은총: roll a d4 and keep the slot when it matches). */
+export const CAST_INVOCATION = "cast";
 /** R78 (D213): an entry point that runs when a short rest ends (비전 회복, 마력 회복) — chosen in the rest window, not pressed on the turn. */
 export const REST_INVOCATION = "short-rest";
 /** R81 (D215): an entry point that runs when this character rolls initiative (경이로운 신진대사). */
@@ -320,7 +322,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: isExpr(operation.amount) ? operation.amount : { value: operation.amount ?? 0 }, when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "condition.apply") { const save = operation.save as { ability?: unknown; dc?: unknown } | undefined; out.push({ kind, condition: conditionName(operation.condition), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined, ...(save && isExpr(save.dc) ? { save: { ability: String(save.ability ?? "con"), dc: save.dc } } : {}), ...(parseDuration(operation.duration) ? { duration: parseDuration(operation.duration) } : {}), ...(operation.repeatSave === "turn-end" ? { repeatSave: "turn-end" as const } : {}), ...(parseTargetMark(operation.successMark) ? { successMark: parseTargetMark(operation.successMark) } : {}) }); return; }
     if (kind === "condition.remove") { out.push({ kind, condition: conditionName(operation.condition), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
-    if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, ...(isExpr(operation.diceCount) ? { diceCount: operation.diceCount } : {}), ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.pool === "half-max" ? { pool: "half-max" as const } : {}) }); return; }
+    if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, ...(typeof operation.hitDice === "number" ? { hitDice: operation.hitDice } : {}), ...(isExpr(operation.diceCount) ? { diceCount: operation.diceCount } : {}), ...(isExpr(operation.diceSides) ? { diceSides: operation.diceSides } : {}), amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.pool === "half-max" ? { pool: "half-max" as const } : {}) }); return; }
     const expr = (raw: unknown, fallback = 0) => (isExpr(raw) ? raw : { value: raw === undefined ? fallback : raw });
     if (kind === "hp.maximum.change") { out.push({ kind, amount: expr(operation.amount), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "life.stabilize") { out.push({ kind, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
@@ -328,7 +330,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "resource.recharge") {
       const resource = String(operation.resource ?? "");
       if (!resource) { unsupported.push(`${at}: resource.recharge에 resource가 없습니다`); return; }
-      out.push({ kind, resourceId: resourceIdOf(resource), die: String(operation.die ?? "1d6"), succeedsOn: (Array.isArray(operation.succeedsOn) ? operation.succeedsOn : [6]).map(Number), when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, resourceId: resourceIdOf(resource), die: String(operation.die ?? "1d6"), succeedsOn: (Array.isArray(operation.succeedsOn) ? operation.succeedsOn : [6]).map(Number), ...(isExpr(operation.succeedsOnValue) ? { succeedsOnValue: operation.succeedsOnValue } : {}), when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     if (kind === "movement.stand") { out.push({ kind, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
@@ -433,7 +435,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const invocation = String(entry.invocation ?? "manual");
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
     // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
-    if (invocation !== "manual" && invocation !== GAIN_INVOCATION && invocation !== TURN_START_INVOCATION && invocation !== TURN_END_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    if (invocation !== "manual" && invocation !== GAIN_INVOCATION && invocation !== TURN_START_INVOCATION && invocation !== TURN_END_INVOCATION && invocation !== CAST_INVOCATION && !TRIGGER_INVOCATIONS.has(invocation) && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
     const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;

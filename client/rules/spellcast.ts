@@ -59,6 +59,8 @@ export interface CasterStats {
   healingMaximized?: boolean;
   /** V3g (D261): this spell's damage dice count as their maximum (과부하). */
   damageMaximized?: boolean;
+  /** D324: this cast's temporary hit points count as their maximum (악마적 활력의 무료 거짓 생명). */
+  tempHpMaximized?: boolean;
   /** R98 (D233): a damage cantrip deals half on a miss or a successful save (강력한 소마법). */
   potentCantrip?: boolean;
   /** R98 (D233): added once to the spell damage (강화된 방출). */
@@ -342,10 +344,11 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "temp";
-        const amount = rollFormula(formula, dice);
+        // D324: a free cast that says so takes the maximum instead of rolling (악마적 활력).
+        const amount = rollFormula(formula, casterStats.tempHpMaximized ? { d: (sides) => sides } : dice);
         row.tempHp = Math.max(combatant.hp.temp, amount);
         row.tempAfter = row.tempHp;
-        row.note = `${formula} = ${amount}`;
+        row.note = `${formula}${casterStats.tempHpMaximized ? " (최대값)" : ""} = ${amount}`;
         targets.push(row);
       }
       break;
@@ -564,7 +567,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec, ...(spellIsJudged(exec, catalog, derived) ? { judged: true } : {}) },
-    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.spellDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.spellDamageMaximizedUpTo && view.level >= 1 && level <= derived.spellDamageMaximizedUpTo && (!derived.spellDamageMaximizedClass || list?.classId?.endsWith(`.${derived.spellDamageMaximizedClass}`)) ? { damageMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(list && (derived.schoolDamageModifier?.some((rule) => rule.school === view.school && list.classId?.endsWith(`.${rule.classSlug}`)) || spellDamageTypes(exec).some((type) => (derived.damageTypeModifier ?? []).includes(type))) ? { damageBonusOnce: derived.abilities[(derived.damageTypeModifierClass ? derived.spellcasting.find((entry) => entry.classId.endsWith(`.${derived.damageTypeModifierClass}`))?.ability : undefined) ?? list.ability].modifier } : {}) },
+    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.spellDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.spellDamageMaximizedUpTo && view.level >= 1 && level <= derived.spellDamageMaximizedUpTo && (!derived.spellDamageMaximizedClass || list?.classId?.endsWith(`.${derived.spellDamageMaximizedClass}`)) ? { damageMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(chosen.kind === "resource" && derived.resources.find((item) => item.id === chosen.id)?.freeCastMaximized ? { tempHpMaximized: true } : {}), ...(list && (derived.schoolDamageModifier?.some((rule) => rule.school === view.school && list.classId?.endsWith(`.${rule.classSlug}`)) || spellDamageTypes(exec).some((type) => (derived.damageTypeModifier ?? []).includes(type))) ? { damageBonusOnce: derived.abilities[(derived.damageTypeModifierClass ? derived.spellcasting.find((entry) => entry.classId.endsWith(`.${derived.damageTypeModifierClass}`))?.ability : undefined) ?? list.ability].modifier } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual, ...((exec.effects ?? []).some((effect) => effect.termination?.bearerAttacksOrCasts) ? { consumeOn: "attack-or-cast" as const } : {}) }, chosen),
   };
 }

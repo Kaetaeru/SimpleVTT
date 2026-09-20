@@ -8,7 +8,7 @@ import type { ContentCatalog } from "../catalog/catalog";
 import type { JournalCharacter } from "../campaign/journal";
 import type { CharacterRuntime } from "../character/runtime";
 import { deriveCharacter } from "../character/derive";
-import { longRest, setItemQuantity, shortRest, spendResource } from "../character/play";
+import { hitDiceAvailable, longRest, setItemQuantity, shortRest, spendHitDie, spendResource } from "../character/play";
 import { restFeatures, spentSlots, useRestFeature } from "../character/rest";
 import { pcStats } from "../rules/actions";
 import { attackAftermath, emptyAftermath } from "../rules/attackAftermath";
@@ -19,7 +19,7 @@ import { payContract, pcRescues } from "../rules/contractUse";
 import { itemUse } from "../rules/items";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
 import { formula as contractFormula, metamagicOptions } from "../rules/contractActivation";
-import { characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } from "../rules/contract";
+import { CAST_INVOCATION, characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
 import { featureRuleKey } from "../rules/activation";
 import type { TableHostOptions } from "./host";
@@ -145,6 +145,38 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
         }
         return conditions.length ? [{ label, conditions }] : [];
       });
+    },
+    // D324: one Hit Point Die spent where a rule asks for it (생명 흡수자), the same arithmetic the sheet uses.
+    pcSpendHitDie: (entry, random) => {
+      const derived = derivedOf(entry, catalog());
+      const left = hitDiceAvailable(entry.runtime, derived);
+      const die = Object.keys(left).filter((size) => (left[size] ?? 0) > 0).sort((a, b) => Number(b.slice(1)) - Number(a.slice(1)))[0];
+      if (!die) return null;
+      const rolled = 1 + Math.floor(random() * (Number(die.slice(1)) || 8));
+      const before = entry.runtime.hp.current;
+      const runtime = spendHitDie(entry.runtime, derived, die, rolled);
+      return { runtime, die, rolled, healed: runtime.hp.current - before };
+    },
+    // D324: a die the sheet rolls as it casts (주문 회상의 은총: a d4 that keeps the slot when it matches its level).
+    pcCastRolls: (entry, level, random) => {
+      const derived = derivedOf(entry, catalog());
+      const scope = characterScope(derived, { "spell.slot-level": level });
+      const rolls: Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string }> = [];
+      for (const feature of derived.features) {
+        const contract = featureContract(catalog(), featureRuleKey(feature.id));
+        for (const point of (contract?.entryPoints ?? []).filter((item) => item.invocation === CAST_INVOCATION)) {
+          for (const operation of point.operations) {
+            if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
+            if (operation.kind !== "resource.recharge") continue;
+            const sides = Number(/d(\d+)/.exec(operation.die)?.[1] ?? 6);
+            const rolled = 1 + Math.floor(random() * sides);
+            const wanted = operation.succeedsOnValue !== undefined ? Number(evaluate(operation.succeedsOnValue, scope)) : undefined;
+            const keepsSlot = wanted !== undefined ? rolled === wanted : operation.succeedsOn.includes(rolled);
+            rolls.push({ label: feature.name, die: operation.die, rolled, keepsSlot, note: wanted !== undefined ? `${operation.die} = ${rolled} vs 슬롯 ${wanted}` : `${operation.die} = ${rolled}` });
+          }
+        }
+      }
+      return rolls;
     },
     // D321: a monster under a spell effect gets the same turn rules a character does; its numbers are the cast's.
     npcEffectTurn: (entry, boundary) => {

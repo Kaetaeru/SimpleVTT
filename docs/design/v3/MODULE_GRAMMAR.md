@@ -102,6 +102,7 @@
 | `initiative` | 우선권을 굴릴 때 |
 | `kill` | 적을 0 HP로 만들었을 때 (`killer: "nearby"`면 남의 처치도) |
 | `turn-start` / `turn-end` | 자기 턴 시작·끝에 저절로 |
+| `cast` | 주문을 시전할 때 (식에서 `spell.slot-level`을 읽는다, D324) |
 
 옵션: `label`(여러 사용을 줄마다 나누기), `targeting: { from: "targets", min, max }`, `test: { kind: "saving-throw", roller: "target", property: "save.str.modifier", dc: <식>, perTarget: true }`.
 
@@ -129,9 +130,9 @@
 | `property.modify` | 값 하나를 바꾼다 (§4) |
 | `economy.modify` | 행동·추가 행동·반응을 준다 (`bucket`, `amount`) |
 | `resource.change` | 풀을 쓰거나 돌려준다 (`resource`, `amount`(음수=소모), `upTo`, `level`) |
-| `resource.recharge` | 주사위를 굴려 회복 (`die`, `succeedsOn`) |
+| `resource.recharge` | 주사위를 굴려 회복 (`die`, `succeedsOn`, D324 `succeedsOnValue`=주사위 눈이 이 값과 같아야 성공) |
 | `damage.apply` | 피해 (`dice`, `diceCount`, `diceSides`, `amount`, `damageType`, `save: {ability, dc, success}`) |
-| `healing.apply` | 회복 (`dice`/`diceCount`+`diceSides`/`amount`, `pool: "half-max"`) |
+| `healing.apply` | 회복 (`dice`/`diceCount`+`diceSides`/`amount`, `pool: "half-max"`, D324 `hitDice`=히트 다이스를 써서 회복) |
 | `temp-hp.grant` | 임시 HP (같은 주사위 필드) |
 | `condition.apply` / `condition.remove` | 상태 (`save`, `duration`, `repeatSave: "turn-end"`, `successMark`) |
 | `effect.apply` / `effect.remove` / `effect.suppress` | 지속 효과 시작·종료·정지 |

@@ -170,6 +170,8 @@ export interface AttackSpec {
   diceRules?: DiceRule[];
   /** R94 (D229): saves the target makes because a chosen rider landed (기절 타격), each with the condition a failure gives. */
   hitSaves?: Array<{ label: string; ability: string; dc: number; condition: string; duration?: ConditionDuration; repeatSave?: "turn-end"; successMark?: TargetMark }>;
+  /** D324: what a landed hit gives its attacker back — a formula, or Hit Point Dice to spend (생명 흡수자). */
+  hitHeals?: Array<{ label: string; formula?: string; hitDice?: number }>;
   /** V4b (D264): marks a hit leaves on the target. */
   hitMarks?: Array<{ label: string; mark: TargetMark }>;
 }
