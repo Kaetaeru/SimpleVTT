@@ -30,6 +30,8 @@ const featContext = (ledger: Ledger, hasFightingStyle = false): FeatContext => (
   taken: (id) => ledger.feats.some((feat) => feat.id === id),
   hasSpellcasting: ledger.hasSpellcasting(),
   hasFightingStyle,
+  // D330: a feat may ask for armour or shield training before it may be taken.
+  training: { armor: [...ledger.armor], shield: ledger.armor.has("shield") },
 });
 
 export function applyTracks(ledger: Ledger) {

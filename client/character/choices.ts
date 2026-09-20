@@ -98,6 +98,8 @@ export interface FeatContext {
   taken: (featId: string) => boolean;
   hasSpellcasting: boolean;
   hasFightingStyle: boolean;
+  /** D330: what this character is trained in, for a feat that asks for armour or a shield first. */
+  training?: { armor: string[]; shield: boolean };
 }
 
 export function featDisabledReason(feat: FeatView, context: FeatContext): string | undefined {
@@ -109,6 +111,10 @@ export function featDisabledReason(feat: FeatView, context: FeatContext): string
   }
   if (feat.requires === "spellcasting-feature" && !context.hasSpellcasting) return "주문 시전 특성 필요";
   if (feat.requires === "fighting-style-feature" && !context.hasFightingStyle) return "전투 방식 특성 필요";
+  // D330: the training a feat asks for before it may be taken (중갑 달인: heavy armour training).
+  const armor = /^armor-training:(light|medium|heavy)$/.exec(feat.requires ?? "");
+  if (armor && !(context.training?.armor ?? []).includes(armor[1])) return `${{ light: "경장", medium: "평장", heavy: "중장" }[armor[1]]} 방어구 훈련 필요`;
+  if (feat.requires === "shield-training" && !context.training?.shield) return "방패 훈련 필요";
   return undefined;
 }
 

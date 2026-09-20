@@ -34,6 +34,8 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
   /** 결투: a melee weapon held in one hand. Whether the other hand is empty is the table's to see. */
   "one-handed-melee": (attack) => Boolean(attack.itemId) && !attack.range && !attack.properties.includes("two-handed"),
   // R53 (D188): 분쇄자·관통자·참격자 narrow themselves by the damage type the weapon deals, not by its properties.
+  /** D330: a weapon or a bare fist, but not an assumed form's own attack (열광자의 신성한 격노). */
+  "weapon-or-unarmed": (attack) => !attack.properties.includes("form"),
   bludgeoning: (attack) => attack.damageType === "타격",
   piercing: (attack) => attack.damageType === "관통",
   slashing: (attack) => attack.damageType === "참격",
@@ -233,4 +235,19 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
 /** The attack scopes a `property.modify` may narrow itself to. */
 export const attackScopes = () => Object.keys(SCOPES);
 /** R52 (D187): the same filters, for a pre-roll rider that narrows itself to a weapon the same way. */
-export const attackScopeFilter = (scope: string) => SCOPES[scope];
+/**
+ * D330: a scope may also be written as a little expression, so content can say exactly which weapons a rule is
+ * about without the engine knowing their names: `a|b` is either, `a+b` is both, and `items:<id>,<id>` names the
+ * weapons themselves (장병기 달인: a quarterstaff or a spear, or a Heavy weapon with Reach).
+ */
+export const attackScopeFilter = (scope: string): ((attack: DerivedAttack) => boolean) | undefined => {
+  if (SCOPES[scope]) return SCOPES[scope];
+  if (!/[|+]|^items:/.test(scope)) return undefined;
+  const terms = scope.split("|").map((term) => term.trim()).filter(Boolean);
+  const parts = terms.map((term) => {
+    if (term.startsWith("items:")) { const ids = term.slice("items:".length).split(",").map((id) => id.trim()).filter(Boolean); return (attack: DerivedAttack) => Boolean(attack.itemId && ids.some((id) => attack.itemId === id || attack.itemId!.endsWith(`.${id}`))); }
+    const each = term.split("+").map((name) => name.trim()).filter(Boolean).map((name) => SCOPES[name] ?? ((attack: DerivedAttack) => attack.properties.includes(name)));
+    return (attack: DerivedAttack) => each.every((test) => test(attack));
+  });
+  return parts.length ? (attack) => parts.some((test) => test(attack)) : undefined;
+};
