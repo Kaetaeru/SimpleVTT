@@ -120,6 +120,8 @@ try {
   await tracker.locator(".cl-tracker-row[data-turn-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
   await player.locator(".cl-turn-ribbon .cl-turn-ribbon-item[data-turn-name='고블린 전사']").waitFor({ timeout: 10000 });
   await tab(dm, "채팅").click();
+  // D346: a card waits for its dice, so two initiative rolls arrive one after the other rather than together.
+  await dm.locator(".cl-roll-card", { hasText: "이니셔티브" }).nth(1).waitFor({ timeout: 15000 });
   check(await dm.locator(".cl-roll-card", { hasText: "이니셔티브" }).count() >= 2, "initiative rolls are chat cards");
   await dm.screenshot({ path: path.join(OUT, "55-tracker-after-initiative.png") });
 

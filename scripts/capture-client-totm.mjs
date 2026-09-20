@@ -305,6 +305,8 @@ try {
   await dm.getByRole("button", { name: "공격", exact: true }).click();
   const rendHead = "성인 황동 드래곤 → 마법사: 찢기";
   await cardOf(player, rendHead).nth(2).waitFor({ timeout: 20000 });
+  // D346: each swing shows its dice before its card, so the three arrive in turn.
+  await cardOf(player, rendHead).nth(2).waitFor({ timeout: 20000 });
   check(await cardOf(player, rendHead).count() === 3, "다중공격 makes three 찢기 cards from one click and one dialog");
   // Targeting clears the selection, so the bar went back to the goblin's turn: pick the dragon again.
   await iconOf(dm, "성인 황동 드래곤").click();

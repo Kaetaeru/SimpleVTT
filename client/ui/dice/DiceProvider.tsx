@@ -11,6 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createPortal } from "react-dom";
 import { physicalSides, rollFormula, type RollResult, type RollSpec } from "../../character/dice";
 import { diceSignature } from "./messageDice";
+import { holdCard, holdForDice, releaseCard, releaseForDice } from "./gate";
 import { PhysicsDice3D, type PhysicsDie } from "./PhysicsDice3D";
 
 const RESULT_HOLD_MS = 2600;
@@ -23,7 +24,7 @@ interface DiceApi {
   rollSilently: (spec: RollSpec) => RollResult;
   /** Animate dice somebody else already rolled (a chat card the host resolved). A roll this viewer just watched
    *  tumble locally is not shown twice. */
-  show: (result: RollResult) => void;
+  show: (result: RollResult, /** D346: the chat card these dice belong to — it waits until they settle. */ messageId?: string) => void;
   history: RollResult[];
 }
 
@@ -33,45 +34,66 @@ const MOTION_KEY = "simplevtt.dice.motion";
 export const isReducedMotion = () => { try { return typeof window !== "undefined" && window.localStorage.getItem(MOTION_KEY) === "reduced"; } catch { return false; } };
 export const setReducedMotion = (reduced: boolean) => { try { if (reduced) window.localStorage.setItem(MOTION_KEY, "reduced"); else window.localStorage.removeItem(MOTION_KEY); } catch { /* storage blocked: the default (rolling) stays */ } };
 const RECENT_MS = 20000;
+/** D346: the longest the table waits on one roll before it shows the result anyway. */
+const GATE_MS = 4000;
 
 export function DiceProvider({ children }: { children: ReactNode }) {
   // A queue in state (not a ref mutated inside updaters — StrictMode runs updaters twice).
   const [pending, setPending] = useState<Array<{ result: RollResult; resolve: () => void; /** Somebody else's dice, replayed. */ shown?: boolean }>>([]);
   const [history, setHistory] = useState<RollResult[]>([]);
-  const finish = useCallback(() => setPending((list) => list.slice(1)), []);
+  // D346: a roll on screen holds the table back until it has settled, so the card and the hit point bars arrive
+  // with the answer rather than before it. A roll that never reaches the overlay must not hold anything, and one
+  // that somehow never finishes lets go by itself after `GATE_MS`.
+  const held = useRef(new Map<string, { timer: number; card?: string }>());
+  const letGo = useCallback((id: string) => {
+    const entry = held.current.get(id);
+    if (!entry) return;
+    held.current.delete(id);
+    window.clearTimeout(entry.timer);
+    if (entry.card) releaseCard(entry.card);
+    releaseForDice();
+  }, []);
+  const hold = useCallback((id: string, card?: string) => {
+    if (held.current.has(id)) return;
+    holdForDice();
+    if (card) holdCard(card);
+    held.current.set(id, { timer: window.setTimeout(() => letGo(id), GATE_MS), ...(card ? { card } : {}) });
+  }, [letGo]);
+  useEffect(() => () => { for (const id of [...held.current.keys()]) letGo(id); }, [letGo]);
+  const finish = useCallback(() => setPending((list) => { const done = list[0]; if (done) letGo(done.result.id); return list.slice(1); }), [letGo]);
   const recent = useRef(new Map<string, number>());
   const roll = useCallback((spec: RollSpec) => {
     const result = rollFormula(spec);
     recent.current.set(diceSignature(result.dice), Date.now());
     setHistory((list) => [...list, result].slice(-50));
     if (typeof document === "undefined") return Promise.resolve(result);
+    hold(result.id);
     return new Promise<RollResult>((resolve) => {
       const item = { result, resolve: () => resolve(result) };
       // The viewer's own roll goes ahead of other people's dice still waiting their turn: a click is never kept
       // waiting behind a replay. The one already on screen finishes.
       setPending((list) => (list.some((entry) => entry.result.id === result.id) ? list : [...list.slice(0, 1), item, ...list.slice(1)]));
     });
-  }, []);
+  }, [hold]);
   const rollSilently = useCallback((spec: RollSpec) => { const result = rollFormula(spec); setHistory((list) => [...list, result].slice(-50)); return result; }, []);
-  const show = useCallback((result: RollResult) => {
+  const show = useCallback((result: RollResult, messageId?: string) => {
     if (typeof document === "undefined") return;
     const signature = diceSignature(result.dice);
     const at = recent.current.get(signature);
     if (at !== undefined && Date.now() - at < RECENT_MS) { recent.current.delete(signature); return; }
-    // ponytail: at most two replays wait; a burst (a fireball on six) keeps the newest, older ones stay in the chat.
-    setPending((list) => {
-      if (list.some((entry) => entry.result.id === result.id)) return list;
-      const waiting = list.slice(1).filter((entry) => entry.shown);
-      const drop = waiting.length >= 2 ? waiting[0] : undefined;
-      return [...list.filter((entry) => entry !== drop), { result, resolve: () => undefined, shown: true }];
-    });
-  }, []);
+    // D346: every replay waits its turn and none is dropped — a dragon's three bites are three rolls, each with
+    // its own card after it, which is what the table would see in front of them.
+    hold(result.id, messageId);
+    setPending((list) => (list.some((entry) => entry.result.id === result.id) ? list : [...list, { result, resolve: () => undefined, shown: true }]));
+  }, [hold]);
   const api = useMemo<DiceApi>(() => ({ roll, rollSilently, show, history }), [roll, rollSilently, show, history]);
   const current = pending[0] ?? null;
   return (
     <DiceContext.Provider value={api}>
       {children}
-      {current ? <DiceOverlay key={current.result.id} result={current.result} onSettled={current.resolve} onFinished={finish} /> : null}
+      {/* D346: the table is let go the moment the dice have an answer, not when they fade — the card lands on
+          the beat the numbers come up, and the next roll waits for this one to finish fading. */}
+      {current ? <DiceOverlay key={current.result.id} result={current.result} onSettled={() => { letGo(current.result.id); current.resolve(); }} onFinished={finish} /> : null}
     </DiceContext.Provider>
   );
 }

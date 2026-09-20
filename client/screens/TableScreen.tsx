@@ -2,7 +2,7 @@
  * The launched table (ROLL20_MODEL.md §3): header with the campaign, presence and the invite; the page area
  * (pages and tokens come in R5); the sidebar with the Chat tab — Roll20 commands, roll cards, whispers, GM rolls.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { controlsToken } from "../campaign/page";
 import { audienceIncludes, canEdit } from "../campaign/journal";
@@ -22,6 +22,7 @@ import { describeChatRoll, expandMacros, parseChatInput } from "../session/chat"
 import { copyText, Notice, Pill } from "../ui/components";
 import { isReducedMotion, setReducedMotion, useDice } from "../ui/dice/DiceProvider";
 import { diceSignature, rollOfMessage } from "../ui/dice/messageDice";
+import { diceHolding, heldCards, subscribeToDice } from "../ui/dice/gate";
 import { ArtTab } from "./ArtPanel";
 import { HandoutPopup, JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
 import { CompendiumTab } from "./CompendiumPanel";
@@ -74,20 +75,27 @@ function Table() {
   // dice it rolled. What was already in the chat when the table opened is history and stays still.
   const dice = useDice();
   const seen = useRef<Set<string> | null>(null);
+  // D346: the table waits for the dice, so this reads the live table rather than the one on screen — the card it is
+  // about is still held back. One roll goes at a time: a dragon's three bites are roll, card, roll, card, roll, card,
+  // because the next one is only sent once the last has settled and its card has landed.
+  const live = c.table.liveSnapshot ?? snapshot;
+  const holding = useSyncExternalStore(subscribeToDice, diceHolding, () => 0);
   useEffect(() => {
-    if (!seen.current) { seen.current = new Set(snapshot.chat.map((message) => message.id)); return; }
-    const fresh = snapshot.chat.filter((message) => !seen.current!.has(message.id));
-    for (const message of fresh) seen.current.add(message.id);
-    for (const message of fresh.slice(-3)) {
+    if (!seen.current) { seen.current = new Set(live.chat.map((message) => message.id)); return; }
+    if (holding) return;
+    for (const message of live.chat) {
+      if (seen.current.has(message.id)) continue;
+      seen.current.add(message.id);
       const roll = rollOfMessage(message);
       if (!roll) continue;
       // A DM edit re-issues the card; only a reroll (new dice) tumbles again.
-      const before = message.supersedes ? snapshot.chat.find((item) => item.id === message.supersedes) : undefined;
+      const before = message.supersedes ? live.chat.find((item) => item.id === message.supersedes) : undefined;
       const previous = before ? rollOfMessage(before) : null;
       if (previous && diceSignature(previous.dice) === diceSignature(roll.dice)) continue;
-      dice.show(roll);
+      dice.show(roll, message.id);
+      return;
     }
-  }, [snapshot.chat, dice]);
+  }, [live.chat, dice, holding]);
   return (
     <div className="cl-page cl-table">
       <div className="cl-page-head">
@@ -149,6 +157,8 @@ function Table() {
   );
 }
 
+const EMPTY_CARDS: ReadonlySet<string> = new Set();
+
 function ChatTab({ isGm }: { isGm: boolean }) {
   const c = useCampaigns();
   const dice = useDice();
@@ -157,7 +167,9 @@ function ChatTab({ isGm }: { isGm: boolean }) {
   const [stillDice, setStillDice] = useState(isReducedMotion);
   const listRef = useRef<HTMLDivElement>(null);
   const superseded = useMemo(() => new Set(snapshot.chat.map((message) => message.supersedes).filter((id): id is string => Boolean(id))), [snapshot.chat]);
-  const messages = useMemo(() => snapshot.chat.filter((message) => !superseded.has(message.id)), [snapshot.chat, superseded]);
+  // D346: a card whose dice are still tumbling waits its turn — the result appears when the dice have one.
+  const waiting = useSyncExternalStore(subscribeToDice, heldCards, () => EMPTY_CARDS);
+  const messages = useMemo(() => snapshot.chat.filter((message) => !superseded.has(message.id) && !waiting.has(message.id)), [snapshot.chat, superseded, waiting]);
   useEffect(() => { const list = listRef.current; if (list) list.scrollTop = list.scrollHeight; }, [messages.length]);
   const names = useMemo(() => Object.fromEntries(snapshot.players.map((player) => [player.userId, player])), [snapshot.players]);
   // R17: `#이름` runs a macro — the campaign's shared ones plus the macros on sheets this viewer controls.

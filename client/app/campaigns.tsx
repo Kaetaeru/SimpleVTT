@@ -4,7 +4,8 @@
  * players come through the same-PC tab channel and, in the exe, TCP over LAN/Hamachi. The join code is the
  * campaign's fixed code (D71); presence and chat are written into the campaign documents as they happen.
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { diceHolding, subscribeToDice } from "../ui/dice/gate";
 import type { ArtAsset } from "../campaign/art";
 import { ART_LIMIT, ART_MIMES, chunkText, hashText, newArtAsset } from "../campaign/art";
 import type { JournalCharacter, JournalEntry } from "../campaign/journal";
@@ -30,7 +31,11 @@ export interface TableState {
   status: TableStatus | "idle";
   reason: string | null;
   campaignId: string | null;
+  /** D346: what the table shows. While dice are rolling this stays as it was, so the card and the hit point
+   *  bars arrive with the answer instead of before it. */
   snapshot: TableSnapshot | null;
+  /** D346: the table as the host has it right now, whatever is on screen — what the dice replay reads. */
+  liveSnapshot: TableSnapshot | null;
   /** Main invite and every alternative (LAN addresses first in the exe, then the same-PC tab invite). */
   invite: string | null;
   invites: string[];
@@ -584,9 +589,19 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     })();
     return () => { cancelled = true; };
   }, [contentKey, setSessionModules]);
-  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
+  // D346: the table waits for the dice. `held` counts the rolls on screen; while any is, the screens keep the
+  // snapshot they were already showing (`shown`), and the live one is still there for the replay to read.
+  const heldDice = useSyncExternalStore(subscribeToDice, diceHolding, () => 0);
+  const live = client?.snapshot ?? null;
+  // Only the board waits: the sheets and the tokens (hit point bars, markers) stay as they were until the dice have
+  // an answer. The chat is live — the card the dice belong to holds itself back (`heldCards`), and a DM editing a
+  // card must never be kept waiting on somebody else's dice.
+  const board = useRef<{ journal: TableSnapshot["journal"]; pages: TableSnapshot["pages"] } | null>(null);
+  if (!heldDice || !board.current) board.current = live ? { journal: live.journal, pages: live.pages } : null;
+  const shownSnapshot = live && heldDice && board.current ? { ...live, journal: board.current.journal, pages: board.current.pages } : live;
+  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: shownSnapshot ?? null, liveSnapshot: live, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
+  [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick, heldDice]);
   const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, zone, declineReaction, guard, hitChoice, triggerChoice, react, rollDeathSave, rescueRoll, runContract, adjustAction, undoAction, confirmAction }),
     [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, hitChoice, triggerChoice, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
