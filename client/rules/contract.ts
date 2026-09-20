@@ -101,7 +101,7 @@ export type ContractOperation =
   /**
    * R40 (D180): the pool a use spends or gives back. A negative `amount` spends; `resource` is the client's pool id.
    */
-  | { kind: "resource.change"; resourceId: string; amount: Expr; target: string; when?: Expr; /** V4c (D265): give uses back until this many are left (지속되는 격노, 완벽한 집중). */ upTo?: boolean; /** V4j (D272): the spell slot level a reserved slot resource spends or gives back (마법의 샘의 교환). */ level?: number }
+  | { kind: "resource.change"; resourceId: string; amount: Expr; target: string; when?: Expr; /** V4c (D265): give uses back until this many are left (지속되는 격노, 완벽한 집중). */ upTo?: boolean; /** V4j (D272): the spell slot level a reserved slot resource spends or gives back (마법의 샘의 교환). */ level?: number; /** D338: that level as an expression, for a rule that reads the cast it answers (전문 예지: one below the slot, never past 5th). */ levelExpr?: Expr }
   /** R40 (D180): dice rolled and applied as healing or temporary hit points; `dice` and `amount` add up to the formula. */
   | { kind: "temp-hp.grant"; dice?: string; /** D300: the dice an expression decides (영감의 외투: 바드의 영감 주사위 두 배). */ diceCount?: Expr; diceSides?: Expr; amount?: Expr; target: string; when?: Expr; /** D329: one pool of temporary hit points shared out among the chosen creatures (고무하는 강타). */ pool?: "share"; /** D336: the most this may hold — a ward that is topped up never goes past it (비전 방호). */ maximum?: Expr; /** D336: add to what is already there instead of replacing it. */ accumulate?: boolean }
   /** R40 (D180): dice rolled and logged as damage a feature deals (Breath Weapon), without choosing who takes it. */
@@ -358,7 +358,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
       const resource = String(operation.resource ?? "");
       if (!resource) { unsupported.push(`${at}: resource.change에 resource가 없습니다`); return; }
       const raw = operation.amount;
-      out.push({ kind, resourceId: resourceIdOf(resource), amount: isExpr(raw) ? raw : { value: typeof raw === "number" ? raw : (raw as { value?: number } | undefined)?.value ?? 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.upTo === true ? { upTo: true } : {}), ...(typeof operation.level === "number" ? { level: operation.level } : {}) });
+      out.push({ kind, resourceId: resourceIdOf(resource), amount: isExpr(raw) ? raw : { value: typeof raw === "number" ? raw : (raw as { value?: number } | undefined)?.value ?? 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, ...(operation.upTo === true ? { upTo: true } : {}), ...(typeof operation.level === "number" ? { level: operation.level } : {}), ...(isExpr(operation.level) ? { levelExpr: operation.level } : {}) });
       return;
     }
     if (kind === "temp-hp.grant" || kind === "damage.apply") {

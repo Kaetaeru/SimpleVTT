@@ -18,7 +18,7 @@ import { tableOutcome } from "../rules/contractTable";
 import { payContract, pcRescues } from "../rules/contractUse";
 import { itemUse } from "../rules/items";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
-import { formula as contractFormula, metamagicOptions } from "../rules/contractActivation";
+import { formula as contractFormula, metamagicOptions, SPELL_SLOT_RESOURCE } from "../rules/contractActivation";
 import { rollGuard } from "../rules/contractReactions";
 import { CAST_INVOCATION, characterScope, evaluate, TURN_END_INVOCATION, TURN_START_INVOCATION } from "../rules/contract";
 import { featureContract } from "../rules/contractActivation";
@@ -164,7 +164,7 @@ export function pcHostOptions(catalog: () => ContentCatalog, /** D334: the host'
       // D336: what was cast, not only how big the slot was — 비전 방호 answers abjuration spells and nothing else.
       const school = spellId ? catalog().spellById(spellId)?.school : undefined;
       const scope = characterScope(derived, { "spell.slot-level": level, ...(school ? { "spell.school": school } : {}) });
-      const rolls: Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; damage?: { formula: string; type: string }; tempHp?: { amount: number; maximum?: number; accumulate?: boolean } }> = [];
+      const rolls: Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; damage?: { formula: string; type: string }; tempHp?: { amount: number; maximum?: number; accumulate?: boolean }; slotBack?: number }> = [];
       // D326: an effect the sheet is under may also answer a cast (소원's price: damage every time you cast).
       const sources = [
         ...derived.features.map((feature) => ({ label: feature.name, contract: featureContract(catalog(), featureRuleKey(feature.id)), cast: undefined as ActiveEffect["cast"] })),
@@ -191,6 +191,13 @@ export function pcHostOptions(catalog: () => ContentCatalog, /** D334: the host'
                 const maximum = operation.maximum === undefined ? undefined : Number(evaluate(operation.maximum, inner));
                 rolls.push({ label: feature.label, die: formula ?? "", rolled: amount, keepsSlot: false, note: `임시 HP +${amount}`, tempHp: { amount, ...(Number.isFinite(maximum) ? { maximum: maximum as number } : {}), ...(operation.accumulate ? { accumulate: true } : {}) } });
               }
+              continue;
+            }
+            // D338: the cast hands a slot back at a level it works out (전문 예지: one below, never past 5th).
+            if (operation.kind === "resource.change" && operation.resourceId === SPELL_SLOT_RESOURCE) {
+              const amount = Number(evaluate(operation.amount, inner));
+              const back = operation.levelExpr !== undefined ? Number(evaluate(operation.levelExpr, inner)) : operation.level;
+              if (amount > 0 && back && Number.isFinite(back)) rolls.push({ label: feature.label, die: "", rolled: 0, keepsSlot: false, note: `${Math.floor(back)}레벨 슬롯 하나를 되찾음`, slotBack: Math.floor(back) });
               continue;
             }
             if (operation.kind !== "resource.recharge") continue;

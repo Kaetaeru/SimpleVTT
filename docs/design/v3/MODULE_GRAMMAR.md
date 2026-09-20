@@ -129,7 +129,7 @@
 |---|---|
 | `property.modify` | 값 하나를 바꾼다 (§4) |
 | `economy.modify` | 행동·추가 행동·반응을 준다 (`bucket`, `amount`) |
-| `resource.change` | 풀을 쓰거나 돌려준다 (`resource`, `amount`(음수=소모), `upTo`, `level`) |
+| `resource.change` | 풀을 쓰거나 돌려준다 (`resource`, `amount`(음수=소모), `upTo`, `level` — D338부터 식도 된다: 시전 항목에서 `spell.slot-level`을 읽어 되찾을 슬롯 레벨을 정한다) |
 | `resource.recharge` | 주사위를 굴려 회복 (`die`, `succeedsOn`, D324 `succeedsOnValue`=주사위 눈이 이 값과 같아야 성공) |
 | `damage.apply` | 피해 (`dice`, `diceCount`, `diceSides`, `amount`, `damageType`, `save: {ability, dc, success}`) |
 | `healing.apply` | 회복 (`dice`/`diceCount`+`diceSides`/`amount`, `pool: "half-max"`, D324 `hitDice`=히트 다이스를 써서 회복) |

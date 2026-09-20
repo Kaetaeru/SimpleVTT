@@ -152,7 +152,7 @@ export interface TableHostOptions {
   /** D324: spend one of the sheet's Hit Point Dice and heal by it (생명 흡수자's bite). */
   pcSpendHitDie?: (entry: JournalCharacter, random: () => number) => { runtime: CharacterRuntime; die: string; rolled: number; healed: number } | null;
   /** D324: what a sheet's contracts do as a spell is cast (주문 회상의 은총: a d4 that may keep the slot). */
-  pcCastRolls?: (entry: JournalCharacter, level: number, random: () => number, /** D336: what was cast, for a rule that answers a school of magic (비전 방호). */ spellId?: string) => Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; /** D326: damage the cast itself costs (소원의 대가). */ damage?: { formula: string; type: string }; /** D336: temporary hit points the cast tops up (비전 방호), with the most the ward may hold. */ tempHp?: { amount: number; maximum?: number; accumulate?: boolean } }>;
+  pcCastRolls?: (entry: JournalCharacter, level: number, random: () => number, /** D336: what was cast, for a rule that answers a school of magic (비전 방호). */ spellId?: string) => Array<{ label: string; die: string; rolled: number; keepsSlot: boolean; note: string; /** D326: damage the cast itself costs (소원의 대가). */ damage?: { formula: string; type: string }; /** D336: temporary hit points the cast tops up (비전 방호), with the most the ward may hold. */ tempHp?: { amount: number; maximum?: number; accumulate?: boolean }; /** D338: a spell slot the cast hands back, at the level the contract worked out (전문 예지). */ slotBack?: number }>;
   /**
    * D321: the same turn-start and turn-end rules for a monster carrying a spell effect (속박 강타's piercing damage
    * at the start of its turns). A monster has no sheet, so the numbers come from the cast the effect remembers.
@@ -1023,6 +1023,15 @@ export class TableHost {
             // D336: a ward the cast tops up. The spell itself writes the caster's sheet as it resolves, so the ward
             // waits until that is done and is applied below.
             if (roll.tempHp) { wards.push({ label: roll.label, note: roll.note, ...roll.tempHp }); continue; }
+            // D338: a slot the cast gives back, at a level the contract names (전문 예지).
+            if (roll.slotBack) {
+              const live = this.journalEntries.get(casterBefore.id);
+              if (live?.kind === "character" && (live.runtime.slotsUsed[roll.slotBack] ?? 0) > 0) {
+                this.storeEntry({ ...live, runtime: { ...restoreSpellSlot(live.runtime, roll.slotBack), updatedAt: this.now() }, updatedAt: this.now() });
+                this.say({ type: "system", who: "", content: `${casterBefore.name}: ${roll.label} — ${roll.note}` });
+              } else this.say({ type: "system", who: "", content: `${casterBefore.name}: ${roll.label} — ${roll.slotBack}레벨 슬롯 중 되찾을 것이 없습니다` });
+              continue;
+            }
             this.say({ type: "system", who: "", content: `${casterBefore.name}: ${roll.label} — ${roll.note}${roll.keepsSlot ? " → 슬롯이 소모되지 않습니다" : ""}` });
             if (!roll.keepsSlot) continue;
             const live = this.journalEntries.get(casterBefore.id);

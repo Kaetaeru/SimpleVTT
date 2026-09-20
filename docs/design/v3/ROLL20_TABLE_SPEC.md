@@ -660,7 +660,9 @@ Roll20 기본 마커: 빨강·파랑·초록·갈색·보라·분홍·노랑 점
 - **D335 이점을 없애는 반응 (V0.9 V8b, SRD 계획 §26)**: CLAUDE.md §1.1·§2. `roll.modify`의 `cancel-roll-state` — 그 굴림의 이점·불리점을 지운다(균형 회복). 창이 주사위 뒤에 열리므로 먼저 굴린 주사위가 남고, 판정 카드가 굴린 순서를 싣는다.
 - **D336 시전이 채우는 방호막 (V0.9 V8c, SRD 계획 §27)**: CLAUDE.md §1.1·§1.4·§2. `cast` 진입점이 `spell.school`을 읽고 자기 `when`을 본다. `temp-hp.grant`의 `accumulate`·`maximum` — 방호막이 시전마다 차오르고 제 크기를 넘지 않는다(비전 방호막). 투사 방호막은 "DM 판정"으로 남겼다.
 - **D337 빗나감에 여는 창 (V0.9 V8d, SRD 계획 §28)**: CLAUDE.md §1.1·§1.2·§2. `reaction.window`의 `attack.miss-self` — 나를 빗나간 공격에 창이 뜨고, 받으면 반격 창이 열린다(응수). 카드는 붙잡지 않고 그대로 나간다.
+- **D338 시전이 돌려주는 슬롯 (V0.9 V8e, SRD 계획 §29)**: CLAUDE.md §1.1·§2. `resource.change`의 `level`이 식이 된다 — 시전 항목에서 `spell.slot-level`을 읽어 `min(5, 슬롯−1)` 슬롯을 되돌려준다(전문 예지).
 
+| V8e 시전이 돌려주는 슬롯 (D338) ✔ | resource.change의 level 식 | 게이트 통과(d338-slot-back 2개), PHB 표 검증 거절 0 |
 | V8d 빗나감에 여는 창 (D337) ✔ | attack.miss-self, 응수 반격 | 게이트 통과(d337-miss-window 2개), PHB 표 검증 거절 0 |
 | V8c 시전이 채우는 방호막 (D336) ✔ | spell.school, 누적 임시 HP | 게이트 통과(d336-ward 3개), PHB 표 검증 거절 0 |
 | V8b 이점을 없애는 반응 (D335) ✔ | cancel-roll-state, 판정 카드의 굴린 순서 | 게이트 통과(d335-cancel-roll-state 4개) |
