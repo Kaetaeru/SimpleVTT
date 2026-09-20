@@ -122,7 +122,7 @@ export interface ActiveEffect {
   /** R85 (D220): conditions the effect put on the bearer, which come off with it. */
   conditions?: string[];
   /** V4d (D266): a die the bearer may add to one failed d20 test, spending the effect (바드의 영감). */
-  rescue?: { dice: string };
+  rescue?: { dice?: string; /** D334: the number this effect makes one d20 test show, recorded when it started (전조). */ value?: number };
   /** V4f (D268): the variant of the spell this effect was cast with (에너지 보호's damage type). */
   variant?: string;
   /**
@@ -373,7 +373,7 @@ export interface DerivedCharacter {
    * catalog, and the one that forgot would silently lose the feature's rule.
    */
   /** V4m (D275): what a long rest hands this character by contract (인간의 수완: 영웅적 영감). */
-  longRestGains?: { heroicInspiration?: boolean };
+  longRestGains?: { heroicInspiration?: boolean; /** D334: dice the rest rolls and keeps as numbers the bearer may make a d20 show (전조). */ records?: Array<{ key: string; name: string; sides: number; count: number }> };
   featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean; points?: boolean; economy?: string; spellSlot?: boolean; pactSlot?: boolean; slotLevel?: number; slotGain?: number; lockout?: { resourceId: string; dice: string } }; acts?: boolean; trigger?: string }>;
   hitDice: Record<string, number>;
   choices: ChoiceRequest[];

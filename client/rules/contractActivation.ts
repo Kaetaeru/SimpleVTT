@@ -186,8 +186,8 @@ export function formula(dice: string | undefined, amount: Parameters<typeof eval
  * V4m (D275): what the end of a long rest hands a character by contract (인간의 수완: 영웅적 영감). A long rest
  * already gives every pool back, so this reads only what a rest does *beside* that.
  */
-export function longRestGains(derived: { features: Array<{ id: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }) {
-  const gains: { heroicInspiration?: boolean } = {};
+export function longRestGains(derived: { features: Array<{ id: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }, scope?: Scope) {
+  const gains: { heroicInspiration?: boolean; records?: Array<{ key: string; name: string; sides: number; count: number }> } = {};
   const seen = new Set<string>();
   for (const feature of derived.features) {
     const key = featureRuleKey(feature.id);
@@ -198,6 +198,14 @@ export function longRestGains(derived: { features: Array<{ id: string }> }, cata
     for (const entry of contract.entryPoints.filter((item) => item.invocation === LONG_REST_INVOCATION)) {
       for (const operation of entry.operations) {
         if (operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain") gains.heroicInspiration = true;
+        // D334: the rest rolls dice and the numbers are kept — one effect per number, spent by making a d20 show it.
+        if (operation.kind === "effect.apply" && operation.template.recordDie) {
+          const sides = Math.floor(Number(evaluate(operation.template.recordDie, scope ?? (() => undefined))));
+          const count = operation.template.count ? Math.floor(Number(evaluate(operation.template.count, scope ?? (() => undefined)))) : 1;
+          if (Number.isFinite(sides) && sides > 0 && Number.isFinite(count) && count > 0) {
+            gains.records = [...(gains.records ?? []), { key: operation.template.key ?? key, name: operation.template.name ?? "", sides, count }];
+          }
+        }
       }
     }
   }

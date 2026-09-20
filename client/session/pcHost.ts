@@ -51,7 +51,7 @@ export function attributeOf(entry: JournalCharacter, link: string, catalog: Cont
   return undefined;
 }
 
-export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostOptions> {
+export function pcHostOptions(catalog: () => ContentCatalog, /** D334: the host's own roller, for the dice a long rest records (전조). */ random?: () => number): Partial<TableHostOptions> {
   return {
     attributeOf: (entry, link) => attributeOf(entry, link, catalog()),
     pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalog())),
@@ -97,7 +97,7 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
       const feature = restFeatures(derived, entry.runtime, catalog(), event).find((item) => item.featureId === choice.featureId);
       return feature ? useRestFeature(entry.runtime, derived, feature, feature.slotLevels ? choice.slots : undefined, feature.heal ? roll(feature.heal) : undefined) : null;
     },
-    pcRest: (entry, kind) => { const derived = derivedOf(entry, catalog()); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
+    pcRest: (entry, kind) => { const derived = derivedOf(entry, catalog()); return kind === "long" ? longRest(entry.runtime, derived, (sides) => Math.floor((random ?? Math.random)() * sides) + 1) : shortRest(entry.runtime, derived); },
     pcReactionSpell: (entry, spellId) => { const derived = derivedOf(entry, catalog()); if (!castableSpells(derived).includes(spellId)) return null; const view = catalog().spellById(spellId); return view ? cheapestCast(derived, entry.runtime, view.level) : null; },
     // V3c (D257): turn-start contracts — healing whose `when` holds against the sheet's hit points right now.
     pcTurnStart: (entry) => {

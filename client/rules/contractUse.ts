@@ -12,7 +12,7 @@ import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
 import { featureRuleKey } from "./activation";
 import { featureContract } from "./contractActivation";
-import { characterScope, interceptorsFor, type ContractInterceptor, type ContractPayment, type Scope } from "./contract";
+import { characterScope, interceptorsFor, type ContractInterceptor, type ContractOperation, type ContractPayment, type Scope } from "./contract";
 
 export type RollFamily = "ability-check" | "saving-throw" | "attack-roll";
 
@@ -37,9 +37,16 @@ const poolLeft = (derived: DerivedCharacter, runtime: CharacterRuntime, resource
 export function pcRescues(entry: JournalCharacter, derived: DerivedCharacter, catalog: ContentCatalog, family: RollFamily, outcome: "success" | "failure", /** V4d (D266): the number the d20 showed, when known (행운 needs a 1). */ d20?: number): RescueOffer[] {
   const offers: RescueOffer[] = [];
   // V4d (D266): a die someone gave this character (바드의 영감) — offered on a failure, spent by using it.
-  if (outcome === "failure") for (const effect of entry.runtime.effects ?? []) {
+  for (const effect of entry.runtime.effects ?? []) {
     if (!effect.rescue) continue;
-    offers.push({ feature: effect.name, ruleKey: effect.key, interceptor: { id: `rescue:${effect.key}`, timing: "d20.outcome-determined", slot: "d20.roll", families: [], outcomes: ["failure"], asks: true, factQueries: [], operations: [{ kind: "roll.modify", mode: "add-die", dice: effect.rescue.dice }] }, payments: [{ kind: "effect", effectKey: effect.key, amount: 1, consumeAt: "commit", refundOnCancel: false }], scope: characterScope(derived) });
+    // D334: a number the sheet recorded earlier (전조) replaces the die whichever way the roll went — a low number
+    // is how the recorded roll spoils somebody else's success. A die that is only added still waits for a failure.
+    const recorded = effect.rescue.value;
+    if (recorded === undefined && outcome !== "failure") continue;
+    const operation: ContractOperation = recorded === undefined
+      ? { kind: "roll.modify", mode: "add-die", dice: effect.rescue.dice }
+      : { kind: "roll.modify", mode: "set-die", value: { value: recorded } };
+    offers.push({ feature: effect.name, ruleKey: effect.key, interceptor: { id: `rescue:${effect.key}`, timing: "d20.outcome-determined", slot: "d20.roll", families: [], outcomes: [outcome], asks: true, factQueries: [], operations: [operation] }, payments: [{ kind: "effect", effectKey: effect.key, amount: 1, consumeAt: "commit", refundOnCancel: false }], scope: characterScope(derived) });
   }
   for (const feature of derived.features) {
     const ruleKey = featureRuleKey(feature.id);

@@ -135,7 +135,7 @@
 | `healing.apply` | 회복 (`dice`/`diceCount`+`diceSides`/`amount`, `pool: "half-max"`, D324 `hitDice`=히트 다이스를 써서 회복) |
 | `temp-hp.grant` | 임시 HP (같은 주사위 필드) |
 | `condition.apply` / `condition.remove` | 상태 (`save`, `duration`, `repeatSave: "turn-end"`, `successMark`) |
-| `effect.apply` / `effect.remove` / `effect.suppress` | 지속 효과 시작·종료·정지 |
+| `effect.apply` / `effect.remove` / `effect.suppress` | 지속 효과 시작·종료·정지 (`template.rescueDie`=빌려주는 주사위, D334 `template.recordDie`=지금 굴려 **숫자**를 적어 두기 + `template.count`=몇 개) |
 | `roll.modify` | 굴림에 손대기 (§6) |
 | `hp.maximum.change`, `life.stabilize`, `life.death-save` | HP 최대치·안정화·죽음 내성 |
 | `movement.stand`, `movement.relocate`, `movement.grant` | 일어서기·순간이동·추가 이동 |
@@ -225,6 +225,7 @@
 - `roll.modify` 모드: `add-die`(`dice` 또는 `diceSides` 식) · `add-flat` · `subtract-die` · `reroll` · `reroll-keep-lower` · `reroll-keep-higher` · `set-die` · `force-success`
 - `slot`: 그 굴림의 자리(`attack-roll`·`saving-throw`·`d20.roll`). 어느 d20이든 상대라면 **`any`**(D333) — 남의 판정에 끼어드는 개입이 이 자리를 쓴다. 능력 판정·명중 굴림·주문 내성이 나쁘게 나오면 도움 창이, 잘 나오면 깎는 창이 같은 장면의 다른 시트에 뜬다.
 - `oncePerTurn`, `naturalOnly: 1`도 있다.
+- **적어 둔 숫자**(D334): `invocation: "long-rest"` 항목의 `effect.apply`가 `template.recordDie`를 쓰면 긴 휴식이 그 주사위를 굴려 숫자를 효과로 남긴다(이름에 숫자가 붙는다). 그 효과를 쓰면 d20이 그 숫자가 된다(`set-die`) — 나쁘게 나온 굴림에도, 잘 나온 굴림에도 제안된다(낮은 숫자로 남의 성공을 지우는 것이 그 규칙의 쓰임이다). 다음 긴 휴식에 안 쓴 것은 사라진다.
 - 앱이 모르는 사실은 `factQueries`에 `unknownPolicy: "ask"` + `question`으로 두면 **창이 그 질문을 띄운다**. `ask`가 아니면 "실행 못 함"으로 센다.
 
 ### 6.2 맞았을 때 뜨는 창 — `timing: "reaction.window"`

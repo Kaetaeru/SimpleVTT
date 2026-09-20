@@ -81,7 +81,7 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   }
   derived.featureContracts = featureContracts;
   // V4m (D275): a contract that names the end of a long rest — the rest applies it, nothing is pressed.
-  derived.longRestGains = longRestGains(derived, catalog);
+  derived.longRestGains = longRestGains(derived, catalog, characterScope(derived));
   // R52 (D187): what this sheet may declare in the attack dialog, worked out once and carried with it.
   derived.attackRiders = characterRiders(derived, catalog);
   // R59 (D194): official actions a contract said may be taken as a bonus action instead.

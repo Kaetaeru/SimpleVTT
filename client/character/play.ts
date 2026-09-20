@@ -123,7 +123,7 @@ export function shortRest(runtime: CharacterRuntime, derived: DerivedCharacter, 
 }
 
 /** Long rest: full HP, no temp HP, all slots and pools, half the hit dice (at least one), one exhaustion level less. */
-export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter): CharacterRuntime {
+export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter, /** D334: the host's own roller, for dice the rest records (전조). */ roll?: (sides: number) => number): CharacterRuntime {
   const total = Object.values(derived.hitDice).reduce((sum, count) => sum + count, 0);
   let toRestore = Math.max(1, Math.floor(total / 2));
   const hitDiceSpent = { ...runtime.hitDiceSpent };
@@ -137,6 +137,14 @@ export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter): 
   const locked = Object.entries(runtime.resourceLockouts ?? {}).filter(([, rests]) => rests > 0);
   const stillUsed = Object.fromEntries(locked.map(([id]) => [id, derived.resources.find((resource) => resource.id === id)?.max ?? 1]));
   const resourceLockouts = Object.fromEntries(locked.map(([id, rests]) => [id, rests - 1] as const).filter(([, rests]) => rests > 0));
+  // D334: the rest rolls the dice a contract says to record, and each number waits on the sheet as its own effect.
+  const now = new Date().toISOString();
+  const die = roll ?? ((sides: number) => Math.floor(Math.random() * sides) + 1);
+  const recorded: ActiveEffect[] = (derived.longRestGains?.records ?? []).flatMap((record) =>
+    Array.from({ length: record.count }, (_unused, index) => {
+      const value = die(record.sides);
+      return { key: `${record.key}#${index}`, name: `${record.name || record.key} (${value})`, source: "feature" as const, duration: "긴 휴식까지", concentration: false, elapsed: 0, startedAt: now, rescue: { value } };
+    }));
   return stamp({
     ...runtime,
     hp: { ...runtime.hp, current: derived.hp.max, temp: 0 },
@@ -147,7 +155,7 @@ export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter): 
     hitDiceSpent,
     exhaustion: Math.max(0, runtime.exhaustion - 1),
     deathSaves: { success: 0, failure: 0 },
-    effects: [],
+    effects: recorded,
     // V4m (D275): what a contract says the end of a long rest hands over (인간의 수완).
     ...(derived.longRestGains?.heroicInspiration ? { heroicInspiration: true } : {}),
   }, `긴 휴식 — HP ${derived.hp.max}/${derived.hp.max}, 슬롯·자원 전부 회복, 히트 다이스 절반 회복${derived.longRestGains?.heroicInspiration ? ", 영웅적 영감" : ""}${(runtime.effects ?? []).length ? `, 효과 종료: ${runtime.effects.map((effect) => effect.name).join(", ")}` : ""}`);

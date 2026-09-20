@@ -93,7 +93,7 @@ export type ContractOperation =
    * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
    * table or another rule decides, and the sheet prints the reason instead of a number.
    */
-  | { kind: "effect.apply"; template: { key?: string; name?: string; duration?: string; rounds?: number; concentration?: boolean; /** V3e (D259): the effect ends when its bearer makes this roll (안정된 조준: its next attack). */ consumeOn?: "attack" | "cast" | "attack-or-cast"; /** V4d (D266): the bearer may add this die to one failed d20 test, which ends the effect (바드의 영감). */ rescueDie?: Expr }; lifetime: string; target: string; when?: Expr }
+  | { kind: "effect.apply"; template: { key?: string; name?: string; duration?: string; rounds?: number; concentration?: boolean; /** V3e (D259): the effect ends when its bearer makes this roll (안정된 조준: its next attack). */ consumeOn?: "attack" | "cast" | "attack-or-cast"; /** V4d (D266): the bearer may add this die to one failed d20 test, which ends the effect (바드의 영감). */ rescueDie?: Expr; /** D334: roll this die *now* and keep the number — the bearer may make one d20 test show it (전조). */ recordDie?: Expr; /** D334: how many of the effect to start, each with its own recorded number. */ count?: Expr }; lifetime: string; target: string; when?: Expr }
   /** R39 (D179): end an effect by key — a new Wild Shape replacing the last one. */
   | { kind: "effect.remove"; selector: string; target: string; when?: Expr }
   /** R39 (D179): pause an effect without ending it (an antimagic field); the sheet shows it, greyed, with the reason. */
@@ -377,6 +377,8 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
         concentration: template.concentration === true,
         ...(template.consumeOn === "attack" || template.consumeOn === "cast" || template.consumeOn === "attack-or-cast" ? { consumeOn: template.consumeOn } : {}),
         ...(isExpr(template.rescueDie) ? { rescueDie: template.rescueDie } : {}),
+        ...(isExpr(template.recordDie) ? { recordDie: template.recordDie } : {}),
+        ...(isExpr(template.count) ? { count: template.count } : {}),
       } });
       return;
     }
