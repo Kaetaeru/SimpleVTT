@@ -25,7 +25,8 @@ import { featureContract } from "./contractActivation";
  * on somebody else, and a bystander's contract wants to answer it. Whether they are close enough is a fact the
  * bystander confirms, because the scene has no positions to check it against (D109).
  */
-export const REACTION_TRIGGERS = ["attack.hit-self", "attack.hit-ally"] as const;
+// D337: `attack.miss-self` is the third — the swing missed its bearer, and a contract answers that (응수).
+export const REACTION_TRIGGERS = ["attack.hit-self", "attack.hit-ally", "attack.miss-self"] as const;
 export type ReactionTrigger = (typeof REACTION_TRIGGERS)[number];
 
 export interface GuardOffer {

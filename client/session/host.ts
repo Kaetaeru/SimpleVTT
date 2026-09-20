@@ -1653,7 +1653,8 @@ export class TableHost {
         if (!offer.strikeBack) this.markReactionUsed(promptMessage.prompt.reactor);
         const rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
-        this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}), ...(offer.miss ? { miss: true } : {}) });
+        // D337: a window on a miss holds no card — there is nothing to resolve again, only the reaction itself.
+        if (trigger !== "attack.miss-self") this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature, ...(offer.halve ? { halve: true } : {}), ...(offer.miss ? { miss: true } : {}) });
         // V4h (D270): the deflected attack sent back at whoever made it.
         if (offer.redirect) { const mover = this.resolveActor(promptMessage.prompt.mover); if (mover) this.contractStrike(reactor, [mover], command.feature, { formula: offer.redirect.formula, damageType: offer.redirect.damageType, ...(offer.redirect.save ? { save: { ...offer.redirect.save, success: "half" as const } } : {}) }, player.displayName, userId); }
         if (offer.strikeBack && (!offer.facts.length || offer.facts.every((item) => confirmed.has(item.id)))) this.say({ type: "prompt", who: "", content: `${promptMessage.prompt.reactor.name}: ${command.feature} — ${promptMessage.prompt.mover.name}에게 공격`, prompt: { kind: "opportunity", mover: promptMessage.prompt.mover, reactor: promptMessage.prompt.reactor } });
@@ -1950,6 +1951,12 @@ export class TableHost {
     // `attack.hit-ally` is asked instead. The target is always asked first — it is their skin — and only one window
     // opens per swing, because the card is held once and a second holder would fight the first over it.
     const bystander = !waits && resolution.outcome === "hit" && !fixed && !canShield && !guards.length ? this.bystanderGuard(target, attacker) : undefined;
+    // D337: a swing that missed. 응수 answers that moment, and nothing about the card changes — the window is a
+    // message of its own rather than a hold, so the miss is posted as usual while the reactor decides.
+    if (!waits && resolution.outcome === "miss" && !fixed && target.entry.kind === "character" && !this.reactionUsed(targetRef)) {
+      const missed = this.options.pcGuards?.(target.entry, "attack.miss-self") ?? [];
+      if (missed.length) this.say({ type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attacker.token?.name ?? attacker.entry.name}의 ${prepared.spec.name}이(가) ${target.token?.name ?? target.entry.name}에게 빗나감 — ${missed.map((guard) => guard.feature).join(" / ")} 반응?`, prompt: { kind: "guard", mover: { name: attacker.token?.name ?? attacker.entry.name, ...inputs.attacker }, reactor: { name: target.token?.name ?? target.entry.name, ...targetRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, guard: { features: missed.map((guard) => ({ name: guard.feature, hint: guardHint(guard), ...(guard.facts.length ? { facts: guard.facts } : {}) })), shield: false, trigger: "attack.miss-self" } } });
+    }
     if (canShield || guards.length || bystander) {
       const promptId = newMessageId();
       const attackerName = attacker.token?.name ?? attacker.entry.name;

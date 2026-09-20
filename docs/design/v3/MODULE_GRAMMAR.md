@@ -230,7 +230,7 @@
 
 ### 6.2 맞았을 때 뜨는 창 — `timing: "reaction.window"`
 
-`trigger`는 **`attack.hit-self`**(내가 맞음) 또는 **`attack.hit-ally`**(남이 맞음 — 거리 확인은 `factQueries`).
+`trigger`는 **`attack.hit-self`**(내가 맞음), **`attack.hit-ally`**(남이 맞음 — 거리 확인은 `factQueries`), **`attack.miss-self`**(D335/D337 — 나를 빗나감; 카드는 그대로 나가고 창만 따로 뜬다).
 창이 읽는 연산은 이것뿐이다:
 
 | 연산 | 뜻 |
