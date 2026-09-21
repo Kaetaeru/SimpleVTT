@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { controlsToken } from "../campaign/page";
-import { newTurn, roundCounterTurn, sortTurns, withoutTurn } from "../campaign/tracker";
+import { newTurn, sortTurns, withoutTurn } from "../campaign/tracker";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import { deriveCharacter } from "../character/derive";
 import { useClient } from "../app/context";
@@ -60,7 +60,9 @@ export function TrackerWindow({ onClose }: { onClose: () => void }) {
       const picked = await requestTargets("전투에 넣을 토큰을 클릭하세요 (Shift로 여러 개, 확정으로 마침)", { multi: true });
       const page = snapshot.pages.find((item) => item.tokens.some((token) => picked.includes(token.id)));
       if (!page) return;
-      if (!tracker.turns.some((turn) => turn.id === "turn_round")) set({ ...tracker, open: true, turns: [...tracker.turns, roundCounterTurn(tracker.round)] });
+      // D348: only the creatures fighting belong in the order. The round is counted by the tracker itself and
+      // shown in its header; the row that used to say so was one more thing to step past on every turn.
+      if (!tracker.open) set({ ...tracker, open: true });
       for (const id of picked) {
         const token = page.tokens.find((item) => item.id === id);
         if (!token) continue;
