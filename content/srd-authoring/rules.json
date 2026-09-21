@@ -1903,7 +1903,11 @@
          "kind": "effect.apply",
          "template": {
           "duration": "다음 턴 끝까지",
-          "rounds": 1
+          "rounds": 2,
+          "anchor": {
+           "who": "bearer",
+           "boundary": "end"
+          }
          },
          "lifetime": "until-duration",
          "target": "self"

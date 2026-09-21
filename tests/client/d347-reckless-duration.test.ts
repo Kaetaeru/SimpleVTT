@@ -130,3 +130,17 @@ test("D347: at the table it survives the barbarian's own turn and ends when thei
   await tick();
   assert.deepEqual(running(), [], "and it ends when the barbarian's own next turn starts");
 });
+
+test("D347: every counted effect that names a turn boundary now says which one", () => {
+  // The same slip lived in every rule written as "until the start/end of your next turn": the rounds were counted on
+  // the bearer's own clock, which is the end of the turn they were used on. The content says the boundary now, and
+  // this keeps it said — a new one written without it would be counted wrongly and silently.
+  const cat = createCatalog([]);
+  // Its own button is a labelled use, so the contract for it is asked for by that key (V3d/D258).
+  const veil = cat.contractFor("feature:ranger.natures-veil#use");
+  const applied = (veil?.entryPoints ?? []).flatMap((entry) => entry.operations).find((operation) => operation.kind === "effect.apply");
+  assert.ok(applied && applied.kind === "effect.apply", JSON.stringify(veil?.entryPoints.map((entry) => entry.id)));
+  if (!applied || applied.kind !== "effect.apply") return;
+  assert.deepEqual(applied.template.anchor, { who: "bearer", boundary: "end" }, "자연의 장막 runs to the end of the next turn");
+  assert.equal(applied.template.rounds, 2, "which is two of the bearer's own turn ends away");
+});
