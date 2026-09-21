@@ -30,7 +30,7 @@ export function contractDuration(contract: CommonPlayContract, scope: Scope): Pa
     // The counter is whatever the contract states and nothing else: a duration with no `rounds` is one the table
     // watches (집중, 최대 1시간), and guessing a number from the text would start a countdown nobody asked for.
     const rounds = counted ? operation.template.rounds : undefined;
-    return { text, instantaneous: false, concentration: Boolean(operation.template.concentration), ...(rounds === undefined ? {} : { rounds }), ...(operation.template.consumeOn ? { consumeOn: operation.template.consumeOn } : {}) };
+    return { text, instantaneous: false, concentration: Boolean(operation.template.concentration), ...(rounds === undefined ? {} : { rounds }), ...(operation.template.consumeOn ? { consumeOn: operation.template.consumeOn } : {}), ...(operation.template.anchor ? { anchor: operation.template.anchor } : {}) };
   }
   return undefined;
 }

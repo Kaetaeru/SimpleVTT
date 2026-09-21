@@ -135,7 +135,7 @@
 | `healing.apply` | 회복 (`dice`/`diceCount`+`diceSides`/`amount`, `pool: "half-max"`, D324 `hitDice`=히트 다이스를 써서 회복) |
 | `temp-hp.grant` | 임시 HP (같은 주사위 필드, `pool: "share"`, D336 `accumulate`=있던 것에 더한다 + `maximum`=그 이상은 안 된다 — 방호막) |
 | `condition.apply` / `condition.remove` | 상태 (`save`, `duration`, `repeatSave: "turn-end"`, `successMark`) |
-| `effect.apply` / `effect.remove` / `effect.suppress` | 지속 효과 시작·종료·정지 (`template.rescueDie`=빌려주는 주사위, D334 `template.recordDie`=지금 굴려 **숫자**를 적어 두기 + `template.count`=몇 개) |
+| `effect.apply` / `effect.remove` / `effect.suppress` | 지속 효과 시작·종료·정지 (`template.anchor`=라운드를 세는 턴 경계 — `{who: "bearer"|"source", boundary: "start"|"end"}`; **"다음 턴 시작까지"는 `{bearer, start}`**(D347), 없으면 자기 턴이 끝날 때 센다. `template.rescueDie`=빌려주는 주사위, D334 `template.recordDie`=지금 굴려 **숫자**를 적어 두기 + `template.count`=몇 개) |
 | `roll.modify` | 굴림에 손대기 (§6) |
 | `hp.maximum.change`, `life.stabilize`, `life.death-save` | HP 최대치·안정화·죽음 내성 |
 | `movement.stand`, `movement.relocate`, `movement.grant` | 일어서기·순간이동·추가 이동 |

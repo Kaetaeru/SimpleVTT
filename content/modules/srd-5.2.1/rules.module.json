@@ -2119,7 +2119,11 @@
            "name": "무모한 공격",
            "duration": "이 턴 (다음 턴 시작까지)",
            "concentration": false,
-           "rounds": 1
+           "rounds": 1,
+           "anchor": {
+            "who": "bearer",
+            "boundary": "start"
+           }
           },
           "lifetime": "until-duration",
           "target": "self"

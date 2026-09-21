@@ -13,6 +13,9 @@ export interface ParsedDuration {
   rounds?: number;
   /** V3e (D259): the effect ends when its bearer next attacks. */
   consumeOn?: "attack" | "cast" | "attack-or-cast";
+  /** D347: the turn boundary the rounds count on — an effect that runs "until the start of your next turn"
+   *  is not over when that turn ends (무모한 공격). */
+  anchor?: { who: "source" | "bearer"; boundary: "start" | "end" };
 }
 
 const ROUNDS_PER: Array<[RegExp, number]> = [[/(\d+)\s*라운드/, 1], [/(\d+)\s*분/, 10], [/(\d+)\s*시간/, 600], [/(\d+)\s*일/, 14400]];
