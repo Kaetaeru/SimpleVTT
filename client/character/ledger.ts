@@ -132,10 +132,12 @@ export class Ledger {
   get proficiencyBonus() { return proficiencyBonusForLevel(Math.max(1, this.level)); }
 
   /** Ability score so far (base + every bonus registered up to now), capped per bonus. */
+  /** D352: scores something sets while it works (거인력 장갑: 근력 19) — the score is this unless already higher. */
+  readonly abilityFloors: Partial<Record<AbilityKey, { value: number; source: string }>> = {};
   abilityScore(key: AbilityKey) {
     let score = this.source.abilities.base[key] ?? 10;
     for (const bonus of this.abilityBonuses[key]) score = Math.min(bonus.cap ?? ABILITY_SCORE_MAX, score + bonus.value);
-    return score;
+    return Math.max(score, this.abilityFloors[key]?.value ?? 0);
   }
   abilityMod(key: AbilityKey) { return abilityModifier(this.abilityScore(key)); }
   abilities(): Record<AbilityKey, number> {

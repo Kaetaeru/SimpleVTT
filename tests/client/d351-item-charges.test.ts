@@ -49,7 +49,7 @@ function carrier() {
   const runtime = addItem(initialRuntime(made.derived), { itemId: STAFF, name: "폭풍의 지팡이" });
   const staff = derive(runtime).inventory.find((item) => item.name === "폭풍의 지팡이")!;
   const attune = (value: CharacterRuntime) => toggleAttune(value, staff.instanceId, 3, staff.magic);
-  return { cat, made, derive, runtime, staff, attune, pool: `resource.item.${staff.instanceId}` };
+  return { cat, made, derive, runtime, staff, attune, pool: `resource.${STAFF}` };
 }
 
 test("D351: the charges are a pool on the sheet, and the spells wait for the item to work", () => {

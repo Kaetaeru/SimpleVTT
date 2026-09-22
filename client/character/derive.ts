@@ -54,6 +54,7 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   if (options.inventory) applyInventoryPatch(ledger, options.inventory);
   if (options.equipped) applyEquipState(ledger, options.equipped);
   addItemCharges(ledger);
+  addItemGrants(ledger);
   const derived = finalize(ledger);
   // V3d (D258): a feature whose contract names several uses (몽크의 기: 질풍 연타, 인내의 방어, 바람의 걸음) gets a line per use.
   for (let index = derived.features.length - 1; index >= 0; index -= 1) {
@@ -115,6 +116,34 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
 }
 
 /**
+ * D352: what a working magic item gives that is not a number on a roll — a score it sets, immunities, speeds, sight —
+ * lands in the ledger before the sheet is worked out, so everything that reads the score (attacks, saves, skills,
+ * carrying) reads the raised one. An official item whose entry carries a contract is also a feature of its bearer
+ * while it works, so its standing properties, its uses (buttons), riders and reactions run on the path features use.
+ */
+function addItemGrants(ledger: Ledger) {
+  for (const item of ledger.inventory) {
+    if (!customItemActive(item)) continue;
+    const magic = item.magic!;
+    for (const [key, value] of Object.entries(magic.abilities ?? {}) as Array<[AbilityKey, number]>) {
+      if ((ledger.abilityFloors[key]?.value ?? 0) < value) ledger.abilityFloors[key] = { value, source: item.name };
+    }
+    for (const type of magic.immunities ?? []) ledger.immunities.add(type);
+    for (const condition of magic.conditionImmunities ?? []) ledger.conditionImmunities.add(condition);
+    for (const [mode, value] of Object.entries(magic.speeds ?? {}) as Array<["fly" | "swim" | "climb", number | "walk"]>) {
+      const feet = value === "walk" ? -1 : value;
+      const current = ledger.extraSpeeds[mode];
+      if (current === undefined || (current >= 0 && (feet < 0 || feet > current))) ledger.extraSpeeds[mode] = feet;
+    }
+    if (magic.darkvision) ledger.senses.darkvision = Math.max(ledger.senses.darkvision ?? 0, magic.darkvision);
+    const key = item.officialId;
+    if (key && (ledger.catalog.contractFor(key) || ledger.catalog.contractUses(key).length)) {
+      ledger.addFeature({ id: key, name: item.name, source: "item", sourceLabel: item.name, ...(magic.description ? { description: magic.description } : {}) });
+    }
+  }
+}
+
+/**
  * D351: a magic item's charges are a pool on the sheet like any other — spent by the spells the item casts, each at
  * its own cost, and given back at dawn by the dice the item names (a long rest here) rather than all at once. The
  * pool is there whether or not the item works right now, so its count is not lost when it is taken off; the spells
@@ -126,8 +155,11 @@ function addItemCharges(ledger: Ledger) {
     if (!charges) continue;
     const working = customItemActive(item);
     const spells = item.magic?.spells ?? [];
+    // D352: an official item's pool is named after the item, so its contract can spend it (`resource:<item id>`).
+    // ponytail: a second copy of the same item gets a pool of its own, but its contract's uses spend the first copy's.
+    const named = item.officialId && !ledger.resources.some((resource) => resource.id === `resource.${item.officialId}`);
     ledger.addResource({
-      id: `resource.item.${item.instanceId}`, label: `${item.name} 충전`, max: charges.max, source: item.name, itemInstanceId: item.instanceId,
+      id: named ? `resource.${item.officialId}` : `resource.item.${item.instanceId}`, label: `${item.name} 충전`, max: charges.max, source: item.name, itemInstanceId: item.instanceId,
       recovery: charges.recharge ? `새벽 (긴 휴식에 ${charges.recharge} 회복)` : "새벽 (긴 휴식)",
       restore: { short: 0 },
       ...(charges.recharge ? { recharge: charges.recharge } : {}),
@@ -158,7 +190,9 @@ function finalize(ledger: Ledger): DerivedCharacter {
   for (const key of ABILITY_KEYS) {
     const base = source.abilities.base[key] ?? 10;
     const score = ledger.abilityScore(key);
-    abilities[key] = { score, modifier: abilityModifier(score), base, bonuses: ledger.abilityBonuses[key].map((bonus) => ({ source: bonus.source, value: bonus.value })) };
+    const floor = ledger.abilityFloors[key];
+    const raised = floor && floor.value === score && score > base + ledger.abilityBonuses[key].reduce((total, bonus) => total + bonus.value, 0);
+    abilities[key] = { score, modifier: abilityModifier(score), base, bonuses: [...ledger.abilityBonuses[key].map((bonus) => ({ source: bonus.source, value: bonus.value })), ...(raised ? [{ source: `${floor.source} (${floor.value}로)`, value: 0 }] : [])] };
   }
   const mod = (key: AbilityKey) => abilities[key].modifier;
 

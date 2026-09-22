@@ -20,7 +20,7 @@ import { Explain } from "../ui/Explain";
 const PROPERTY_KO: Record<string, string> = { light: "경량", heavy: "중량", finesse: "교묘", thrown: "투척", versatile: "다용도", "two-handed": "양손", reach: "간격", ammunition: "탄약", loading: "장전", special: "특수", nick: "닉", "숙련 없음": "숙련 없음" };
 const propertyKo = (property: string) => PROPERTY_KO[property] ?? property;
 
-const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "class", "subclass", "feat", "invocation", "metamagic"];
+const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "class", "subclass", "feat", "invocation", "metamagic", "item"];
 /**
  * R33 (D168): what the engine actually does with a feat. R32 kept this as a hand-written table keyed on the feat's
  * name; it is the derivation's own answer now, written from the feat catalog's config, so the sheet cannot claim a
@@ -28,7 +28,7 @@ const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "clas
  */
 const featRule = (feature: DerivedFeature): string | null => (feature.rules?.length ? feature.rules.join(" · ") : null);
 
-const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직", spell: "주문" };
+const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직", spell: "주문", item: "마법 아이템" };
 
 export interface SheetActions {
   useSlot: (level: number) => void;
