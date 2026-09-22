@@ -102,6 +102,16 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
   return { item, warnings };
 }
 
+/**
+ * D350: an official magic item's definition, read by the same parser a pasted one goes through. The content writes
+ * the same fields a player would paste, so everything that already works for a pasted item works for it; what the
+ * parser warns about is the content author's to fix (the module check reports it), not the player's.
+ */
+export function officialMagicItem(name: string, definition: Record<string, unknown>, catalog: ContentCatalog): CustomItem | undefined {
+  const parsed = parseCustomItem(JSON.stringify({ ...definition, name }), catalog);
+  return "error" in parsed ? undefined : parsed.item;
+}
+
 export const customAttackId = (item: Pick<DerivedItem, "itemId" | "instanceId">) => `attack.${item.itemId}@${item.instanceId}`;
 
 /** Whether the item's numbers are on the sheet right now. */

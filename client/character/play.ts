@@ -224,13 +224,14 @@ export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name
 }
 
 /** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */
-export function toggleAttune(runtime: CharacterRuntime, instanceId: string, limit = 3): CharacterRuntime {
+export function toggleAttune(runtime: CharacterRuntime, instanceId: string, limit = 3, /** D350: an official item's definition lives in the catalog, not on the runtime — the sheet passes what it derived. */ definition?: Pick<CustomItem, "attunement" | "name">): CharacterRuntime {
   const patch = patchOf(runtime);
   const target = patch.extra.find((item) => item.instanceId === instanceId);
-  if (!target?.custom?.attunement) return runtime;
-  if (!target.attuned && patch.extra.filter((item) => item.attuned && !patch.removed.includes(item.instanceId)).length >= limit) return stamp(runtime, `조율할 수 없음: ${target.custom.name} (이미 ${limit}개 조율 중)`);
-  const extra = patch.extra.map((item) => (item.instanceId === instanceId ? { ...item, attuned: !item.attuned } : item));
-  return stamp({ ...runtime, inventory: { ...patch, extra } }, `${target.attuned ? "조율 해제" : "조율"}: ${target.custom.name}`);
+  const item = target?.custom ?? definition;
+  if (!target || !item?.attunement) return runtime;
+  if (!target.attuned && patch.extra.filter((entry) => entry.attuned && !patch.removed.includes(entry.instanceId)).length >= limit) return stamp(runtime, `조율할 수 없음: ${item.name} (이미 ${limit}개 조율 중)`);
+  const extra = patch.extra.map((entry) => (entry.instanceId === instanceId ? { ...entry, attuned: !entry.attuned } : entry));
+  return stamp({ ...runtime, inventory: { ...patch, extra } }, `${target.attuned ? "조율 해제" : "조율"}: ${item.name}`);
 }
 
 export function removeItem(runtime: CharacterRuntime, derived: DerivedCharacter, instanceId: string): CharacterRuntime {

@@ -192,7 +192,7 @@ export interface SpellView {
   scope: "builtin" | "installed";
 }
 
-export type ItemKind = "weapon" | "armor" | "shield" | "tool" | "gear" | "pack" | "focus" | "ammunition" | "consumable";
+export type ItemKind = "weapon" | "armor" | "shield" | "tool" | "gear" | "pack" | "focus" | "ammunition" | "consumable" | /** D350: an official magic item, defined in the same shape as a pasted one. */ "magic";
 
 export interface WeaponDefinition { training: "simple" | "martial"; mode: "melee" | "ranged"; damage: string; damageType: string; properties: string[]; mastery?: string }
 export interface ArmorDefinition { training: "light" | "medium" | "heavy"; base: number; dexMax?: number; dexFull: boolean; strengthRequirement?: number; stealthDisadvantage: boolean }
@@ -210,6 +210,8 @@ export interface ItemView {
   tool?: { ability?: AbilityKey };
   /** H5d (D247): used up when used, and the healing it rolls (`consumable-definition`). */
   consumable?: { healing?: string };
+  /** D350: a magic item's definition, written in the shape a pasted custom item uses (`magic-item-definition`). */
+  magic?: Record<string, unknown>;
   config: Record<string, unknown>;
   scope: "builtin" | "installed";
 }
@@ -643,6 +645,7 @@ export class ContentCatalog {
         case "ammunition": return "ammunition";
         case "focus": return "focus";
         case "item": return "consumable";
+        case "magic-item": return "magic";
         default: return null;
       }
     };
@@ -656,6 +659,7 @@ export class ContentCatalog {
       const shield = mechanic<{ acBonus?: number }>(entry, "shield-definition");
       const tool = mechanic<{ ability?: AbilityKey }>(entry, "tool-definition");
       const consumable = mechanic<{ healing?: string }>(entry, "consumable-definition");
+      const magic = mechanic<Record<string, unknown>>(entry, "magic-item-definition");
       const packKind = entry.mechanics.some((item) => item.kind === "pack-definition") ? "pack" : kind;
       views.push({
         id: entry.id, name: entry.name, nameEn: entry.nameEn, kind: packKind,
@@ -665,6 +669,7 @@ export class ContentCatalog {
         ...(armorRaw ? { armor: { training: armorRaw.training, base: armorRaw.ac.base, dexMax: armorRaw.ac.dexMax, dexFull: armorRaw.ac.dex === "full", strengthRequirement: armorRaw.strengthRequirement, stealthDisadvantage: armorRaw.stealthDisadvantage ?? false } } : {}),
         ...(shield ? { shieldBonus: shield.acBonus ?? 2 } : {}),
         ...(tool ? { tool } : {}),
+        ...(magic ? { magic } : {}),
         config: anyConfig, scope: entry.scope,
       });
     }

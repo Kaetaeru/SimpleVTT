@@ -92,7 +92,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
     setQuantity: (instanceId, quantity) => commit(setItemQuantity(runtime, derived, instanceId, quantity)),
     removeItem: (instanceId) => commit(removeItem(runtime, derived, instanceId)),
     openAddItem: () => setAdding({ query: "", custom: "", quantity: "1", json: "" }),
-    toggleAttune: (instanceId) => commit(toggleAttune(runtime, instanceId, 3 + (derived.attunementBonus ?? 0))),
+    toggleAttune: (instanceId) => commit(toggleAttune(runtime, instanceId, 3 + (derived.attunementBonus ?? 0), derived.inventory.find((item) => item.instanceId === instanceId)?.magic)),
     roll: (label, formula, note, kind) => { void rollAndLog({ label, formula, note, kind }); },
     useFeature: (feature) => { void activateFeature(feature); },
     endEffect: (key) => commit(endEffect(runtime, key)),

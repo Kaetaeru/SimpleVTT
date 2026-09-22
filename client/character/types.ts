@@ -220,7 +220,7 @@ export interface DerivedResource {
   freeCastMaximized?: boolean;
 }
 
-export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean }
+export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean; /** D350: the catalog magic item this is, when it is an official one rather than a pasted one. */ officialId?: string }
 
 /** Runtime-side changes to the bag: items removed, quantities changed, items added during play. */
 export interface InventoryPatch {

@@ -24,7 +24,7 @@ import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
 import { deriveSpellSlots } from "./spells";
 import { applyTracks } from "./tracks";
-import { customAttackId, customItemActive, customItemApplication } from "./customItem";
+import { customAttackId, customItemActive, customItemApplication, officialMagicItem } from "./customItem";
 import type { ActiveEffect, CharacterSource, DerivedAttack, DerivedCharacter, DerivedItem, DerivedSkill, DerivedSpellcasting, InventoryPatch, Term } from "./types";
 
 const ARMOR_KO: Record<string, string> = { light: "경장 방어구", medium: "평장 방어구", heavy: "중장 방어구", shield: "방패" };
@@ -100,10 +100,15 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
   for (const item of ledger.inventory) { const quantity = patch.quantities[item.instanceId]; if (quantity !== undefined) item.quantity = Math.max(0, quantity); }
   for (const extra of patch.extra) {
     if (removed.has(extra.instanceId)) continue;
-    const itemId = extra.custom ? extra.custom.base : extra.itemId;
+    // D350: an official magic item is the same thing as a pasted one, written by the content instead of the player —
+    // its definition is read with the same parser, and from here on it is carried exactly like a pasted item.
+    const listed = !extra.custom && extra.itemId ? ledger.catalog.itemById(extra.itemId) : undefined;
+    const official = listed?.magic ? officialMagicItem(listed.name, listed.magic, ledger.catalog) : undefined;
+    const definition = extra.custom ?? official;
+    const itemId = definition ? definition.base : extra.itemId;
     const view = itemId ? ledger.catalog.itemById(itemId) : undefined;
     const quantity = patch.quantities[extra.instanceId] ?? extra.quantity;
-    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: extra.custom?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !extra.custom, ...(extra.custom ? { magic: extra.custom, attuned: extra.attuned === true } : {}) };
+    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true } : {}), ...(official ? { officialId: extra.itemId } : {}) };
     ledger.inventory.push(item);
   }
 }
