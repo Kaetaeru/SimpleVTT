@@ -18,7 +18,8 @@ export interface FeatBonus { source: string; value: number }
 /** 대형 무기 전투 and its kin: no damage die on a matching weapon rolls below `minimum`. */
 export interface FeatDieMinimum { source: string; minimum: number; properties: string[] }
 
-const PROPERTY_KO: Record<string, string> = { light: "경량", heavy: "중량", finesse: "교묘", thrown: "투척", versatile: "다재", "two-handed": "양손", reach: "간격", ammunition: "탄약", loading: "장전", special: "특수", nick: "닉" };
+/** Weapon property ids in the sheet's words (UI vocabulary, shared by the rules text and the printed sheet). */
+export const PROPERTY_KO: Record<string, string> = { light: "경량", heavy: "중량", finesse: "교묘", thrown: "투척", versatile: "다재", "two-handed": "양손", reach: "간격", ammunition: "탄약", loading: "장전", special: "특수", nick: "닉" };
 const RESET_KO: Record<string, string> = { "long-rest": "긴 휴식", "short-rest": "짧은 휴식", "short-or-long-rest": "짧은 휴식 또는 긴 휴식", turn: "턴", round: "라운드" };
 export const resetKo = (reset: string) => RESET_KO[reset] ?? reset;
 

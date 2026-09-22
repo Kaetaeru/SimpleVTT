@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>캐릭터 시트 인쇄 — SimpleVTT</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; background: #e9e7e2; font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; color: #1c1b19; }
+    .controls { max-width: 190mm; margin: 0 auto; padding: 16px; display: grid; gap: 10px; }
+    .controls h1 { font-size: 18px; margin: 0; }
+    .controls p { margin: 0; font-size: 13px; color: #555; }
+    .controls label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+    .controls textarea { min-height: 70px; font: 12px/1.4 ui-monospace, Consolas, monospace; }
+    .controls .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .controls button { font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 6px; border: 1px solid #555; background: #fff; cursor: pointer; }
+    .controls button.primary { background: #2d2a26; color: #fff; border-color: #2d2a26; }
+    .controls button:disabled { opacity: .45; cursor: default; }
+    .controls button:focus-visible, .controls input:focus-visible, .controls textarea:focus-visible { outline: 2px solid #b8651b; outline-offset: 2px; }
+    .messages { margin: 0; padding: 8px 12px 8px 28px; border-radius: 6px; font-size: 13px; }
+    .messages.bad { background: #fbe4e1; color: #7a1f14; }
+    .messages.note { background: #f3efe3; color: #5a4a1c; }
+    .sheet { padding: 0 16px 24px; }
+  </style>
+</head>
+<body>
+  <div class="controls no-print">
+    <h1>캐릭터 시트 인쇄</h1>
+    <p>SimpleVTT에서 내보낸 캐릭터 JSON을 고르면 시트가 만들어집니다. 추가 모듈로 만든 캐릭터라면 그 모듈 파일도 같이 고르세요. 인터넷 없이 동작합니다.</p>
+    <label>캐릭터 파일 (.json)<input id="character" type="file" accept=".json,application/json" /></label>
+    <label>추가 모듈 (선택, 여러 개 가능)<input id="modules" type="file" accept=".json,application/json" multiple /></label>
+    <label>또는 JSON 붙여 넣기<textarea id="pasted" placeholder='{ "format": "simplevtt.character", ... }'></textarea></label>
+    <div class="buttons">
+      <button id="make" type="button">시트 만들기</button>
+      <button id="print" type="button" class="primary" disabled>PDF로 저장</button>
+    </div>
+    <p>"PDF로 저장"을 누르면 인쇄 창이 열립니다. 대상에서 <b>PDF로 저장</b>을 고르고, 용지는 A4, 여백은 기본값으로 두세요.</p>
+    <ul id="messages" class="messages" hidden></ul>
+  </div>
+  <div id="sheet" class="sheet"></div>
+  <script type="module" src="./app.ts"></script>
+</body>
+</html>

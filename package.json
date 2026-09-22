@@ -49,6 +49,7 @@
     "build:frontend": "npm run generate:content && vite build",
     "dev:client": "vite --config vite.client.config.ts",
     "build:client": "npm run generate:content && tsc --noEmit -p tsconfig.client.json && vite build --config vite.client.config.ts",
+    "build:sheet": "npm run generate:content && node scripts/build-sheet-tool.mjs",
     "test:client": "node --import tsx --import ./tests/support/register-css.mjs --test tests/client/*.test.ts",
     "gate:client": "npm run generate:content && tsc --noEmit -p tsconfig.client.json && npm run check:client-boundary && npm run test:client",
     "check:client-boundary": "node scripts/check-client-boundary.mjs",
