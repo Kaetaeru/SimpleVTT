@@ -26,14 +26,16 @@
 | `saveAbilities` | `["wis", "cha"]` | `bonus.saves`를 이 능력의 내성에만 붙인다. 생략하면 모든 내성 |
 | `resistances` | 피해 타입 배열 | 영문 id (§4). 시트의 저항 목록에 더해진다 |
 | `notes` | 문자열 배열 | 계산할 수 없는 효과. 가방 줄에 마우스를 올리면 설명 아래에 보인다 |
-| `use` | 객체 | 턴 패널에서 썼을 때: `healing`("2d4+2" 형식, 마실 대상을 골라 굴려 회복)과 `consumes`(true면 하나 줄어듦). 회복이 있으면 소모된다. 이름에 "물약"이 들어가도 `use`가 없으면 회복하지 않는다(D247). D353: `tempHp`("10", "2d4" — 마신 쪽 임시 HP), `effect`(`{ "name", "duration": "1시간", "rounds", "grants": { 아이템과 같은 필드 } }` — 마신 쪽에 그 시간 동안 붙는다. `rounds`를 생략하면 지속시간 글에서 센다), `spell`(`{ "spellId", "duration" }` — 마신 쪽이 집중 없이 그 주문의 효과를 받는다). 셋 중 하나라도 있으면 소모되고, 턴 패널에서 마실 대상을 고른다 |
+| `use` | 객체 | 턴 패널에서 썼을 때: `healing`("2d4+2" 형식, 마실 대상을 골라 굴려 회복)과 `consumes`(true면 하나 줄어듦). 회복이 있으면 소모된다. 이름에 "물약"이 들어가도 `use`가 없으면 회복하지 않는다(D247). D353: `tempHp`("10", "2d4" — 마신 쪽 임시 HP), `effect`(`{ "name", "duration": "1시간", "rounds", "grants": { 아이템과 같은 필드 } }` — 마신 쪽에 그 시간 동안 붙는다. `rounds`를 생략하면 지속시간 글에서 센다), `spell`(`{ "spellId", "duration" }` — 마신 쪽이 집중 없이 그 주문의 효과를 받는다). `effect.permanent: true`면 끝나지 않는 효과(교본: `grants.abilityBonuses`로 영구 +2), 두 번 쓰면 두 번 더해진다 (D356). 셋 중 하나라도 있으면 소모되고, 턴 패널에서 마실 대상을 고른다 |
 | `charges` | 객체 | 충전: `max`(최대치), `recharge`("1d6+4" 형식, 긴 휴식(새벽)에 이만큼 돌아온다. 생략하면 긴 휴식에 전부), `note`(다 쓰면 부서지는지 같은 서사 — "DM 판정"). 시트의 자원에 "이름 충전"으로 보인다 (D351) |
-| `spells` | 배열 | 충전으로 시전하는 주문: `{ "spellId", "charges", "dc", "attackBonus", "level" }`. 아이템이 작동할 때(조율이 필요하면 조율 중) 주문 목록에 들어가고, 그 충전 풀로 시전하면 주문마다 적힌 충전이 빠진다. `dc`·`attackBonus`를 생략하면 시전자의 값, `level`을 생략하면 주문 레벨 (D351) |
+| `spells` | 배열 | 충전으로 시전하는 주문: `{ "spellId", "charges", "dc", "attackBonus", "level" }`. 아이템이 작동할 때(조율이 필요하면 조율 중) 주문 목록에 들어가고, 그 충전 풀로 시전하면 주문마다 적힌 충전이 빠진다. `dc`·`attackBonus`를 생략하면 시전자의 값, `level`을 생략하면 주문 레벨 (D351). `perLevel`·`maxLevel`: 충전을 `perLevel`개 더 쓸 때마다 한 레벨 높게, `maxLevel`까지 — 시전 창이 레벨별로 보여 준다 (D356) |
 | `abilities` | 객체 | 작동하는 동안 능력치를 이 값으로: `{ "str": 19 }`. 이미 더 높으면 그대로 (D352) |
 | `immunities` | 피해 타입 배열 | 영문 id (§4). 피해 면역 (D352) |
 | `conditionImmunities` | 상태 배열 | `poisoned`, `charmed`, `frightened` … 상태 면역 (D352) |
 | `speeds` | 객체 | `{ "fly": 60 }`, `{ "swim": "walk" }` — 피트 수 또는 보행 속도와 같음 (D352) |
 | `darkvision` | 숫자(ft) | 암시야 (D352) |
+| `abilityBonuses` | 객체 | 작동하는 동안 능력치를 올린다, 상한까지: `{ "con": { "amount": 2, "max": 20 } }`. 이미 상한을 넘은 점수는 그대로 (D356) |
+| `damageType` | 피해 타입 | 이 무기의 피해 타입을 기반 무기 대신 이것으로 (태양검: `radiant`) (D356) |
 | `baseOptions` | 객체 | 공식·모듈 아이템: 지급할 때 기반을 고른다. `{ "kind": "weapon"|"armor"|"shield"|"ammunition", "training": ["martial"] 또는 ["medium","heavy"], "mode": "melee"|"ranged", "ids": [...], "exclude": [...] }`. 고른 기반으로 "아이템 (기반)" 이름으로 지급된다 (D354) |
 
 ## 3. `bonus`

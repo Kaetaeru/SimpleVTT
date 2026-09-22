@@ -30,7 +30,7 @@ export function itemUse(item: { name: string; kind: string; itemId?: string; mag
   const consumes = Boolean(view?.consumable) || item.kind === "consumable" || item.kind === "ammunition" || use?.consumes === true || Boolean(heal) || Boolean(effect) || Boolean(use?.tempHp);
   const parts = [...(heal ? [`${heal} 회복`] : []), ...(use?.tempHp ? [`임시 HP ${use.tempHp}`] : []), ...(effect ? [`${effect.name} ${effect.duration}`] : [])];
   const extra = { ...(use?.tempHp ? { tempHp: use.tempHp } : {}), ...(effect ? { effect } : {}) };
-  if (parts.length) return { consumes, ...(heal ? { heal } : {}), ...extra, text: `${item.name} 마심 (${parts.join(" · ")})` };
+  if (parts.length) return { consumes, ...(heal ? { heal } : {}), ...extra, text: `${item.name} ${!item.magic || item.magic.type === "potion" ? "마심" : "사용"} (${parts.join(" · ")})` };
   return { consumes, text: `${item.name} 사용` };
 }
 
@@ -43,6 +43,7 @@ function itemEffect(name: string, use: CustomItem["use"], catalog?: Pick<Content
     return { key: `spell:${use.spell.spellId}`, name: spell?.name ?? name, source: "spell", duration, concentration: false, ...(rounds !== undefined ? { rounds } : {}), elapsed: 0, startedAt: "" };
   }
   const rounds = use?.effect ? use.effect.rounds ?? durationInRounds(use.effect.duration) : undefined;
-  if (use?.effect) return { key: `item-effect:${name}`, name: use.effect.name ?? name, source: "feature", duration: use.effect.duration, concentration: false, ...(rounds !== undefined ? { rounds } : {}), elapsed: 0, startedAt: "", grants: use.effect.grants };
+  // D356: a permanent one (교본) is its own each time, so a second reading adds to the first.
+  if (use?.effect) return { key: `item-effect:${name}${use.effect.permanent ? `:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}` : ""}`, name: use.effect.name ?? name, source: "feature", duration: use.effect.duration, concentration: false, ...(rounds !== undefined ? { rounds } : {}), elapsed: 0, startedAt: "", grants: use.effect.grants };
   return undefined;
 }

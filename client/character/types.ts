@@ -225,7 +225,7 @@ export interface DerivedResource {
   /** D351: how much of the pool each spell it casts costs (a staff's 3 charges for one spell, 1 for another). */
   spellCosts?: Record<string, number>;
   /** D351: the numbers a spell cast from this pool uses when the pool's item has its own (DC 18). */
-  castStats?: Record<string, { dc?: number; attackBonus?: number; level?: number }>;
+  castStats?: Record<string, { dc?: number; attackBonus?: number; level?: number; /** D356: charges per level above, up to this level (화염구의 마법봉). */ perLevel?: number; maxLevel?: number }>;
   /** D351: the item whose charges these are; its spells are offered only while it works (attuned, if it needs to be). */
   itemInstanceId?: string;
 }

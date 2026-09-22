@@ -587,7 +587,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   if (!list && !fromScroll && !lent?.cast && !itemPool) return null;
   const chosen: CastMethod = method ?? (view.level === 0 ? { kind: "cantrip" } : { kind: "slot", level: view.level });
   const carried = chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`) : undefined;
-  const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : itemStats?.level ?? carried?.level ?? (chosen.kind === "sustain" ? view.level : view.level);
+  const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : (chosen.kind === "resource" && itemPool && chosen.level !== undefined ? chosen.level : undefined) ?? itemStats?.level ?? carried?.level ?? (chosen.kind === "sustain" ? view.level : view.level);
   return {
     spec: { spellId, name: view.name, level, exec, ...(spellIsJudged(exec, catalog, derived) ? { judged: true } : {}) },
     // D327: a spell somebody else cast on this sheet keeps their numbers when this sheet uses it (용의 숨결).

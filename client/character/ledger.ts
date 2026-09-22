@@ -136,7 +136,8 @@ export class Ledger {
   readonly abilityFloors: Partial<Record<AbilityKey, { value: number; source: string }>> = {};
   abilityScore(key: AbilityKey) {
     let score = this.source.abilities.base[key] ?? 10;
-    for (const bonus of this.abilityBonuses[key]) score = Math.min(bonus.cap ?? ABILITY_SCORE_MAX, score + bonus.value);
+    // D356: a raise never lowers a score already above its ceiling (건강 21에 "최대 20까지 +2").
+    for (const bonus of this.abilityBonuses[key]) score = bonus.value > 0 ? Math.max(score, Math.min(bonus.cap ?? ABILITY_SCORE_MAX, score + bonus.value)) : score + bonus.value;
     return Math.max(score, this.abilityFloors[key]?.value ?? 0);
   }
   abilityMod(key: AbilityKey) { return abilityModifier(this.abilityScore(key)); }

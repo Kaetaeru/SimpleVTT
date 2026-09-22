@@ -449,7 +449,7 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
 }
 
 export interface SpellSummary { id: string; name: string; level: number; duration?: string; ritual?: boolean; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ consumeOn?: "attack" | "cast" | "attack-or-cast" }
-export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string } | { kind: "scroll"; instanceId: string } | /** R77 (D212): using a spell in effect again — no cost, no new effect. */ { kind: "sustain" };
+export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string; /** D356: the level an item casts at, paid with extra charges. */ level?: number } | { kind: "scroll"; instanceId: string } | /** R77 (D212): using a spell in effect again — no cost, no new effect. */ { kind: "sustain" };
 
 /** Cast a spell: spend the slot, pact slot, free-cast pool or nothing (cantrip, ritual); a lasting spell becomes an effect. Null when the cost cannot be paid. */
 export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, spell: SpellSummary, method: CastMethod): CharacterRuntime | null {
@@ -486,7 +486,11 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
       // V3g (D261): an at-will free cast spends nothing.
       if (resource.atWill) { how = `${resource.label} (무제한)`; break; }
       // D351: an item's charges are spent by the spell's own cost (a staff: 1 for one spell, 3 for another).
-      const cost = resource.spellCosts?.[spell.id] ?? 1;
+      const stats = resource.castStats?.[spell.id];
+      const baseLevel = stats?.level ?? spell.level;
+      // D356: an item that casts higher for extra charges (화염구의 마법봉: 1 more per level, up to 6).
+      if (method.level !== undefined && method.level !== baseLevel && (!stats?.perLevel || method.level < baseLevel || method.level > (stats.maxLevel ?? 9))) return null;
+      const cost = (resource.spellCosts?.[spell.id] ?? 1) + (method.level !== undefined && stats?.perLevel ? (method.level - baseLevel) * stats.perLevel : 0);
       if (used + cost > resource.max) return null;
       next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + cost } };
       how = cost === 0 ? `${resource.label} (충전 없이)` : `${resource.label}${cost !== 1 ? ` ${cost}회` : ""}, 남은 ${resource.max - used - cost}/${resource.max}`;

@@ -1786,10 +1786,10 @@
     "bonus": {
      "attack": 1,
      "damage": 1
-    }
+    },
+    "damageType": "force"
    },
    "dm": [
-    "화살은 관통 대신 역장 피해 — 피해 유형을 바꿔 적용",
     "구속의 화살: 피해 대신 DC 15 근력 내성 실패 시 1분 포박(DC 20 근력(운동)으로 탈출)",
     "운송의 화살·에너지 사다리 — 좌표가 없어 표에서"
    ]
@@ -1812,13 +1812,12 @@
      {
       "spellId": "dnd.srd521.spell.charm-person",
       "charges": 1,
-      "dc": 13
+      "dc": 13,
+      "perLevel": 1,
+      "maxLevel": 3
      }
     ]
-   },
-   "dm": [
-    "충전을 더 쓰면 1개당 주문 레벨 +1 — 추가 충전은 직접 빼기"
-   ]
+   }
   },
   "dnd.srd521.magic-item.eyes-of-minute-seeing": {
    "definition": {
@@ -2572,11 +2571,16 @@
   },
   "dnd.srd521.magic-item.ioun-stone-of-agility": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "abilityBonuses": {
+     "dex": {
+      "amount": 2,
+      "max": 20
+     }
+    }
    },
    "dm": [
-    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
-    "민첩 +2(최대 20) — 시트 능력치에 직접 반영"
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
    ]
   },
   "dnd.srd521.magic-item.ioun-stone-of-awareness": {
@@ -2617,11 +2621,16 @@
   },
   "dnd.srd521.magic-item.ioun-stone-of-fortitude": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "abilityBonuses": {
+     "con": {
+      "amount": 2,
+      "max": 20
+     }
+    }
    },
    "dm": [
-    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
-    "건강 +2(최대 20) — 시트 능력치에 직접 반영"
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
    ]
   },
   "dnd.srd521.magic-item.ioun-stone-of-greater-absorption": {
@@ -2636,29 +2645,44 @@
   },
   "dnd.srd521.magic-item.ioun-stone-of-insight": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "abilityBonuses": {
+     "wis": {
+      "amount": 2,
+      "max": 20
+     }
+    }
    },
    "dm": [
-    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
-    "지혜 +2(최대 20) — 시트 능력치에 직접 반영"
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
    ]
   },
   "dnd.srd521.magic-item.ioun-stone-of-intellect": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "abilityBonuses": {
+     "int": {
+      "amount": 2,
+      "max": 20
+     }
+    }
    },
    "dm": [
-    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
-    "지능 +2(최대 20) — 시트 능력치에 직접 반영"
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
    ]
   },
   "dnd.srd521.magic-item.ioun-stone-of-leadership": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "abilityBonuses": {
+     "cha": {
+      "amount": 2,
+      "max": 20
+     }
+    }
    },
    "dm": [
-    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
-    "매력 +2(최대 20) — 시트 능력치에 직접 반영"
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
    ]
   },
   "dnd.srd521.magic-item.ioun-stone-of-mastery": {
@@ -2702,11 +2726,16 @@
   },
   "dnd.srd521.magic-item.ioun-stone-of-strength": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "abilityBonuses": {
+     "str": {
+      "amount": 2,
+      "max": 20
+     }
+    }
    },
    "dm": [
-    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
-    "근력 +2(최대 20) — 시트 능력치에 직접 반영"
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
    ]
   },
   "dnd.srd521.magic-item.ioun-stone-of-sustenance": {
@@ -2993,19 +3022,49 @@
   },
   "dnd.srd521.magic-item.manual-of-bodily-health": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "use": {
+     "effect": {
+      "name": "건강 +2 (교본)",
+      "duration": "영구",
+      "permanent": true,
+      "grants": {
+       "abilityBonuses": {
+        "con": {
+         "amount": 2,
+         "max": 30
+        }
+       }
+      }
+     }
+    }
    },
    "dm": [
-    "6일 안에 48시간 공부하면 건강 +2(최대 30) — 시트 능력치에 직접 반영",
+    "6일 안에 48시간 공부한 뒤에 쓴다(마신다 대신 읽는다)",
     "그 뒤 100년 동안 마법을 잃는다"
    ]
   },
   "dnd.srd521.magic-item.manual-of-gainful-exercise": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "use": {
+     "effect": {
+      "name": "근력 +2 (교본)",
+      "duration": "영구",
+      "permanent": true,
+      "grants": {
+       "abilityBonuses": {
+        "str": {
+         "amount": 2,
+         "max": 30
+        }
+       }
+      }
+     }
+    }
    },
    "dm": [
-    "6일 안에 48시간 공부하면 근력 +2(최대 30) — 시트 능력치에 직접 반영",
+    "6일 안에 48시간 공부한 뒤에 쓴다(마신다 대신 읽는다)",
     "그 뒤 100년 동안 마법을 잃는다"
    ]
   },
@@ -3021,10 +3080,25 @@
   },
   "dnd.srd521.magic-item.manual-of-quickness-of-action": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "use": {
+     "effect": {
+      "name": "민첩 +2 (교본)",
+      "duration": "영구",
+      "permanent": true,
+      "grants": {
+       "abilityBonuses": {
+        "dex": {
+         "amount": 2,
+         "max": 30
+        }
+       }
+      }
+     }
+    }
    },
    "dm": [
-    "6일 안에 48시간 공부하면 민첩 +2(최대 30) — 시트 능력치에 직접 반영",
+    "6일 안에 48시간 공부한 뒤에 쓴다(마신다 대신 읽는다)",
     "그 뒤 100년 동안 마법을 잃는다"
    ]
   },
@@ -5587,7 +5661,9 @@
     "spells": [
      {
       "spellId": "dnd.srd521.spell.cure-wounds",
-      "charges": 1
+      "charges": 1,
+      "perLevel": 1,
+      "maxLevel": 4
      },
      {
       "spellId": "dnd.srd521.spell.lesser-restoration",
@@ -5598,10 +5674,7 @@
       "charges": 5
      }
     ]
-   },
-   "dm": [
-    "상처 치료는 주문 레벨당 충전 1(최대 4레벨) — 올려 쓴 만큼 충전을 더 차감"
-   ]
+   }
   },
   "dnd.srd521.magic-item.staff-of-power": {
    "definition": {
@@ -6003,10 +6076,11 @@
     "bonus": {
      "attack": 2,
      "damage": 2
-    }
+    },
+    "damageType": "radiant"
    },
    "dm": [
-    "피해는 참격 대신 광휘, 기교 속성 — 카드의 피해 유형을 광휘로 읽기",
+    "기교 속성 — 근력 대신 민첩을 쓸 수 있다",
     "언데드 명중 시 1d8 광휘 추가",
     "칼날 생성·소멸은 추가 행동, 햇빛 15피트 반경 조절"
    ]
@@ -6301,28 +6375,73 @@
   },
   "dnd.srd521.magic-item.tome-of-clear-thought": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "use": {
+     "effect": {
+      "name": "지능 +2 (교본)",
+      "duration": "영구",
+      "permanent": true,
+      "grants": {
+       "abilityBonuses": {
+        "int": {
+         "amount": 2,
+         "max": 30
+        }
+       }
+      }
+     }
+    }
    },
    "dm": [
-    "6일 안에 48시간 연구하면 지능 +2 (최대 30) — 시트 능력치를 직접 올림",
+    "6일 안에 48시간 공부한 뒤에 쓴다(마신다 대신 읽는다)",
     "읽은 뒤 100년간 마법을 잃음"
    ]
   },
   "dnd.srd521.magic-item.tome-of-leadership-and-influence": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "use": {
+     "effect": {
+      "name": "매력 +2 (교본)",
+      "duration": "영구",
+      "permanent": true,
+      "grants": {
+       "abilityBonuses": {
+        "cha": {
+         "amount": 2,
+         "max": 30
+        }
+       }
+      }
+     }
+    }
    },
    "dm": [
-    "6일 안에 48시간 연구하면 매력 +2 (최대 30) — 시트 능력치를 직접 올림",
+    "6일 안에 48시간 공부한 뒤에 쓴다(마신다 대신 읽는다)",
     "읽은 뒤 100년간 마법을 잃음"
    ]
   },
   "dnd.srd521.magic-item.tome-of-understanding": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "use": {
+     "effect": {
+      "name": "지혜 +2 (교본)",
+      "duration": "영구",
+      "permanent": true,
+      "grants": {
+       "abilityBonuses": {
+        "wis": {
+         "amount": 2,
+         "max": 30
+        }
+       }
+      }
+     }
+    }
    },
    "dm": [
-    "6일 안에 48시간 연구하면 지혜 +2 (최대 30) — 시트 능력치를 직접 올림",
+    "6일 안에 48시간 공부한 뒤에 쓴다(마신다 대신 읽는다)",
     "읽은 뒤 100년간 마법을 잃음"
    ]
   },
@@ -6497,13 +6616,12 @@
      {
       "spellId": "dnd.srd521.spell.fireball",
       "charges": 1,
-      "dc": 15
+      "dc": 15,
+      "perLevel": 1,
+      "maxLevel": 6
      }
     ]
-   },
-   "dm": [
-    "충전을 1회 더 쓸 때마다 주문 레벨 +1 (최대 3회) — 추가 충전은 직접 차감"
-   ]
+   }
   },
   "dnd.srd521.magic-item.wand-of-lightning-bolts": {
    "definition": {
@@ -6517,13 +6635,12 @@
      {
       "spellId": "dnd.srd521.spell.lightning-bolt",
       "charges": 1,
-      "dc": 15
+      "dc": 15,
+      "perLevel": 1,
+      "maxLevel": 6
      }
     ]
-   },
-   "dm": [
-    "충전을 1회 더 쓸 때마다 주문 레벨 +1 (최대 3회) — 추가 충전은 직접 차감"
-   ]
+   }
   },
   "dnd.srd521.magic-item.wand-of-magic-detection": {
    "definition": {
@@ -6551,13 +6668,12 @@
     "spells": [
      {
       "spellId": "dnd.srd521.spell.magic-missile",
-      "charges": 1
+      "charges": 1,
+      "perLevel": 1,
+      "maxLevel": 4
      }
     ]
-   },
-   "dm": [
-    "충전을 1회 더 쓸 때마다 주문 레벨 +1 (최대 3회) — 추가 충전은 직접 차감"
-   ]
+   }
   },
   "dnd.srd521.magic-item.wand-of-paralysis": {
    "definition": {

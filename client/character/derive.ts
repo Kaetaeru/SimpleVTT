@@ -140,6 +140,8 @@ function addItemGrants(ledger: Ledger) {
 
 function addGrants(ledger: Ledger, name: string, magic: NonNullable<DerivedItem["magic"]>) {
   {
+    // D356: a raise with a ceiling (건강의 아이운 스톤, 교본) is a bonus like an ability score improvement's.
+    for (const [key, bonus] of Object.entries(magic.abilityBonuses ?? {}) as Array<[AbilityKey, { amount: number; max: number }]>) ledger.addAbilityBonus(key, bonus.amount, name, bonus.max);
     for (const [key, value] of Object.entries(magic.abilities ?? {}) as Array<[AbilityKey, number]>) {
       if ((ledger.abilityFloors[key]?.value ?? 0) < value) ledger.abilityFloors[key] = { value, source: name };
     }
@@ -166,7 +168,7 @@ function addItemCharges(ledger: Ledger) {
     const spells = item.magic?.spells ?? [];
     // D354: an item that casts its spells at will has no charges — its spells are an at-will pool while it works.
     if (!item.magic?.charges) {
-      if (working && spells.length) ledger.addResource({ id: `resource.item.${item.instanceId}`, label: `${item.name} 주문`, max: 1, recovery: "무제한", source: item.name, itemInstanceId: item.instanceId, atWill: true, freeCastSpellIds: spells.map((spell) => spell.spellId), castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}) }])) });
+      if (working && spells.length) ledger.addResource({ id: `resource.item.${item.instanceId}`, label: `${item.name} 주문`, max: 1, recovery: "무제한", source: item.name, itemInstanceId: item.instanceId, atWill: true, freeCastSpellIds: spells.map((spell) => spell.spellId), castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined || spell.perLevel !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}), ...(spell.perLevel !== undefined ? { perLevel: spell.perLevel, maxLevel: spell.maxLevel ?? 9 } : {}) }])) });
       continue;
     }
     const charges = item.magic.charges;
@@ -181,7 +183,7 @@ function addItemCharges(ledger: Ledger) {
       ...(working && spells.length ? {
         freeCastSpellIds: spells.map((spell) => spell.spellId),
         spellCosts: Object.fromEntries(spells.map((spell) => [spell.spellId, spell.charges])),
-        castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}) }])),
+        castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined || spell.perLevel !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}), ...(spell.perLevel !== undefined ? { perLevel: spell.perLevel, maxLevel: spell.maxLevel ?? 9 } : {}) }])),
       } : {}),
     });
   }
@@ -364,7 +366,8 @@ function finalize(ledger: Ledger): DerivedCharacter {
     const view = itemOf(item.itemId);
     if (!view?.weapon) continue;
     // R75 (D210): a magic weapon is its own row, named for itself, so its bonus does not land on the plain one.
-    if (item.magic) { attacks.push({ ...weaponAttack(ledger, view, abilities, pb), id: customAttackId(item), name: item.name }); continue; }
+    // D356: an item may deal another damage type than its base (태양검: 광휘).
+    if (item.magic) { attacks.push({ ...weaponAttack(ledger, view, abilities, pb), id: customAttackId(item), name: item.name, ...(item.magic.damageType ? { damageType: damageTypeKo(item.magic.damageType) } : {}) }); continue; }
     if (seenWeapons.has(view.id)) continue;
     seenWeapons.add(view.id);
     attacks.push(weaponAttack(ledger, view, abilities, pb));

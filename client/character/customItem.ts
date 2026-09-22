@@ -34,7 +34,7 @@ export interface CustomItem {
     /** D353: temporary hit points it gives the drinker ("10", "2d4"). */
     tempHp?: string;
     /** D353: an effect on the drinker for a while — the same fields an item carries, under `grants`. */
-    effect?: { name?: string; duration: string; rounds?: number; grants: CustomItem };
+    effect?: { name?: string; duration: string; rounds?: number; grants: CustomItem; /** D356: it never ends (교본: 능력치가 영구히 오른다). */ permanent?: boolean };
     /** D353: the drinker is under this spell for a while, without concentration (속도의 물약: 가속). */
     spell?: { spellId: string; duration?: string; rounds?: number };
   };
@@ -44,9 +44,13 @@ export interface CustomItem {
    */
   charges?: { max: number; recharge?: string; note?: string };
   /** D351: spells it casts from those charges — how many each costs, and the DC or attack bonus it casts with when it has its own. */
-  spells?: Array<{ spellId: string; charges: number; dc?: number; attackBonus?: number; level?: number }>;
+  spells?: Array<{ spellId: string; charges: number; dc?: number; attackBonus?: number; level?: number; /** D356: each extra charge spent raises the spell's level by one, up to `maxLevel`. */ perLevel?: number; maxLevel?: number }>;
   /** D352: ability scores it sets while it works — the score becomes this unless it is already higher (거인력 장갑: 근력 19). */
   abilities?: Partial<Record<AbilityKey, number>>;
+  /** D356: ability scores it raises while it works, each up to a maximum (건강의 아이운 스톤: 건강 +2, 최대 20). */
+  abilityBonuses?: Partial<Record<AbilityKey, { amount: number; max: number }>>;
+  /** D356: the damage type its weapon deals instead of the base weapon's (태양검: 광휘). */
+  damageType?: string;
   /** D352: damage types (English ids) and conditions it makes the bearer immune to. */
   immunities?: string[];
   conditionImmunities?: string[];
@@ -136,7 +140,7 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
       const spellId = text(value.spellId)!;
       if (!catalog.spellById(spellId)) warnings.push(`spells[${index}]: "${spellId}"는 목록에 없는 주문입니다`);
       const charges = typeof value.charges === "number" && value.charges >= 0 ? Math.floor(value.charges) : 1;
-      spells.push({ spellId, charges, ...(typeof value.dc === "number" ? { dc: value.dc } : {}), ...(typeof value.attackBonus === "number" ? { attackBonus: value.attackBonus } : {}), ...(typeof value.level === "number" ? { level: value.level } : {}) });
+      spells.push({ spellId, charges, ...(typeof value.dc === "number" ? { dc: value.dc } : {}), ...(typeof value.attackBonus === "number" ? { attackBonus: value.attackBonus } : {}), ...(typeof value.level === "number" ? { level: value.level } : {}), ...(typeof value.perLevel === "number" && value.perLevel > 0 ? { perLevel: Math.floor(value.perLevel) } : {}), ...(typeof value.maxLevel === "number" && value.maxLevel <= 9 ? { maxLevel: Math.floor(value.maxLevel) } : {}) });
     }
     if (spells.length) item.spells = spells;
   }
@@ -148,6 +152,16 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     }
     if (Object.keys(abilities).length) item.abilities = abilities;
   }
+  if (isObject(raw.abilityBonuses)) {
+    const bonuses: NonNullable<CustomItem["abilityBonuses"]> = {};
+    for (const [key, value] of Object.entries(raw.abilityBonuses)) {
+      if (!ABILITIES.includes(key as AbilityKey) || !isObject(value) || typeof value.amount !== "number" || typeof value.max !== "number") { warnings.push(`abilityBonuses.${key}: str/dex/con/int/wis/cha에 { "amount": 2, "max": 20 } 형식이어야 합니다`); continue; }
+      bonuses[key as AbilityKey] = { amount: Math.floor(value.amount), max: Math.floor(value.max) };
+    }
+    if (Object.keys(bonuses).length) item.abilityBonuses = bonuses;
+  }
+  const damageType = text(raw.damageType);
+  if (damageType !== undefined) { if (DAMAGE_TYPES.includes(damageType)) item.damageType = damageType; else warnings.push(`damageType: "${damageType}"는 ${DAMAGE_TYPES.join("/")} 중 하나가 아닙니다`); }
   for (const [field, known] of [["immunities", DAMAGE_TYPES], ["conditionImmunities", CONDITIONS]] as const) {
     if (!Array.isArray(raw[field])) continue;
     const values = (raw[field] as unknown[]).map(String);
@@ -185,7 +199,7 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
       const grants = parseCustomItem(JSON.stringify({ ...(isObject(effect.grants) ? effect.grants : {}), name: text(effect.name) ?? name }), catalog);
       if ("error" in grants) warnings.push(`use.effect.grants: ${grants.error}`);
       else if (!text(effect.duration)) warnings.push("use.effect.duration: 지속시간 글이 필요합니다 (\"1시간\")");
-      else { warnings.push(...grants.warnings.map((line) => `use.effect.grants: ${line}`)); use.effect = { ...(text(effect.name) ? { name: text(effect.name) } : {}), duration: text(effect.duration)!, ...(typeof effect.rounds === "number" ? { rounds: effect.rounds } : {}), grants: grants.item }; }
+      else { warnings.push(...grants.warnings.map((line) => `use.effect.grants: ${line}`)); use.effect = { ...(text(effect.name) ? { name: text(effect.name) } : {}), duration: text(effect.duration)!, ...(typeof effect.rounds === "number" ? { rounds: effect.rounds } : {}), grants: grants.item, ...(effect.permanent === true ? { permanent: true } : {}) }; }
     }
     if (isObject(raw.use.spell)) {
       const spell = raw.use.spell;
