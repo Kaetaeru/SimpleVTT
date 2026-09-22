@@ -53,6 +53,7 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   applyEquipment(ledger);
   if (options.inventory) applyInventoryPatch(ledger, options.inventory);
   if (options.equipped) applyEquipState(ledger, options.equipped);
+  addItemCharges(ledger);
   const derived = finalize(ledger);
   // V3d (D258): a feature whose contract names several uses (몽크의 기: 질풍 연타, 인내의 방어, 바람의 걸음) gets a line per use.
   for (let index = derived.features.length - 1; index >= 0; index -= 1) {
@@ -110,6 +111,32 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
     const quantity = patch.quantities[extra.instanceId] ?? extra.quantity;
     const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true } : {}), ...(official ? { officialId: extra.itemId } : {}) };
     ledger.inventory.push(item);
+  }
+}
+
+/**
+ * D351: a magic item's charges are a pool on the sheet like any other — spent by the spells the item casts, each at
+ * its own cost, and given back at dawn by the dice the item names (a long rest here) rather than all at once. The
+ * pool is there whether or not the item works right now, so its count is not lost when it is taken off; the spells
+ * it casts are offered only while it works (attuned, if it needs to be).
+ */
+function addItemCharges(ledger: Ledger) {
+  for (const item of ledger.inventory) {
+    const charges = item.magic?.charges;
+    if (!charges) continue;
+    const working = customItemActive(item);
+    const spells = item.magic?.spells ?? [];
+    ledger.addResource({
+      id: `resource.item.${item.instanceId}`, label: `${item.name} 충전`, max: charges.max, source: item.name, itemInstanceId: item.instanceId,
+      recovery: charges.recharge ? `새벽 (긴 휴식에 ${charges.recharge} 회복)` : "새벽 (긴 휴식)",
+      restore: { short: 0 },
+      ...(charges.recharge ? { recharge: charges.recharge } : {}),
+      ...(working && spells.length ? {
+        freeCastSpellIds: spells.map((spell) => spell.spellId),
+        spellCosts: Object.fromEntries(spells.map((spell) => [spell.spellId, spell.charges])),
+        castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}) }])),
+      } : {}),
+    });
   }
 }
 

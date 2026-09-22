@@ -76,6 +76,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
   const gold = runtime ? runtime.gold : derived.gold;
   const [casting, setCasting] = useState<string | null>(null);
   const isActive = (key: string) => Boolean(runtime?.effects?.some((effect) => effect.key === key));
+  const itemSpellPools = derived.resources.filter((resource) => resource.itemInstanceId && resource.freeCastSpellIds?.length);
   const spellRows = (ids: string[]) => <SpellRows ids={ids} catalog={catalog} derived={derived} runtime={runtime} actions={actions} casting={casting} setCasting={setCasting} />;
   return (
     <div className={`cl-sheet${compact ? " compact" : ""}`}>
@@ -226,7 +227,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
             </table>
           </section>
 
-          {derived.spellcasting.length || Object.keys(derived.spellSlots).length || derived.pactMagic ? (
+          {derived.spellcasting.length || Object.keys(derived.spellSlots).length || derived.pactMagic || itemSpellPools.length ? (
             <section className="cl-section">
               <h2>주문 {live ? <span className="cl-quiet cl-small">● 클릭: 슬롯 사용 · ○ 클릭: 회복</span> : null}</h2>
               {Object.keys(derived.spellSlots).length || derived.pactMagic ? (
@@ -248,6 +249,13 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
                   ) : null}
                 </div>
               ) : null}
+              {/* D351: the spells a working magic item casts from its own charges. */}
+              {itemSpellPools.map((pool) => (
+                <div className="cl-feature" key={pool.id}>
+                  <div className="cl-head"><span className="cl-name">{pool.source}</span><span className="cl-quiet cl-small">충전 {pool.max - (runtime?.resourcesUsed[pool.id] ?? 0)}/{pool.max}</span></div>
+                  {live ? spellRows(pool.freeCastSpellIds ?? []) : <div className="cl-small">{(pool.freeCastSpellIds ?? []).map((id) => `${catalog.spellById(id)?.name ?? id} (충전 ${pool.spellCosts?.[id] ?? 1})`).join(", ")}</div>}
+                </div>
+              ))}
               {derived.spellcasting.map((entry) => (
                 <div className="cl-feature" key={entry.key}>
                   <div className="cl-head">
@@ -330,7 +338,7 @@ export function castOptions(spell: SpellView, derived: DerivedCharacter, runtime
     // V4n (D276): a pool that pays for any spell up to a level (주문 회상의 은총: 1~4레벨).
     else if (left > 0 && resource.freeCastMaxLevel !== undefined && spell.level > 0 && spell.level <= resource.freeCastMaxLevel) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
     // V4q (D279): a pool that pays for any one of the spells it names (자연 회복: 회합 주문).
-    else if (left > 0 && resource.freeCastSpellIds?.includes(spell.id)) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
+    else if (resource.freeCastSpellIds?.includes(spell.id) && left >= (resource.spellCosts?.[spell.id] ?? 1)) options.push({ label: `${resource.label}${resource.spellCosts?.[spell.id] !== undefined ? ` ${resource.spellCosts[spell.id]}회` : ""} (${left})`, method: { kind: "resource", id: resource.id } });
   }
   if (spell.ritual) options.push({ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } });
   return options;

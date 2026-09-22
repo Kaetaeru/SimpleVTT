@@ -30,6 +30,13 @@ export interface CustomItem {
   notes?: string[];
   /** H5d (D247): what using it does — the healing it rolls, and whether it is used up. */
   use?: { healing?: string; consumes?: boolean };
+  /**
+   * D351: charges — how many it holds, the dice that come back at dawn (a long rest here), and what happens when the
+   * last one is spent, which is the table's to roll (`note`).
+   */
+  charges?: { max: number; recharge?: string; note?: string };
+  /** D351: spells it casts from those charges — how many each costs, and the DC or attack bonus it casts with when it has its own. */
+  spells?: Array<{ spellId: string; charges: number; dc?: number; attackBonus?: number; level?: number }>;
 }
 
 const ABILITIES: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
@@ -90,6 +97,25 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     if (valid.length) item.resistances = valid;
   }
   if (Array.isArray(raw.notes)) item.notes = raw.notes.map(String);
+  if (isObject(raw.charges)) {
+    const max = raw.charges.max;
+    if (typeof max === "number" && Number.isInteger(max) && max > 0) {
+      const recharge = text(raw.charges.recharge)?.replace(/\s+/g, "");
+      if (recharge !== undefined && !/^[0-9]*d[0-9]+([+-][0-9]+)?$|^[0-9]+$/.test(recharge)) warnings.push(`charges.recharge: "${recharge}"는 "1d6+4" 형식이어야 합니다`);
+      item.charges = { max, ...(recharge && /^[0-9]*d[0-9]+([+-][0-9]+)?$|^[0-9]+$/.test(recharge) ? { recharge } : {}), ...(text(raw.charges.note) ? { note: text(raw.charges.note) } : {}) };
+    } else warnings.push("charges.max: 1 이상의 정수여야 합니다");
+  }
+  if (Array.isArray(raw.spells)) {
+    const spells: NonNullable<CustomItem["spells"]> = [];
+    for (const [index, value] of raw.spells.entries()) {
+      if (!isObject(value) || !text(value.spellId)) { warnings.push(`spells[${index}]: spellId가 필요합니다`); continue; }
+      const spellId = text(value.spellId)!;
+      if (!catalog.spellById(spellId)) warnings.push(`spells[${index}]: "${spellId}"는 목록에 없는 주문입니다`);
+      const charges = typeof value.charges === "number" && value.charges >= 0 ? Math.floor(value.charges) : 1;
+      spells.push({ spellId, charges, ...(typeof value.dc === "number" ? { dc: value.dc } : {}), ...(typeof value.attackBonus === "number" ? { attackBonus: value.attackBonus } : {}), ...(typeof value.level === "number" ? { level: value.level } : {}) });
+    }
+    if (spells.length) item.spells = spells;
+  }
   if (isObject(raw.use)) {
     const use: NonNullable<CustomItem["use"]> = {};
     const healing = text(raw.use.healing)?.replace(/\s+/g, "");

@@ -218,6 +218,14 @@ export interface DerivedResource {
   freeCastSpellIds?: string[];
   /** D324: the free cast rolls its dice at their maximum (악마적 활력: 거짓 생명의 임시 HP). */
   freeCastMaximized?: boolean;
+  /** D351: what a long rest gives back, rolled, instead of everything (a wand's 1d6+1 at dawn). */
+  recharge?: string;
+  /** D351: how much of the pool each spell it casts costs (a staff's 3 charges for one spell, 1 for another). */
+  spellCosts?: Record<string, number>;
+  /** D351: the numbers a spell cast from this pool uses when the pool's item has its own (DC 18). */
+  castStats?: Record<string, { dc?: number; attackBonus?: number; level?: number }>;
+  /** D351: the item whose charges these are; its spells are offered only while it works (attuned, if it needs to be). */
+  itemInstanceId?: string;
 }
 
 export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean; /** D350: the catalog magic item this is, when it is an official one rather than a pasted one. */ officialId?: string }

@@ -140,6 +140,20 @@ export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter, /
   // D334: the rest rolls the dice a contract says to record, and each number waits on the sheet as its own effect.
   const now = new Date().toISOString();
   const die = roll ?? ((sides: number) => Math.floor(Math.random() * sides) + 1);
+  // D351: an item's charges come back by the dice it names (at dawn — the long rest here), not all at once.
+  const rolled = (formula: string) => {
+    const match = /^(\d*)d(\d+)([+-]\d+)?$/.exec(formula);
+    if (!match) return Number(formula) || 0;
+    let total = Number(match[3] ?? 0);
+    for (let n = 0; n < Number(match[1] || 1); n += 1) total += die(Number(match[2]));
+    return total;
+  };
+  for (const resource of derived.resources) {
+    if (!resource.recharge || stillUsed[resource.id] !== undefined) continue;
+    const used = runtime.resourcesUsed[resource.id] ?? 0;
+    const left = Math.max(0, used - rolled(resource.recharge));
+    if (left > 0) stillUsed[resource.id] = left;
+  }
   const recorded: ActiveEffect[] = (derived.longRestGains?.records ?? []).flatMap((record) =>
     Array.from({ length: record.count }, (_unused, index) => {
       const value = die(record.sides);
@@ -470,8 +484,11 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
       if (resource.freeCastSpellIds?.length && resource.freeCastSpellId !== spell.id && !resource.freeCastSpellIds.includes(spell.id)) return null;
       // V3g (D261): an at-will free cast spends nothing.
       if (resource.atWill) { how = `${resource.label} (무제한)`; break; }
-      next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + 1 } };
-      how = `${resource.label}, 남은 ${resource.max - used - 1}/${resource.max}`;
+      // D351: an item's charges are spent by the spell's own cost (a staff: 1 for one spell, 3 for another).
+      const cost = resource.spellCosts?.[spell.id] ?? 1;
+      if (used + cost > resource.max) return null;
+      next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + cost } };
+      how = `${resource.label}${cost !== 1 ? ` ${cost}회` : ""}, 남은 ${resource.max - used - cost}/${resource.max}`;
       break;
     }
     case "scroll": {
