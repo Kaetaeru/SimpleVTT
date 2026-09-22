@@ -15,6 +15,7 @@ import type { AbilityKey } from "../catalog/types";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
 import { PROPERTY_KO } from "../character/featRules";
+import { RARITY_KO } from "../character/customItem";
 
 const ABILITIES: Array<{ key: AbilityKey; ko: string; en: string }> = [
   { key: "str", ko: "근력", en: "STR" }, { key: "dex", ko: "민첩", en: "DEX" }, { key: "con", ko: "건강", en: "CON" },
@@ -134,6 +135,8 @@ export function sheetHtml({ derived, runtime, catalog, notes }: SheetInput): str
   const castingRows = derived.spellcasting.map((casting) => `<div class="row">${field("주문 시전", `${casting.className} · ${ABILITIES.find((item) => item.key === casting.ability)?.ko ?? casting.ability}`, "wide")}${field("주문 내성 DC", casting.saveDc)}${field("주문 명중", signed(casting.attackBonus))}</div>`).join("");
   const resources = derived.resources.filter((resource) => resource.max > 0 && !resource.atWill);
   const inventory = derived.inventory.filter((item) => item.quantity > 0);
+  // D354: what a magic item leaves to the table (충전 뒤의 파괴 굴림, DM 판정 줄) goes on paper with its name.
+  const magicNotes = inventory.flatMap((item) => [...(item.magic?.charges?.note ? [`${item.name}: ${item.magic.charges.note}`] : []), ...(item.magic?.notes ?? []).map((line) => `${item.name}: ${line}`)]);
 
   const page2 = `<section class="page">
     <header class="top slim">${field("캐릭터 이름", derived.name, "name")}${field("레벨", derived.level)}</header>
@@ -148,10 +151,12 @@ export function sheetHtml({ derived, runtime, catalog, notes }: SheetInput): str
         ${resources.map((resource) => `<div class="resource"><span class="res-label">${escape(resource.label)} <small>${escape(resource.recovery)}</small></span>${boxes(resource.max)}${resource.max > 20 ? ` <small>(${resource.max})</small>` : ""}</div>`).join("") || '<p class="empty">—</p>'}
       </section>
       <section class="panel"><h3>장비</h3>
-        <ul class="gear">${inventory.map((item) => `<li>${escape(item.name)}${item.quantity > 1 ? ` ×${item.quantity}` : ""}${item.equipped ? " <small>(착용)</small>" : ""}</li>`).join("") || '<li class="empty">—</li>'}</ul>
+        <ul class="gear">${inventory.map((item) => `<li>${item.magic ? "✦ " : ""}${escape(item.name)}${item.quantity > 1 ? ` ×${item.quantity}` : ""}${item.equipped ? " <small>(착용)</small>" : ""}${item.magic?.rarity ? ` <small>${escape(RARITY_KO[item.magic.rarity] ?? item.magic.rarity)}</small>` : ""}${item.magic?.attunement ? ` <small>(조율 ${item.attuned ? "●" : "○"})</small>` : ""}</li>`).join("") || '<li class="empty">—</li>'}</ul>
+        <p><b>조율</b> ${inventory.filter((item) => item.attuned).length} / ${3 + (derived.attunementBonus ?? 0)}</p>
         <p><b>금화</b> ${runtime?.gold ?? derived.gold} GP</p>
       </section>
     </div>
+    ${magicNotes.length ? `<section class="panel"><h3>마법 아이템</h3>${magicNotes.map((line) => `<p>${escape(line)}</p>`).join("")}</section>` : ""}
     ${notes && (notes.appearance || notes.personality || notes.backstory) ? `<section class="panel"><h3>외모 · 성격 · 배경 이야기</h3>${notes.appearance ? `<p>${escape(notes.appearance)}</p>` : ""}${notes.personality ? `<p>${escape(notes.personality)}</p>` : ""}${notes.backstory ? `<p>${escape(notes.backstory)}</p>` : ""}</section>` : ""}
   </section>`;
 

@@ -83,6 +83,58 @@ function spells() {
   return { moduleId: "dnd.srd-5.2.1.spells", content: entries.sort((a, b) => a.id.localeCompare(b.id)) };
 }
 
+// The rarity and attunement words of the translation, to the definition's keys (the table's vocabulary, not a rule).
+const RARITY = { 일반: "common", 고급: "uncommon", 희귀: "rare", "매우 희귀": "very-rare", 전설: "legendary", 유물: "artifact" };
+
+/**
+ * D354 (MAGIC_ITEMS_PLAN.md MI-5): magic items. The name, rarity, attunement and text come from the translation; the
+ * definition (the fields a pasted magic item carries), a contract when the item acts, and the lines the table has to
+ * settle ("DM 판정") come from `magic-items.json`. An item that comes in kinds (거인 힘의 허리띠, 전쟁 마법사의 지팡이)
+ * lists them as `variants`, each an entry of its own. The few SRD items the translation does not carry (+1 무기 …)
+ * are written whole under `authored`.
+ */
+function magicItems() {
+  const decided = decisions("magic-items.json");
+  const entries = [];
+  const seen = new Set();
+  const entryOf = (id, name, english, description, rarity, attunement, decision) => {
+    const notes = [...(decision.definition?.notes ?? []), ...(decision.dm ?? []).map((line) => `DM 판정: ${line}`)];
+    const definition = { type: "wondrous", ...(rarity ? { rarity } : {}), ...(attunement ? { attunement: true } : {}), ...decision.definition, ...(notes.length ? { notes } : {}) };
+    return {
+      id, category: "magic-item", tags: ["magic-item", "srd-5.2.1"],
+      presentation: presentation(name, english, { description }),
+      mechanics: [
+        { kind: "magic-item-definition", config: definition },
+        ...(decision.contract ? [{ kind: "common-play", config: { id, ...decision.contract } }] : []),
+      ],
+    };
+  };
+  const emit = (id, name, english, description, rarity, attunement, decision) => {
+    if (!decision.variants?.length) { entries.push(entryOf(id, name, english, description, rarity, attunement, decision)); return; }
+    for (const variant of decision.variants) {
+      const merged = { ...decision, definition: { ...decision.definition, ...variant.definition }, dm: [...(decision.dm ?? []), ...(variant.dm ?? [])], ...(variant.contract ? { contract: variant.contract } : {}) };
+      entries.push(entryOf(`${id}.${variant.id}`, variant.name, `${english} (${variant.id})`, description, RARITY[variant.rarity] ?? variant.rarity ?? rarity, attunement, merged));
+    }
+  };
+  for (const doc of parsed.docs.filter((item) => item.file.startsWith("magic-items/items/"))) {
+    for (const node of doc.tree.flatMap((top) => top.children)) {
+      const field = (label) => new RegExp(`^- \\*\\*${label}:\\*\\*\\s*(.+)$`, "m").exec(node.text)?.[1]?.trim();
+      const english = field("원문명");
+      if (!english) continue;
+      const id = `dnd.srd521.magic-item.${slug(english)}`;
+      const body = node.text.split("\n").filter((line) => !/^- \*\*[^*]+:\*\*/.test(line)).join("\n").trim();
+      const description = plain([body, ...node.children.map((child) => `${child.head}\n${nodeText(child)}`)].join("\n\n"));
+      const decision = decided.items?.[id];
+      if (!decision) { problems.push(`${id}: 결정 없음 (content/srd-authoring/magic-items.json)`); continue; }
+      seen.add(id);
+      emit(id, node.head, english, description, RARITY[field("희귀도") ?? ""], (field("조율") ?? "").startsWith("필요"), decision);
+    }
+  }
+  for (const id of Object.keys(decided.items ?? {})) if (!seen.has(id)) problems.push(`${id}: 원문에 없음`);
+  for (const item of decided.authored ?? []) emit(item.id, item.name, item.originalName, item.description, RARITY[item.rarity] ?? item.rarity, item.attunement === true, item);
+  return { moduleId: "dnd.srd-5.2.1.magic-items", content: entries.sort((a, b) => a.id.localeCompare(b.id)) };
+}
+
 /** A document by its path under the SRD root. */
 const doc = (file) => parsed.docs.find((item) => item.file === file);
 /** A document's whole text: its tree, headings as their own lines. */
@@ -210,7 +262,7 @@ function verbatim(file, moduleId, taken = new Set()) {
 
 const classModule = classes();
 // An entry the classes module writes (a feature whose contract sat on the same id) is not written twice.
-const built = [core(), spells(), origins(), classModule, monsters(), verbatim("rules.json", "dnd.srd-5.2.1.rules", new Set(classModule.content.map((entry) => entry.id))), verbatim("equipment.json", "dnd.srd-5.2.1.equipment")];
+const built = [core(), spells(), origins(), classModule, monsters(), verbatim("rules.json", "dnd.srd-5.2.1.rules", new Set(classModule.content.map((entry) => entry.id))), verbatim("equipment.json", "dnd.srd-5.2.1.equipment"), magicItems()];
 if (textMissing.length) console.warn(`원문에서 글을 찾지 못한 항목 ${textMissing.length}개 (옛 글을 씀):\n${textMissing.join("\n")}`);
 if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 mkdirSync(outDir, { recursive: true });

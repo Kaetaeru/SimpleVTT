@@ -236,7 +236,7 @@ export interface DerivedItem { instanceId: string; itemId: string; name: string;
 export interface InventoryPatch {
   removed: string[];
   quantities: Record<string, number>;
-  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number; /** R75 (D210) */ custom?: CustomItem; attuned?: boolean }>;
+  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number; /** R75 (D210) */ custom?: CustomItem; attuned?: boolean; /** D354: the weapon or armour an official item was given as. */ base?: string }>;
 }
 
 /** R33 (D168): feat numbers that only matter once a swing is being rolled. */

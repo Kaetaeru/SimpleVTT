@@ -8,7 +8,7 @@ import type { EntryJson, RuleModuleJson } from "./types";
 
 export const KNOWN_CATEGORIES = new Set([
   "class", "subclass", "species", "background", "feat", "spell", "option", "weapon", "armor", "shield", "tool", "item", "adventuring-gear", "ammunition", "focus",
-  "starting-loadout", "combatant", "condition",
+  "starting-loadout", "combatant", "condition", "magic-item",
 ]);
 
 /** Categories that flow into character creation; the rest are carried along for the table. */

@@ -1,0 +1,7130 @@
+{
+ "items": {
+  "dnd.srd521.magic-item.adamantine-armor": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor",
+     "ids": [
+      "dnd.srd521.item.armor.breastplate",
+      "dnd.srd521.item.armor.chain-shirt",
+      "dnd.srd521.item.armor.half-plate",
+      "dnd.srd521.item.armor.scale-mail",
+      "dnd.srd521.item.armor.chain-mail",
+      "dnd.srd521.item.armor.plate",
+      "dnd.srd521.item.armor.ring-mail",
+      "dnd.srd521.item.armor.splint"
+     ]
+    }
+   },
+   "dm": [
+    "착용 중 자신에 대한 치명타는 일반 명중으로 처리"
+   ]
+  },
+  "dnd.srd521.magic-item.air-ring-of-elemental-command": {
+   "definition": {
+    "type": "ring",
+    "resistances": [
+     "lightning"
+    ],
+    "speeds": {
+     "fly": "walk"
+    },
+    "charges": {
+     "max": 5,
+     "recharge": "1d4+1"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.chain-lightning",
+      "charges": 3,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.feather-fall",
+      "charges": 0,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.gust-of-wind",
+      "charges": 2,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.wind-wall",
+      "charges": 1,
+      "dc": 18
+     }
+    ]
+   },
+   "dm": [
+    "정령 대상 명중 굴림 이점, 정령의 명중 굴림 불리 — 대상 종류는 앱이 판정하지 않음",
+    "정령 강제: 마법 행동, 60피트 내 정령 DC 18 지혜 내성 실패 시 다음 턴 시작까지 매혹·행동 지시",
+    "아우란어를 앎, 정지 비행 가능"
+   ]
+  },
+  "dnd.srd521.magic-item.ammunition-of-slaying": {
+   "definition": {
+    "type": "ammunition",
+    "baseOptions": {
+     "kind": "ammunition"
+    }
+   },
+   "dm": [
+    "살해 대상 크리처 유형은 DM이 정하거나 표로 굴림",
+    "그 유형이 피해를 입으면 DC 17 건강 내성: 실패 6d10 역장 추가, 성공 절반 — 대상 종류는 앱이 판정하지 않음",
+    "추가 피해를 준 뒤 탄약은 비마법이 됨"
+   ]
+  },
+  "dnd.srd521.magic-item.amulet-of-health": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "con": 19
+    }
+   }
+  },
+  "dnd.srd521.magic-item.amulet-of-proof-against-detection-and-location": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "허용하지 않는 한 예지계 주문의 대상이 되거나 점술 센서에 감지되지 않음"
+   ]
+  },
+  "dnd.srd521.magic-item.amulet-of-the-planes": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "마법 행동으로 다른 차원의 장소를 말하고 DC 15 지능(비전) 판정 — 성공 시 이계 전송 시전",
+    "실패 시 15피트 내 모두 d100 표로 무작위 목적지 — 표는 DM이 굴림"
+   ]
+  },
+  "dnd.srd521.magic-item.animated-shield": {
+   "definition": {
+    "type": "shield",
+    "base": "dnd.srd521.item.shield"
+   },
+   "dm": [
+    "추가 행동으로 1분 동안 방패가 떠서 두 손이 자유로움(AC 유지) — 추가 행동으로 끝내거나 행동불능·사망 시 종료"
+   ]
+  },
+  "dnd.srd521.magic-item.apparatus-of-the-crab": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "DC 20 지능(조사)로 걸쇠 발견, 중형 이하 둘 탑승",
+    "대형 물체: AC 20, HP 200, 이동 30·수영 30, 독·정신 면역 — 조종간 10개 조작은 DM 판정"
+   ]
+  },
+  "dnd.srd521.magic-item.armor-of-invulnerability": {
+   "definition": {
+    "type": "armor",
+    "base": "dnd.srd521.item.armor.plate",
+    "resistances": [
+     "bludgeoning",
+     "piercing",
+     "slashing"
+    ],
+    "charges": {
+     "max": 1
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "metal-shell",
+      "label": "금속 껍질",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.armor-of-invulnerability",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "effect.apply",
+        "template": {
+         "name": "금속 껍질",
+         "duration": "10분",
+         "rounds": 100
+        },
+        "target": "self"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "금속 껍질 동안 타격·관통·참격 피해 면역 — 면역 적용은 수동",
+    "갑옷을 벗으면 금속 껍질 종료"
+   ]
+  },
+  "dnd.srd521.magic-item.armor-of-resistance": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor"
+    }
+   },
+   "variants": [
+    {
+     "id": "acid",
+     "name": "저항의 갑옷(산성)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "acid"
+      ]
+     }
+    },
+    {
+     "id": "cold",
+     "name": "저항의 갑옷(냉기)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "cold"
+      ]
+     }
+    },
+    {
+     "id": "fire",
+     "name": "저항의 갑옷(화염)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "fire"
+      ]
+     }
+    },
+    {
+     "id": "force",
+     "name": "저항의 갑옷(역장)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "force"
+      ]
+     }
+    },
+    {
+     "id": "lightning",
+     "name": "저항의 갑옷(번개)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "lightning"
+      ]
+     }
+    },
+    {
+     "id": "necrotic",
+     "name": "저항의 갑옷(사령)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "necrotic"
+      ]
+     }
+    },
+    {
+     "id": "poison",
+     "name": "저항의 갑옷(독)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "poison"
+      ]
+     }
+    },
+    {
+     "id": "psychic",
+     "name": "저항의 갑옷(정신)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "psychic"
+      ]
+     }
+    },
+    {
+     "id": "radiant",
+     "name": "저항의 갑옷(광휘)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "radiant"
+      ]
+     }
+    },
+    {
+     "id": "thunder",
+     "name": "저항의 갑옷(천둥)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "thunder"
+      ]
+     }
+    }
+   ],
+   "dm": [
+    "저항 유형은 DM이 고르거나 d10으로 굴림 — 맞는 종류를 지급"
+   ]
+  },
+  "dnd.srd521.magic-item.armor-of-vulnerability": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor"
+    }
+   },
+   "variants": [
+    {
+     "id": "bludgeoning",
+     "name": "약점의 갑옷(타격)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "bludgeoning"
+      ]
+     }
+    },
+    {
+     "id": "piercing",
+     "name": "약점의 갑옷(관통)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "piercing"
+      ]
+     }
+    },
+    {
+     "id": "slashing",
+     "name": "약점의 갑옷(참격)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "slashing"
+      ]
+     }
+    }
+   ],
+   "dm": [
+    "저항 유형은 DM이 고르거나 무작위로 정함 — 맞는 종류를 지급"
+   ]
+  },
+  "dnd.srd521.magic-item.arrow-catching-shield": {
+   "definition": {
+    "type": "shield",
+    "base": "dnd.srd521.item.shield"
+   },
+   "dm": [
+    "원거리 공격에 대해서만 AC +2 — 공격 종류별 AC는 수동",
+    "반응: 5피트 내 대상을 노린 원거리 공격의 대상이 대신 됨"
+   ]
+  },
+  "dnd.srd521.magic-item.bag-of-beans": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "콩 3d4개 — 개수는 가방에서 직접 관리",
+    "콩을 버리면 반경 10피트 폭발: DC 15 민첩 내성, 실패 5d4 역장, 성공 절반",
+    "심고 물을 주면 표의 효과 — DM이 고르거나 굴림"
+   ]
+  },
+  "dnd.srd521.magic-item.bag-of-devouring": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "넣은 동·식물성 물질은 먹혀 사라짐, 크리처 일부를 넣으면 50% 확률로 끌려 들어감",
+    "탈출 DC 15, 끌어내기 DC 20 근력(운동); 안에서 턴을 시작하면 먹힘",
+    "하루 한 번 내용물을 다른 차원으로 뱉음 — DM 판정"
+   ]
+  },
+  "dnd.srd521.magic-item.bag-of-holding": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "500파운드·64입방피트까지, 무게 5파운드, 꺼내기는 활용 행동",
+    "과적·찢어짐·차원 공간 아이템과 겹치면 파괴 — DM 판정"
+   ]
+  },
+  "dnd.srd521.magic-item.bead-of-force": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "throw",
+      "label": "구슬 던지기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "targeting": {
+       "from": "targets",
+       "min": 1,
+       "max": 12
+      },
+      "operations": [
+       {
+        "kind": "damage.apply",
+        "dice": "5d4",
+        "damageType": "역장",
+        "target": "targets",
+        "save": {
+         "ability": "dex",
+         "dc": 15,
+         "success": "none"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "구슬 1d4+4개 — 개수는 가방에서 직접",
+    "내성 실패하고 반경 10피트 안에 완전히 있는 크리처는 1분 동안 역장 구체에 갇힘 — 좌표가 없어 수동"
+   ]
+  },
+  "dnd.srd521.magic-item.bead-of-nourishment": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "먹으면 하루치 식량과 같은 영양"
+   ]
+  },
+  "dnd.srd521.magic-item.belt-of-dwarvenkind": {
+   "definition": {
+    "type": "wondrous",
+    "darkvision": 60,
+    "resistances": [
+     "poison"
+    ]
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "saving-throw.advantage-vs-condition",
+        "operation": "add",
+        "params": {
+         "conditions": [
+          "poisoned"
+         ]
+        },
+        "note": "중독 내성 이점"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "드워프·듀에르가면 암시야·독 저항·중독 내성 이점은 없음 — 수동으로 무시",
+    "건강 +2(최대 20) — 수동 적용",
+    "드워프어를 앎, 드워프·듀에르가 대상 매력(설득) 이점"
+   ]
+  },
+  "dnd.srd521.magic-item.belt-of-giant-strength": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "variants": [
+    {
+     "id": "hill",
+     "name": "거인 힘의 허리띠(언덕)",
+     "rarity": "희귀",
+     "definition": {
+      "abilities": {
+       "str": 21
+      }
+     }
+    },
+    {
+     "id": "frost",
+     "name": "거인 힘의 허리띠(서리)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "abilities": {
+       "str": 23
+      }
+     }
+    },
+    {
+     "id": "stone",
+     "name": "거인 힘의 허리띠(돌)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "abilities": {
+       "str": 23
+      }
+     }
+    },
+    {
+     "id": "fire",
+     "name": "거인 힘의 허리띠(불)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "abilities": {
+       "str": 25
+      }
+     }
+    },
+    {
+     "id": "cloud",
+     "name": "거인 힘의 허리띠(구름)",
+     "rarity": "전설",
+     "definition": {
+      "abilities": {
+       "str": 27
+      }
+     }
+    },
+    {
+     "id": "storm",
+     "name": "거인 힘의 허리띠(폭풍)",
+     "rarity": "전설",
+     "definition": {
+      "abilities": {
+       "str": 29
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.magic-item.belt-of-giant-strength-hill": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "str": 21
+    }
+   }
+  },
+  "dnd.srd521.magic-item.belt-of-giant-strength-frost": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "str": 23
+    }
+   }
+  },
+  "dnd.srd521.magic-item.belt-of-giant-strength-stone": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "str": 23
+    }
+   }
+  },
+  "dnd.srd521.magic-item.belt-of-giant-strength-fire": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "str": 25
+    }
+   }
+  },
+  "dnd.srd521.magic-item.belt-of-giant-strength-cloud": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "str": 27
+    }
+   }
+  },
+  "dnd.srd521.magic-item.belt-of-giant-strength-storm": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "str": 29
+    }
+   }
+  },
+  "dnd.srd521.magic-item.berserker-axe": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.battleaxe",
+      "dnd.srd521.item.weapon.greataxe",
+      "dnd.srd521.item.weapon.halberd"
+     ]
+    },
+    "bonus": {
+     "attack": 1,
+     "damage": 1
+    }
+   },
+   "dm": [
+    "조율 중 최대 HP가 레벨마다 +1 — 수동 적용"
+   ]
+  },
+  "dnd.srd521.magic-item.boots-of-elvenkind": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "skill.stealth.advantage",
+        "operation": "add",
+        "note": "민첩(은신) 이점"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "발소리가 나지 않음"
+   ]
+  },
+  "dnd.srd521.magic-item.boots-of-levitation": {
+   "definition": {
+    "type": "wondrous",
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.levitate",
+      "charges": 0
+     }
+    ]
+   },
+   "dm": [
+    "부양은 자신에게만"
+   ]
+  },
+  "dnd.srd521.magic-item.boots-of-speed": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "click",
+      "label": "뒤꿈치 부딪치기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "effect.apply",
+        "template": {
+         "name": "속도의 장화",
+         "duration": "10분",
+         "rounds": 100
+        },
+        "target": "self"
+       }
+      ]
+     },
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "speed.walk",
+        "operation": "multiply",
+        "value": 2,
+        "when": {
+         "op": "eq",
+         "left": {
+          "ref": "effect.running:속도의 장화"
+         },
+         "right": {
+          "value": true
+         }
+        }
+       },
+       {
+        "kind": "property.modify",
+        "property": "attack-roll.against-me.opportunity-disadvantage",
+        "operation": "set",
+        "value": 1,
+        "when": {
+         "op": "eq",
+         "left": {
+          "ref": "effect.running:속도의 장화"
+         },
+         "right": {
+          "value": true
+         }
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "다시 부딪치면 끝남 — 사용 시간 합계 10분이면 긴 휴식까지 작동 안 함(누적 시간은 수동)"
+   ]
+  },
+  "dnd.srd521.magic-item.boots-of-striding-and-springing": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "보행 속도가 30피트보다 낮으면 30 — 수동 적용",
+    "과적·중갑으로 속도가 줄지 않음",
+    "턴마다 이동 10피트로 30피트까지 도약"
+   ]
+  },
+  "dnd.srd521.magic-item.boots-of-the-winterlands": {
+   "definition": {
+    "type": "wondrous",
+    "resistances": [
+     "cold"
+    ]
+   },
+   "dm": [
+    "얼음·눈의 어려운 지형 무시, 영하의 추위를 견딤"
+   ]
+  },
+  "dnd.srd521.magic-item.bowl-of-commanding-water-elementals": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    }
+   },
+   "dm": [
+    "물 정령 소환 — 앱에 능력치 블록 없음, 1시간 동안 명령에 따름",
+    "충전 1은 새벽까지 한 번 사용한 표시"
+   ]
+  },
+  "dnd.srd521.magic-item.bracers-of-archery": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "장궁·단궁 숙련, 그 무기의 피해 굴림 +2 — 무기별 보너스는 수동"
+   ]
+  },
+  "dnd.srd521.magic-item.bracers-of-defense": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "갑옷을 입지 않고 방패를 쓰지 않을 때만 AC +2 — 수동 적용"
+   ]
+  },
+  "dnd.srd521.magic-item.brass-horn-of-valhalla": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "마법 행동으로 전사 영혼 3 소환(광전사 능력치 블록, 1시간) — 앱에 소환 없음",
+    "요구: 모든 단순 무기 숙련, 아니면 영혼이 공격함",
+    "한 번 쓰면 7일 동안 다시 쓸 수 없음 — 수동 기록"
+   ]
+  },
+  "dnd.srd521.magic-item.brazier-of-commanding-fire-elementals": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    }
+   },
+   "dm": [
+    "불 정령 소환 — 앱에 능력치 블록 없음, 1시간 동안 명령에 따름",
+    "충전 1은 새벽까지 한 번 사용한 표시"
+   ]
+  },
+  "dnd.srd521.magic-item.bronze-griffon": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "최대 6시간 그리폰이 됨 — 앱에 소환 없음",
+    "한 번 쓰면 5일 동안 다시 쓸 수 없음 — 수동 기록"
+   ]
+  },
+  "dnd.srd521.magic-item.bronze-horn-of-valhalla": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "마법 행동으로 전사 영혼 4 소환(광전사 능력치 블록, 1시간) — 앱에 소환 없음",
+    "요구: 중갑 훈련, 아니면 영혼이 공격함",
+    "한 번 쓰면 7일 동안 다시 쓸 수 없음 — 수동 기록"
+   ]
+  },
+  "dnd.srd521.magic-item.brooch-of-shielding": {
+   "definition": {
+    "type": "wondrous",
+    "resistances": [
+     "force"
+    ]
+   },
+   "dm": [
+    "마법 화살 주문의 피해에 면역 — 수동 적용"
+   ]
+  },
+  "dnd.srd521.magic-item.broom-of-flying": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "타고 있는 동안 비행 50피트(200파운드 넘게 실으면 30), 최대 400파운드",
+    "1마일 내 목적지로 혼자 보내고 불러올 수 있음"
+   ]
+  },
+  "dnd.srd521.magic-item.candle-of-invocation": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "마법 행동으로 켜면 4시간(분 단위로 끌 수 있음) — 남은 시간은 수동",
+    "빛(30피트 약한 빛) 안에서 d20 시험 이점, 성직자·드루이드는 1레벨 주문을 슬롯 없이 시전 — 좌표가 없어 수동",
+    "처음 켤 때 관문 시전 가능(양초 파괴), 연결 차원은 DM이 정하거나 굴림"
+   ]
+  },
+  "dnd.srd521.magic-item.cape-of-the-mountebank": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.dimension-door",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "떠난 자리에 연기 — 다음 턴 끝까지 가림"
+   ]
+  },
+  "dnd.srd521.magic-item.carpet-of-flying": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "크기·용량·비행 속도는 DM이 고르거나 표로 굴림",
+    "30피트 안에서 명령어로 조종, 용량의 두 배까지 싣고 초과 시 속도 절반"
+   ]
+  },
+  "dnd.srd521.magic-item.censer-of-controlling-air-elementals": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    }
+   },
+   "dm": [
+    "공기 정령 소환 — 앱에 능력치 블록 없음, 1시간 동안 명령에 따름",
+    "충전 1은 새벽까지 한 번 사용한 표시"
+   ]
+  },
+  "dnd.srd521.magic-item.chime-of-opening": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 10,
+     "recharge": "0",
+     "note": "10번째 사용 뒤 금이 가서 쓸 수 없음"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.knock",
+      "charges": 1
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.circlet-of-blasting": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.scorching-ray",
+      "charges": 1,
+      "attackBonus": 5
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.clawed-gauntlet": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "attack-roll.bonus",
+        "operation": "add",
+        "value": 1,
+        "scope": "unarmed",
+        "note": "비무장 공격 +1"
+       },
+       {
+        "kind": "property.modify",
+        "property": "damage.bonus",
+        "operation": "add",
+        "value": 1,
+        "scope": "unarmed",
+        "note": "비무장 피해 +1"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "비무장 공격 피해가 1d8 참격 — 주사위 교체는 수동"
+   ]
+  },
+  "dnd.srd521.magic-item.cloak-of-arachnida": {
+   "definition": {
+    "type": "wondrous",
+    "resistances": [
+     "poison"
+    ],
+    "speeds": {
+     "climb": "walk"
+    },
+    "charges": {
+     "max": 1
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.web",
+      "charges": 1,
+      "dc": 13
+     }
+    ]
+   },
+   "dm": [
+    "거미줄 주문 범위 두 배",
+    "거미줄에 갇히지 않고 어려운 지형처럼 통과, 벽·천장을 손 없이 오름"
+   ]
+  },
+  "dnd.srd521.magic-item.cloak-of-displacement": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "모든 크리처의 자신에 대한 명중 굴림 불리 — 수동 적용",
+    "피해를 받으면 다음 턴 시작까지, 속도 0이면 그동안 꺼짐"
+   ]
+  },
+  "dnd.srd521.magic-item.cloak-of-elvenkind": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "skill.stealth.advantage",
+        "operation": "add",
+        "note": "민첩(은신) 이점"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "자신을 보려는 지혜(지각) 판정에 불리"
+   ]
+  },
+  "dnd.srd521.magic-item.cloak-of-invisibility": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "hood",
+      "label": "후드 쓰기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.cloak-of-invisibility",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "condition.apply",
+        "condition": "invisible",
+        "target": "self",
+        "duration": {
+         "kind": "hours",
+         "amount": 1
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "후드를 내리거나 망토를 벗으면 투명 종료 — 수동 해제"
+   ]
+  },
+  "dnd.srd521.magic-item.cloak-of-protection": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "ac": 1,
+     "saves": 1
+    }
+   }
+  },
+  "dnd.srd521.magic-item.cloak-of-the-bat": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.polymorph",
+      "charges": 1
+     }
+    ]
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "skill.stealth.advantage",
+        "operation": "add",
+        "note": "민첩(은신) 이점"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "약한 빛·어둠에서 망토를 잡으면 비행 40피트 — 조명은 앱이 모름",
+    "변신은 약한 빛·어둠에서 자신만 박쥐로, 지능·지혜·매력 유지"
+   ]
+  },
+  "dnd.srd521.magic-item.cloak-of-the-manta-ray": {
+   "definition": {
+    "type": "wondrous",
+    "speeds": {
+     "swim": 60
+    }
+   },
+   "dm": [
+    "물속에서 숨 쉼"
+   ]
+  },
+  "dnd.srd521.magic-item.crystal-ball": {
+   "definition": {
+    "type": "wondrous",
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.scrying",
+      "charges": 0,
+      "dc": 17
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.crystal-ball-of-mind-reading": {
+   "definition": {
+    "type": "wondrous",
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.scrying",
+      "charges": 0,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.detect-thoughts",
+      "charges": 0,
+      "dc": 17
+     }
+    ]
+   },
+   "dm": [
+    "생각 탐지는 센서 30피트 내 대상, 집중 없이 염탐이 끝날 때까지"
+   ]
+  },
+  "dnd.srd521.magic-item.crystal-ball-of-telepathy": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.scrying",
+      "charges": 0,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.suggestion",
+      "charges": 1,
+      "dc": 17
+     }
+    ]
+   },
+   "dm": [
+    "센서 30피트 내 크리처와 정신 감응 대화",
+    "암시는 센서를 통해, 집중 없이 염탐이 끝날 때까지"
+   ]
+  },
+  "dnd.srd521.magic-item.crystal-ball-of-true-seeing": {
+   "definition": {
+    "type": "wondrous",
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.scrying",
+      "charges": 0,
+      "dc": 17
+     }
+    ]
+   },
+   "dm": [
+    "센서 중심 120피트 진시야"
+   ]
+  },
+  "dnd.srd521.magic-item.cube-of-force": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 10,
+     "recharge": "1d6"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.mage-armor",
+      "charges": 1,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.shield",
+      "charges": 1,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.tiny-hut",
+      "charges": 3,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.private-sanctum",
+      "charges": 4,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.resilient-sphere",
+      "charges": 4,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-force",
+      "charges": 5,
+      "dc": 17
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.cubic-gate": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.gate",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.plane-shift",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "면마다 연결된 차원(하나는 물질계)은 DM이 정함"
+   ]
+  },
+  "dnd.srd521.magic-item.dagger-of-venom": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.dagger",
+    "bonus": {
+     "attack": 1,
+     "damage": 1
+    },
+    "charges": {
+     "max": 1
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "coat",
+      "label": "독 바르기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.dagger-of-venom",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "effect.apply",
+        "target": "self",
+        "lifetime": "until-duration",
+        "template": {
+         "name": "독 칼날",
+         "duration": "1분 또는 명중할 때까지",
+         "rounds": 10
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "독 칼날로 명중한 크리처: DC 15 건강 내성 실패 시 2d10 독 피해와 1분 중독 — 적용 후 효과 끄기"
+   ]
+  },
+  "dnd.srd521.magic-item.dancing-sword": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.greatsword",
+      "dnd.srd521.item.weapon.longsword",
+      "dnd.srd521.item.weapon.rapier",
+      "dnd.srd521.item.weapon.scimitar",
+      "dnd.srd521.item.weapon.shortsword"
+     ]
+    }
+   },
+   "dm": [
+    "추가 행동으로 던져 떠다니며 공격 — 공격 횟수 4회, 거리 30피트는 좌표가 없어 표에서 셈"
+   ]
+  },
+  "dnd.srd521.magic-item.decanter-of-endless-water": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "명령어별 물의 양은 서사",
+    "간헐천: 라인 위 크리처 하나 DC 13 근력 내성 실패 시 1d4 타격 피해와 넘어짐 — 라인은 좌표가 없어 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.deck-of-illusions": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "카드는 무작위 표로 굴림 — 환영의 모습·남은 카드 수는 표에서 관리"
+   ]
+  },
+  "dnd.srd521.magic-item.defender": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "mode": "melee"
+    },
+    "bonus": {
+     "attack": 3,
+     "damage": 3
+    }
+   },
+   "dm": [
+    "턴 첫 공격 때 보너스 일부를 AC로 옮기기 — 옮긴 만큼 명중·피해에서 빼고 AC에 더하기"
+   ]
+  },
+  "dnd.srd521.magic-item.demon-armor": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor",
+     "training": [
+      "light",
+      "medium",
+      "heavy"
+     ]
+    },
+    "bonus": {
+     "ac": 1
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "claws",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "attack-roll.bonus",
+        "operation": "add",
+        "value": {
+         "value": 1
+        },
+        "scope": "unarmed",
+        "note": "비무장 공격 +1"
+       },
+       {
+        "kind": "property.modify",
+        "property": "damage.bonus",
+        "operation": "add",
+        "value": {
+         "value": 1
+        },
+        "scope": "unarmed",
+        "note": "비무장 피해 +1"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "비무장 공격 피해를 1d8 참격으로 바꿔 굴리기",
+    "심연어를 앎"
+   ]
+  },
+  "dnd.srd521.magic-item.dimensional-shackles": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "족쇄에 묶인 크리처는 순간이동·차원 이동 불가 — 30일마다 DC 30 근력(운동) 판정으로 탈출"
+   ]
+  },
+  "dnd.srd521.magic-item.dragon-orb": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 7,
+     "recharge": "1d4+3"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.cure-wounds",
+      "charges": 4,
+      "level": 9
+     },
+     {
+      "spellId": "dnd.srd521.spell.daylight",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.death-ward",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.detect-magic",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.scrying",
+      "charges": 3,
+      "dc": 18
+     }
+    ]
+   },
+   "dm": [
+    "드래곤 부르기(1시간에 1회): 40마일 안 오색 드래곤을 부름 — 서사",
+    "유물: 오브를 조종하는 것과 그 밖의 속성은 DM이 정함"
+   ]
+  },
+  "dnd.srd521.magic-item.dragon-scale-mail": {
+   "definition": {
+    "type": "armor",
+    "base": "dnd.srd521.item.armor.scale-mail",
+    "bonus": {
+     "ac": 1
+    }
+   },
+   "variants": [
+    {
+     "id": "black",
+     "name": "드래곤 스케일 메일(검은색)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "acid"
+      ]
+     }
+    },
+    {
+     "id": "blue",
+     "name": "드래곤 스케일 메일(파란색)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "lightning"
+      ]
+     }
+    },
+    {
+     "id": "brass",
+     "name": "드래곤 스케일 메일(놋쇠)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "fire"
+      ]
+     }
+    },
+    {
+     "id": "bronze",
+     "name": "드래곤 스케일 메일(청동)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "lightning"
+      ]
+     }
+    },
+    {
+     "id": "copper",
+     "name": "드래곤 스케일 메일(구리)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "acid"
+      ]
+     }
+    },
+    {
+     "id": "gold",
+     "name": "드래곤 스케일 메일(금)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "fire"
+      ]
+     }
+    },
+    {
+     "id": "green",
+     "name": "드래곤 스케일 메일(녹색)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "poison"
+      ]
+     }
+    },
+    {
+     "id": "red",
+     "name": "드래곤 스케일 메일(빨간색)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "fire"
+      ]
+     }
+    },
+    {
+     "id": "silver",
+     "name": "드래곤 스케일 메일(은)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "cold"
+      ]
+     }
+    },
+    {
+     "id": "white",
+     "name": "드래곤 스케일 메일(하얀색)",
+     "rarity": "매우 희귀",
+     "definition": {
+      "resistances": [
+       "cold"
+      ]
+     }
+    }
+   ],
+   "dm": [
+    "드래곤 브레스 무기에 대한 내성에 유리 — 브레스인지는 표에서",
+    "하루 1회 같은 종류 드래곤 방향 감지(30마일) — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.dragon-slayer": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "training": [
+      "simple",
+      "martial"
+     ]
+    },
+    "bonus": {
+     "attack": 1,
+     "damage": 1
+    }
+   },
+   "dm": [
+    "대상이 드래곤이면 무기 피해 유형으로 3d6 추가 — 크리처 종류는 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.dust-of-disappearance": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "자신과 10피트 발산 안 크리처·물체가 2d4분 투명 — 공격·피해·시전 직후 풀림, 범위는 좌표가 없어 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.dust-of-dryness": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "처음 1d6+4 줌 — 남은 줌 수는 표에서 셈",
+    "물 15피트 정육면체를 알갱이로 — 서사",
+    "물로 된 정령: DC 13 건강 내성, 실패 10d6 사령 피해·성공 절반"
+   ]
+  },
+  "dnd.srd521.magic-item.dust-of-sneezing-and-choking": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "자신 포함 30피트 발산 안 모두 DC 15 건강 내성 — 실패 시 무력화(질식), 턴 끝마다 재내성, 범위는 좌표가 없어 표에서",
+    "구조물·정령·식물·언데드 등은 자동 성공"
+   ]
+  },
+  "dnd.srd521.magic-item.dwarven-plate": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor",
+     "ids": [
+      "dnd.srd521.item.armor.half-plate",
+      "dnd.srd521.item.armor.plate"
+     ]
+    },
+    "bonus": {
+     "ac": 2
+    }
+   },
+   "dm": [
+    "원치 않는 이동을 반응으로 10피트까지 줄임 — 이동은 좌표가 없어 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.dwarven-thrower": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.warhammer",
+    "bonus": {
+     "attack": 3,
+     "damage": 3
+    }
+   },
+   "dm": [
+    "투척(20/60) 가능, 던진 뒤 손으로 돌아옴",
+    "원거리 공격 명중 시 1d8 역장 추가, 거인이면 2d8 더 — 근접엔 없음",
+    "조율은 드워프(또는 드워프족 허리띠 조율자)만"
+   ]
+  },
+  "dnd.srd521.magic-item.earth-ring-of-elemental-command": {
+   "definition": {
+    "type": "ring",
+    "resistances": [
+     "acid"
+    ],
+    "charges": {
+     "max": 5,
+     "recharge": "1d4+1"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.earthquake",
+      "charges": 5,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.stone-shape",
+      "charges": 2,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.stoneskin",
+      "charges": 3,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-stone",
+      "charges": 3,
+      "dc": 18
+     }
+    ]
+   },
+   "dm": [
+    "정령 대상 명중 유리, 정령이 당신을 치면 불리 — 크리처 종류는 표에서",
+    "정령 강제: 60피트 정령 DC 18 지혜 내성 실패 시 매혹, 행동 지시",
+    "테란어, 흙·바위 지형 통과 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.ebony-fly": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "12시간까지 거대 파리 탈것 — 쓴 뒤 2일 재사용 불가, 날짜는 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.efficient-quiver": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "칸마다 화살 60·투창 18·긴 물건 6개 수납 — 가방에서 직접 관리"
+   ]
+  },
+  "dnd.srd521.magic-item.efreeti-bottle": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "열면 d10 표로 이프리트 결과 — 소환·소원은 DM 진행"
+   ]
+  },
+  "dnd.srd521.magic-item.elemental-gem": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "보석 종류에 따라 정령 소환(1시간, 명령 복종) — 정령은 DM이 표에 놓음"
+   ]
+  },
+  "dnd.srd521.magic-item.elemental-gem-blue-sapphire": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "공기 정령 소환(1시간, 명령 복종) — 정령은 DM이 표에 놓음"
+   ]
+  },
+  "dnd.srd521.magic-item.elemental-gem-emerald": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "물 정령 소환(1시간, 명령 복종) — 정령은 DM이 표에 놓음"
+   ]
+  },
+  "dnd.srd521.magic-item.elemental-gem-red-corundum": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "불 정령 소환(1시간, 명령 복종) — 정령은 DM이 표에 놓음"
+   ]
+  },
+  "dnd.srd521.magic-item.elemental-gem-yellow-diamond": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "대지 정령 소환(1시간, 명령 복종) — 정령은 DM이 표에 놓음"
+   ]
+  },
+  "dnd.srd521.magic-item.elixir-of-health": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "마신 크리처의 마법 질병과 장님·귀머거리·마비·중독 상태 종료 — 상태는 시트에서 해제"
+   ]
+  },
+  "dnd.srd521.magic-item.elven-chain": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor",
+     "ids": [
+      "dnd.srd521.item.armor.chain-mail",
+      "dnd.srd521.item.armor.chain-shirt"
+     ]
+    },
+    "bonus": {
+     "ac": 1
+    }
+   },
+   "dm": [
+    "이 갑옷의 훈련이 없어도 훈련한 것으로 침"
+   ]
+  },
+  "dnd.srd521.magic-item.energy-bow": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.longbow",
+      "dnd.srd521.item.weapon.shortbow"
+     ]
+    },
+    "bonus": {
+     "attack": 1,
+     "damage": 1
+    }
+   },
+   "dm": [
+    "화살은 관통 대신 역장 피해 — 피해 유형을 바꿔 적용",
+    "구속의 화살: 피해 대신 DC 15 근력 내성 실패 시 1분 포박(DC 20 근력(운동)으로 탈출)",
+    "운송의 화살·에너지 사다리 — 좌표가 없어 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.eversmoking-bottle": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "연 동안 60피트(분마다 +10, 최대 120) 연기 — 심하게 가려짐, 범위는 좌표가 없어 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.eyes-of-charming": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.charm-person",
+      "charges": 1,
+      "dc": 13
+     }
+    ]
+   },
+   "dm": [
+    "충전을 더 쓰면 1개당 주문 레벨 +1 — 추가 충전은 직접 빼기"
+   ]
+  },
+  "dnd.srd521.magic-item.eyes-of-minute-seeing": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "1피트 안의 것을 조사할 때 지능(조사) 유리, 그 범위 암시야 — 거리는 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.eyes-of-the-eagle": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "시각에 기대는 지혜(감지) 판정에 유리 — 시각 판정인지는 표에서",
+    "먼 것을 2피트 거리처럼 자세히 봄 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.feather-token-anchor": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "배를 24시간 멈춤 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.feather-token-bird": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "공격하지 않는 로크 크기의 새 — 탈것·운반은 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.feather-token-fan": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "배 속도 8시간 시속 5마일 증가 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.feather-token-swan-boat": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "24시간 백조 배 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.feather-token-tree": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "실외에서 참나무 한 그루 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.feather-token-whip": {
+   "definition": {
+    "type": "wondrous",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "1시간 떠다니는 채찍: 추가 행동으로 근접 주문 공격 +9, 명중 시 1d6+5 역장 — 표에서 굴림"
+   ]
+  },
+  "dnd.srd521.magic-item.fire-ring-of-elemental-command": {
+   "definition": {
+    "type": "ring",
+    "immunities": [
+     "fire"
+    ],
+    "charges": {
+     "max": 5,
+     "recharge": "1d4+1"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.burning-hands",
+      "charges": 1,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.fireball",
+      "charges": 2,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.fire-storm",
+      "charges": 4,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-fire",
+      "charges": 3,
+      "dc": 18
+     }
+    ]
+   },
+   "dm": [
+    "정령 대상 명중 유리, 정령이 당신을 치면 불리 — 크리처 종류는 표에서",
+    "정령 강제: 60피트 정령 DC 18 지혜 내성 실패 시 매혹, 행동 지시",
+    "이그난어를 앎"
+   ]
+  },
+  "dnd.srd521.magic-item.flame-tongue": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "mode": "melee"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "ignite",
+      "label": "불꽃 켜기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "effect.apply",
+        "target": "self",
+        "lifetime": "until-state",
+        "template": {
+         "name": "불꽃 혀",
+         "duration": "끄거나 무기를 놓을 때까지"
+        }
+       },
+       {
+        "kind": "property.modify",
+        "property": "damage.bonus",
+        "operation": "add",
+        "dice": "2d6",
+        "damageTypes": [
+         "화염"
+        ],
+        "scope": "effect-weapon",
+        "note": "불꽃 혀 2d6 화염"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "끌 때(추가 행동)·무기를 놓거나 넣을 때 효과를 직접 끄기"
+   ]
+  },
+  "dnd.srd521.magic-item.folding-boat": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "명령어로 보트·배로 펼치고 접음 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.frost-brand": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.glaive",
+      "dnd.srd521.item.weapon.greatsword",
+      "dnd.srd521.item.weapon.longsword",
+      "dnd.srd521.item.weapon.rapier",
+      "dnd.srd521.item.weapon.scimitar",
+      "dnd.srd521.item.weapon.shortsword"
+     ]
+    },
+    "bonus": {
+     "extraDamage": {
+      "dice": "1d6",
+      "type": "cold"
+     }
+    },
+    "resistances": [
+     "fire"
+    ]
+   },
+   "dm": [
+    "뽑을 때 30피트 비마법 불꽃 끄기(1시간 1회) — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.gauntlets-of-ogre-power": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "str": 19
+    }
+   }
+  },
+  "dnd.srd521.magic-item.gem-of-brightness": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 50,
+     "recharge": "0",
+     "note": "충전을 다 쓰면 50GP 보석이 됨"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "ray",
+      "label": "눈부신 광선 (충전 1)",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "targeting": {
+       "from": "targets",
+       "min": 1,
+       "max": 1
+      },
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.gem-of-brightness",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "condition.apply",
+        "condition": "blinded",
+        "target": "targets",
+        "save": {
+         "ability": "con",
+         "dc": {
+          "value": 15
+         }
+        },
+        "duration": {
+         "kind": "minutes",
+         "amount": 1
+        },
+        "repeatSave": "turn-end"
+       }
+      ]
+     },
+     {
+      "id": "cone",
+      "label": "빛의 원뿔 (충전 5)",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "targeting": {
+       "from": "targets",
+       "min": 1,
+       "max": 20
+      },
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.gem-of-brightness",
+        "amount": -5,
+        "target": "self"
+       },
+       {
+        "kind": "condition.apply",
+        "condition": "blinded",
+        "target": "targets",
+        "save": {
+         "ability": "con",
+         "dc": {
+          "value": 15
+         }
+        },
+        "duration": {
+         "kind": "minutes",
+         "amount": 1
+        },
+        "repeatSave": "turn-end"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "30피트 원뿔 안의 크리처 — 좌표가 없어 표에서 고름"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "첫 명령어: 빛(충전 없음) — 조명은 앱이 모름"
+   ]
+  },
+  "dnd.srd521.magic-item.gem-of-seeing": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "see",
+      "label": "진시야 (충전 1)",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.gem-of-seeing",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "effect.apply",
+        "target": "self",
+        "lifetime": "until-duration",
+        "template": {
+         "name": "보석 진시야",
+         "duration": "10분",
+         "rounds": 100
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "보석을 들여다보는 동안 진시야 120피트 — 보이는 것은 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.giant-slayer": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "training": [
+      "simple",
+      "martial"
+     ]
+    },
+    "bonus": {
+     "attack": 1,
+     "damage": 1
+    }
+   },
+   "dm": [
+    "거인 명중 시 무기 피해 유형 2d6 추가, DC 15 근력 내성 실패 시 넘어짐 — 크리처 종류는 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.glamoured-studded-leather": {
+   "definition": {
+    "type": "armor",
+    "base": "dnd.srd521.item.armor.studded-leather",
+    "bonus": {
+     "ac": 1
+    }
+   },
+   "dm": [
+    "추가 행동으로 겉모습을 옷이나 다른 갑옷으로 바꿈 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.gloves-of-missile-snaring": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "interceptors": [
+     {
+      "id": "snare",
+      "timing": "reaction.window",
+      "slot": "reaction",
+      "trigger": "attack.hit-self",
+      "interaction": {
+       "id": "use",
+       "kind": "choice",
+       "responder": "actor-owner",
+       "mode": "blocking",
+       "input": {
+        "type": "boolean"
+       },
+       "revalidate": "if-revision-changed",
+       "stalePolicy": "reject"
+      },
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "damage-taken.reduce",
+        "operation": "subtract",
+        "dice": "1d10",
+        "value": {
+         "ref": "ability.dex.modifier"
+        }
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "원거리·투척 무기 공격에만 — 피해가 0이면 손에 쥘 만한 투사체를 잡음"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.gloves-of-swimming-and-climbing": {
+   "definition": {
+    "type": "wondrous",
+    "speeds": {
+     "climb": "walk",
+     "swim": "walk"
+    }
+   },
+   "dm": [
+    "등반·수영을 위한 근력(운동) 판정 +5 — 그 판정일 때 직접 더하기"
+   ]
+  },
+  "dnd.srd521.magic-item.gloves-of-thievery": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "skill.sleight-of-hand.bonus",
+        "operation": "add",
+        "value": {
+         "value": 5
+        },
+        "note": "도둑의 장갑 +5"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "착용 중 장갑이 눈에 띄지 않음 — 서사"
+   ]
+  },
+  "dnd.srd521.magic-item.goggles-of-night": {
+   "definition": {
+    "type": "wondrous",
+    "darkvision": 60
+   },
+   "dm": [
+    "이미 암시야가 있으면 범위가 60피트 늘어남 — 합친 값은 직접 확인"
+   ]
+  },
+  "dnd.srd521.magic-item.golden-lions": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "조각상마다 1시간까지 사자가 됨 — 쓴 뒤 7일 재사용 불가, 사자는 DM이 표에 놓음"
+   ]
+  },
+  "dnd.srd521.magic-item.gray-bag-of-tricks": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "d8 표로 동물 소환(다음 새벽까지) — DM이 표에 놓음, 새벽까지 3회"
+   ]
+  },
+  "dnd.srd521.magic-item.hammer-of-thunderbolts": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.maul",
+      "dnd.srd521.item.weapon.warhammer"
+     ]
+    },
+    "bonus": {
+     "attack": 1,
+     "damage": 1
+    },
+    "charges": {
+     "max": 5,
+     "recharge": "1d4+1"
+    }
+   },
+   "dm": [
+    "충전 1로 투척(20/60) 원거리 공격 — 명중 시 대상과 30피트 안(당신 제외) DC 17 건강 내성 실패 시 다음 턴 끝까지 기절, 무기는 돌아옴",
+    "거인 힘의 허리띠·오우거 힘의 건틀릿과 함께: 거인에게 d20 20이면 DC 17 건강 내성 실패 시 사망, 그 근력 +4(최대 30)"
+   ]
+  },
+  "dnd.srd521.magic-item.hat-of-disguise": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "착용 중 자기 위장을 마음대로 시전 — 모자를 벗으면 끝"
+   ]
+  },
+  "dnd.srd521.magic-item.hat-of-many-spells": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "마법사 주문 시전 초점",
+    "모르는 마법사 주문 시전: 슬롯 소비 후 지능(비전) DC 10+레벨 — 성공 시 휴식까지 재사용 불가, 실패 시 d100 표",
+    "조율은 마법사만"
+   ]
+  },
+  "dnd.srd521.magic-item.headband-of-intellect": {
+   "definition": {
+    "type": "wondrous",
+    "abilities": {
+     "int": 19
+    }
+   }
+  },
+  "dnd.srd521.magic-item.helm-of-brilliance": {
+   "definition": {
+    "type": "wondrous",
+    "resistances": [
+     "fire"
+    ]
+   },
+   "dm": [
+    "보석 수(다이아 1d10, 루비 2d10, 파이어 오팔 3d10, 오팔 4d10)는 표에서 셈 — 루비가 다 없으면 화염 저항 없음",
+    "보석 하나를 써서 태양광·화염구·무지개 분사·화염 장벽(DC 18) 시전",
+    "다이아몬드: 30피트 발산 안에서 턴을 시작한 언데드 1d6 광휘",
+    "파이어 오팔: 든 무기에 불꽃 — 명중 시 1d6 화염 추가",
+    "화염 피해 내성 실패 시 d20 1이면 폭발 — DC 17 민첩, 보석 수만큼 광휘"
+   ]
+  },
+  "dnd.srd521.magic-item.helm-of-comprehending-languages": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "착용 중 언어 이해를 마음대로 시전"
+   ]
+  },
+  "dnd.srd521.magic-item.helm-of-telepathy": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 2
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.detect-thoughts",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.suggestion",
+      "charges": 1,
+      "dc": 13
+     }
+    ]
+   },
+   "dm": [
+    "주문마다 하루 1회",
+    "30피트 텔레파시"
+   ]
+  },
+  "dnd.srd521.magic-item.helm-of-teleportation": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.teleport",
+      "charges": 1
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.holy-avenger": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "training": [
+      "simple",
+      "martial"
+     ]
+    },
+    "bonus": {
+     "attack": 3,
+     "damage": 3
+    }
+   },
+   "dm": [
+    "악마·언데드 명중 시 2d10 광휘 추가 — 크리처 종류는 표에서",
+    "뽑아 든 동안 10피트(성기사 17레벨이면 30피트) 발산: 당신과 아군은 주문·마법 효과 내성에 유리 — 범위는 좌표가 없어 표에서",
+    "조율은 성기사만"
+   ]
+  },
+  "dnd.srd521.magic-item.horn-of-blasting": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "blast",
+      "label": "뿔피리 불기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "targeting": {
+       "from": "targets",
+       "min": 1,
+       "max": 20
+      },
+      "operations": [
+       {
+        "kind": "damage.apply",
+        "target": "targets",
+        "dice": "5d8",
+        "damageType": "천둥",
+        "save": {
+         "ability": "con",
+         "dc": {
+          "value": 15
+         },
+         "success": "half"
+        }
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "30피트 원뿔 — 좌표가 없어 표에서 고름. 내성 실패한 크리처는 1분 귀머거리"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "쓸 때마다 20% 폭발: 사용자 10d6 역장, 뿔피리 파괴 — d100을 표에서 굴림"
+   ]
+  },
+  "dnd.srd521.magic-item.horseshoes-of-a-zephyr": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "네 개를 단 말은 지면 위에 떠서 이동 — 험지 무시, 하루 12시간 여행에 탈진 없음"
+   ]
+  },
+  "dnd.srd521.magic-item.horseshoes-of-speed": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "네 개를 단 말의 속도 +30피트 — 탈것 시트에서 적용"
+   ]
+  },
+  "dnd.srd521.magic-item.immovable-rod": {
+   "definition": {
+    "type": "rod"
+   },
+   "dm": [
+    "단추로 고정·해제(활용 행동) — 8,000파운드까지 지탱",
+    "DC 30 근력(운동)에 성공하면 고정된 막대를 10피트 옮긴다"
+   ]
+  },
+  "dnd.srd521.magic-item.instant-fortress": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "탑을 세우고 되돌리는 것은 마법 행동 — 자리에 있던 생물·물체는 밀려난다",
+    "탑 벽·문·지붕: AC 20, HP 100, 공성 외 타격·관통·참격 면역, 나머지 피해 저항",
+    "문은 추가 행동 명령으로만 열린다, 수리는 소원으로만"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "종류는 개별 아이운 스톤 항목으로 지급 — 이 항목 자체에는 효과가 없다",
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-absorption": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "반응으로 보이는 생물의 4레벨 이하 주문을 무효화",
+    "무효화한 주문 레벨 합이 20이 되면 마법을 잃는다"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-agility": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "민첩 +2(최대 20) — 시트 능력치에 직접 반영"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-awareness": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "initiative.advantage",
+        "operation": "set",
+        "value": {
+         "value": 1
+        },
+        "note": "우선권 이점"
+       },
+       {
+        "kind": "property.modify",
+        "property": "skill.perception.advantage",
+        "operation": "set",
+        "value": {
+         "value": 1
+        },
+        "note": "지혜(지각) 이점"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-fortitude": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "건강 +2(최대 20) — 시트 능력치에 직접 반영"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-greater-absorption": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "반응으로 보이는 생물의 8레벨 이하 주문을 무효화",
+    "무효화한 주문 레벨 합이 20이 되면 마법을 잃는다"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-insight": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "지혜 +2(최대 20) — 시트 능력치에 직접 반영"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-intellect": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "지능 +2(최대 20) — 시트 능력치에 직접 반영"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-leadership": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "매력 +2(최대 20) — 시트 능력치에 직접 반영"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-mastery": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "숙련 보너스 +1 — 앱이 숙련 보너스를 바꾸지 못해 수동 적용"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-protection": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "ac": 1
+    }
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-regeneration": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "HP가 1 이상이면 매 시간이 끝날 때 15 회복 — 시간 경과는 앱이 세지 않는다"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-reserve": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "1~4레벨 주문을 레벨 합 4까지 저장 — 처음엔 DM이 고른 주문 1d4레벨",
+    "저장된 주문은 원래 시전자의 슬롯 레벨·DC·명중 보너스로 시전"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-strength": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "근력 +2(최대 20) — 시트 능력치에 직접 반영"
+   ]
+  },
+  "dnd.srd521.magic-item.ioun-stone-of-sustenance": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "머리 주위를 선회할 때만 효과 — 띄우기는 마법 행동, 동시에 최대 3개",
+    "먹거나 마실 필요가 없다"
+   ]
+  },
+  "dnd.srd521.magic-item.iron-bands": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1,
+     "note": "새벽마다 다시 쓸 수 있다"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "throw",
+      "label": "철 밴드 던지기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.iron-bands",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "60피트 안 거대 이하 생물에게 원거리 명중(민첩 수정치+숙련) — 맞으면 포박"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "원거리 명중 굴림은 민첩 수정치+숙련 보너스로 직접 굴린다",
+    "맞으면 대상은 포박 — 해제는 추가 행동 명령",
+    "DC 20 근력(운동) 성공 시 밴드 파괴·해방, 실패하면 24시간 재시도 불가"
+   ]
+  },
+  "dnd.srd521.magic-item.iron-flask": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "다른 차원의 생물을 DC 17 지혜 내성 실패 시 가둔다(이전에 갇혔으면 이점)",
+    "풀어주면 1시간 동안 명령에 복종 — 그 뒤는 본래 성향대로",
+    "처음부터 DM이 고른 생물이 들어 있을 수 있다"
+   ]
+  },
+  "dnd.srd521.magic-item.iron-horn-of-valhalla": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "모든 군용 무기 숙련이 있어야 한다 — 없으면 소환된 영혼이 공격한다",
+    "광전사 영혼 5명 소환(1시간 또는 HP 0까지) — 광전사 스탯블록을 표에 따로 올린다",
+    "한 번 쓰면 7일 동안 다시 못 쓴다"
+   ]
+  },
+  "dnd.srd521.magic-item.ivory-goats": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "세 염소 조각상 세트 — 효과와 재사용 대기(15일·7일·30일)는 조각상마다 다르다",
+    "공포의 염소: 뿔이 +1 기병창·+2 장검, 타는 동안 30피트 공포(DC 15 지혜)",
+    "여행의 염소: 충전 24(1시간당 1), 다 쓰면 7일 뒤 전부 회복",
+    "염소 스탯블록은 표에 따로 올린다"
+   ]
+  },
+  "dnd.srd521.magic-item.javelin-of-lightning": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.javelin",
+    "charges": {
+     "max": 1,
+     "note": "새벽마다 다시 쓸 수 있다"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "bolt",
+      "label": "번개 화살",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.javelin-of-lightning",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "damage.apply",
+        "dice": "4d6",
+        "damageType": "번개",
+        "target": "targets",
+        "save": {
+         "ability": "dex",
+         "dc": {
+          "value": 13
+         },
+         "success": "half"
+        }
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "120피트 안 대상까지 5피트 너비 선 위의 생물 — 좌표가 없어 대상은 직접 고른다"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "공격마다 관통 대신 번개 피해로 바꿀 수 있다 — 피해 유형은 수동"
+   ]
+  },
+  "dnd.srd521.magic-item.lantern-of-revealing": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "밝은 빛 30피트 안의 투명한 생물·물체가 보인다 — 조명은 앱이 모른다",
+    "기름 1파인트로 6시간, 덮개를 내리면 5피트 어둑한 빛"
+   ]
+  },
+  "dnd.srd521.magic-item.luck-blade": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.glaive",
+      "dnd.srd521.item.weapon.greatsword",
+      "dnd.srd521.item.weapon.longsword",
+      "dnd.srd521.item.weapon.rapier",
+      "dnd.srd521.item.weapon.scimitar",
+      "dnd.srd521.item.weapon.sickle",
+      "dnd.srd521.item.weapon.shortsword"
+     ]
+    },
+    "bonus": {
+     "attack": 1,
+     "damage": 1,
+     "saves": 1
+    },
+    "charges": {
+     "max": 3,
+     "recharge": "0",
+     "note": "처음 충전은 1d3 — 회복하지 않고, 다 쓰면 소원 속성이 사라진다"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.wish",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "처음 충전 1d3 — 3보다 적으면 남는 충전을 직접 줄인다",
+    "소원은 하루 1회",
+    "운: 실패한 d20 시험 하나를 다시 굴려 두 번째 결과를 쓴다(하루 1회)"
+   ]
+  },
+  "dnd.srd521.magic-item.mace-of-disruption": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.mace"
+   },
+   "dm": [
+    "악마·언데드에게 맞히면 광휘 2d6 추가 — 크리처 유형은 앱이 판정하지 않는다",
+    "그 뒤 HP 25 이하면 DC 15 지혜 내성 실패 시 파괴, 성공 시 다음 턴 끝까지 공포",
+    "들고 있으면 밝은 빛 20피트, 어둑한 빛 20피트 더"
+   ]
+  },
+  "dnd.srd521.magic-item.mace-of-smiting": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.mace",
+    "bonus": {
+     "attack": 1,
+     "damage": 1
+    }
+   },
+   "dm": [
+    "구조물 상대로는 명중·피해 보너스가 +3",
+    "명중 굴림 20이면 타격 7 추가(구조물은 14), 그 뒤 구조물 HP 25 이하면 파괴"
+   ]
+  },
+  "dnd.srd521.magic-item.mace-of-terror": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.mace",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "use",
+      "label": "공포의 물결",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.mace-of-terror",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "condition.apply",
+        "condition": "frightened",
+        "target": "targets",
+        "save": {
+         "ability": "wis",
+         "dc": {
+          "value": 15
+         }
+        },
+        "duration": {
+         "kind": "minutes",
+         "amount": 1
+        },
+        "repeatSave": "turn-end"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "30피트 안에서 고른 생물 — 좌표가 없어 대상은 직접 고른다"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "겁에 질린 생물은 최대한 멀리 이동해야 하고 기회 공격을 못 한다(질주·탈출·회피만)"
+   ]
+  },
+  "dnd.srd521.magic-item.mantle-of-spell-resistance": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "주문에 대한 내성 굴림에 이점 — 주문 출처 구분은 수동"
+   ]
+  },
+  "dnd.srd521.magic-item.manual-of-bodily-health": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "6일 안에 48시간 공부하면 건강 +2(최대 30) — 시트 능력치에 직접 반영",
+    "그 뒤 100년 동안 마법을 잃는다"
+   ]
+  },
+  "dnd.srd521.magic-item.manual-of-gainful-exercise": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "6일 안에 48시간 공부하면 근력 +2(최대 30) — 시트 능력치에 직접 반영",
+    "그 뒤 100년 동안 마법을 잃는다"
+   ]
+  },
+  "dnd.srd521.magic-item.manual-of-golems": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "골렘 종류는 DM이 고르거나 표를 굴린다 — 제작 기간·비용은 표대로",
+    "5레벨 슬롯 2개 이상이 없는 생물이 읽으면 정신 6d6",
+    "골렘 스탯블록은 표에 따로 올린다"
+   ]
+  },
+  "dnd.srd521.magic-item.manual-of-quickness-of-action": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "6일 안에 48시간 공부하면 민첩 +2(최대 30) — 시트 능력치에 직접 반영",
+    "그 뒤 100년 동안 마법을 잃는다"
+   ]
+  },
+  "dnd.srd521.magic-item.marble-elephant": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "최대 24시간 코끼리가 된다 — 코끼리 스탯블록을 표에 따로 올린다",
+    "한 번 쓰면 7일 동안 다시 못 쓴다"
+   ]
+  },
+  "dnd.srd521.magic-item.marvelous-pigments": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "물감 병 1d4개 — 한 병으로 20피트 입방체 안에 그린 것이 현실이 된다(10분, 집중)",
+    "병당 25GP, 전체 500GP를 넘는 가치는 가짜",
+    "그린 에너지(불·번개)는 해를 끼치지 않는다"
+   ]
+  },
+  "dnd.srd521.magic-item.medallion-of-thoughts": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 5,
+     "recharge": "1d4"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.detect-thoughts",
+      "charges": 1,
+      "dc": 13
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.mirror-of-life-trapping": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "활성화된 거울을 30피트 안에서 본 생물은 DC 15 매력 내성 실패 시 갇힌다(12칸)",
+    "거울: AC 11, HP 10, 독·정신 면역, 타격 취약",
+    "갇힌 생물 부르기·풀어주기는 마법 행동",
+    "차원 공간 아이템과 겹치면 둘 다 파괴되고 아스트랄계 문이 열린다"
+   ]
+  },
+  "dnd.srd521.magic-item.mithral-armor": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor",
+     "training": [
+      "medium",
+      "heavy"
+     ],
+     "exclude": [
+      "dnd.srd521.item.armor.hide"
+     ]
+    }
+   },
+   "dm": [
+    "민첩(은신) 불리점과 근력 요구가 없다 — 수동 적용",
+    "평상복 아래에 입을 수 있다"
+   ]
+  },
+  "dnd.srd521.magic-item.mysterious-deck": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "뽑을 장수를 먼저 선언하고 표를 굴린다 — 카드마다 효과는 DM 판정",
+    "13장(75%) 또는 22장 덱"
+   ]
+  },
+  "dnd.srd521.magic-item.necklace-of-adaptation": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "saving-throw.advantage-vs-condition",
+        "operation": "set",
+        "value": {
+         "value": 1
+        },
+        "params": {
+         "conditions": [
+          "중독"
+         ]
+        },
+        "note": "중독 내성 이점"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "어떤 환경에서도 정상적으로 호흡한다"
+   ]
+  },
+  "dnd.srd521.magic-item.necklace-of-fireballs": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 9,
+     "recharge": "0",
+     "note": "구슬 1d6+3개 — 회복하지 않는다"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.fireball",
+      "charges": 1,
+      "dc": 15
+     }
+    ]
+   },
+   "dm": [
+    "처음 구슬 1d6+3개 — 9보다 적으면 남는 충전을 직접 줄인다",
+    "여러 개를 한 번에 던지면 첫 개 이후 하나마다 피해 +1d6(최대 12d6) — 충전도 그만큼"
+   ]
+  },
+  "dnd.srd521.magic-item.necklace-of-prayer-beads": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 6,
+     "note": "마법 구슬 1d4+2개"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.bless",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.cure-wounds",
+      "charges": 1,
+      "level": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.greater-restoration",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.shining-smite",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.guardian-of-faith",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.wind-walk",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "구슬 수(1d4+2)와 종류는 DM이 정하거나 굴린다 — 가진 구슬의 주문만 쓴다",
+    "구슬마다 추가 행동으로 시전, 그 구슬은 다음 새벽까지 못 쓴다",
+    "성직자·드루이드·성기사만 조율"
+   ]
+  },
+  "dnd.srd521.magic-item.nine-lives-stealer": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "training": [
+      "simple",
+      "martial"
+     ]
+    },
+    "bonus": {
+     "attack": 2,
+     "damage": 2
+    },
+    "charges": {
+     "max": 9,
+     "recharge": "0",
+     "note": "처음 충전 1d8+1 — 다 쓰면 이 속성이 사라진다"
+    }
+   },
+   "dm": [
+    "처음 충전 1d8+1 — 9보다 적으면 남는 충전을 직접 줄인다",
+    "HP 100 미만 생물에게 자연 20이면 DC 15 건강 내성 실패 시 즉사(구조물·언데드 면제), 죽이면 충전 1 소모"
+   ]
+  },
+  "dnd.srd521.magic-item.oathbow": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.longbow",
+      "dnd.srd521.item.weapon.shortbow"
+     ]
+    }
+   },
+   "dm": [
+    "원거리 공격 때 맹세의 적을 지정(죽거나 7일 뒤 새벽까지, 한 번에 하나)",
+    "맹세의 적에게: 명중 이점, 절반·3/4 엄폐 무시, 원거리 불리점 없음, 관통 3d6 추가",
+    "맹세의 적이 살아 있는 동안 다른 무기 명중에 불리점"
+   ]
+  },
+  "dnd.srd521.magic-item.obsidian-steed": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "최대 24시간 악몽이 된다 — 악몽 스탯블록을 표에 따로 올린다, 자신을 지킬 때만 싸움",
+    "쓸 때마다 10% 확률로 명령을 무시 — 그때 타면 하데스로 이동",
+    "한 번 쓰면 5일 동안 다시 못 쓴다"
+   ]
+  },
+  "dnd.srd521.magic-item.oil-of-etherealness": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.etherealness",
+      "duration": "1시간"
+     }
+    }
+   },
+   "dm": [
+    "바르는 데 10분 — 중형보다 크면 한 단계마다 한 병 더"
+   ]
+  },
+  "dnd.srd521.magic-item.oil-of-sharpness": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "비마법 참격·관통 근접 무기 1개나 탄약 20개를 +3으로(1분) — +3 무기는 따로 지급"
+   ]
+  },
+  "dnd.srd521.magic-item.oil-of-slipperiness": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.freedom-of-movement",
+      "duration": "1시간"
+     }
+    }
+   },
+   "dm": [
+    "바르는 데 10분 — 중형보다 크면 한 단계마다 한 병 더",
+    "대신 땅에 부으면 10피트 정사각형에 기름칠 효과 8시간"
+   ]
+  },
+  "dnd.srd521.magic-item.onyx-dog": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "최대 6시간 마스티프가 된다(지능 8, 공용어, 맹안시 60피트) — 스탯블록을 표에 따로 올린다",
+    "한 번 쓰면 7일 동안 다시 못 쓴다"
+   ]
+  },
+  "dnd.srd521.magic-item.pearl-of-power": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1,
+     "note": "새벽마다 다시 쓸 수 있다"
+    }
+   },
+   "dm": [
+    "마법 행동으로 3레벨 이하 쓴 슬롯 하나를 되찾는다 — 충전을 쓰고 슬롯은 시트에서 직접 돌린다",
+    "주문 시전자만 조율"
+   ]
+  },
+  "dnd.srd521.magic-item.periapt-of-health": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1,
+     "note": "새벽마다 다시 쓸 수 있다"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "saving-throw.advantage-vs-condition",
+        "operation": "set",
+        "value": {
+         "value": 1
+        },
+        "params": {
+         "conditions": [
+          "중독"
+         ]
+        },
+        "note": "중독 내성 이점"
+       }
+      ]
+     },
+     {
+      "id": "heal",
+      "label": "건강의 호부: 회복",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.periapt-of-health",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "healing.apply",
+        "dice": "2d4",
+        "amount": {
+         "value": 2
+        },
+        "target": "self"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.periapt-of-proof-against-poison": {
+   "definition": {
+    "type": "wondrous",
+    "immunities": [
+     "poison"
+    ],
+    "conditionImmunities": [
+     "poisoned"
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.periapt-of-wound-closure": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "죽음 내성 굴림 9 이하를 10으로 바꿀 수 있다 — 수동 적용",
+    "히트 다이스로 회복하는 HP가 두 배 — 수동 적용"
+   ]
+  },
+  "dnd.srd521.magic-item.philter-of-love": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "마신 뒤 10분 안에 처음 본 생물에게 1시간 매혹 — 상태는 직접 붙인다"
+   ]
+  },
+  "dnd.srd521.magic-item.pipes-of-haunting": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "use",
+      "label": "공포의 곡",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.pipes-of-haunting",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "condition.apply",
+        "condition": "frightened",
+        "target": "targets",
+        "save": {
+         "ability": "wis",
+         "dc": {
+          "value": 15
+         }
+        },
+        "duration": {
+         "kind": "minutes",
+         "amount": 1
+        },
+        "repeatSave": "turn-end"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "30피트 안에서 고른 생물 — 좌표가 없어 대상은 직접 고른다"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "내성에 성공한 생물은 24시간 이 파이프에 면역"
+   ]
+  },
+  "dnd.srd521.magic-item.pipes-of-the-sewers": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "dm": [
+    "지닌 동안 쥐는 위협하지 않는 한 공격하지 않는다",
+    "충전 1~3으로 반 마일 안 쥐 떼를 충전마다 하나 부른다 — 있는지는 DM이 정한다",
+    "30피트 안에 온 쥐 떼는 DC 15 지혜 내성 실패 시 연주하는 동안 우호적 — 스탯블록은 표에 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.plate-armor-of-etherealness": {
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor",
+     "ids": [
+      "dnd.srd521.item.armor.half-plate",
+      "dnd.srd521.item.armor.plate"
+     ]
+    },
+    "charges": {
+     "max": 1,
+     "note": "새벽마다 다시 쓸 수 있다"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.etherealness",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "주문 효과만 얻는다 — 갑옷을 벗거나 마법 행동으로 명령어를 반복하면 즉시 끝난다"
+   ]
+  },
+  "dnd.srd521.magic-item.portable-hole": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "펴고 접는 것은 마법 행동 — 지름 6피트, 깊이 10피트 차원 구멍",
+    "닫힌 구멍 안 생물은 DC 10 근력(운동)으로 빠져나온다, 공기는 1시간분을 인원수로 나눈다",
+    "차원 공간 아이템과 겹치면 둘 다 파괴되고 아스트랄계 문이 열린다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-animal-friendship": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "마시면 동물 친밀화를 3레벨로 시전(내성 DC 13) — 주문은 직접 굴린다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-clairvoyance": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.clairvoyance",
+      "duration": "10분"
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-climbing": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "등반",
+      "duration": "1시간",
+      "grants": {
+       "speeds": {
+        "climb": "walk"
+       }
+      }
+     }
+    }
+   },
+   "dm": [
+    "그 시간 동안 등반을 위한 근력(운동) 판정에 이점"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-diminution": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.enlarge-reduce",
+      "duration": "1시간"
+     }
+    }
+   },
+   "dm": [
+    "축소 효과만 — 지속은 1d4시간이라 1시간을 넘으면 직접 늘린다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-flying": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "비행",
+      "duration": "1시간",
+      "grants": {
+       "speeds": {
+        "fly": "walk"
+       }
+      }
+     }
+    }
+   },
+   "dm": [
+    "정지 비행 가능 — 끝날 때 공중이면 떨어진다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-gaseous-form": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.gaseous-form",
+      "duration": "1시간"
+     }
+    }
+   },
+   "dm": [
+    "추가 행동으로 일찍 끝낼 수 있다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-giant-strength-cloud": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "거인의 힘",
+      "duration": "1시간",
+      "grants": {
+       "abilities": {
+        "str": 27
+       }
+      }
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-giant-strength-fire": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "거인의 힘",
+      "duration": "1시간",
+      "grants": {
+       "abilities": {
+        "str": 25
+       }
+      }
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-giant-strength-frost": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "거인의 힘",
+      "duration": "1시간",
+      "grants": {
+       "abilities": {
+        "str": 23
+       }
+      }
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-giant-strength-hill": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "거인의 힘",
+      "duration": "1시간",
+      "grants": {
+       "abilities": {
+        "str": 21
+       }
+      }
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-giant-strength-stone": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "거인의 힘",
+      "duration": "1시간",
+      "grants": {
+       "abilities": {
+        "str": 23
+       }
+      }
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-giant-strength-storm": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "거인의 힘",
+      "duration": "1시간",
+      "grants": {
+       "abilities": {
+        "str": 29
+       }
+      }
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-growth": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.enlarge-reduce",
+      "duration": "10분"
+     }
+    }
+   },
+   "dm": [
+    "확대 효과만"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-healing": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "healing": "2d4+2"
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-healing-greater": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "healing": "4d4+4"
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-healing-superior": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "healing": "8d4+8"
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-healing-supreme": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "healing": "10d4+20"
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-heroism": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "tempHp": "10",
+     "spell": {
+      "spellId": "dnd.srd521.spell.bless",
+      "duration": "1시간"
+     }
+    }
+   },
+   "dm": [
+    "임시 HP 10은 1시간 뒤 사라진다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-invisibility": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.invisibility",
+      "duration": "1시간"
+     }
+    }
+   },
+   "dm": [
+    "명중 굴림·피해·주문 시전을 하면 일찍 끝난다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-invulnerability": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "effect": {
+      "name": "무적",
+      "duration": "1분",
+      "grants": {
+       "resistances": [
+        "acid",
+        "bludgeoning",
+        "cold",
+        "fire",
+        "force",
+        "lightning",
+        "necrotic",
+        "piercing",
+        "poison",
+        "psychic",
+        "radiant",
+        "slashing",
+        "thunder"
+       ]
+      }
+     }
+    }
+   }
+  },
+  "dnd.srd521.magic-item.potion-of-longevity": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "신체 나이 1d6+6년 감소(최소 13세)",
+    "두 번째부터는 누적 10% 확률로 오히려 1d6+6년 늙는다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-mind-reading": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.detect-thoughts",
+      "duration": "10분"
+     }
+    }
+   },
+   "dm": [
+    "주문 내성 DC 13"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-poison": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "마시면 독 4d6, DC 13 건강 내성 실패 시 1시간 중독 — 피해·상태는 직접 적용",
+    "치유 물약처럼 보인다 — 정체는 식별로만 드러난다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-resistance": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "피해 유형은 DM이 고르거나 굴린다"
+   ],
+   "variants": [
+    {
+     "id": "acid",
+     "name": "저항의 물약(산성)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "산성 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "acid"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "cold",
+     "name": "저항의 물약(냉기)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "냉기 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "cold"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "fire",
+     "name": "저항의 물약(화염)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "화염 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "fire"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "force",
+     "name": "저항의 물약(역장)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "역장 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "force"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "lightning",
+     "name": "저항의 물약(번개)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "번개 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "lightning"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "necrotic",
+     "name": "저항의 물약(사령)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "사령 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "necrotic"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "poison",
+     "name": "저항의 물약(독)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "독 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "poison"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "psychic",
+     "name": "저항의 물약(정신)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "정신 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "psychic"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "radiant",
+     "name": "저항의 물약(광휘)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "광휘 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "radiant"
+         ]
+        }
+       }
+      }
+     }
+    },
+    {
+     "id": "thunder",
+     "name": "저항의 물약(천둥)",
+     "rarity": "고급",
+     "definition": {
+      "use": {
+       "effect": {
+        "name": "천둥 저항",
+        "duration": "1시간",
+        "grants": {
+         "resistances": [
+          "thunder"
+         ]
+        }
+       }
+      }
+     }
+    }
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-speed": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "spell": {
+      "spellId": "dnd.srd521.spell.haste",
+      "duration": "1분"
+     }
+    }
+   },
+   "dm": [
+    "효과가 끝날 때 무기력이 오지 않는다 — 수동으로 건너뛴다"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-vitality": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "모든 탈진과 중독을 없앤다 — 직접 제거",
+    "24시간 동안 쓴 히트 다이스는 최대치로 회복 — 수동 적용"
+   ]
+  },
+  "dnd.srd521.magic-item.potion-of-water-breathing": {
+   "definition": {
+    "type": "potion",
+    "use": {
+     "consumes": true
+    }
+   },
+   "dm": [
+    "24시간 동안 물속에서 숨 쉰다"
+   ]
+  },
+  "dnd.srd521.magic-item.quarterstaff-of-the-acrobat": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.quarterstaff",
+    "bonus": {
+     "attack": 2,
+     "damage": 2
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "skill.acrobatics.advantage",
+        "operation": "add",
+        "note": "민첩(곡예) 판정 이점 — 육척봉·10피트 기둥 형태만"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "빛 켜고 끄기·형태 변경(6인치 막대/10피트 기둥/육척봉)은 추가 행동 — 형태는 앱이 모름",
+    "곡예 이점은 6인치 막대 형태에서는 없음",
+    "공격 편향: 공격받을 때 반응으로 그 공격에 AC +5, 짧은·긴 휴식마다 1회",
+    "육척봉 형태는 투척(30/120) 가능, 던지면 손으로 돌아옴"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-animal-influence": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.animal-friendship",
+      "charges": 1,
+      "dc": 13
+     },
+     {
+      "spellId": "dnd.srd521.spell.speak-with-animals",
+      "charges": 1,
+      "dc": 13
+     },
+     {
+      "spellId": "dnd.srd521.spell.fear",
+      "charges": 3,
+      "dc": 13
+     }
+    ]
+   },
+   "dm": [
+    "공포는 야수만 대상으로 하고 집중이 필요 없음"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-djinni-summoning": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 1
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "summon",
+      "label": "지니 소환",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.ring-of-djinni-summoning",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "지니 소환 — 능력치 블록은 DM이 준비, 집중 최대 1시간"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "지니는 명령에 복종하며 명령이 없으면 회피 — 소환수 운용은 DM"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-elemental-command": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 5,
+     "recharge": "1d4+1"
+    }
+   },
+   "variants": [
+    {
+     "id": "air",
+     "name": "정령 지휘의 반지(공기)",
+     "rarity": "전설",
+     "definition": {
+      "resistances": [
+       "lightning"
+      ],
+      "speeds": {
+       "fly": "walk"
+      },
+      "spells": [
+       {
+        "spellId": "dnd.srd521.spell.chain-lightning",
+        "charges": 3,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.feather-fall",
+        "charges": 0,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.gust-of-wind",
+        "charges": 2,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.wind-wall",
+        "charges": 1,
+        "dc": 18
+       }
+      ]
+     },
+     "dm": [
+      "아우란어, 정지 비행"
+     ]
+    },
+    {
+     "id": "earth",
+     "name": "정령 지휘의 반지(대지)",
+     "rarity": "전설",
+     "definition": {
+      "resistances": [
+       "acid"
+      ],
+      "spells": [
+       {
+        "spellId": "dnd.srd521.spell.earthquake",
+        "charges": 5,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.stone-shape",
+        "charges": 2,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.stoneskin",
+        "charges": 3,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.wall-of-stone",
+        "charges": 3,
+        "dc": 18
+       }
+      ]
+     },
+     "dm": [
+      "테란어, 잔해·바위 험지 무시, 흙·바위 통과"
+     ]
+    },
+    {
+     "id": "fire",
+     "name": "정령 지휘의 반지(불)",
+     "rarity": "전설",
+     "definition": {
+      "immunities": [
+       "fire"
+      ],
+      "spells": [
+       {
+        "spellId": "dnd.srd521.spell.burning-hands",
+        "charges": 1,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.fireball",
+        "charges": 2,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.fire-storm",
+        "charges": 4,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.wall-of-fire",
+        "charges": 3,
+        "dc": 18
+       }
+      ]
+     },
+     "dm": [
+      "이그난어"
+     ]
+    },
+    {
+     "id": "water",
+     "name": "정령 지휘의 반지(물)",
+     "rarity": "전설",
+     "definition": {
+      "speeds": {
+       "swim": 60
+      },
+      "spells": [
+       {
+        "spellId": "dnd.srd521.spell.create-or-destroy-water",
+        "charges": 1,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.ice-storm",
+        "charges": 2,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.tsunami",
+        "charges": 5,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.wall-of-ice",
+        "charges": 3,
+        "dc": 18
+       },
+       {
+        "spellId": "dnd.srd521.spell.water-walk",
+        "charges": 2,
+        "dc": 18
+       }
+      ]
+     },
+     "dm": [
+      "아쿠안어, 수중 호흡"
+     ]
+    }
+   ],
+   "dm": [
+    "정령 대상 명중 이점, 정령의 나에 대한 명중 불리 — 대상 종류는 앱이 모름",
+    "정령 강제: 마법 행동, 60피트 내 정령 DC 18 지혜 내성 실패 시 매혹, 다음 턴 행동을 내가 정함"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-evasion": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "evade",
+      "label": "회피",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "reaction",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.ring-of-evasion",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "실패한 민첩 내성을 성공으로 바꾼다 — 결과 수정은 DM"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.ring-of-feather-falling": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "낙하 시 라운드당 60피트로 내려오고 낙하 피해 없음"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-free-action": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "험지 추가 이동 비용 없음",
+    "마법으로 인한 속도 감소·마비·포박 무효 — 원인이 마법인지는 DM"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-invisibility": {
+   "definition": {
+    "type": "ring"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "vanish",
+      "label": "투명화",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "condition.apply",
+        "condition": "invisible",
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "공격·피해·주문 직후 투명 상태를 직접 해제"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.ring-of-jumping": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "추가 행동으로 자신에게 도약을 무제한 시전 — 슬롯 소모 없음"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-mind-shielding": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "텔레파시·거짓말 탐지·성향/유형 탐지·생각 읽기 차단",
+    "반지를 투명하게 할 수 있음, 죽으면 영혼이 반지에 들어갈 수 있음"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-protection": {
+   "definition": {
+    "type": "ring",
+    "bonus": {
+     "ac": 1,
+     "saves": 1
+    }
+   }
+  },
+  "dnd.srd521.magic-item.ring-of-regeneration": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "HP 1 이상이면 10분마다 1d6 회복 — 시간 경과는 DM",
+    "잃은 신체 부위는 1d6+1일 뒤 재생"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-resistance": {
+   "definition": {
+    "type": "ring"
+   },
+   "variants": [
+    {
+     "id": "acid",
+     "name": "저항의 반지(산성)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "acid"
+      ]
+     }
+    },
+    {
+     "id": "fire",
+     "name": "저항의 반지(화염)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "fire"
+      ]
+     }
+    },
+    {
+     "id": "force",
+     "name": "저항의 반지(역장)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "force"
+      ]
+     }
+    },
+    {
+     "id": "lightning",
+     "name": "저항의 반지(번개)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "lightning"
+      ]
+     }
+    },
+    {
+     "id": "necrotic",
+     "name": "저항의 반지(사령)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "necrotic"
+      ]
+     }
+    },
+    {
+     "id": "poison",
+     "name": "저항의 반지(독)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "poison"
+      ]
+     }
+    },
+    {
+     "id": "psychic",
+     "name": "저항의 반지(정신)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "psychic"
+      ]
+     }
+    },
+    {
+     "id": "radiant",
+     "name": "저항의 반지(광휘)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "radiant"
+      ]
+     }
+    },
+    {
+     "id": "thunder",
+     "name": "저항의 반지(천둥)",
+     "rarity": "희귀",
+     "definition": {
+      "resistances": [
+       "thunder"
+      ]
+     }
+    }
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-shooting-stars": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 6,
+     "recharge": "1d6"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.faerie-fire",
+      "charges": 1
+     }
+    ]
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "ball-lightning",
+      "label": "번개 구체",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.ring-of-shooting-stars",
+        "amount": -2,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "번개 구체 1–4개, DC 15 민첩 내성 — 피해는 구체 수 표, 이동은 DM"
+       }
+      ]
+     },
+     {
+      "id": "shooting-star",
+      "label": "유성 (충전 1)",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.ring-of-shooting-stars",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "60피트 내 15피트 입방체, DC 15 민첩 내성 실패 5d4 광휘(성공 절반) — 충전 2·3회는 버튼을 더 눌러 티끌 추가"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "춤추는 빛·빛을 반지로 무제한 시전"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-spell-storing": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "저장된 주문(최대 5레벨 분량)과 원래 시전자의 DC·공격 보너스를 DM이 기록",
+    "발견 시 1d6-1레벨 분량 저장"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-spell-turning": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "자신만 대상으로 하는 주문의 내성 이점",
+    "7레벨 이하 주문 내성에서 20이면 주문을 시전자에게 되돌림"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-swimming": {
+   "definition": {
+    "type": "ring",
+    "speeds": {
+     "swim": 40
+    }
+   }
+  },
+  "dnd.srd521.magic-item.ring-of-telekinesis": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "마법 행동으로 염동력 무제한 시전 — 슬롯 소모 없음",
+    "운반·착용되지 않은 물체 대상이면 집중·대결 없음"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-the-ram": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "ram",
+      "label": "숫양 (충전 1)",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "bonus-action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.ring-of-the-ram",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "원거리 주문 공격 +7, 명중 시 충전당 2d10 역장 + 5피트 밀침 — 충전 2·3회는 버튼을 더 눌러 차감"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "물체 대상이면 자동 명중, 피해 두 배"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-three-wishes": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 3,
+     "note": "루비는 회복되지 않음 — 마지막 루비를 쓰면 비마법 반지",
+     "recharge": "0"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.wish",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": []
+  },
+  "dnd.srd521.magic-item.ring-of-warmth": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "냉기 피해를 받을 때마다 2d8 감소",
+    "화씨 0도 이하 추위 피해 없음"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-water-walking": {
+   "definition": {
+    "type": "ring"
+   },
+   "dm": [
+    "액체 표면 위를 걸을 수 있음, 용암 등의 피해는 그대로"
+   ]
+  },
+  "dnd.srd521.magic-item.ring-of-x-ray-vision": {
+   "definition": {
+    "type": "ring",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "xray",
+      "label": "투시",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.ring-of-x-ray-vision",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "effect.apply",
+        "template": {
+         "name": "투시",
+         "duration": "1분",
+         "rounds": 10
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "투시 30피트, 두께별 차단 물질",
+    "1분마다 DC 15 건강 내성 실패 시 탈진 1단계, 새벽까지 사용 불가"
+   ]
+  },
+  "dnd.srd521.magic-item.robe-of-eyes": {
+   "definition": {
+    "type": "wondrous",
+    "darkvision": 120
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "skill.perception.advantage",
+        "operation": "add",
+        "note": "지혜(지각) 판정 이점 — 시각 의존만"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "진시야 120피트",
+    "로브에 빛, 5피트 내 태양광 시전 시 1분 장님(턴 끝 건강 내성 DC 11/15)"
+   ]
+  },
+  "dnd.srd521.magic-item.robe-of-scintillating-colors": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "dazzle",
+      "label": "현란한 색",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.robe-of-scintillating-colors",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "effect.apply",
+        "template": {
+         "name": "현란한 색",
+         "duration": "다음 턴 끝까지",
+         "rounds": 1
+        }
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "보이는 크리처는 DC 15 지혜 내성 실패 시 기절 — 대상은 DM"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "나를 보는 크리처의 공격 불리, 밝은 빛 30피트 + 희미한 빛 30피트"
+   ]
+  },
+  "dnd.srd521.magic-item.robe-of-stars": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "saves": 1
+    },
+    "charges": {
+     "max": 6,
+     "recharge": "1d6",
+     "note": "별은 새벽이 아니라 황혼에 1d6 돌아옴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.magic-missile",
+      "charges": 1,
+      "level": 5
+     }
+    ]
+   },
+   "dm": [
+    "마법 행동으로 아스트랄계 출입"
+   ]
+  },
+  "dnd.srd521.magic-item.robe-of-the-archmagi": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "spellDc": 2,
+     "spellAttack": 2
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "ac.unarmored-base",
+        "operation": "set",
+        "note": "방어구 없을 때 AC 15 + 민첩",
+        "value": {
+         "value": 15
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "주문과 마법 효과에 대한 내성 이점 — 원인이 마법인지는 DM"
+   ]
+  },
+  "dnd.srd521.magic-item.robe-of-useful-items": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "패치를 떼어 물건으로 — 기본 패치 목록과 4d4 무작위 패치 표는 DM이 기록"
+   ]
+  },
+  "dnd.srd521.magic-item.rod-of-absorption": {
+   "definition": {
+    "type": "rod"
+   },
+   "dm": [
+    "자신만 대상으로 하는 단일 대상 주문을 반응으로 흡수, 저장 레벨(누적 최대 50)을 DM이 기록",
+    "저장 에너지로 5레벨 이하 슬롯 대신 시전, 발견 시 1d10레벨 저장"
+   ]
+  },
+  "dnd.srd521.magic-item.rod-of-alertness": {
+   "definition": {
+    "type": "rod",
+    "charges": {
+     "max": 1
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.detect-evil-and-good",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.detect-magic",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.detect-poison-and-disease",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.see-invisibility",
+      "charges": 0
+     }
+    ]
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "skill.perception.advantage",
+        "operation": "add",
+        "note": "지혜(지각) 판정 이점"
+       },
+       {
+        "kind": "property.modify",
+        "property": "initiative.advantage",
+        "operation": "add",
+        "note": "우선권 이점"
+       }
+      ]
+     },
+     {
+      "id": "aura",
+      "label": "보호 오라",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.rod-of-alertness",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "10분, 밝은 빛 60피트 안의 나와 아군 AC·내성 +1, 투명 크리처 위치 감지 — 범위는 DM"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.rod-of-lordly-might": {
+   "definition": {
+    "type": "rod",
+    "base": "dnd.srd521.item.weapon.mace",
+    "bonus": {
+     "attack": 3,
+     "damage": 3
+    },
+    "charges": {
+     "max": 3
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "drain",
+      "label": "생명 흡수",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.rod-of-lordly-might",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "근접 명중 대상 DC 17 건강 내성 실패 시 4d6 사령 추가, 그 절반 회복"
+       }
+      ]
+     },
+     {
+      "id": "paralyze",
+      "label": "마비",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.rod-of-lordly-might",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "근접 명중 대상 DC 17 건강 내성 실패 시 1분 마비, 턴 끝 재굴림"
+       }
+      ]
+     },
+     {
+      "id": "terrify",
+      "label": "공포",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.rod-of-lordly-might",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "30피트 내 보이는 크리처 DC 17 지혜 내성 실패 시 1분 공포, 턴 끝 재굴림"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "세 속성은 각각 하루 1회 — 같은 속성을 두 번 쓰지 않았는지 확인",
+    "단추 1–6(화염 검 2d6, 전투도끼·창 +3, 등반 막대, 공성추 +10, 자북) 형태는 추가 행동 — 형태는 앱이 모름"
+   ]
+  },
+  "dnd.srd521.magic-item.rod-of-resurrection": {
+   "definition": {
+    "type": "rod",
+    "charges": {
+     "max": 5,
+     "recharge": "1",
+     "note": "마지막 충전을 쓰면 d20 1이면 사라짐"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.heal",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.resurrection",
+      "charges": 5
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.rod-of-rulership": {
+   "definition": {
+    "type": "rod",
+    "charges": {
+     "max": 1
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "rule",
+      "label": "복종 명령",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.rod-of-rulership",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "120피트 내 고른 크리처 DC 15 지혜 내성 실패 시 8시간 매혹 — 피해·본성에 반하는 명령이면 끝"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.rod-of-security": {
+   "definition": {
+    "type": "rod"
+   },
+   "dm": [
+    "충전 50을 모두 써서 최대 199명과 낙원으로 — 체류 200일÷인원, 10일 뒤 충전 회복",
+    "낙원에서는 히트 다이스 없이 회복, 중독·저주·질병 내성 이점"
+   ]
+  },
+  "dnd.srd521.magic-item.rope-of-climbing": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "밧줄 명령(이동·묶기·풀기·매듭), 매듭 시 등반 판정 이점",
+    "AC 20, HP 20, 독·정신 면역, 5분마다 1 회복"
+   ]
+  },
+  "dnd.srd521.magic-item.rope-of-entanglement": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "마법 행동으로 20피트 내 크리처 DC 15 민첩 내성 실패 시 포박, 탈출은 DC 15 근력(운동)/민첩(곡예)",
+    "AC 20, HP 20, 독·정신 면역, 5분마다 1 회복"
+   ]
+  },
+  "dnd.srd521.magic-item.rust-bag-of-tricks": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "pull",
+      "label": "털뭉치 던지기",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.rust-bag-of-tricks",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "d8 표로 크리처 결정 — 능력치 블록과 조종은 DM, 새벽이나 HP 0이면 사라짐"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.scarab-of-protection": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "ac": 1
+    },
+    "charges": {
+     "max": 12,
+     "note": "회복되지 않음 — 마지막 충전을 쓰면 가루가 됨",
+     "recharge": "0"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "preserve",
+      "label": "보존",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "reaction",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.scarab-of-protection",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "강령술 주문·언데드 효과에 대한 실패한 내성을 성공으로 — 결과 수정은 DM"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "주문에 대한 내성 이점"
+   ]
+  },
+  "dnd.srd521.magic-item.scimitar-of-speed": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.scimitar",
+    "bonus": {
+     "attack": 2,
+     "damage": 2
+    }
+   },
+   "dm": [
+    "매 턴 추가 행동으로 이 무기 공격 1회"
+   ]
+  },
+  "dnd.srd521.magic-item.sending-stones": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.sending",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "짝 돌을 가진 크리처에게만 — 짝이 파괴되면 비마법"
+   ]
+  },
+  "dnd.srd521.magic-item.sentinel-shield": {
+   "definition": {
+    "type": "shield",
+    "base": "dnd.srd521.item.shield"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "initiative.advantage",
+        "operation": "add",
+        "note": "우선권 이점"
+       },
+       {
+        "kind": "property.modify",
+        "property": "skill.perception.advantage",
+        "operation": "add",
+        "note": "지혜(지각) 판정 이점"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.serpentine-owl": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "최대 8시간 거대 올빼미로 변신, 텔레파시 — 능력치 블록은 DM, 사용 후 2일 대기"
+   ]
+  },
+  "dnd.srd521.magic-item.shield-of-missile-attraction": {
+   "definition": {
+    "type": "shield",
+    "base": "dnd.srd521.item.shield"
+   },
+   "dm": [
+    "원거리 무기 공격 피해에 저항 — 공격 종류는 앱이 모름",
+    "저주: 10피트 내 크리처를 노린 원거리 무기 공격이 나를 대상으로 함, 저주 해제로만 풀림"
+   ]
+  },
+  "dnd.srd521.magic-item.shield-of-the-cavalier": {
+   "definition": {
+    "type": "shield",
+    "base": "dnd.srd521.item.shield",
+    "bonus": {
+     "ac": 2
+    }
+   },
+   "dm": [
+    "강력한 강타: 공격 행동 중 방패로 공격 — 2d6+2+근력 역장, 10피트 밀침·넘어뜨림",
+    "보호 필드: 반응으로 5피트 발산 차단막, 하루 1회"
+   ]
+  },
+  "dnd.srd521.magic-item.silver-horn-of-valhalla": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "광전사 영혼 2명 소환 1시간 — 능력치 블록은 DM, 7일에 1회"
+   ]
+  },
+  "dnd.srd521.magic-item.silver-raven": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "최대 12시간 까마귀로 변신, 그동안 동물 전달자 시전 가능 — 사용 후 2일 대기"
+   ]
+  },
+  "dnd.srd521.magic-item.slippers-of-spider-climbing": {
+   "definition": {
+    "type": "wondrous",
+    "speeds": {
+     "climb": "walk"
+    }
+   },
+   "dm": [
+    "벽·천장 이동, 미끄러운 표면은 불가"
+   ]
+  },
+  "dnd.srd521.magic-item.sovereign-glue": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "용기에 1d6+1온스, 1온스가 1제곱피트 영구 접착 — 만능 용해제·에테르화의 기름·소원으로만 해제"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-1st-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-2nd-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-3rd-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-4th-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-5th-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-6th-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-7th-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-8th-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-9th-level": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spell-scroll-cantrip": {
+   "definition": {
+    "type": "scroll"
+   },
+   "dm": [
+    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+   ]
+  },
+  "dnd.srd521.magic-item.spellguard-shield": {
+   "definition": {
+    "type": "shield",
+    "base": "dnd.srd521.item.shield"
+   },
+   "dm": [
+    "주문과 마법 효과에 대한 내성 이점, 나에 대한 주문 명중 불리 — 원인이 주문인지는 DM"
+   ]
+  },
+  "dnd.srd521.magic-item.sphere-of-annihilation": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "구체 제어 DC 25 지능(비전), 닿으면 8d10 역장(DC 19 민첩), 0 HP면 소멸",
+    "포털 접촉 시 d100 표"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-charming": {
+   "definition": {
+    "type": "staff",
+    "charges": {
+     "max": 10,
+     "recharge": "1d8+2",
+     "note": "마지막 충전을 쓰면 d20 1이면 먼지가 됨"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.charm-person",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.command",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.comprehend-languages",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "마법 반사: 자신만 대상인 마법 부여 주문 내성 성공 시 반응+충전 1로 시전자에게 되돌림",
+    "마법 저항: 그런 내성 실패를 성공으로, 하루 1회"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-fire": {
+   "definition": {
+    "type": "staff",
+    "charges": {
+     "max": 10,
+     "recharge": "1d6+4",
+     "note": "마지막 충전을 쓰면 d20 1이면 재가 됨"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.burning-hands",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.fireball",
+      "charges": 3
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-fire",
+      "charges": 4
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.staff-of-frost": {
+   "definition": {
+    "type": "staff",
+    "resistances": [
+     "cold"
+    ],
+    "charges": {
+     "max": 10,
+     "recharge": "1d6+4",
+     "note": "마지막 충전을 쓰면 d20 1이면 물이 됨"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.cone-of-cold",
+      "charges": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.ice-storm",
+      "charges": 4
+     },
+     {
+      "spellId": "dnd.srd521.spell.fog-cloud",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-ice",
+      "charges": 4
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.staff-of-healing": {
+   "definition": {
+    "type": "staff",
+    "charges": {
+     "max": 10,
+     "recharge": "1d6+4",
+     "note": "마지막 충전을 쓰면 d20 1이면 사라짐"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.cure-wounds",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.lesser-restoration",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.mass-cure-wounds",
+      "charges": 5
+     }
+    ]
+   },
+   "dm": [
+    "상처 치료는 주문 레벨당 충전 1(최대 4레벨) — 올려 쓴 만큼 충전을 더 차감"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-power": {
+   "definition": {
+    "type": "staff",
+    "base": "dnd.srd521.item.weapon.quarterstaff",
+    "bonus": {
+     "attack": 2,
+     "damage": 2,
+     "ac": 2,
+     "saves": 2,
+     "spellAttack": 2
+    },
+    "charges": {
+     "max": 20,
+     "recharge": "2d8+4",
+     "note": "마지막 충전을 쓰면 d20: 1이면 +2만 남고 속성 상실, 20이면 1d8+2 회복"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.cone-of-cold",
+      "charges": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.fireball",
+      "charges": 5,
+      "level": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.globe-of-invulnerability",
+      "charges": 6
+     },
+     {
+      "spellId": "dnd.srd521.spell.hold-monster",
+      "charges": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.levitate",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.lightning-bolt",
+      "charges": 5,
+      "level": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.magic-missile",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.ray-of-enfeeblement",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-force",
+      "charges": 5
+     }
+    ]
+   },
+   "dm": [
+    "보복 공격: 지팡이를 부숴 30피트 폭발 — 충전×16 역장(자신, 50% 차원 이동), 다른 크리처 DC 17 민첩 충전×4"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-striking": {
+   "definition": {
+    "type": "staff",
+    "base": "dnd.srd521.item.weapon.quarterstaff",
+    "charges": {
+     "max": 10,
+     "recharge": "1d6+4",
+     "note": "마지막 충전을 쓰면 d20 1이면 비마법 육척봉"
+    }
+   },
+   "dm": [
+    "근접 명중 시 충전 최대 3 소비, 충전당 1d6 역장 추가 — 충전은 직접 차감"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-swarming-insects": {
+   "definition": {
+    "type": "staff",
+    "charges": {
+     "max": 10,
+     "recharge": "1d6+4",
+     "note": "마지막 충전을 쓰면 d20 1이면 벌레가 먹어치움"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.giant-insect",
+      "charges": 4
+     },
+     {
+      "spellId": "dnd.srd521.spell.insect-plague",
+      "charges": 5
+     }
+    ]
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "cloud",
+      "label": "곤충 구름",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.staff-of-swarming-insects",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "30피트 발산 10분 심하게 가림 — 강한 바람이면 끝"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.staff-of-the-magi": {
+   "definition": {
+    "type": "staff",
+    "base": "dnd.srd521.item.weapon.quarterstaff",
+    "bonus": {
+     "attack": 2,
+     "damage": 2,
+     "spellAttack": 2
+    },
+    "charges": {
+     "max": 50,
+     "recharge": "4d6+2",
+     "note": "마지막 충전을 쓰면 d20 20이면 1d12+1 회복"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.arcane-lock",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.conjure-elemental",
+      "charges": 7
+     },
+     {
+      "spellId": "dnd.srd521.spell.detect-magic",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.dispel-magic",
+      "charges": 3
+     },
+     {
+      "spellId": "dnd.srd521.spell.enlarge-reduce",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.fireball",
+      "charges": 7,
+      "level": 7
+     },
+     {
+      "spellId": "dnd.srd521.spell.flaming-sphere",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.ice-storm",
+      "charges": 4
+     },
+     {
+      "spellId": "dnd.srd521.spell.invisibility",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.knock",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.light",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.lightning-bolt",
+      "charges": 7,
+      "level": 7
+     },
+     {
+      "spellId": "dnd.srd521.spell.mage-hand",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.passwall",
+      "charges": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.plane-shift",
+      "charges": 7
+     },
+     {
+      "spellId": "dnd.srd521.spell.protection-from-evil-and-good",
+      "charges": 0
+     },
+     {
+      "spellId": "dnd.srd521.spell.telekinesis",
+      "charges": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-fire",
+      "charges": 4
+     },
+     {
+      "spellId": "dnd.srd521.spell.web",
+      "charges": 2
+     }
+    ]
+   },
+   "dm": [
+    "보복 공격: 지팡이를 부숴 30피트 폭발 — 충전×16 역장(자신, 50% 차원 이동), 다른 크리처 DC 17 민첩 충전×6"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-the-python": {
+   "definition": {
+    "type": "staff"
+   },
+   "dm": [
+    "던져서 거대 압축 뱀으로 — 능력치 블록·조종은 DM",
+    "뱀이 HP 0이면 지팡이 파괴, 되돌리면 1시간 사용 불가"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-the-woodlands": {
+   "definition": {
+    "type": "staff",
+    "base": "dnd.srd521.item.weapon.quarterstaff",
+    "bonus": {
+     "attack": 2,
+     "damage": 2,
+     "spellAttack": 2
+    },
+    "charges": {
+     "max": 6,
+     "recharge": "1d6",
+     "note": "마지막 충전을 쓰면 d20 1이면 비마법 육척봉"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.animal-friendship",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.awaken",
+      "charges": 5
+     },
+     {
+      "spellId": "dnd.srd521.spell.barkskin",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.locate-animals-or-plants",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.pass-without-trace",
+      "charges": 2
+     },
+     {
+      "spellId": "dnd.srd521.spell.speak-with-animals",
+      "charges": 1
+     },
+     {
+      "spellId": "dnd.srd521.spell.speak-with-plants",
+      "charges": 3
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-thorns",
+      "charges": 6
+     }
+    ]
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "tree",
+      "label": "나무 형태",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.staff-of-the-woodlands",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "지팡이를 60피트 나무로 — 되돌리기는 마법 행동"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.staff-of-thunder-and-lightning": {
+   "definition": {
+    "type": "staff",
+    "base": "dnd.srd521.item.weapon.quarterstaff",
+    "bonus": {
+     "attack": 2,
+     "damage": 2
+    }
+   },
+   "dm": [
+    "다섯 속성은 각각 하루 1회",
+    "번개: 근접 명중 시 2d6 번개 추가",
+    "우뢰: 근접 명중 대상 DC 17 건강 실패 시 다음 턴 끝까지 기절",
+    "천둥과 번개: 명중 직후 추가 행동으로 둘 다 (이것만 소비)",
+    "번개 일격: 120피트 선 DC 17 민첩 9d6 번개 / 천둥소리: 60피트 DC 17 건강 2d6 천둥 + 1분 귀머거리"
+   ]
+  },
+  "dnd.srd521.magic-item.staff-of-withering": {
+   "definition": {
+    "type": "staff",
+    "base": "dnd.srd521.item.weapon.quarterstaff",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "dm": [
+    "명중 시 충전 1로 2d10 사령 추가 + DC 15 건강 실패 시 1시간 근력·건강 판정·내성 불리 — 충전은 직접 차감"
+   ]
+  },
+  "dnd.srd521.magic-item.stone-of-controlling-earth-elementals": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 1
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "summon",
+      "label": "대지 정령 소환",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.stone-of-controlling-earth-elementals",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "대지 정령 1시간 소환 — 능력치 블록·조종은 DM"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.stone-of-good-luck-luckstone": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "checks": 1,
+     "saves": 1
+    }
+   }
+  },
+  "dnd.srd521.magic-item.sun-blade": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.longsword",
+    "bonus": {
+     "attack": 2,
+     "damage": 2
+    }
+   },
+   "dm": [
+    "피해는 참격 대신 광휘, 기교 속성 — 카드의 피해 유형을 광휘로 읽기",
+    "언데드 명중 시 1d8 광휘 추가",
+    "칼날 생성·소멸은 추가 행동, 햇빛 15피트 반경 조절"
+   ]
+  },
+  "dnd.srd521.magic-item.sword-of-life-stealing": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.glaive",
+      "dnd.srd521.item.weapon.greatsword",
+      "dnd.srd521.item.weapon.longsword",
+      "dnd.srd521.item.weapon.rapier",
+      "dnd.srd521.item.weapon.scimitar",
+      "dnd.srd521.item.weapon.shortsword"
+     ]
+    }
+   },
+   "dm": [
+    "명중 d20이 20이면 구조물·언데드가 아닌 대상에 사령 15 추가, 그만큼 임시 HP"
+   ]
+  },
+  "dnd.srd521.magic-item.sword-of-sharpness": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.glaive",
+      "dnd.srd521.item.weapon.greatsword",
+      "dnd.srd521.item.weapon.longsword",
+      "dnd.srd521.item.weapon.scimitar"
+     ]
+    }
+   },
+   "dm": [
+    "물체 명중 시 무기 피해 주사위 최대",
+    "명중 d20이 20이면 참격 14 추가, 탈진 1단계"
+   ]
+  },
+  "dnd.srd521.magic-item.sword-of-wounding": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.glaive",
+      "dnd.srd521.item.weapon.greatsword",
+      "dnd.srd521.item.weapon.longsword",
+      "dnd.srd521.item.weapon.rapier",
+      "dnd.srd521.item.weapon.scimitar",
+      "dnd.srd521.item.weapon.shortsword"
+     ]
+    },
+    "bonus": {
+     "extraDamage": {
+      "dice": "2d6",
+      "type": "necrotic"
+     }
+    }
+   },
+   "dm": [
+    "2d6 사령은 크리처에게만",
+    "DC 15 건강 실패 시 1시간 HP 회복 불가, 턴 끝 재굴림"
+   ]
+  },
+  "dnd.srd521.magic-item.talisman-of-pure-good": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "spellAttack": 2
+    },
+    "charges": {
+     "max": 7,
+     "recharge": "0",
+     "note": "마지막 충전을 쓰면 부적 파괴"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "rift",
+      "label": "불타는 균열",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.talisman-of-pure-good",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "120피트 내 지상 대상 DC 20 민첩 내성 — 실패 시 파괴, 성공 시 4d6 정신 피해(핀드·언데드는 불리). 결과는 표에서"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "닿은 핀드·언데드는 8d6 광휘 피해 — 닿는 순간과 들고 있는 턴 끝마다, 표에서 적용",
+    "신성한 문양으로 쓸 수 있음",
+    "성직자·성기사만 조율 가능 — 자격은 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.talisman-of-the-sphere": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "절멸의 구 제어 판정에 유리",
+    "구를 제어하며 턴 시작 시 마법 행동으로 10피트 + 지능 수정치×10피트 이동"
+   ]
+  },
+  "dnd.srd521.magic-item.talisman-of-ultimate-evil": {
+   "definition": {
+    "type": "wondrous",
+    "bonus": {
+     "spellAttack": 2
+    },
+    "charges": {
+     "max": 6,
+     "recharge": "0",
+     "note": "마지막 충전을 쓰면 부적 파괴"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "rift",
+      "label": "불타는 균열",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.talisman-of-ultimate-evil",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "120피트 내 지상 대상 DC 20 민첩 내성 — 실패 시 파괴, 성공 시 4d6 정신 피해(천상체는 불리). 결과는 표에서"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "닿은 핀드·언데드가 아닌 크리처는 8d6 사령 피해 — 닿는 순간과 들고 있는 턴 끝마다, 표에서 적용",
+    "신성한 문양으로 쓸 수 있음"
+   ]
+  },
+  "dnd.srd521.magic-item.tan-bag-of-tricks": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 3
+    }
+   },
+   "dm": [
+    "마법 행동으로 털뭉치를 꺼내 20피트까지 던짐 — 충전 1 소비",
+    "황갈색 표(d8)로 크리처 결정, 새벽이나 HP 0에 사라짐 — 능력치는 괴물 목록에서",
+    "추가 행동으로 크리처에게 명령"
+   ]
+  },
+  "dnd.srd521.magic-item.thunderous-greatclub": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.greatclub",
+    "abilities": {
+     "str": 20
+    },
+    "bonus": {
+     "extraDamage": {
+      "dice": "1d8",
+      "type": "thunder"
+     }
+    },
+    "charges": {
+     "max": 1
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "clap",
+      "label": "천둥 박수",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "targeting": {
+       "from": "targets",
+       "min": 1,
+       "max": 20
+      },
+      "operations": [
+       {
+        "kind": "condition.apply",
+        "condition": "prone",
+        "target": "targets",
+        "save": {
+         "ability": "str",
+         "dc": {
+          "value": 15
+         }
+        }
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "30피트 원뿔 안의 크리처 — 좌표가 없어 대상은 표에서 고름. 들고 있지 않은 비마법 물체는 3d8 천둥"
+       }
+      ]
+     },
+     {
+      "id": "quake",
+      "label": "지진",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "targeting": {
+       "from": "targets",
+       "min": 1,
+       "max": 20
+      },
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.thunderous-greatclub",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "condition.apply",
+        "condition": "prone",
+        "target": "targets",
+        "save": {
+         "ability": "dex",
+         "dc": {
+          "value": 20
+         }
+        }
+       },
+       {
+        "kind": "adjudication.request",
+        "question": "반경 50피트 지면 위 크리처 — 대상은 표에서. 집중 중이면 DC 20 건강 내성, 구조물 50 타격"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "들고 있지 않은 물체를 치면 3d8 천둥 추가",
+    "지진의 균열(깊이 30피트)과 구조물 붕괴"
+   ]
+  },
+  "dnd.srd521.magic-item.tome-of-clear-thought": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "6일 안에 48시간 연구하면 지능 +2 (최대 30) — 시트 능력치를 직접 올림",
+    "읽은 뒤 100년간 마법을 잃음"
+   ]
+  },
+  "dnd.srd521.magic-item.tome-of-leadership-and-influence": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "6일 안에 48시간 연구하면 매력 +2 (최대 30) — 시트 능력치를 직접 올림",
+    "읽은 뒤 100년간 마법을 잃음"
+   ]
+  },
+  "dnd.srd521.magic-item.tome-of-understanding": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "6일 안에 48시간 연구하면 지혜 +2 (최대 30) — 시트 능력치를 직접 올림",
+    "읽은 뒤 100년간 마법을 잃음"
+   ]
+  },
+  "dnd.srd521.magic-item.trident-of-fish-command": {
+   "definition": {
+    "type": "weapon",
+    "base": "dnd.srd521.item.weapon.trident",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.dominate-beast",
+      "charges": 1,
+      "dc": 15
+     }
+    ]
+   },
+   "dm": [
+    "야수 지배는 수영 속도가 있는 야수만"
+   ]
+  },
+  "dnd.srd521.magic-item.universal-solvent": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "발견 시 1d6+1온스 — 남은 양은 표에서 셈",
+    "활용 행동으로 1온스당 접착제 1제곱피트(지고의 접착제 포함) 용해"
+   ]
+  },
+  "dnd.srd521.magic-item.vicious-weapon": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon"
+    },
+    "bonus": {
+     "damageDice": "2d6"
+    }
+   }
+  },
+  "dnd.srd521.magic-item.vorpal-sword": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon",
+     "ids": [
+      "dnd.srd521.item.weapon.glaive",
+      "dnd.srd521.item.weapon.greatsword",
+      "dnd.srd521.item.weapon.longsword",
+      "dnd.srd521.item.weapon.scimitar"
+     ]
+    },
+    "bonus": {
+     "attack": 3,
+     "damage": 3
+    }
+   },
+   "dm": [
+    "이 무기의 참격 피해는 저항을 무시 — 저항 무시는 표에서",
+    "명중 d20이 20이면 머리 하나를 벰 — 면역 대상은 대신 30 참격 추가, 전설 저항으로 막을 수 있음"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-binding": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.hold-monster",
+      "charges": 5,
+      "dc": 17
+     },
+     {
+      "spellId": "dnd.srd521.spell.hold-person",
+      "charges": 2,
+      "dc": 17
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.wand-of-enemy-detection": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "detect",
+      "label": "적 탐지",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.wand-of-enemy-detection",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "effect.apply",
+        "template": {
+         "name": "적 탐지",
+         "duration": "1분",
+         "rounds": 10
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "60피트 내 가장 가까운 적대 크리처의 방향만 앎 — DM이 알려 줌",
+    "마법봉을 놓으면 효과 종료"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-fear": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.command",
+      "charges": 1,
+      "dc": 15
+     },
+     {
+      "spellId": "dnd.srd521.spell.fear",
+      "charges": 3,
+      "dc": 15
+     }
+    ]
+   },
+   "dm": [
+    "명령은 도망 또는 엎드림만",
+    "공포는 60피트 원뿔"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-fireballs": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.fireball",
+      "charges": 1,
+      "dc": 15
+     }
+    ]
+   },
+   "dm": [
+    "충전을 1회 더 쓸 때마다 주문 레벨 +1 (최대 3회) — 추가 충전은 직접 차감"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-lightning-bolts": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.lightning-bolt",
+      "charges": 1,
+      "dc": 15
+     }
+    ]
+   },
+   "dm": [
+    "충전을 1회 더 쓸 때마다 주문 레벨 +1 (최대 3회) — 추가 충전은 직접 차감"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-magic-detection": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.detect-magic",
+      "charges": 1
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.wand-of-magic-missiles": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.magic-missile",
+      "charges": 1
+     }
+    ]
+   },
+   "dm": [
+    "충전을 1회 더 쓸 때마다 주문 레벨 +1 (최대 3회) — 추가 충전은 직접 차감"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-paralysis": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "ray",
+      "label": "마비 광선",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "targeting": {
+       "from": "targets",
+       "min": 1,
+       "max": 1
+      },
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.wand-of-paralysis",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "condition.apply",
+        "condition": "paralyzed",
+        "target": "targets",
+        "save": {
+         "ability": "con",
+         "dc": {
+          "value": 15
+         }
+        },
+        "duration": {
+         "kind": "minutes",
+         "amount": 1
+        },
+        "repeatSave": "turn-end"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.wand-of-polymorph": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.polymorph",
+      "charges": 1,
+      "dc": 15
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.wand-of-secrets": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 3,
+     "recharge": "1d3"
+    }
+   },
+   "dm": [
+    "마법 행동으로 충전 1 — 60피트 내 가장 가까운 비밀 문·함정을 DM이 알려 줌"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-the-war-mage-1-2-or-3": {
+   "definition": {
+    "type": "wand",
+    "bonus": {
+     "spellAttack": 1
+    }
+   },
+   "variants": [
+    {
+     "id": "plus-1",
+     "name": "전쟁 마법사의 지팡이 +1",
+     "rarity": "고급",
+     "definition": {
+      "bonus": {
+       "spellAttack": 1
+      }
+     }
+    },
+    {
+     "id": "plus-2",
+     "name": "전쟁 마법사의 지팡이 +2",
+     "rarity": "희귀",
+     "definition": {
+      "bonus": {
+       "spellAttack": 2
+      }
+     }
+    },
+    {
+     "id": "plus-3",
+     "name": "전쟁 마법사의 지팡이 +3",
+     "rarity": "매우 희귀",
+     "definition": {
+      "bonus": {
+       "spellAttack": 3
+      }
+     }
+    }
+   ],
+   "dm": [
+    "주문 명중 굴림에서 반엄폐 무시 — 엄폐는 표에서"
+   ]
+  },
+  "dnd.srd521.magic-item.wand-of-web": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.web",
+      "charges": 1,
+      "dc": 13
+     }
+    ]
+   }
+  },
+  "dnd.srd521.magic-item.wand-of-wonder": {
+   "definition": {
+    "type": "wand",
+    "charges": {
+     "max": 7,
+     "recharge": "1d6+1",
+     "note": "마지막 충전을 쓰면 d20 — 1이면 파괴"
+    }
+   },
+   "dm": [
+    "마법 행동으로 충전 1 — 효과는 d100 표를 굴려 DM이 적용",
+    "마법봉 주문의 내성 DC 15, 사거리 최소 120피트"
+   ]
+  },
+  "dnd.srd521.magic-item.water-ring-of-elemental-command": {
+   "definition": {
+    "type": "ring",
+    "speeds": {
+     "swim": 60
+    },
+    "charges": {
+     "max": 5,
+     "recharge": "1d4+1"
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.create-or-destroy-water",
+      "charges": 1,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.ice-storm",
+      "charges": 2,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.tsunami",
+      "charges": 5,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.wall-of-ice",
+      "charges": 3,
+      "dc": 18
+     },
+     {
+      "spellId": "dnd.srd521.spell.water-walk",
+      "charges": 2,
+      "dc": 18
+     }
+    ]
+   },
+   "dm": [
+    "아쿠안어를 알고 물속에서 숨 쉼",
+    "정령 상대 명중 유리, 정령이 나를 공격하면 불리 — 대상 종류는 표에서",
+    "마법 행동으로 60피트 내 정령 강제: DC 18 지혜 내성 실패 시 다음 턴 시작까지 매혹, 그 행동을 내가 정함"
+   ]
+  },
+  "dnd.srd521.magic-item.weapon-of-warning": {
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "initiative.advantage",
+        "operation": "add",
+        "note": "우선권 유리"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "30피트 내 아군도 우선권 유리 — 아군 적용은 표에서",
+    "전투가 시작되면 자연적인 잠에서 깨움"
+   ]
+  },
+  "dnd.srd521.magic-item.well-of-many-worlds": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "dm": [
+    "마법 행동으로 펼치면 다른 세계로 가는 6피트 포털 — 목적지는 DM",
+    "포털을 열면 1d8시간 다시 못 엶"
+   ]
+  },
+  "dnd.srd521.magic-item.wind-fan": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 5
+    },
+    "spells": [
+     {
+      "spellId": "dnd.srd521.spell.gust-of-wind",
+      "charges": 1,
+      "dc": 13
+     }
+    ]
+   },
+   "dm": [
+    "새벽 전 두 번째 사용부터 누적 20% 확률로 작동 안 함 — 실패하면 부채는 마법을 잃음"
+   ]
+  },
+  "dnd.srd521.magic-item.winged-boots": {
+   "definition": {
+    "type": "wondrous",
+    "charges": {
+     "max": 4,
+     "recharge": "1d4"
+    }
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "fly",
+      "label": "날개 장화 비행",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "resource.change",
+        "resource": "resource:dnd.srd521.magic-item.winged-boots",
+        "amount": -1,
+        "target": "self"
+       },
+       {
+        "kind": "effect.apply",
+        "template": {
+         "name": "날개 장화 비행",
+         "duration": "1시간",
+         "rounds": 600
+        }
+       }
+      ]
+     },
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "speed.fly",
+        "operation": "set",
+        "value": {
+         "value": 30
+        },
+        "when": {
+         "ref": "effect.running:날개 장화 비행"
+        },
+        "note": "날개 장화 비행 동안 비행 30피트"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "효과가 끝날 때 날고 있으면 라운드당 30피트씩 내려옴"
+   ]
+  },
+  "dnd.srd521.magic-item.wings-of-flying": {
+   "definition": {
+    "type": "wondrous"
+   },
+   "contract": {
+    "entryPoints": [
+     {
+      "id": "fly",
+      "label": "비행의 날개",
+      "invocation": "manual",
+      "payments": [
+       {
+        "kind": "economy",
+        "bucket": "action",
+        "amount": {
+         "value": 1
+        },
+        "consumeAt": "commit"
+       }
+      ],
+      "operations": [
+       {
+        "kind": "effect.apply",
+        "template": {
+         "name": "비행의 날개",
+         "duration": "1시간",
+         "rounds": 600
+        }
+       }
+      ]
+     },
+     {
+      "id": "passive",
+      "invocation": "manual",
+      "operations": [
+       {
+        "kind": "property.modify",
+        "property": "speed.fly",
+        "operation": "set",
+        "value": {
+         "value": 60
+        },
+        "when": {
+         "ref": "effect.running:비행의 날개"
+        },
+        "note": "비행의 날개 동안 비행 60피트"
+       }
+      ]
+     }
+    ]
+   },
+   "dm": [
+    "마법 행동으로 일찍 끝낼 수 있음",
+    "끝난 뒤 1d12시간 다시 못 씀 — 재사용 시각은 표에서",
+    "날개가 사라질 때 공중이면 추락"
+   ]
+  }
+ },
+ "authored": [
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus",
+   "name": "무기 +1·+2·+3",
+   "originalName": "Weapon, +1, +2, or +3",
+   "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다.",
+   "definition": {
+    "type": "weapon",
+    "baseOptions": {
+     "kind": "weapon"
+    }
+   },
+   "variants": [
+    {
+     "id": "1",
+     "name": "무기 +1",
+     "rarity": "고급",
+     "definition": {
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      }
+     }
+    },
+    {
+     "id": "2",
+     "name": "무기 +2",
+     "rarity": "희귀",
+     "definition": {
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      }
+     }
+    },
+    {
+     "id": "3",
+     "name": "무기 +3",
+     "rarity": "매우 희귀",
+     "definition": {
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus",
+   "name": "갑옷 +1·+2·+3",
+   "originalName": "Armor, +1, +2, or +3",
+   "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다.",
+   "definition": {
+    "type": "armor",
+    "baseOptions": {
+     "kind": "armor"
+    }
+   },
+   "variants": [
+    {
+     "id": "1",
+     "name": "갑옷 +1",
+     "rarity": "희귀",
+     "definition": {
+      "bonus": {
+       "ac": 1
+      }
+     }
+    },
+    {
+     "id": "2",
+     "name": "갑옷 +2",
+     "rarity": "매우 희귀",
+     "definition": {
+      "bonus": {
+       "ac": 2
+      }
+     }
+    },
+    {
+     "id": "3",
+     "name": "갑옷 +3",
+     "rarity": "전설",
+     "definition": {
+      "bonus": {
+       "ac": 3
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.shield-plus",
+   "name": "방패 +1·+2·+3",
+   "originalName": "Shield, +1, +2, or +3",
+   "description": "든 동안 방어도에 방패의 보너스에 더해 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다.",
+   "definition": {
+    "type": "shield",
+    "base": "dnd.srd521.item.shield"
+   },
+   "variants": [
+    {
+     "id": "1",
+     "name": "방패 +1",
+     "rarity": "고급",
+     "definition": {
+      "bonus": {
+       "ac": 1
+      }
+     }
+    },
+    {
+     "id": "2",
+     "name": "방패 +2",
+     "rarity": "희귀",
+     "definition": {
+      "bonus": {
+       "ac": 2
+      }
+     }
+    },
+    {
+     "id": "3",
+     "name": "방패 +3",
+     "rarity": "매우 희귀",
+     "definition": {
+      "bonus": {
+       "ac": 3
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus",
+   "name": "탄약 +1·+2·+3",
+   "originalName": "Ammunition, +1, +2, or +3",
+   "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다.",
+   "definition": {
+    "type": "ammunition",
+    "baseOptions": {
+     "kind": "ammunition"
+    }
+   },
+   "dm": [
+    "맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+   ],
+   "variants": [
+    {
+     "id": "1",
+     "name": "탄약 +1",
+     "rarity": "고급",
+     "definition": {
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      }
+     }
+    },
+    {
+     "id": "2",
+     "name": "탄약 +2",
+     "rarity": "희귀",
+     "definition": {
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      }
+     }
+    },
+    {
+     "id": "3",
+     "name": "탄약 +3",
+     "rarity": "매우 희귀",
+     "definition": {
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -108,7 +108,9 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
     // D350: an official magic item is the same thing as a pasted one, written by the content instead of the player —
     // its definition is read with the same parser, and from here on it is carried exactly like a pasted item.
     const listed = !extra.custom && extra.itemId ? ledger.catalog.itemById(extra.itemId) : undefined;
-    const official = listed?.magic ? officialMagicItem(listed.name, listed.magic, ledger.catalog) : undefined;
+    const found = listed?.magic ? officialMagicItem(listed.name, listed.magic, ledger.catalog) : undefined;
+    // D354: an item given as a chosen weapon or armour is that base, under the name it was given with.
+    const official = found && extra.base ? { ...found, base: extra.base, name: extra.name } : found;
     const definition = extra.custom ?? official;
     const itemId = definition ? definition.base : extra.itemId;
     const view = itemId ? ledger.catalog.itemById(itemId) : undefined;
@@ -160,16 +162,20 @@ function addGrants(ledger: Ledger, name: string, magic: NonNullable<DerivedItem[
  */
 function addItemCharges(ledger: Ledger) {
   for (const item of ledger.inventory) {
-    const charges = item.magic?.charges;
-    if (!charges) continue;
     const working = customItemActive(item);
     const spells = item.magic?.spells ?? [];
+    // D354: an item that casts its spells at will has no charges — its spells are an at-will pool while it works.
+    if (!item.magic?.charges) {
+      if (working && spells.length) ledger.addResource({ id: `resource.item.${item.instanceId}`, label: `${item.name} 주문`, max: 1, recovery: "무제한", source: item.name, itemInstanceId: item.instanceId, atWill: true, freeCastSpellIds: spells.map((spell) => spell.spellId), castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}) }])) });
+      continue;
+    }
+    const charges = item.magic.charges;
     // D352: an official item's pool is named after the item, so its contract can spend it (`resource:<item id>`).
     // ponytail: a second copy of the same item gets a pool of its own, but its contract's uses spend the first copy's.
     const named = item.officialId && !ledger.resources.some((resource) => resource.id === `resource.${item.officialId}`);
     ledger.addResource({
       id: named ? `resource.${item.officialId}` : `resource.item.${item.instanceId}`, label: `${item.name} 충전`, max: charges.max, source: item.name, itemInstanceId: item.instanceId,
-      recovery: charges.recharge ? `새벽 (긴 휴식에 ${charges.recharge} 회복)` : "새벽 (긴 휴식)",
+      recovery: charges.recharge === "0" ? "회복 안 됨" : charges.recharge ? `새벽 (긴 휴식에 ${charges.recharge} 회복)` : "새벽 (긴 휴식)",
       restore: { short: 0 },
       ...(charges.recharge ? { recharge: charges.recharge } : {}),
       ...(working && spells.length ? {

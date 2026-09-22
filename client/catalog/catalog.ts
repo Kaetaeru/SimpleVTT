@@ -669,7 +669,8 @@ export class ContentCatalog {
         ...(armorRaw ? { armor: { training: armorRaw.training, base: armorRaw.ac.base, dexMax: armorRaw.ac.dexMax, dexFull: armorRaw.ac.dex === "full", strengthRequirement: armorRaw.strengthRequirement, stealthDisadvantage: armorRaw.stealthDisadvantage ?? false } } : {}),
         ...(shield ? { shieldBonus: shield.acBonus ?? 2 } : {}),
         ...(tool ? { tool } : {}),
-        ...(magic ? { magic } : {}),
+        // D354: the item's text is its entry's; a definition writes one only when it wants to say something else.
+        ...(magic ? { magic: entry.description && magic.description === undefined ? { ...magic, description: entry.description } : magic } : {}),
         config: anyConfig, scope: entry.scope,
       });
     }

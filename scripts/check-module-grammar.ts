@@ -15,7 +15,9 @@ import { resolve } from "node:path";
 import { parseModuleJson } from "../client/catalog/install";
 import { parseContract } from "../client/rules/contract";
 import { contractEffect } from "../client/rules/contractEffects";
-import type { MechanicJson } from "../client/catalog/types";
+import type { MechanicJson, RuleModuleJson } from "../client/catalog/types";
+import { createCatalog } from "../client/catalog";
+import { parseCustomItem } from "../client/character/customItem";
 
 const file = process.argv[2];
 if (!file) { console.error("usage: tsx scripts/check-module-grammar.ts <file.module.json> [--verbose]"); process.exit(2); }
@@ -33,10 +35,19 @@ let operations = 0;
 const unsupported: string[] = [];
 const unknownProperties: string[] = [];
 const counts: Record<string, number> = {};
+// D354: a magic item's definition is read by the parser a pasted item goes through; what it warns about is the
+// content author's to fix. The catalog is this module over the SRD, so bases and spells resolve as they will in play.
+const itemProblems: string[] = [];
+const itemCatalog = module.content.some((entry) => (entry.mechanics ?? []).some((mechanic: MechanicJson) => mechanic.kind === "magic-item-definition")) ? createCatalog([module as unknown as RuleModuleJson]) : undefined;
 
 for (const entry of module.content) {
   for (const mechanic of (entry.mechanics ?? []) as MechanicJson[]) {
     counts[mechanic.kind] = (counts[mechanic.kind] ?? 0) + 1;
+    if (mechanic.kind === "magic-item-definition" && itemCatalog) {
+      const read = parseCustomItem(JSON.stringify({ ...(mechanic.config ?? {}), name: entry.id }), itemCatalog);
+      if ("error" in read) itemProblems.push(`${entry.id}: ${read.error}`);
+      else for (const warning of read.warnings) itemProblems.push(`${entry.id}: ${warning}`);
+    }
     if (mechanic.kind !== "common-play") continue;
     contracts += 1;
     const contract = parseContract(mechanic.config ?? {}, entry.id);
@@ -56,4 +67,6 @@ for (const warning of parsed.warnings.slice(0, verbose ? parsed.warnings.length 
 if (parsed.warnings.length > 5 && !verbose) console.log(`warning: … ${parsed.warnings.length - 5} more (--verbose)`);
 for (const gap of (verbose ? unsupported : unsupported.slice(0, 20))) console.log("unsupported:", gap);
 for (const gap of (verbose ? unknownProperties : unknownProperties.slice(0, 20))) console.log("unknown property:", gap);
-process.exitCode = unsupported.length || unknownProperties.length ? 1 : 0;
+if (itemCatalog) console.log(`magic items: ${counts["magic-item-definition"] ?? 0}, definition problems: ${itemProblems.length}`);
+for (const problem of (verbose ? itemProblems : itemProblems.slice(0, 20))) console.log("item:", problem);
+process.exitCode = unsupported.length || unknownProperties.length || itemProblems.length ? 1 : 0;

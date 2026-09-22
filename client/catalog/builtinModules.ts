@@ -3,6 +3,7 @@
 import m_classes from "../../content/modules/srd-5.2.1/classes.module.json";
 import m_core from "../../content/modules/srd-5.2.1/core.module.json";
 import m_equipment from "../../content/modules/srd-5.2.1/equipment.module.json";
+import m_magic_items from "../../content/modules/srd-5.2.1/magic-items.module.json";
 import m_monsters from "../../content/modules/srd-5.2.1/monsters.module.json";
 import m_origins from "../../content/modules/srd-5.2.1/origins.module.json";
 import m_rules from "../../content/modules/srd-5.2.1/rules.module.json";
@@ -12,6 +13,7 @@ export const BUILTIN_MODULE_JSON: readonly unknown[] = [
   m_classes,
   m_core,
   m_equipment,
+  m_magic_items,
   m_monsters,
   m_origins,
   m_rules,

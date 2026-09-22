@@ -34,6 +34,7 @@
 | `conditionImmunities` | 상태 배열 | `poisoned`, `charmed`, `frightened` … 상태 면역 (D352) |
 | `speeds` | 객체 | `{ "fly": 60 }`, `{ "swim": "walk" }` — 피트 수 또는 보행 속도와 같음 (D352) |
 | `darkvision` | 숫자(ft) | 암시야 (D352) |
+| `baseOptions` | 객체 | 공식·모듈 아이템: 지급할 때 기반을 고른다. `{ "kind": "weapon"|"armor"|"shield"|"ammunition", "training": ["martial"] 또는 ["medium","heavy"], "mode": "melee"|"ranged", "ids": [...], "exclude": [...] }`. 고른 기반으로 "아이템 (기반)" 이름으로 지급된다 (D354) |
 
 ## 3. `bonus`
 
@@ -107,6 +108,7 @@
 
 ## 7. 한계
 
+- `spells`만 있고 `charges`가 없으면 작동하는 동안 무제한으로 시전한다. 충전 풀 안에서 `charges: 0`인 주문은 풀이 비어도 시전된다. `charges.recharge: "0"`은 회복되지 않는 충전이다 (D354).
 - 충전을 다 썼을 때의 파괴 굴림은 굴리지 않는다. `charges.note`에 적어 DM이 판정한다.
 - `damageDice`는 무기의 피해 타입으로 굴린다. 다른 타입의 추가 피해는 `bonus.extraDamage`로 적는다.
 - 마법 탄약(`type: "ammunition"`, `base`가 화살·볼트)은 탄약을 쓰는 무기마다 "무기 (탄약 이름)" 공격 줄이 생기고 보너스는 그 줄에만 붙는다. 화살과 볼트는 구분하지 않는다 — 맞는 무기 줄을 고른다. 쏜 뒤 줄이는 것은 가방에서 직접.

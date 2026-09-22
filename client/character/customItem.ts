@@ -53,7 +53,13 @@ export interface CustomItem {
   /** D352: speeds it gives, in feet; `"walk"` means equal to the walking speed. */
   speeds?: { fly?: number | "walk"; swim?: number | "walk"; climb?: number | "walk" };
   darkvision?: number;
+  /**
+   * D354: the item is made from a weapon or armour the giver picks (불꽃 혀: any melee weapon) — the kinds of base it
+   * may be. Given with a base, it is carried as that base (`base`), named "<item> (<base>)".
+   */
+  baseOptions?: BaseOptions;
 }
+export interface BaseOptions { kind: "weapon" | "armor" | "shield" | "ammunition"; training?: string[]; mode?: "melee" | "ranged"; ids?: string[]; exclude?: string[] }
 
 const ABILITIES: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
 const DAMAGE_TYPES = ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"];
@@ -158,6 +164,15 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     if (Object.keys(speeds).length) item.speeds = speeds;
   }
   if (typeof raw.darkvision === "number" && raw.darkvision > 0) item.darkvision = raw.darkvision;
+  if (isObject(raw.baseOptions)) {
+    const options = raw.baseOptions;
+    if (!["weapon", "armor", "shield", "ammunition"].includes(String(options.kind))) warnings.push("baseOptions.kind: weapon/armor/shield/ammunition 중 하나여야 합니다");
+    else {
+      const list = (value: unknown) => (Array.isArray(value) ? value.map(String) : undefined);
+      item.baseOptions = { kind: options.kind as BaseOptions["kind"], ...(list(options.training) ? { training: list(options.training) } : {}), ...(options.mode === "melee" || options.mode === "ranged" ? { mode: options.mode } : {}), ...(list(options.ids) ? { ids: list(options.ids) } : {}), ...(list(options.exclude) ? { exclude: list(options.exclude) } : {}) };
+      if (!baseChoices(catalog, item.baseOptions).length) warnings.push("baseOptions: 고를 수 있는 기반 아이템이 없습니다");
+    }
+  }
   if (isObject(raw.use)) {
     const use: NonNullable<CustomItem["use"]> = {};
     const healing = text(raw.use.healing)?.replace(/\s+/g, "");
@@ -181,8 +196,21 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     if (Object.keys(use).length) item.use = use;
   }
   const base = item.base ? catalog.itemById(item.base) : undefined;
-  if ((item.bonus?.attack || item.bonus?.damage || item.bonus?.damageDice || item.bonus?.extraDamage) && !base?.weapon) warnings.push("attack/damage 보너스는 base가 무기일 때만 그 무기의 공격에 붙습니다 — 지금은 모든 공격에 붙습니다");
+  if ((item.bonus?.attack || item.bonus?.damage || item.bonus?.damageDice || item.bonus?.extraDamage) && !base?.weapon && item.baseOptions?.kind !== "weapon" && item.baseOptions?.kind !== "ammunition") warnings.push("attack/damage 보너스는 base가 무기일 때만 그 무기의 공격에 붙습니다 — 지금은 모든 공격에 붙습니다");
   return { item, warnings };
+}
+
+/** D354: the catalog items a `baseOptions` allows, in catalog order. */
+export function baseChoices(catalog: Pick<ContentCatalog, "items">, options: BaseOptions) {
+  return catalog.items.filter((item) => {
+    if (item.kind !== options.kind) return false;
+    if (options.ids && !options.ids.includes(item.id)) return false;
+    if (options.exclude?.includes(item.id)) return false;
+    const training = item.weapon?.training ?? item.armor?.training;
+    if (options.training && (!training || !options.training.includes(training))) return false;
+    if (options.mode && item.weapon?.mode !== options.mode) return false;
+    return true;
+  });
 }
 
 /**

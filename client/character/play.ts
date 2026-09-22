@@ -230,11 +230,11 @@ export function setGold(runtime: CharacterRuntime, gold: number): CharacterRunti
 
 const patchOf = (runtime: CharacterRuntime) => runtime.inventory ?? emptyInventoryPatch();
 
-export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem }): CharacterRuntime {
+export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem; /** D354 */ base?: string }): CharacterRuntime {
   const patch = patchOf(runtime);
   const instanceId = `extra:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const quantity = Math.max(1, Math.floor(item.quantity ?? 1));
-  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
+  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}), ...(item.base ? { base: item.base } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
 }
 
 /** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */
@@ -477,7 +477,8 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
     case "resource": {
       const resource = derived.resources.find((item) => item.id === method.id);
       const used = next.resourcesUsed[method.id] ?? 0;
-      if (!resource || (!resource.atWill && used >= resource.max)) return null;
+      // D354: a spell an item casts for no charge (수정 구슬의 투시) is cast even when the pool is empty.
+      if (!resource || (!resource.atWill && used >= resource.max && resource.spellCosts?.[spell.id] !== 0)) return null;
       // V4p (D278): a pool that pays for spells up to a level pays for nothing above it (신성 개입, 주문 회상).
       if (resource.freeCastMaxLevel !== undefined && resource.freeCastSpellId !== spell.id && (spell.level < 1 || spell.level > resource.freeCastMaxLevel)) return null;
       // V4q (D279): a pool that names its spells pays for those and nothing else (자연 회복).
@@ -488,7 +489,7 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
       const cost = resource.spellCosts?.[spell.id] ?? 1;
       if (used + cost > resource.max) return null;
       next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + cost } };
-      how = `${resource.label}${cost !== 1 ? ` ${cost}회` : ""}, 남은 ${resource.max - used - cost}/${resource.max}`;
+      how = cost === 0 ? `${resource.label} (충전 없이)` : `${resource.label}${cost !== 1 ? ` ${cost}회` : ""}, 남은 ${resource.max - used - cost}/${resource.max}`;
       break;
     }
     case "scroll": {

@@ -23,7 +23,7 @@ import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared,
 import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "../ui/components";
 import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
-import { CUSTOM_ITEM_EXAMPLE, parseCustomItem } from "../character/customItem";
+import { baseChoices, CUSTOM_ITEM_EXAMPLE, officialMagicItem, parseCustomItem, RARITY_KO } from "../character/customItem";
 import { pickSlots, restFeatures, spentSlots, triggerPolicyKey, useRestFeature } from "../character/rest";
 
 export interface SheetPlayProps {
@@ -54,7 +54,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const [copied, setCopied] = useState<string | null>(null);
 
   const [resting, setResting] = useState<{ spends: Record<string, number>; /** R78 (D213): rest features chosen, with the slot levels each gives back. */ uses?: Record<string, number[]> } | null>(null);
-  const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string; json: string } | null>(null);
+  const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string; json: string; /** D354: the magic item waiting for its base to be picked. */ basing?: string } | null>(null);
   // V4k (D273): which form a use turns this character into (야생 변신) — a window, never a typed name.
   const [formAsk, setFormAsk] = useState<{ name: string; options: Array<{ id: string; name: string; crText: string }>; resolve: (id: string | null) => void } | null>(null);
   const [showLog, setShowLog] = useState(true);
@@ -378,10 +378,30 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
           </div>
           {catalogMatches.length ? (
             <div className="cl-list" style={{ gap: 2, maxHeight: 260, overflow: "auto" }}>
+              {(() => {
+                // D354: an item made from a weapon or armour the giver picks asks which one first.
+                const pending = adding.basing ? catalog.itemById(adding.basing) : undefined;
+                const definition = pending?.magic ? officialMagicItem(pending.name, pending.magic, catalog) : undefined;
+                if (!pending || !definition?.baseOptions) return null;
+                return (
+                  <div className="cl-field">
+                    <p className="cl-small">{pending.name} — 어떤 {definition.baseOptions.kind === "weapon" ? "무기" : definition.baseOptions.kind === "ammunition" ? "탄약" : definition.baseOptions.kind === "shield" ? "방패" : "갑옷"}인가요?</p>
+                    <div className="cl-row" style={{ flexWrap: "wrap", gap: 4 }}>
+                      {baseChoices(catalog, definition.baseOptions).map((base) => (
+                        <button type="button" key={base.id} className="cl-btn small" onClick={() => { commit(addItem(runtime, { itemId: pending.id, name: `${pending.name} (${base.name})`, base: base.id, quantity: Number(adding.quantity) || 1 })); setAdding(null); }}>{base.name}</button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               {catalogMatches.map((item) => (
-                <button type="button" key={item.id} className="cl-option" onClick={() => { commit(addItem(runtime, { itemId: item.id, name: item.name, quantity: Number(adding.quantity) || 1 })); setAdding(null); }}>
+                <button type="button" key={item.id} className="cl-option" onClick={() => {
+                  const definition = item.magic ? officialMagicItem(item.name, item.magic, catalog) : undefined;
+                  if (definition?.baseOptions && !definition.base) { setAdding({ ...adding, basing: item.id }); return; }
+                  commit(addItem(runtime, { itemId: item.id, name: item.name, quantity: Number(adding.quantity) || 1 })); setAdding(null);
+                }}>
                   <span className="cl-name">{item.name}</span><span className="cl-en">{item.nameEn}</span>
-                  <span className="cl-summary">{item.kind}{item.weapon ? ` · ${item.weapon.damage} ${item.weapon.damageType}` : ""}{item.armor ? ` · AC ${item.armor.base}` : ""}{item.priceGp !== undefined ? ` · ${item.priceGp} GP` : ""}</span>
+                  <span className="cl-summary">{item.magic ? `✦ ${RARITY_KO[String(item.magic.rarity)] ?? "마법 아이템"}${item.magic.attunement ? " · 조율" : ""}` : item.kind}{item.weapon ? ` · ${item.weapon.damage} ${item.weapon.damageType}` : ""}{item.armor ? ` · AC ${item.armor.base}` : ""}{item.priceGp !== undefined ? ` · ${item.priceGp} GP` : ""}</span>
                 </button>
               ))}
             </div>

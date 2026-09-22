@@ -18,7 +18,7 @@ import { spellExec, sustainOf } from "../../client/compendium/spells";
 import { featureRuleKey } from "../../client/rules/activation";
 
 test("D314: the builtin catalog is the SRD modules, and they hold the whole SRD", () => {
-  assert.deepEqual(BUILTIN_MODULES.map((module) => module.moduleId).sort(), ["dnd.srd-5.2.1.classes", "dnd.srd-5.2.1.core", "dnd.srd-5.2.1.equipment", "dnd.srd-5.2.1.monsters", "dnd.srd-5.2.1.origins", "dnd.srd-5.2.1.rules", "dnd.srd-5.2.1.spells"]);
+  assert.deepEqual(BUILTIN_MODULES.map((module) => module.moduleId).sort(), ["dnd.srd-5.2.1.classes", "dnd.srd-5.2.1.core", "dnd.srd-5.2.1.equipment", "dnd.srd-5.2.1.magic-items", "dnd.srd-5.2.1.monsters", "dnd.srd-5.2.1.origins", "dnd.srd-5.2.1.rules", "dnd.srd-5.2.1.spells"]);
   const catalog = createCatalog([]);
   assert.equal(catalog.classes.length, 12);
   assert.equal(catalog.subclasses.length, 12);
@@ -27,6 +27,8 @@ test("D314: the builtin catalog is the SRD modules, and they hold the whole SRD"
   assert.equal(catalog.feats.length, 17);
   assert.equal(catalog.spells.length, 339);
   assert.equal(catalog.monsters.length, 329);
+  // D355: the magic items, with an item per kind where the text lists kinds.
+  assert.ok(catalog.items.filter((item) => item.kind === "magic").length >= 317);
   assert.equal(Object.keys(catalog.skills).length, 18, "the vocabulary comes from a module too");
   assert.ok(catalog.artisanToolIds.length > 0);
   assert.ok(catalog.classes.every((cls) => cls.progression.length === 20), "every class has its twenty rows");

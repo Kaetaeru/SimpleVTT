@@ -26,6 +26,8 @@ import { activateFeature, usableFeatures } from "../client/character/activate";
 import { autofill } from "../client/character/autofill";
 import { rollFormula } from "../client/character/dice";
 import { emptySource } from "../client/character/source";
+import { baseChoices, officialMagicItem } from "../client/character/customItem";
+import { addItem, toggleAttune } from "../client/character/play";
 import { initialRuntime } from "../client/character/runtime";
 import type { CharacterRuntime, DerivedCharacter } from "../client/character/types";
 import { parseCustomMonster } from "../client/compendium/customMonster";
@@ -58,7 +60,7 @@ let seq = 0;
 /** A quiet copy of a sheet's runtime: what a use may change, without the log and the clock. */
 const shape = (runtime: CharacterRuntime) => JSON.stringify({ hp: runtime.hp, used: runtime.resourcesUsed, slots: runtime.slotsUsed, pact: runtime.pactSlotsUsed, effects: (runtime.effects ?? []).map((effect) => effect.key), conditions: runtime.conditions, inventory: runtime.inventory?.extra?.length, hitDice: runtime.hitDiceUsed });
 
-async function table(source: ReturnType<typeof emptySource>) {
+async function table(source: ReturnType<typeof emptySource>, /** D355: what the hero carries before play (a magic item, attuned). */ prepare?: (runtime: CharacterRuntime, derived: DerivedCharacter) => CharacterRuntime) {
   seq += 1;
   const hub = new MemoryHub();
   const code = `V${String(seq).padStart(5, "0")}`;
@@ -72,7 +74,9 @@ async function table(source: ReturnType<typeof emptySource>) {
   dm.send({ type: "page.put", page: scene });
   dm.send({ type: "page.ribbon", pageId: scene.id });
   const made = autofill(source, catalog, { prefer: source.choices });
-  const hero = newJournalCharacter(campaign.id, "dm", { ...made.source, name: "주인공" }, initialRuntime(made.derived));
+  const start = prepare ? prepare(initialRuntime(made.derived), made.derived) : initialRuntime(made.derived);
+  const derived = prepare ? derivedOf({ source: made.source, runtime: start } as never, catalog) : made.derived;
+  const hero = newJournalCharacter(campaign.id, "dm", { ...made.source, name: "주인공" }, start);
   const allyMade = autofill(emptySource({ name: "동료", origin: { speciesId: "dnd.srd521.species.human", backgroundId: "dnd.srd521.background.soldier" }, abilities: { method: "manual", base: { str: 14, dex: 12, con: 14, int: 10, wis: 10, cha: 10 } }, tracks: Array.from({ length: 5 }, () => ({ classId: "dnd.srd521.class.fighter", hp: { kind: "fixed" as const } })), choices: {}, equipment: { mode: "loadout" } }), catalog);
   const allyRuntime = initialRuntime(allyMade.derived);
   const ally = newJournalCharacter(campaign.id, "dm", allyMade.source, { ...allyRuntime, hp: { ...allyRuntime.hp, current: 5 } });
@@ -90,7 +94,7 @@ async function table(source: ReturnType<typeof emptySource>) {
   const ref = (key: keyof typeof tokens) => ({ pageId: scene.id, tokenId: tokens[key].id });
   const heroRef = { entryId: hero.id, pageId: scene.id, tokenId: tokens.hero.id };
   const dummyRef = { entryId: dummy.id, pageId: scene.id, tokenId: tokens.dummy.id };
-  return { host, dm, hero, ally, dummy, tokens, live, allTokens, dummyHp, dummyMarks, board, ref, heroRef, dummyRef, refusals, derived: made.derived, messages: () => host.archive.length };
+  return { host, dm, hero, ally, dummy, tokens, live, allTokens, dummyHp, dummyMarks, board, ref, heroRef, dummyRef, refusals, derived, start, messages: () => host.archive.length };
 }
 type Table = Awaited<ReturnType<typeof table>>;
 
@@ -101,7 +105,7 @@ const roll = async (spec: Parameters<typeof rollFormula>[0]) => rollFormula(spec
  * for the uses that give one back (a slot for a use).
  */
 const fresh = async (t: Table, drained = false) => {
-  const start = initialRuntime(t.derived);
+  const start = t.start;
   const resourcesUsed = Object.fromEntries(t.derived.resources.map((pool) => [pool.id, drained ? pool.max : pool.max >= 2 ? 1 : 0]));
   const slotsUsed = Object.fromEntries(Object.entries(t.derived.spellSlots).map(([level, max]) => [level, drained ? 0 : max >= 2 ? 1 : 0]));
   const runtime = { ...start, hp: { ...start.hp, current: Math.max(1, Math.floor(start.hp.current / 2)) }, resourcesUsed, slotsUsed, conditions: ["매혹", "공포"], updatedAt: new Date().toISOString() };
@@ -302,6 +306,17 @@ async function main() {
     await swingRiders(t, feat.name, (key) => key.startsWith(`feat:${slug}`));
   }
   if (BUILTIN) await speciesChoices(base);
+  // D355: a magic item whose entry carries a contract — carried and attuned by a fighter, every button pressed.
+  for (const item of catalog.items.filter((view) => view.scope === SCOPE && view.magic && catalog.contracts.has(view.id))) {
+    const t = await table(base(5, "dnd.srd521.class.fighter", {}), (runtime, derived) => {
+      const definition = officialMagicItem(item.name, item.magic!, catalog);
+      const basePick = definition?.baseOptions && !definition.base ? baseChoices(catalog, definition.baseOptions)[0] : undefined;
+      const next = addItem(runtime, { itemId: item.id, name: basePick ? `${item.name} (${basePick.name})` : item.name, ...(basePick ? { base: basePick.id } : {}) });
+      const carried = derivedOf({ source: emptySource({ name: "-" }), runtime: next } as never, catalog).inventory.find((line) => line.officialId === item.id) ?? derived.inventory.find(() => false);
+      return carried && definition?.attunement ? toggleAttune(next, carried.instanceId, 3, definition) : next;
+    });
+    await pressFeatures(t, item.name, (id) => id.startsWith(item.id));
+  }
   await castSpells();
 
   const count = (verdict: Verdict) => rows.filter((row) => row.verdict === verdict).length;

@@ -30,7 +30,7 @@ const contract = (key: string) => catalog().contractFor(key)!;
 test("contracts: all eight SRD contracts are read, and what this executor cannot run is named (D171)", () => {
   // R38 added a second family of contracts (standing effects, keyed `spell:`/`feature:`); these are the feature ones.
   // R51 (D186) added a third, keyed `feat:` — the same grammar, reached through the feat's own rule key.
-  const all = new Map([...catalog().contracts].filter(([key]) => !key.startsWith("spell:") && !key.startsWith("feature:") && !key.startsWith("feat:")));
+  const all = new Map([...catalog().contracts].filter(([key]) => !key.startsWith("spell:") && !key.startsWith("feature:") && !key.startsWith("feat:") && !key.startsWith("dnd.srd521.magic-item.")));
   assert.deepEqual([...all.keys()].sort(), [
     "bard.college-of-lore.cutting-words",
     "bard.college-of-lore.peerless-skill",
