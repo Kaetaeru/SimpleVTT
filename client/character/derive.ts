@@ -55,6 +55,8 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   if (options.equipped) applyEquipState(ledger, options.equipped);
   addItemCharges(ledger);
   addItemGrants(ledger);
+  // D353: a drunk potion's grants are the bearer's while its effect runs, the same way a worn item's are.
+  for (const effect of options.effects ?? []) if (effect.grants) addGrants(ledger, effect.name, effect.grants);
   const derived = finalize(ledger);
   // V3d (D258): a feature whose contract names several uses (몽크의 기: 질풍 연타, 인내의 방어, 바람의 걸음) gets a line per use.
   for (let index = derived.features.length - 1; index >= 0; index -= 1) {
@@ -93,7 +95,8 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   // R75 (D210): pasted magic items, as always-on effects while attuned (and worn, for armour).
   const magic = passive.inventory.filter(customItemActive);
   const equipped = magic.length ? applyActiveEffects(passive, magic.map((item) => ({ key: `item:${item.instanceId}`, name: item.name, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" })), catalog, { list: false, inline: Object.fromEntries(magic.map((item) => [`item:${item.instanceId}`, customItemApplication(item)])) }) : passive;
-  return options.effects?.length ? applyActiveEffects(equipped, options.effects, catalog) : equipped;
+  const granted = (options.effects ?? []).filter((effect) => effect.grants);
+  return options.effects?.length ? applyActiveEffects(equipped, options.effects, catalog, granted.length ? { inline: Object.fromEntries(granted.map((effect) => [effect.key, customItemApplication({ instanceId: effect.key, itemId: effect.key, name: effect.name, kind: "custom", quantity: 1, source: effect.name, magic: effect.grants })])) } : {}) : equipped;
 }
 
 function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
@@ -125,8 +128,18 @@ function addItemGrants(ledger: Ledger) {
   for (const item of ledger.inventory) {
     if (!customItemActive(item)) continue;
     const magic = item.magic!;
+    addGrants(ledger, item.name, magic);
+    const key = item.officialId;
+    if (key && (ledger.catalog.contractFor(key) || ledger.catalog.contractUses(key).length)) {
+      ledger.addFeature({ id: key, name: item.name, source: "item", sourceLabel: item.name, ...(magic.description ? { description: magic.description } : {}) });
+    }
+  }
+}
+
+function addGrants(ledger: Ledger, name: string, magic: NonNullable<DerivedItem["magic"]>) {
+  {
     for (const [key, value] of Object.entries(magic.abilities ?? {}) as Array<[AbilityKey, number]>) {
-      if ((ledger.abilityFloors[key]?.value ?? 0) < value) ledger.abilityFloors[key] = { value, source: item.name };
+      if ((ledger.abilityFloors[key]?.value ?? 0) < value) ledger.abilityFloors[key] = { value, source: name };
     }
     for (const type of magic.immunities ?? []) ledger.immunities.add(type);
     for (const condition of magic.conditionImmunities ?? []) ledger.conditionImmunities.add(condition);
@@ -136,10 +149,6 @@ function addItemGrants(ledger: Ledger) {
       if (current === undefined || (current >= 0 && (feet < 0 || feet > current))) ledger.extraSpeeds[mode] = feet;
     }
     if (magic.darkvision) ledger.senses.darkvision = Math.max(ledger.senses.darkvision ?? 0, magic.darkvision);
-    const key = item.officialId;
-    if (key && (ledger.catalog.contractFor(key) || ledger.catalog.contractUses(key).length)) {
-      ledger.addFeature({ id: key, name: item.name, source: "item", sourceLabel: item.name, ...(magic.description ? { description: magic.description } : {}) });
-    }
   }
 }
 
@@ -353,6 +362,13 @@ function finalize(ledger: Ledger): DerivedCharacter {
     if (seenWeapons.has(view.id)) continue;
     seenWeapons.add(view.id);
     attacks.push(weaponAttack(ledger, view, abilities, pb));
+  }
+  // D353: magic ammunition (+1 화살) is a row for each weapon that shoots, so its bonus lands only when it is used.
+  // ponytail: every ammunition weapon gets the row — arrows and bolts are not told apart; the player picks the right one.
+  const shooters = attacks.filter((attack) => attack.itemId && itemOf(attack.itemId)?.weapon?.properties.some((property) => property.startsWith("ammunition")));
+  for (const item of ledger.inventory) {
+    if (!item.magic || itemOf(item.itemId)?.kind !== "ammunition" || item.quantity <= 0) continue;
+    for (const shooter of shooters) attacks.push({ ...shooter, id: `${customAttackId(item)}:${shooter.id}`, name: `${shooter.name} (${item.name})` });
   }
   attacks.push(unarmedStrike(ledger, abilities, pb));
 

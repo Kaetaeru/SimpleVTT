@@ -100,6 +100,8 @@ export interface ActiveEffect {
   key: string;
   name: string;
   source: "feature" | "spell";
+  /** D353: what a drunk potion gives while this runs — the same fields a magic item carries (근력 21, 화염 저항, 비행). */
+  grants?: import("./customItem").CustomItem;
   duration: string;
   concentration: boolean;
   /** Round counter when the duration is short enough to track (10 rounds for one minute). */

@@ -187,7 +187,7 @@ export interface TableHostOptions {
   pcTriggers?: (entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", /** V4a (D263): only what answers somebody else's kill nearby. */ nearby?: boolean) => TriggerOffer[];
   pcTriggerApply?: (entry: JournalCharacter, event: "short-rest" | "initiative" | "kill", choice: { featureId: string; slots?: number[] }, roll: (formula: string) => number) => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
-  pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
+  pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; /** D353 */ tempHp?: string; /** D353: what the drink starts on whoever drinks it. */ effect?: ActiveEffect; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
   random?: () => number;
   /** R87 (D222): schedule a callback (tests pass their own clock); defaults to an unref'd setTimeout. */
@@ -1399,6 +1399,18 @@ export class TableHost {
             const live = page?.tokens.find((candidate) => candidate.id === target.token?.id);
             if (live && bar && !bar.link && page) { const value = Math.min(bar.max ?? before.hp.max, (bar.value ?? 0) + healed); this.storeToken(page, { ...live, bars: [{ ...bar, value }, live.bars[1], live.bars[2]] }); text = `${item.name} (${dice} = ${healed} 회복) · HP ${bar.value ?? 0} → ${value}`; }
             else { const after = Math.min(before.hp.max, before.hp.current + healed); const current = this.journalEntries.get(target.entry.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: { ...current.runtime.hp, current: after }, updatedAt: now }, updatedAt: now }); text = `${item.name} (${dice} = ${healed} 회복) · HP ${before.hp.current} → ${after}`; }
+          }
+        }
+        // D353: temporary hit points and an effect (a potion of giant strength, of speed) land on whoever drank.
+        if (item.tempHp || item.effect) {
+          const drinker = this.journalEntries.get(target.entry.id);
+          if (drinker?.kind === "character" || drinker?.kind === "npc") {
+            const temp = item.tempHp ? rollFormula({ label: item.name, formula: item.tempHp, kind: "custom" }, this.options.random ?? Math.random).total : 0;
+            const hp = drinker.runtime.hp as { temp?: number };
+            const effects = item.effect ? [...(drinker.runtime.effects ?? []).filter((effect) => effect.key !== item.effect!.key), { ...item.effect, startedAt: now, from: actor.entry.id }] : drinker.runtime.effects;
+            this.storeEntry({ ...drinker, runtime: { ...drinker.runtime, ...(temp > (hp.temp ?? 0) ? { hp: { ...drinker.runtime.hp, temp } } : {}), ...(effects ? { effects } : {}), updatedAt: now }, updatedAt: now } as typeof drinker);
+            if (temp) text += ` · 임시 HP ${temp}`;
+            if (item.effect && drinker.kind === "npc") this.mark(target, [item.effect.name], true, actor.token?.id);
           }
         }
         const owner = this.journalEntries.get(actor.entry.id);

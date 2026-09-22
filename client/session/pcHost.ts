@@ -244,6 +244,6 @@ export function pcHostOptions(catalog: () => ContentCatalog, /** D334: the host'
     pcSlotHealSelf: (entry) => derivedOf(entry, catalog()).slotHealSelf,
     pcOncePerTurnRiders: (entry) => (derivedOf(entry, catalog()).attackRiders ?? []).filter((rider) => rider.oncePerTurn && rider.moment === "pre-roll").map((rider) => rider.key),
     pcRevealsDefenses: (entry, spellId) => (derivedOf(entry, catalog()).revealDefenses ?? []).includes(spellId),
-    pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalog()); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item, catalog()); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
+    pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalog()); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item, catalog()); return { name: item.name, heal: use.heal, ...(use.tempHp ? { tempHp: use.tempHp } : {}), ...(use.effect ? { effect: use.effect } : {}), text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
   };
 }

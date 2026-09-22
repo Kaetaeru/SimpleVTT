@@ -29,7 +29,15 @@ export interface CustomItem {
   resistances?: string[];
   notes?: string[];
   /** H5d (D247): what using it does — the healing it rolls, and whether it is used up. */
-  use?: { healing?: string; consumes?: boolean };
+  use?: {
+    healing?: string; consumes?: boolean;
+    /** D353: temporary hit points it gives the drinker ("10", "2d4"). */
+    tempHp?: string;
+    /** D353: an effect on the drinker for a while — the same fields an item carries, under `grants`. */
+    effect?: { name?: string; duration: string; rounds?: number; grants: CustomItem };
+    /** D353: the drinker is under this spell for a while, without concentration (속도의 물약: 가속). */
+    spell?: { spellId: string; duration?: string; rounds?: number };
+  };
   /**
    * D351: charges — how many it holds, the dice that come back at dawn (a long rest here), and what happens when the
    * last one is spent, which is the table's to roll (`note`).
@@ -155,6 +163,21 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     const healing = text(raw.use.healing)?.replace(/\s+/g, "");
     if (healing !== undefined) { if (/^[0-9]*d[0-9]+([+-][0-9]+)?$/.test(healing)) use.healing = healing; else warnings.push(`use.healing: "${healing}"는 "2d4+2" 형식이어야 합니다`); }
     if (typeof raw.use.consumes === "boolean") use.consumes = raw.use.consumes;
+    const tempHp = text(raw.use.tempHp)?.replace(/\s+/g, "");
+    if (tempHp !== undefined) { if (/^[0-9]*d[0-9]+([+-][0-9]+)?$|^[0-9]+$/.test(tempHp)) use.tempHp = tempHp; else warnings.push(`use.tempHp: "${tempHp}"는 "10"이나 "2d4" 형식이어야 합니다`); }
+    if (isObject(raw.use.effect)) {
+      const effect = raw.use.effect;
+      const grants = parseCustomItem(JSON.stringify({ ...(isObject(effect.grants) ? effect.grants : {}), name: text(effect.name) ?? name }), catalog);
+      if ("error" in grants) warnings.push(`use.effect.grants: ${grants.error}`);
+      else if (!text(effect.duration)) warnings.push("use.effect.duration: 지속시간 글이 필요합니다 (\"1시간\")");
+      else { warnings.push(...grants.warnings.map((line) => `use.effect.grants: ${line}`)); use.effect = { ...(text(effect.name) ? { name: text(effect.name) } : {}), duration: text(effect.duration)!, ...(typeof effect.rounds === "number" ? { rounds: effect.rounds } : {}), grants: grants.item }; }
+    }
+    if (isObject(raw.use.spell)) {
+      const spell = raw.use.spell;
+      const spellId = text(spell.spellId);
+      if (!spellId || !catalog.spellById(spellId)) warnings.push(`use.spell.spellId: "${String(spell.spellId)}"는 목록에 없는 주문입니다`);
+      else use.spell = { spellId, ...(text(spell.duration) ? { duration: text(spell.duration) } : {}), ...(typeof spell.rounds === "number" ? { rounds: spell.rounds } : {}) };
+    }
     if (Object.keys(use).length) item.use = use;
   }
   const base = item.base ? catalog.itemById(item.base) : undefined;
@@ -186,7 +209,8 @@ export function customItemActive(item: DerivedItem): boolean {
 export function customItemApplication(item: DerivedItem): EffectApplication {
   const magic = item.magic!;
   const bonus = magic.bonus ?? {};
-  const own = item.kind === "weapon" ? (attack: DerivedAttack) => attack.id === customAttackId(item) : undefined;
+  // D353: magic ammunition has a row per weapon that shoots it (`<id>:<weapon>`), and its bonus is on those rows.
+  const own = item.kind === "weapon" || item.kind === "ammunition" ? (attack: DerivedAttack) => attack.id === customAttackId(item) || attack.id.startsWith(`${customAttackId(item)}:`) : undefined;
   return {
     ...(bonus.ac ? { ac: { add: bonus.ac } } : {}),
     ...(bonus.attack ? { attack: { value: bonus.attack, ...(own ? { filter: own } : {}) } } : {}),

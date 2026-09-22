@@ -600,7 +600,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (entry.kind !== "character" || !derived) return;
     const use = itemUse(item, catalog);
     // R10: a potion can be poured into anyone's mouth — pick who drinks (yourself included); the host rolls and applies.
-    if (use.heal) {
+    if (use.heal || use.tempHp || use.effect) {
       const picked = await requestTargets(`${item.name} — 마실 대상을 클릭하세요 (자기 자신도)`, { multi: false });
       if (!picked.length) return;
       c.useItem(me, { pageId: page.id, tokenId: picked[0] }, item.instanceId);
