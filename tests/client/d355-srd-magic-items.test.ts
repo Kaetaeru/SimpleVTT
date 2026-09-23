@@ -101,3 +101,17 @@ test("D355: 불꽃 혀 asks for a melee weapon", () => {
   assert.ok(bases.some((item) => item.id === "dnd.srd521.item.weapon.longsword"));
   assert.ok(bases.every((item) => item.weapon?.mode === "melee"));
 });
+
+test("D357: +1 weapons are one entry per weapon — 장검 +1 is found by its name and attacks one better", () => {
+  const { cat, derive, carry, start } = hero();
+  assert.equal(cat.itemById(ID("weapon-plus.1")), undefined, "no bare 무기 +1 to pick a weapon for");
+  const view = cat.itemById(ID("weapon-plus.1.longsword"))!;
+  assert.equal(view.name, "장검 +1");
+  assert.ok(cat.items.some((item) => item.name === "판금 갑옷 +3"));
+  const definition = officialMagicItem(view.name, view.magic!, cat)!;
+  assert.equal(definition.baseOptions, undefined, "no base to pick");
+  const sheet = derive(carry(start, "weapon-plus.1.longsword"));
+  const plain = derive(addItem(start, { itemId: "dnd.srd521.item.weapon.longsword", name: "장검" })).attacks.find((attack) => attack.name === "장검")!;
+  const row = sheet.attacks.find((attack) => attack.name === "장검 +1")!;
+  assert.equal(row.attackBonus, plain.attackBonus + 1);
+});

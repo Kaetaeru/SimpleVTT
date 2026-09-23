@@ -109,11 +109,34 @@ function magicItems() {
       ],
     };
   };
+  // D357: the catalog's weapons and armour, for an item that is written once per base (`expand`).
+  const equipment = Object.values(decisions("equipment.json"));
+  const basesOf = (options) => equipment.filter((item) => {
+    if (item.category !== options.kind) return false;
+    const config = item.mechanics?.[0]?.config ?? {};
+    if (options.ids && !options.ids.includes(item.id)) return false;
+    if (options.exclude?.includes(item.id)) return false;
+    if (options.training && !options.training.includes(config.training)) return false;
+    if (options.mode && config.mode !== options.mode) return false;
+    return true;
+  });
+  const push = (id, name, english, description, rarity, attunement, decision) => {
+    // D357: `expand` writes the item once for every base its `baseOptions` allows ("장검 +1", "판금 갑옷 +2"), so a
+    // player finds it by the weapon's name instead of picking the weapon after picking the item.
+    if (!decision.expand || !decision.definition?.baseOptions) { entries.push(entryOf(id, name, english, description, rarity, attunement, decision)); return; }
+    const { baseOptions, ...rest } = decision.definition;
+    const bases = basesOf(baseOptions);
+    if (!bases.length) problems.push(`${id}: expand에 맞는 기반이 없음`);
+    for (const base of bases) {
+      const baseName = base.presentation.locales["ko-KR"].name;
+      entries.push(entryOf(`${id}.${base.id.split(".").pop()}`, (decision.nameTemplate ?? "{item} ({base})").replace("{base}", baseName).replace("{item}", name), decision.nameTemplate ? decision.nameTemplate.replace("{base}", base.presentation.originalName).replace("{item}", english) : `${base.presentation.originalName}, ${english}`, description, rarity, attunement, { ...decision, definition: { ...rest, base: base.id } }));
+    }
+  };
   const emit = (id, name, english, description, rarity, attunement, decision) => {
-    if (!decision.variants?.length) { entries.push(entryOf(id, name, english, description, rarity, attunement, decision)); return; }
+    if (!decision.variants?.length) { push(id, name, english, description, rarity, attunement, decision); return; }
     for (const variant of decision.variants) {
-      const merged = { ...decision, definition: { ...decision.definition, ...variant.definition }, dm: [...(decision.dm ?? []), ...(variant.dm ?? [])], ...(variant.contract ? { contract: variant.contract } : {}) };
-      entries.push(entryOf(`${id}.${variant.id}`, variant.name, `${english} (${variant.id})`, description, RARITY[variant.rarity] ?? variant.rarity ?? rarity, attunement, merged));
+      const merged = { ...decision, definition: { ...decision.definition, ...variant.definition }, dm: [...(decision.dm ?? []), ...(variant.dm ?? [])], ...(variant.contract ? { contract: variant.contract } : {}), ...(variant.nameTemplate ? { nameTemplate: variant.nameTemplate } : {}) };
+      push(`${id}.${variant.id}`, variant.name, `${english} (${variant.id})`, description, RARITY[variant.rarity] ?? variant.rarity ?? rarity, attunement, merged);
     }
   };
   for (const doc of parsed.docs.filter((item) => item.file.startsWith("magic-items/items/"))) {

@@ -177,22 +177,22 @@
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.ammunition-plus.1",
+   "id": "dnd.srd521.magic-item.ammunition-plus.1.arrows",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Ammunition, +1, +2, or +3 (1)",
+    "originalName": "Arrows (20) +1",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "탄약 +1",
+      "name": "화살 20개 +1",
       "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Ammunition, +1, +2, or +3 (1)"
+      "name": "Arrows (20) +1"
      }
     }
    },
@@ -202,13 +202,11 @@
      "config": {
       "type": "ammunition",
       "rarity": "uncommon",
-      "baseOptions": {
-       "kind": "ammunition"
-      },
       "bonus": {
        "attack": 1,
        "damage": 1
       },
+      "base": "dnd.srd521.item.ammunition.arrows",
       "notes": [
        "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
       ]
@@ -217,22 +215,136 @@
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.ammunition-plus.2",
+   "id": "dnd.srd521.magic-item.ammunition-plus.1.bolts",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Ammunition, +1, +2, or +3 (2)",
+    "originalName": "Bolts (20) +1",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "탄약 +2",
+      "name": "쇠뇌살 20개 +1",
       "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Ammunition, +1, +2, or +3 (2)"
+      "name": "Bolts (20) +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.ammunition.bolts",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.1.needles",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Needles (50) +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "바늘 50개 +1",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Needles (50) +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.ammunition.needles",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.1.sling-bullets",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sling Bullets (20) +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투석탄 20개 +1",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sling Bullets (20) +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.ammunition.sling-bullets",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.2.arrows",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Arrows (20) +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "화살 20개 +2",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Arrows (20) +2"
      }
     }
    },
@@ -242,13 +354,11 @@
      "config": {
       "type": "ammunition",
       "rarity": "rare",
-      "baseOptions": {
-       "kind": "ammunition"
-      },
       "bonus": {
        "attack": 2,
        "damage": 2
       },
+      "base": "dnd.srd521.item.ammunition.arrows",
       "notes": [
        "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
       ]
@@ -257,22 +367,136 @@
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.ammunition-plus.3",
+   "id": "dnd.srd521.magic-item.ammunition-plus.2.bolts",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Ammunition, +1, +2, or +3 (3)",
+    "originalName": "Bolts (20) +2",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "탄약 +3",
+      "name": "쇠뇌살 20개 +2",
       "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Ammunition, +1, +2, or +3 (3)"
+      "name": "Bolts (20) +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.ammunition.bolts",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.2.needles",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Needles (50) +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "바늘 50개 +2",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Needles (50) +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.ammunition.needles",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.2.sling-bullets",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sling Bullets (20) +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투석탄 20개 +2",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sling Bullets (20) +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.ammunition.sling-bullets",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.3.arrows",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Arrows (20) +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "화살 20개 +3",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Arrows (20) +3"
      }
     }
    },
@@ -282,13 +506,125 @@
      "config": {
       "type": "ammunition",
       "rarity": "very-rare",
-      "baseOptions": {
-       "kind": "ammunition"
-      },
       "bonus": {
        "attack": 3,
        "damage": 3
       },
+      "base": "dnd.srd521.item.ammunition.arrows",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.3.bolts",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Bolts (20) +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "쇠뇌살 20개 +3",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Bolts (20) +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.ammunition.bolts",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.3.needles",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Needles (50) +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "바늘 50개 +3",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Needles (50) +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.ammunition.needles",
+      "notes": [
+       "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.ammunition-plus.3.sling-bullets",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sling Bullets (20) +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투석탄 20개 +3",
+      "description": "이 마법 탄약으로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 목표를 맞히면 탄약은 마법을 잃는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sling Bullets (20) +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "ammunition",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.ammunition.sling-bullets",
       "notes": [
        "DM 판정: 맞힌 탄약은 마법을 잃는다 — 쏜 만큼 가방에서 줄인다"
       ]
@@ -1073,22 +1409,22 @@
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.armor-plus.1",
+   "id": "dnd.srd521.magic-item.armor-plus.1.breastplate",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Armor, +1, +2, or +3 (1)",
+    "originalName": "Breastplate +1",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "갑옷 +1",
+      "name": "흉갑 +1",
       "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Armor, +1, +2, or +3 (1)"
+      "name": "Breastplate +1"
      }
     }
    },
@@ -1098,33 +1434,405 @@
      "config": {
       "type": "armor",
       "rarity": "rare",
-      "baseOptions": {
-       "kind": "armor"
-      },
       "bonus": {
        "ac": 1
-      }
+      },
+      "base": "dnd.srd521.item.armor.breastplate"
      }
     }
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.armor-plus.2",
+   "id": "dnd.srd521.magic-item.armor-plus.1.chain-mail",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Armor, +1, +2, or +3 (2)",
+    "originalName": "Chain Mail +1",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "갑옷 +2",
+      "name": "사슬 갑옷 +1",
       "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Armor, +1, +2, or +3 (2)"
+      "name": "Chain Mail +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.chain-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.chain-shirt",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Chain Shirt +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "사슬 셔츠 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Chain Shirt +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.chain-shirt"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.half-plate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Half Plate Armor +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "반판금 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Half Plate Armor +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.half-plate"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.hide",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Hide Armor +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "생가죽 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Hide Armor +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.hide"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.leather",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Leather Armor +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "가죽 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Leather Armor +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.leather"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.padded",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Padded Armor +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "누비 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Padded Armor +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.padded"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.plate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Plate Armor +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "판금 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Plate Armor +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.plate"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.ring-mail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Ring Mail +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "고리 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Ring Mail +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.ring-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.scale-mail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Scale Mail +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "비늘 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Scale Mail +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.scale-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.splint",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Splint Armor +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "철편 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Splint Armor +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.splint"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.1.studded-leather",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Studded Leather Armor +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "징 박힌 가죽 갑옷 +1",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Studded Leather Armor +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "rare",
+      "bonus": {
+       "ac": 1
+      },
+      "base": "dnd.srd521.item.armor.studded-leather"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.breastplate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Breastplate +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "흉갑 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Breastplate +2"
      }
     }
    },
@@ -1134,33 +1842,405 @@
      "config": {
       "type": "armor",
       "rarity": "very-rare",
-      "baseOptions": {
-       "kind": "armor"
-      },
       "bonus": {
        "ac": 2
-      }
+      },
+      "base": "dnd.srd521.item.armor.breastplate"
      }
     }
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.armor-plus.3",
+   "id": "dnd.srd521.magic-item.armor-plus.2.chain-mail",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Armor, +1, +2, or +3 (3)",
+    "originalName": "Chain Mail +2",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "갑옷 +3",
+      "name": "사슬 갑옷 +2",
       "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Armor, +1, +2, or +3 (3)"
+      "name": "Chain Mail +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.chain-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.chain-shirt",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Chain Shirt +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "사슬 셔츠 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Chain Shirt +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.chain-shirt"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.half-plate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Half Plate Armor +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "반판금 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Half Plate Armor +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.half-plate"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.hide",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Hide Armor +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "생가죽 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Hide Armor +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.hide"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.leather",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Leather Armor +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "가죽 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Leather Armor +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.leather"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.padded",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Padded Armor +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "누비 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Padded Armor +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.padded"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.plate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Plate Armor +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "판금 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Plate Armor +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.plate"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.ring-mail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Ring Mail +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "고리 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Ring Mail +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.ring-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.scale-mail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Scale Mail +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "비늘 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Scale Mail +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.scale-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.splint",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Splint Armor +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "철편 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Splint Armor +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.splint"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.2.studded-leather",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Studded Leather Armor +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "징 박힌 가죽 갑옷 +2",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Studded Leather Armor +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "very-rare",
+      "bonus": {
+       "ac": 2
+      },
+      "base": "dnd.srd521.item.armor.studded-leather"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.breastplate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Breastplate +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "흉갑 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Breastplate +3"
      }
     }
    },
@@ -1170,12 +2250,384 @@
      "config": {
       "type": "armor",
       "rarity": "legendary",
-      "baseOptions": {
-       "kind": "armor"
-      },
       "bonus": {
        "ac": 3
-      }
+      },
+      "base": "dnd.srd521.item.armor.breastplate"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.chain-mail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Chain Mail +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "사슬 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Chain Mail +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.chain-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.chain-shirt",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Chain Shirt +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "사슬 셔츠 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Chain Shirt +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.chain-shirt"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.half-plate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Half Plate Armor +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "반판금 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Half Plate Armor +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.half-plate"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.hide",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Hide Armor +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "생가죽 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Hide Armor +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.hide"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.leather",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Leather Armor +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "가죽 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Leather Armor +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.leather"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.padded",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Padded Armor +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "누비 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Padded Armor +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.padded"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.plate",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Plate Armor +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "판금 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Plate Armor +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.plate"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.ring-mail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Ring Mail +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "고리 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Ring Mail +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.ring-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.scale-mail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Scale Mail +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "비늘 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Scale Mail +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.scale-mail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.splint",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Splint Armor +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "철편 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Splint Armor +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.splint"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.armor-plus.3.studded-leather",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Studded Leather Armor +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "징 박힌 가죽 갑옷 +3",
+      "description": "방패가 아닌 어떤 갑옷이든 될 수 있다. 입은 동안 방어도에 희귀도에 따라 +1(희귀), +2(매우 희귀), +3(전설) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Studded Leather Armor +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "armor",
+      "rarity": "legendary",
+      "bonus": {
+       "ac": 3
+      },
+      "base": "dnd.srd521.item.armor.studded-leather"
      }
     }
    ]
@@ -16663,22 +18115,22 @@
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.weapon-plus.1",
+   "id": "dnd.srd521.magic-item.weapon-plus.1.battleaxe",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Weapon, +1, +2, or +3 (1)",
+    "originalName": "Battleaxe +1",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "무기 +1",
+      "name": "전투도끼 +1",
       "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Weapon, +1, +2, or +3 (1)"
+      "name": "Battleaxe +1"
      }
     }
    },
@@ -16688,34 +18140,1327 @@
      "config": {
       "type": "weapon",
       "rarity": "uncommon",
-      "baseOptions": {
-       "kind": "weapon"
-      },
       "bonus": {
        "attack": 1,
        "damage": 1
-      }
+      },
+      "base": "dnd.srd521.item.weapon.battleaxe"
      }
     }
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.weapon-plus.2",
+   "id": "dnd.srd521.magic-item.weapon-plus.1.blowgun",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Weapon, +1, +2, or +3 (2)",
+    "originalName": "Blowgun +1",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "무기 +2",
+      "name": "바람총 +1",
       "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Weapon, +1, +2, or +3 (2)"
+      "name": "Blowgun +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.blowgun"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.club",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Club +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "몽둥이 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Club +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.club"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.dagger",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dagger +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "단검 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Dagger +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.dagger"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.dart",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dart +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "다트 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Dart +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.dart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.flail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Flail +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "도리깨 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Flail +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.flail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.glaive",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Glaive +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "글레이브 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Glaive +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.glaive"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.greataxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greataxe +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 도끼 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greataxe +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.greataxe"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.greatclub",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greatclub +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 몽둥이 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greatclub +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.greatclub"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.greatsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greatsword +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대검 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greatsword +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.greatsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.halberd",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Halberd +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "미늘창 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Halberd +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.halberd"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.hand-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Hand Crossbow +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "손쇠뇌 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Hand Crossbow +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.hand-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.handaxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Handaxe +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "손도끼 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Handaxe +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.handaxe"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.heavy-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Heavy Crossbow +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "중쇠뇌 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Heavy Crossbow +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.heavy-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.javelin",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Javelin +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투창 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Javelin +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.javelin"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.lance",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Lance +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "기병창 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Lance +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.lance"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.light-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Light Crossbow +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "경쇠뇌 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Light Crossbow +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.light-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.light-hammer",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Light Hammer +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "가벼운 망치 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Light Hammer +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.light-hammer"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.longbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Longbow +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장궁 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Longbow +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.longbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.longsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Longsword +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장검 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Longsword +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.longsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.mace",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Mace +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "철퇴 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Mace +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.mace"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.maul",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Maul +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 망치 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Maul +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.maul"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.morningstar",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Morningstar +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "모닝스타 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Morningstar +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.morningstar"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.musket",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Musket +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "머스킷 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Musket +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.musket"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.pike",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Pike +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장창 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Pike +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.pike"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.pistol",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Pistol +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "권총 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Pistol +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.pistol"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.quarterstaff",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Quarterstaff +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "육척봉 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Quarterstaff +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.quarterstaff"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.rapier",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Rapier +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "레이피어 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Rapier +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.rapier"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.scimitar",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Scimitar +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "시미터 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Scimitar +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.scimitar"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.shortbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Shortbow +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "단궁 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Shortbow +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.shortbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.shortsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Shortsword +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "소검 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Shortsword +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.shortsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.sickle",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sickle +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "낫 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sickle +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.sickle"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.sling",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sling +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투석구 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sling +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.sling"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.spear",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Spear +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "창 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Spear +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.spear"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.trident",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Trident +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "삼지창 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Trident +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.trident"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.warhammer",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Warhammer +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투망치 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Warhammer +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.warhammer"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.warpick",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "War Pick +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투곡괭이 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "War Pick +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.warpick"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.1.whip",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Whip +1",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "채찍 +1",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Whip +1"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "uncommon",
+      "bonus": {
+       "attack": 1,
+       "damage": 1
+      },
+      "base": "dnd.srd521.item.weapon.whip"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.battleaxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Battleaxe +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투도끼 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Battleaxe +2"
      }
     }
    },
@@ -16725,34 +19470,1327 @@
      "config": {
       "type": "weapon",
       "rarity": "rare",
-      "baseOptions": {
-       "kind": "weapon"
-      },
       "bonus": {
        "attack": 2,
        "damage": 2
-      }
+      },
+      "base": "dnd.srd521.item.weapon.battleaxe"
      }
     }
    ]
   },
   {
-   "id": "dnd.srd521.magic-item.weapon-plus.3",
+   "id": "dnd.srd521.magic-item.weapon-plus.2.blowgun",
    "category": "magic-item",
    "tags": [
     "magic-item",
     "srd-5.2.1"
    ],
    "presentation": {
-    "originalName": "Weapon, +1, +2, or +3 (3)",
+    "originalName": "Blowgun +2",
     "defaultLocale": "ko-KR",
     "locales": {
      "ko-KR": {
-      "name": "무기 +3",
+      "name": "바람총 +2",
       "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
      },
      "en": {
-      "name": "Weapon, +1, +2, or +3 (3)"
+      "name": "Blowgun +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.blowgun"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.club",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Club +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "몽둥이 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Club +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.club"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.dagger",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dagger +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "단검 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Dagger +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.dagger"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.dart",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dart +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "다트 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Dart +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.dart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.flail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Flail +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "도리깨 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Flail +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.flail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.glaive",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Glaive +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "글레이브 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Glaive +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.glaive"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.greataxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greataxe +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 도끼 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greataxe +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.greataxe"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.greatclub",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greatclub +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 몽둥이 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greatclub +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.greatclub"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.greatsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greatsword +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대검 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greatsword +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.greatsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.halberd",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Halberd +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "미늘창 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Halberd +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.halberd"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.hand-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Hand Crossbow +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "손쇠뇌 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Hand Crossbow +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.hand-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.handaxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Handaxe +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "손도끼 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Handaxe +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.handaxe"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.heavy-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Heavy Crossbow +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "중쇠뇌 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Heavy Crossbow +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.heavy-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.javelin",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Javelin +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투창 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Javelin +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.javelin"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.lance",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Lance +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "기병창 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Lance +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.lance"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.light-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Light Crossbow +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "경쇠뇌 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Light Crossbow +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.light-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.light-hammer",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Light Hammer +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "가벼운 망치 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Light Hammer +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.light-hammer"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.longbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Longbow +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장궁 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Longbow +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.longbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.longsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Longsword +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장검 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Longsword +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.longsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.mace",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Mace +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "철퇴 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Mace +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.mace"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.maul",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Maul +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 망치 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Maul +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.maul"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.morningstar",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Morningstar +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "모닝스타 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Morningstar +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.morningstar"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.musket",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Musket +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "머스킷 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Musket +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.musket"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.pike",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Pike +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장창 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Pike +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.pike"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.pistol",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Pistol +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "권총 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Pistol +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.pistol"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.quarterstaff",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Quarterstaff +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "육척봉 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Quarterstaff +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.quarterstaff"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.rapier",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Rapier +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "레이피어 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Rapier +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.rapier"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.scimitar",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Scimitar +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "시미터 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Scimitar +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.scimitar"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.shortbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Shortbow +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "단궁 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Shortbow +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.shortbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.shortsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Shortsword +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "소검 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Shortsword +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.shortsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.sickle",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sickle +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "낫 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sickle +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.sickle"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.sling",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sling +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투석구 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sling +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.sling"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.spear",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Spear +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "창 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Spear +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.spear"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.trident",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Trident +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "삼지창 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Trident +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.trident"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.warhammer",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Warhammer +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투망치 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Warhammer +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.warhammer"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.warpick",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "War Pick +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투곡괭이 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "War Pick +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.warpick"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.2.whip",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Whip +2",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "채찍 +2",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Whip +2"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "rare",
+      "bonus": {
+       "attack": 2,
+       "damage": 2
+      },
+      "base": "dnd.srd521.item.weapon.whip"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.battleaxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Battleaxe +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투도끼 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Battleaxe +3"
      }
     }
    },
@@ -16762,13 +20800,1306 @@
      "config": {
       "type": "weapon",
       "rarity": "very-rare",
-      "baseOptions": {
-       "kind": "weapon"
-      },
       "bonus": {
        "attack": 3,
        "damage": 3
-      }
+      },
+      "base": "dnd.srd521.item.weapon.battleaxe"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.blowgun",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Blowgun +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "바람총 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Blowgun +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.blowgun"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.club",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Club +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "몽둥이 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Club +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.club"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.dagger",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dagger +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "단검 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Dagger +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.dagger"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.dart",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Dart +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "다트 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Dart +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.dart"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.flail",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Flail +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "도리깨 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Flail +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.flail"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.glaive",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Glaive +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "글레이브 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Glaive +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.glaive"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.greataxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greataxe +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 도끼 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greataxe +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.greataxe"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.greatclub",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greatclub +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 몽둥이 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greatclub +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.greatclub"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.greatsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Greatsword +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대검 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Greatsword +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.greatsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.halberd",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Halberd +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "미늘창 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Halberd +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.halberd"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.hand-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Hand Crossbow +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "손쇠뇌 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Hand Crossbow +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.hand-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.handaxe",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Handaxe +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "손도끼 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Handaxe +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.handaxe"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.heavy-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Heavy Crossbow +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "중쇠뇌 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Heavy Crossbow +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.heavy-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.javelin",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Javelin +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투창 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Javelin +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.javelin"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.lance",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Lance +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "기병창 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Lance +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.lance"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.light-crossbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Light Crossbow +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "경쇠뇌 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Light Crossbow +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.light-crossbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.light-hammer",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Light Hammer +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "가벼운 망치 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Light Hammer +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.light-hammer"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.longbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Longbow +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장궁 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Longbow +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.longbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.longsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Longsword +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장검 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Longsword +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.longsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.mace",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Mace +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "철퇴 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Mace +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.mace"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.maul",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Maul +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 망치 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Maul +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.maul"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.morningstar",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Morningstar +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "모닝스타 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Morningstar +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.morningstar"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.musket",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Musket +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "머스킷 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Musket +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.musket"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.pike",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Pike +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장창 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Pike +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.pike"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.pistol",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Pistol +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "권총 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Pistol +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.pistol"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.quarterstaff",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Quarterstaff +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "육척봉 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Quarterstaff +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.quarterstaff"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.rapier",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Rapier +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "레이피어 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Rapier +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.rapier"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.scimitar",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Scimitar +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "시미터 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Scimitar +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.scimitar"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.shortbow",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Shortbow +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "단궁 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Shortbow +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.shortbow"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.shortsword",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Shortsword +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "소검 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Shortsword +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.shortsword"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.sickle",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sickle +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "낫 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sickle +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.sickle"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.sling",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Sling +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투석구 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Sling +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.sling"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.spear",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Spear +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "창 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Spear +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.spear"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.trident",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Trident +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "삼지창 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Trident +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.trident"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.warhammer",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Warhammer +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투망치 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Warhammer +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.warhammer"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.warpick",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "War Pick +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투곡괭이 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "War Pick +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.warpick"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dnd.srd521.magic-item.weapon-plus.3.whip",
+   "category": "magic-item",
+   "tags": [
+    "magic-item",
+    "srd-5.2.1"
+   ],
+   "presentation": {
+    "originalName": "Whip +3",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "채찍 +3",
+      "description": "어떤 무기든 될 수 있다. 이 마법 무기로 하는 명중 굴림과 피해 굴림에 희귀도에 따라 +1(고급), +2(희귀), +3(매우 희귀) 보너스를 받는다. 번역 원문에 없는 SRD 항목이라 이 글은 앱이 적었다."
+     },
+     "en": {
+      "name": "Whip +3"
+     }
+    }
+   },
+   "mechanics": [
+    {
+     "kind": "magic-item-definition",
+     "config": {
+      "type": "weapon",
+      "rarity": "very-rare",
+      "bonus": {
+       "attack": 3,
+       "damage": 3
+      },
+      "base": "dnd.srd521.item.weapon.whip"
      }
     }
    ]

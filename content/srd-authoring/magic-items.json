@@ -7080,7 +7080,8 @@
        "attack": 1,
        "damage": 1
       }
-     }
+     },
+     "nameTemplate": "{base} +1"
     },
     {
      "id": "2",
@@ -7091,7 +7092,8 @@
        "attack": 2,
        "damage": 2
       }
-     }
+     },
+     "nameTemplate": "{base} +2"
     },
     {
      "id": "3",
@@ -7102,9 +7104,11 @@
        "attack": 3,
        "damage": 3
       }
-     }
+     },
+     "nameTemplate": "{base} +3"
     }
-   ]
+   ],
+   "expand": true
   },
   {
    "id": "dnd.srd521.magic-item.armor-plus",
@@ -7126,7 +7130,8 @@
       "bonus": {
        "ac": 1
       }
-     }
+     },
+     "nameTemplate": "{base} +1"
     },
     {
      "id": "2",
@@ -7136,7 +7141,8 @@
       "bonus": {
        "ac": 2
       }
-     }
+     },
+     "nameTemplate": "{base} +2"
     },
     {
      "id": "3",
@@ -7146,9 +7152,11 @@
       "bonus": {
        "ac": 3
       }
-     }
+     },
+     "nameTemplate": "{base} +3"
     }
-   ]
+   ],
+   "expand": true
   },
   {
    "id": "dnd.srd521.magic-item.shield-plus",
@@ -7216,7 +7224,8 @@
        "attack": 1,
        "damage": 1
       }
-     }
+     },
+     "nameTemplate": "{base} +1"
     },
     {
      "id": "2",
@@ -7227,7 +7236,8 @@
        "attack": 2,
        "damage": 2
       }
-     }
+     },
+     "nameTemplate": "{base} +2"
     },
     {
      "id": "3",
@@ -7238,9 +7248,11 @@
        "attack": 3,
        "damage": 3
       }
-     }
+     },
+     "nameTemplate": "{base} +3"
     }
-   ]
+   ],
+   "expand": true
   }
  ]
 }

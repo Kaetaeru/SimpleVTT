@@ -210,7 +210,7 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     if (Object.keys(use).length) item.use = use;
   }
   const base = item.base ? catalog.itemById(item.base) : undefined;
-  if ((item.bonus?.attack || item.bonus?.damage || item.bonus?.damageDice || item.bonus?.extraDamage) && !base?.weapon && item.baseOptions?.kind !== "weapon" && item.baseOptions?.kind !== "ammunition") warnings.push("attack/damage 보너스는 base가 무기일 때만 그 무기의 공격에 붙습니다 — 지금은 모든 공격에 붙습니다");
+  if ((item.bonus?.attack || item.bonus?.damage || item.bonus?.damageDice || item.bonus?.extraDamage) && !base?.weapon && base?.kind !== "ammunition" && item.baseOptions?.kind !== "weapon" && item.baseOptions?.kind !== "ammunition") warnings.push("attack/damage 보너스는 base가 무기일 때만 그 무기의 공격에 붙습니다 — 지금은 모든 공격에 붙습니다");
   return { item, warnings };
 }
 
