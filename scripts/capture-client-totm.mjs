@@ -21,6 +21,9 @@ if (!(await portOpen(PORT))) { server = spawn(process.execPath, [path.resolve("n
 const OUT = path.resolve("docs/evidence/new-client-m1");
 const base = `http://127.0.0.1:${PORT}/`;
 const failures = [];
+// D346: the board and the journal follow a card once its dice have settled, so a check on them waits for the change
+// rather than a fixed pause that a slow machine overruns.
+const settles = async (probe, timeout = 12000) => { const end = Date.now() + timeout; for (;;) { if (await probe()) return true; if (Date.now() > end) return false; await new Promise((resolve) => setTimeout(resolve, 200)); } };
 const check = (condition, message) => { if (!condition) { failures.push(message); console.error("FAIL:", message); } else console.log("ok:", message); };
 const tab = (page, name) => page.getByRole("tab", { name: new RegExp(`^${name}`) });
 /**
@@ -237,7 +240,7 @@ try {
   await letHitGo(player, cardOf(dm, readiedHead));
   await cardOf(dm, readiedHead).waitFor({ timeout: 15000 });
   await dm.waitForTimeout(600);
-  check(await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='준비']").count() === 0, "the readied action is spent with the mark");
+  check(await settles(async () => await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='준비']").count() === 0), "the readied action is spent with the mark");
   check(await waitingBar.getByRole("button", { name: /^⚔ 대검/ }).isDisabled(), "and the attack buttons go quiet again (the reaction is used)");
   await dmPanel.getByRole("button", { name: "붙잡기" }).click();
   await dm.locator(".cl-targeting-banner").waitFor();
@@ -284,7 +287,7 @@ try {
   await mageBar.waitFor();
   await mageBar.getByRole("button", { name: /^✨ 마법/ }).click();
   await dm.getByRole("menuitem", { name: /화염구/ }).waitFor({ timeout: 5000 });
-  check((await dm.getByRole("menuitem", { name: /화염구/ }).innerText()).includes("1/2 남음"), "the per-day spell shows its remaining uses after the cast");
+  check(await settles(async () => (await dm.getByRole("menuitem", { name: /화염구/ }).innerText()).includes("1/2 남음")), "the per-day spell shows its remaining uses after the cast");
   await dm.keyboard.press("Escape");
 
   // SC-54 (R9, D103/D104): the DM's dragon — 다중공격 runs the routine (three 찢기 cards, one pre-roll dialog), ☄ 화염 브레스
@@ -322,7 +325,7 @@ try {
   check(breathText.includes("NPC 행동") && breathText.includes("vs DC 18") && breathText.includes("마법사") && breathText.includes("고블린 전사"), "the breath is a save card for both targets against DC 18");
   await iconOf(dm, "성인 황동 드래곤").click();
   await dragonBar.waitFor();
-  check((await dragonBar.getByRole("button", { name: /화염 브레스/ }).innerText()).includes("재충전 대기"), "the breath waits for its recharge");
+  check(await settles(async () => (await dragonBar.getByRole("button", { name: /화염 브레스/ }).innerText()).includes("재충전 대기")), "the breath waits for its recharge");
   await dragonBar.getByRole("button", { name: /전설 3\/3/ }).click();
   await dm.getByRole("menuitem", { name: /^급습/ }).click();
   await dm.locator(".cl-chat-msg.act", { hasText: "전설 행동 · 급습" }).waitFor({ timeout: 15000 });
