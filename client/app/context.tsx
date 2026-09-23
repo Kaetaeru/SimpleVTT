@@ -71,6 +71,8 @@ export interface ClientState {
    */
   sessionModules: RuleModuleJson[];
   setSessionModules: (modules: RuleModuleJson[]) => void;
+  /** D363: modules the open table adds (the campaign's magic items). */
+  setTableModules: (modules: RuleModuleJson[]) => void;
   getDraft: () => Promise<CharacterSource | undefined>;
   putDraft: (source: CharacterSource | undefined) => Promise<void>;
 }
@@ -81,6 +83,8 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
   const [store, setStore] = useState<ClientStore | null>(presetStore ?? null);
   const [modules, setModules] = useState<InstalledModuleRecord[]>([]);
   const [sessionModules, setSessionModules] = useState<RuleModuleJson[]>([]);
+  // D363: what the table itself adds while it is open (the campaign's magic item library).
+  const [tableModules, setTableModules] = useState<RuleModuleJson[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [ready, setReady] = useState(false);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
@@ -115,7 +119,7 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
   }, []);
 
   // R83 (D217): the host's copy of a module wins over this app's, so everyone at the table reads the same rules.
-  const catalog = useMemo(() => createCatalog([...modules.map((row) => row.module).filter((module) => !sessionModules.some((item) => item.moduleId === module.moduleId)), ...sessionModules]), [modules, sessionModules]);
+  const catalog = useMemo(() => createCatalog([...modules.map((row) => row.module).filter((module) => !sessionModules.some((item) => item.moduleId === module.moduleId)), ...sessionModules, ...tableModules]), [modules, sessionModules, tableModules]);
 
   const navigate = useCallback((next: Route) => {
     if (typeof location !== "undefined") { location.hash = routeHash(next); }
@@ -163,8 +167,8 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
   const getDraft = useCallback(async () => store?.getSetting<CharacterSource>("creation-draft"), [store]);
   const putDraft = useCallback(async (source: CharacterSource | undefined) => { await store?.putSetting("creation-draft", source ?? null); }, [store]);
 
-  const value = useMemo<ClientState>(() => ({ ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, sessionModules, setSessionModules, getDraft, putDraft }),
-    [ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, sessionModules, setSessionModules, getDraft, putDraft]);
+  const value = useMemo<ClientState>(() => ({ ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, sessionModules, setSessionModules, setTableModules, getDraft, putDraft }),
+    [ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, sessionModules, setSessionModules, setTableModules, getDraft, putDraft]);
   return <ClientContext.Provider value={value}>{children}</ClientContext.Provider>;
 }
 

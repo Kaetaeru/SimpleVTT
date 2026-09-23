@@ -10,14 +10,14 @@ import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import type { ActionKind } from "../rules/actions";
 import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
-import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
+import type { CampaignClock, CampaignItem, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 import type { RuleModuleJson } from "../catalog/types";
 
 // R57 (D192): 29 — declared facts travel with the riders and with a taken reaction.
 // R63 (D198): 30 — a hit opens a window for the attacker (`on-hit` prompt, `act.onhit` answer).
 // R81 (D215): 31 — a trigger window (`trigger` prompt, `act.trigger` answer) for initiative and the end of a short rest.
 // R83 (D217): 32 — the snapshot lists the host's content modules; `content.fetch` / `content.data` carry one across.
-export const PROTOCOL_VERSION = 33;
+export const PROTOCOL_VERSION = 34;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -41,6 +41,8 @@ export interface TableSnapshot {
   macros: Macro[];
   /** R17: rollable tables — the GM sees the rows, a player only the names (the host draws). */
   tables: RollTable[];
+  /** D363: the campaign's own magic items, for every seat's catalog. */
+  items?: CampaignItem[];
   /** R18: the in-world clock everyone sees. */
   clock: CampaignClock;
   lastEventN: number;
@@ -123,6 +125,8 @@ export type ClientCommand =
   /** R17: the GM saves the campaign's macros / rollable tables. */
   | { type: "table.macros"; macros: Macro[] }
   | { type: "table.tables"; tables: RollTable[] }
+  /** D363: the GM saves the campaign's magic item library. */
+  | { type: "table.items"; items: CampaignItem[] }
   /** R17: draw `count` rows from a rollable table; the host rolls, because players never hold the rows. */
   | { type: "chat.table"; name: string; count: number; mode: "public" | "gm" | "self" }
   | { type: "tracker.set"; tracker: Tracker }
@@ -197,6 +201,7 @@ export type TableEvent =
   | { n: number; type: "clock"; clock: CampaignClock }
   | { n: number; type: "macros"; macros: Macro[] }
   | { n: number; type: "tables"; tables: RollTable[] }
+  | { n: number; type: "items"; items: CampaignItem[] }
   | { n: number; type: "journal"; entry: JournalEntry }
   | { n: number; type: "journal.removed"; id: string }
   | { n: number; type: "journal.show"; id: string; by: string }

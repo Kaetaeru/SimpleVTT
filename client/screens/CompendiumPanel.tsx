@@ -16,6 +16,8 @@ import { COMPENDIUM_DRAG_TYPE, placeToken } from "./PageCanvas";
 import { addItem } from "../character/play";
 import { spellExec } from "../compendium/spells";
 import { scrollItemId, scrollName, scrollRarity } from "../rules/scrolls";
+import { parseCustomItem } from "../character/customItem";
+import type { CampaignItem } from "../campaign/model";
 
 export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => void }) {
   const c = useCampaigns();
@@ -95,6 +97,12 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
             {open === spell.id ? <div className="cl-compendium-detail cl-small"><p className="cl-quiet">{spell.school} · {spell.castingTime} · {spell.range} · {spell.components} · {spell.duration}{spell.ritual ? " · 의식" : ""}</p><p style={{ whiteSpace: "pre-wrap" }}>{spell.description ?? spell.summary ?? ""}</p><p className="cl-quiet">{spell.classes.map((id) => catalog.name(id)).join(", ")}</p></div> : null}
           </div>
         )) : null}
+        {section === "items" && isGm ? <CampaignItems items={snapshot.items ?? []} characters={characters} onSave={c.saveItems} onGive={(itemId, name, entryId) => {
+          const entry = characters.find((item) => item.id === entryId);
+          if (!entry) return;
+          c.putJournal({ ...entry, runtime: addItem(entry.runtime, { itemId, name }), updatedAt: new Date().toISOString() });
+          c.say(`/em ${entry.name}이(가) ${name}을(를) 받았습니다`);
+        }} /> : null}
         {section === "items" ? items.map((item) => (
           <div key={item.id} className={`cl-compendium-row${open === item.id ? " open" : ""}`}>
             <div className="cl-row" style={{ gap: 6 }}>
@@ -107,6 +115,50 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
         {(section === "monsters" ? monsters : section === "spells" ? spells : items).length === 0 ? <p className="cl-quiet cl-small" style={{ padding: 10 }}>찾는 항목이 없습니다.</p> : null}
       </div>
       {snapshot.journal.some((entry) => entry.kind === "npc") ? <div className="cl-compendium-foot cl-small"><span className="cl-quiet">놓은 NPC:</span> {snapshot.journal.filter((entry) => entry.kind === "npc").slice(-6).map((entry) => <button type="button" key={entry.id} className="cl-journal-link" onClick={() => onOpenEntry(entry.id)}>{entry.name}</button>)}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * D363: the campaign's magic item library, the GM's. An item is pasted as item JSON (docs/guides/CUSTOM_ITEM_JSON.md),
+ * checked by the same parser a sheet uses, and saved to the campaign; a character given it holds only its id, so an
+ * edit here reaches every bag that holds it.
+ */
+function CampaignItems({ items, characters, onSave, onGive }: { items: CampaignItem[]; characters: Array<{ id: string; name: string }>; onSave: (items: CampaignItem[]) => void; onGive: (itemId: string, name: string, entryId: string) => void }) {
+  const { catalog } = useClient();
+  const [text, setText] = useState("");
+  const [editing, setEditing] = useState<string | null>(null);
+  const [giveTo, setGiveTo] = useState<Record<string, string>>({});
+  const read = text.trim() ? parseCustomItem(text, catalog) : undefined;
+  const save = () => {
+    if (!read || "error" in read) return;
+    const definition = JSON.parse(text) as Record<string, unknown>;
+    const id = editing ?? `campaign.item.${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    onSave(editing ? items.map((item) => (item.id === editing ? { id, definition } : item)) : [...items, { id, definition }]);
+    setText("");
+    setEditing(null);
+  };
+  return (
+    <div className="cl-compendium-row" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <strong className="cl-small">캠페인 아이템 (DM) <Pill>{items.length}</Pill></strong>
+      {items.map((item) => (
+        <div key={item.id} className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
+          <span className="cl-small" style={{ flex: 1 }}>{String(item.definition.name)}</span>
+          <select className="cl-input" aria-label={`${String(item.definition.name)} 받을 캐릭터`} value={giveTo[item.id] ?? ""} onChange={(event) => setGiveTo({ ...giveTo, [item.id]: event.target.value })}>
+            <option value="">캐릭터…</option>
+            {characters.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+          </select>
+          <button type="button" className="cl-btn small" disabled={!giveTo[item.id]} onClick={() => onGive(item.id, String(item.definition.name), giveTo[item.id])}>주기</button>
+          <button type="button" className="cl-btn small quiet" onClick={() => { setEditing(item.id); setText(JSON.stringify(item.definition, null, 2)); }}>고치기</button>
+          <button type="button" className="cl-btn small quiet" title="가진 캐릭터에게는 이름만 남는다" onClick={() => onSave(items.filter((other) => other.id !== item.id))}>삭제</button>
+        </div>
+      ))}
+      <textarea className="cl-input" aria-label="캠페인 아이템 JSON" rows={6} style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }} placeholder='{ "name": "…", "type": "ring", "bonus": { "ac": 1 } }' value={text} onChange={(event) => setText(event.target.value)} />
+      {read ? ("error" in read ? <p className="cl-small" style={{ color: "var(--bad)" }}>{read.error}</p> : read.warnings.length ? <ul className="cl-small">{read.warnings.map((line) => <li key={line}>{line}</li>)}</ul> : <p className="cl-small cl-quiet">형식 확인됨.</p>) : null}
+      <div className="cl-row" style={{ gap: 4 }}>
+        <button type="button" className="cl-btn small primary" disabled={!read || "error" in read} onClick={save}>{editing ? "고친 것 저장 (가진 캐릭터 모두에게 반영)" : "캠페인에 저장"}</button>
+        {editing ? <button type="button" className="cl-btn small quiet" onClick={() => { setEditing(null); setText(""); }}>취소</button> : null}
+      </div>
     </div>
   );
 }

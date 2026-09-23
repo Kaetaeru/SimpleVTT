@@ -11,7 +11,7 @@ import { ART_LIMIT, ART_MIMES, chunkText, hashText, newArtAsset } from "../campa
 import type { JournalCharacter, JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
-import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, Macro, PlayerRole, RollTable } from "../campaign/model";
+import type { Campaign, CampaignItem, ChatArchive, ChatMessage, JoinedCampaign, Macro, PlayerRole, RollTable } from "../campaign/model";
 import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
 import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
@@ -25,6 +25,7 @@ import type { RuleModuleJson } from "../catalog/types";
 import { DEFAULT_SESSION_PORT, listSessionAddresses, tauriAvailable, TauriTcpTransport } from "../session/tauriTransport";
 import { BroadcastChannelTransport, MemoryHub } from "../session/transport";
 import { useClient } from "./context";
+import { campaignItemsModule } from "../character/customItem";
 
 export interface TableState {
   role: "host" | "player" | null;
@@ -119,6 +120,8 @@ export interface CampaignsState {
   askRest: (kind: "short" | "long") => void;
   /** R17: save the campaign's macros / rollable tables (GM). */
   saveMacros: (macros: Macro[]) => void;
+  /** D363: the GM saves the campaign's magic item library. */
+  saveItems: (items: CampaignItem[]) => void;
   saveTables: (tables: RollTable[]) => void;
   /** R17: draw rows from a rollable table; the host rolls and posts the result. */
   rollTable: (name: string, count?: number, mode?: "public" | "gm" | "self") => void;
@@ -205,7 +208,7 @@ function storedId(key: string) {
 }
 
 export function CampaignsProvider({ children }: { children: ReactNode }) {
-  const { store, ready, catalog, modules: installedModules, setSessionModules } = useClient();
+  const { store, ready, catalog, modules: installedModules, setSessionModules, setTableModules } = useClient();
   const installedRef = useRef(installedModules);
   installedRef.current = installedModules;
   const [seat] = useState(() => seatOf());
@@ -524,6 +527,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const tableRest = useCallback((kind: "short" | "long") => send({ type: "table.rest", kind }), [send]);
   const askRest = useCallback((kind: "short" | "long") => send({ type: "act.rest", kind }), [send]);
   const saveMacros = useCallback((macros: Macro[]) => send({ type: "table.macros", macros }), [send]);
+  const saveItems = useCallback((items: CampaignItem[]) => send({ type: "table.items", items }), [send]);
   const saveTables = useCallback((tables: RollTable[]) => send({ type: "table.tables", tables }), [send]);
   const rollTable = useCallback((name: string, count = 1, mode: "public" | "gm" | "self" = "public") => send({ type: "chat.table", name, count, mode }), [send]);
   const spendEconomy = useCallback((actor: ActorRef, which: "action" | "bonus", options: { grant?: boolean; source?: string; once?: string } = {}) => send({ type: "act.spend", actor, which, ...options }), [send]);
@@ -589,6 +593,13 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     })();
     return () => { cancelled = true; };
   }, [contentKey, setSessionModules]);
+  // D363: the campaign's magic item library joins every seat's catalog while the table is open (host and players).
+  const campaignItems = JSON.stringify(client?.snapshot?.items ?? []);
+  const campaignIdForItems = client?.snapshot?.campaignId ?? "";
+  useEffect(() => {
+    const items = JSON.parse(campaignItems) as CampaignItem[];
+    setTableModules(items.length && campaignIdForItems ? [campaignItemsModule(campaignIdForItems, items)] : []);
+  }, [campaignItems, campaignIdForItems, setTableModules]);
   // D346: the table waits for the dice. `held` counts the rolls on screen; while any is, the screens keep the
   // snapshot they were already showing (`shown`), and the live one is still there for the replay to read.
   const heldDice = useSyncExternalStore(subscribeToDice, diceHolding, () => 0);
@@ -602,8 +613,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: shownSnapshot ?? null, liveSnapshot: live, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick, heldDice]);
-  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, zone, declineReaction, guard, hitChoice, triggerChoice, react, rollDeathSave, rescueRoll, runContract, adjustAction, undoAction, confirmAction }),
-    [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, hitChoice, triggerChoice, adjustAction, undoAction, confirmAction]);
+  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveItems, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, zone, declineReaction, guard, hitChoice, triggerChoice, react, rollDeathSave, rescueRoll, runContract, adjustAction, undoAction, confirmAction }),
+    [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveItems, saveTables, rollTable, summon, dismissSummons, resist, hitChoice, triggerChoice, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

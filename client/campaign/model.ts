@@ -54,6 +54,8 @@ export interface CampaignSettings {
  * R17 (D114): a macro is a saved chat line. `#이름` in the chat box runs it, and it shows as a button in the macro
  * bar. Campaign macros belong to the GM (shared ones reach every player's bar); a journal entry may carry its own.
  */
+/** D363: one magic item of the campaign's library: its id and the item JSON (docs/guides/CUSTOM_ITEM_JSON.md). */
+export interface CampaignItem { id: string; definition: Record<string, unknown> }
 export interface Macro { id: string; name: string; text: string; /** GM macros: shown in every player's macro bar too. */ shared?: boolean }
 
 /** R17 (D114): a rollable table. `/roll 2t[조우]` draws two rows; weights make a row more likely. */
@@ -84,6 +86,8 @@ export interface Campaign {
   macros?: Macro[];
   /** R17: rollable tables; players may roll on them but never see the rows. */
   tables?: RollTable[];
+  /** D363: the magic items the DM made for this campaign — a sheet holds only the id, so an edit reaches every bag. */
+  items?: CampaignItem[];
   /** R18: the in-world clock — the day since the campaign started and the minute of that day. */
   clock?: CampaignClock;
 }

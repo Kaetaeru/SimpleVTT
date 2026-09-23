@@ -146,6 +146,7 @@ export class TableClient {
       case "clock": state.clock = event.clock; break;
       case "macros": state.macros = event.macros; break;
       case "tables": state.tables = event.tables; break;
+      case "items": state.items = event.items; break;
       case "journal": {
         const index = state.journal.findIndex((item) => item.id === event.entry.id);
         state.journal = index >= 0 ? state.journal.map((item, at) => (at === index ? event.entry : item)) : [...state.journal, event.entry];

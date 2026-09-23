@@ -9,7 +9,7 @@
  * docs/guides/CUSTOM_ITEM_JSON.md.
  */
 import type { ContentCatalog } from "../catalog/catalog";
-import type { AbilityKey } from "../catalog/types";
+import type { AbilityKey, RuleModuleJson } from "../catalog/types";
 import type { EffectApplication } from "../rules/effects";
 import { parseContract } from "../rules/contract";
 import { damageTypeKo } from "./origin";
@@ -353,6 +353,20 @@ export function baseChoices(catalog: Pick<ContentCatalog, "items">, options: Bas
 export function officialMagicItem(name: string, definition: Record<string, unknown>, catalog: ContentCatalog): CustomItem | undefined {
   const parsed = parseCustomItem(JSON.stringify({ ...definition, name }), catalog);
   return "error" in parsed ? undefined : parsed.item;
+}
+
+/**
+ * D363: a campaign's magic item library as a module, so every seat's catalog holds the items by id — a bag keeps only
+ * the id, and an edit to the library reaches every copy at the next derivation.
+ */
+export function campaignItemsModule(campaignId: string, items: Array<{ id: string; definition: Record<string, unknown> }>): RuleModuleJson {
+  return {
+    moduleId: `campaign.${campaignId}.items`, moduleVersion: "1",
+    content: items.map((item) => {
+      const { name, description, ...definition } = item.definition;
+      return { id: item.id, category: "magic-item", presentation: { originalName: String(name), defaultLocale: "ko-KR", locales: { "ko-KR": { name: String(name), ...(typeof description === "string" ? { description } : {}) } } }, mechanics: [{ kind: "magic-item-definition", config: definition }] };
+    }),
+  } as unknown as RuleModuleJson;
 }
 
 export const customAttackId = (item: Pick<DerivedItem, "itemId" | "instanceId">) => `attack.${item.itemId}@${item.instanceId}`;

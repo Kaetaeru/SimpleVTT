@@ -300,6 +300,7 @@ export class TableHost {
     if (JSON.stringify(before.tracker ?? emptyTracker()) !== JSON.stringify(this.tracker)) this.emit({ type: "tracker", tracker: this.tracker });
     if (JSON.stringify(before.clock ?? emptyClock()) !== JSON.stringify(this.clock)) this.emit({ type: "clock", clock: this.clock });
     if (JSON.stringify(before.macros ?? []) !== JSON.stringify(campaign.macros ?? [])) this.emit({ type: "macros", macros: campaign.macros ?? [] });
+    if (JSON.stringify(before.items ?? []) !== JSON.stringify(campaign.items ?? [])) this.emit({ type: "items", items: campaign.items ?? [] });
     if (JSON.stringify(before.tables ?? []) !== JSON.stringify(campaign.tables ?? [])) this.emit({ type: "tables", tables: campaign.tables ?? [] });
     // A role change alters what each viewer may see: resend the journal so mirrors converge.
     if (before.players.some((player) => player.role !== campaign.players.find((item) => item.userId === player.userId)?.role)) for (const entry of this.journalEntries.values()) this.emit({ type: "journal", entry });
@@ -326,6 +327,7 @@ export class TableHost {
       // R17: a player sees only shared macros, and a table's name without its rows (the host draws).
       macros: (this.campaign.macros ?? []).filter((macro) => viewer.role === "gm" || macro.shared),
       tables: (this.campaign.tables ?? []).filter((table) => viewer.role === "gm" || table.shared).map((table) => (viewer.role === "gm" ? table : { ...table, rows: [] })),
+      items: this.campaign.items ?? [],
       lastEventN: this.n,
       sessionId: this.sessionId,
       // R83 (D217): what the table is played with, so a player's app can bring the same rules.
@@ -723,6 +725,18 @@ export class TableHost {
         const macros = command.macros.map((macro) => ({ id: String(macro.id), name: String(macro.name).slice(0, 40), text: String(macro.text).slice(0, 2000), ...(macro.shared ? { shared: true as const } : {}) })).filter((macro) => macro.name && macro.text);
         this.setCampaign({ ...this.campaign, macros, updatedAt: this.now() });
         this.emit({ type: "macros", macros });
+        return;
+      }
+      case "table.items": {
+        // D363: the campaign's magic item library — the GM's. Each is item JSON; a sheet reads it through the catalog.
+        if (!isGm) return refuse("캠페인 아이템은 GM이 만듭니다");
+        if (!Array.isArray(command.items) || command.items.length > 300) return refuse("아이템 목록 형식이 아닙니다");
+        const items = command.items
+          .filter((item) => item && typeof item.id === "string" && item.definition && typeof item.definition === "object" && typeof item.definition.name === "string")
+          .map((item) => ({ id: String(item.id).slice(0, 80), definition: item.definition }))
+          .filter((item) => JSON.stringify(item.definition).length <= 30000);
+        this.setCampaign({ ...this.campaign, items, updatedAt: this.now() });
+        this.emit({ type: "items", items });
         return;
       }
       case "table.tables": {
