@@ -79,6 +79,8 @@ export class Ledger {
   /** R62 (D197): damage types this character's own damage ignores resistance to (원소 숙련자). */
   readonly ignoresResistance = new Set<string>();
   readonly immunities = new Set<string>();
+  /** D360: damage types the bearer is vulnerable to (a cursed item's). */
+  readonly vulnerabilities = new Set<string>();
   readonly conditionImmunities = new Set<string>();
   readonly weaponMasteries = new Set<string>();
   /**

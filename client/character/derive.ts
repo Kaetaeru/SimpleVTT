@@ -94,7 +94,7 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   const passive = applyPassiveContracts(derived, catalog, (options.effects ?? []).map((effect) => effect.name));
   // R75 (D210): pasted magic items, as always-on effects while attuned (and worn, for armour).
   const magic = passive.inventory.filter(customItemActive);
-  const equipped = magic.length ? applyActiveEffects(passive, magic.map((item) => ({ key: `item:${item.instanceId}`, name: item.name, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" })), catalog, { list: false, inline: Object.fromEntries(magic.map((item) => [`item:${item.instanceId}`, customItemApplication(item, (options.effects ?? []).map((effect) => effect.name))])) }) : passive;
+  const equipped = magic.length ? applyActiveEffects(passive, [...magic.map((item) => ({ key: `item:${item.instanceId}`, name: item.name, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" })), ...magic.filter((item) => item.magic?.curse?.grants && !item.curseLifted).map((item) => ({ key: `item-curse:${item.instanceId}`, name: `${item.name} (저주)`, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" }))], catalog, { list: false, inline: Object.fromEntries([...magic.map((item) => [`item:${item.instanceId}`, customItemApplication(item, (options.effects ?? []).map((effect) => effect.name))] as const), ...magic.filter((item) => item.magic?.curse?.grants && !item.curseLifted).map((item) => [`item-curse:${item.instanceId}`, customItemApplication({ ...item, magic: item.magic!.curse!.grants })] as const)]) }) : passive;
   const granted = (options.effects ?? []).filter((effect) => effect.grants);
   return options.effects?.length ? applyActiveEffects(equipped, options.effects, catalog, granted.length ? { inline: Object.fromEntries(granted.map((effect) => [effect.key, customItemApplication({ instanceId: effect.key, itemId: effect.key, name: effect.name, kind: "custom", quantity: 1, source: effect.name, magic: effect.grants })])) } : {}) : equipped;
 }
@@ -115,7 +115,7 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
     const itemId = definition ? definition.base : extra.itemId;
     const view = itemId ? ledger.catalog.itemById(itemId) : undefined;
     const quantity = patch.quantities[extra.instanceId] ?? extra.quantity;
-    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true } : {}), ...(official ? { officialId: extra.itemId } : {}) };
+    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true, ...(extra.curseLifted ? { curseLifted: true } : {}) } : {}), ...(official ? { officialId: extra.itemId } : {}) };
     ledger.inventory.push(item);
   }
 }
@@ -131,6 +131,8 @@ function addItemGrants(ledger: Ledger) {
     if (!customItemActive(item)) continue;
     const magic = item.magic!;
     addGrants(ledger, item.name, magic);
+    // D360: a curse's own grants hold while the item works, until the curse is lifted.
+    if (magic.curse?.grants && !item.curseLifted) addGrants(ledger, `${item.name} (저주)`, magic.curse.grants);
     // D358: an item's contract (official or pasted, the same JSON) belongs to this copy: it is registered under the
     // copy's key, and `resource:self` / `resource:self.<pool>` name this copy's pools. While the item works the
     // contract is its bearer's feature, so its standing properties, buttons and reactions run as features' do.
@@ -153,6 +155,7 @@ function addGrants(ledger: Ledger, name: string, magic: NonNullable<DerivedItem[
       if ((ledger.abilityFloors[key]?.value ?? 0) < value) ledger.abilityFloors[key] = { value, source: name };
     }
     for (const type of magic.immunities ?? []) ledger.immunities.add(type);
+    for (const type of magic.vulnerabilities ?? []) ledger.vulnerabilities.add(type);
     for (const condition of magic.conditionImmunities ?? []) ledger.conditionImmunities.add(condition);
     for (const [mode, value] of Object.entries(magic.speeds ?? {}) as Array<["fly" | "swim" | "climb", number | "walk"]>) {
       const feet = value === "walk" ? -1 : value;
@@ -444,7 +447,7 @@ function finalize(ledger: Ledger): DerivedCharacter {
     defenses: {
       resistances: [...ledger.resistances].map(damageTypeKo),
       immunities: [...ledger.immunities].map(damageTypeKo),
-      vulnerabilities: [],
+      vulnerabilities: [...ledger.vulnerabilities].map(damageTypeKo),
       conditionImmunities: [...ledger.conditionImmunities].map((condition) => CONDITION_KO[condition] ?? condition),
     },
     inventory: ledger.inventory,

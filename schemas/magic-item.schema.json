@@ -452,6 +452,46 @@
     "worksWhen": {
       "const": "held",
       "description": "Works only in a hand slot."
+    },
+    "attunementRequires": {
+      "type": "object",
+      "properties": {
+        "spellcaster": {
+          "type": "boolean"
+        },
+        "classes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "curse": {
+      "type": "object",
+      "properties": {
+        "cannotUnattune": {
+          "type": "boolean"
+        },
+        "grants": {
+          "type": "object",
+          "description": "The same fields as this schema: what the curse lays on the bearer."
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "vulnerabilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/damageType"
+      }
     }
   },
   "$defs": {

@@ -62,6 +62,15 @@ export interface CustomItem {
   darkvision?: number;
   /** D359: it works only while held (in a hand slot), not merely carried. */
   worksWhen?: "held";
+  /** D360: who may attune to it — a spellcaster, a class (id or its last segment); `note` for what the app cannot check. */
+  attunementRequires?: { spellcaster?: boolean; classes?: string[]; note?: string };
+  /**
+   * D360: a curse. While the item works its `grants` (the same fields an item carries — a penalty, a vulnerability)
+   * are the bearer's; `cannotUnattune` keeps the bearer attuned. Lifting it (remove curse, the DM's call) ends both.
+   */
+  curse?: { cannotUnattune?: boolean; grants?: CustomItem; note?: string };
+  /** D360: damage types (English ids) it makes the bearer vulnerable to. */
+  vulnerabilities?: string[];
   /**
    * D358: pools of its own besides `charges` — a use a dawn, a use a short rest, dice back at dawn, or none back.
    * Its spells (`pool`) and its contract (`resource:self.<id>`) spend them.
@@ -189,7 +198,7 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
   }
   const damageType = text(raw.damageType);
   if (damageType !== undefined) { if (DAMAGE_TYPES.includes(damageType)) item.damageType = damageType; else warnings.push(`damageType: "${damageType}"는 ${DAMAGE_TYPES.join("/")} 중 하나가 아닙니다`); }
-  for (const [field, known] of [["immunities", DAMAGE_TYPES], ["conditionImmunities", CONDITIONS]] as const) {
+  for (const [field, known] of [["immunities", DAMAGE_TYPES], ["vulnerabilities", DAMAGE_TYPES], ["conditionImmunities", CONDITIONS]] as const) {
     if (!Array.isArray(raw[field])) continue;
     const values = (raw[field] as unknown[]).map(String);
     for (const value of values) if (!known.includes(value)) warnings.push(`${field}: "${value}"는 ${known.join("/")} 중 하나가 아닙니다`);
@@ -205,6 +214,20 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     if (Object.keys(speeds).length) item.speeds = speeds;
   }
   if (typeof raw.darkvision === "number" && raw.darkvision > 0) item.darkvision = raw.darkvision;
+  if (isObject(raw.attunementRequires)) {
+    const req = raw.attunementRequires;
+    const classes = Array.isArray(req.classes) ? req.classes.map(String) : undefined;
+    for (const cls of classes ?? []) if (!catalog.classById(cls) && !catalog.classBySlug(cls)) warnings.push(`attunementRequires.classes: "${cls}"는 목록에 없는 직업입니다`);
+    item.attunementRequires = { ...(req.spellcaster === true ? { spellcaster: true } : {}), ...(classes?.length ? { classes } : {}), ...(text(req.note) ? { note: text(req.note) } : {}) };
+    if (!item.attunement) warnings.push("attunementRequires: attunement가 true가 아니면 쓰이지 않습니다");
+  }
+  if (isObject(raw.curse)) {
+    const curse = raw.curse;
+    const grants = isObject(curse.grants) ? parseCustomItem(JSON.stringify({ ...curse.grants, name: `${name} (저주)` }), catalog) : undefined;
+    if (grants && "error" in grants) warnings.push(`curse.grants: ${grants.error}`);
+    else if (grants) warnings.push(...grants.warnings.map((line) => `curse.grants: ${line}`));
+    item.curse = { ...(curse.cannotUnattune === true ? { cannotUnattune: true } : {}), ...(grants && !("error" in grants) ? { grants: grants.item } : {}), ...(text(curse.note) ? { note: text(curse.note) } : {}) };
+  }
   if (raw.worksWhen !== undefined) { if (raw.worksWhen === "held") item.worksWhen = "held"; else warnings.push('worksWhen: "held"만 있습니다'); }
   if (isObject(raw.baseOptions)) {
     const options = raw.baseOptions;
@@ -259,6 +282,19 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
   const base = item.base ? catalog.itemById(item.base) : undefined;
   if ((item.bonus?.attack || item.bonus?.damage || item.bonus?.damageDice || item.bonus?.extraDamage) && !base?.weapon && base?.kind !== "ammunition" && item.baseOptions?.kind !== "weapon" && item.baseOptions?.kind !== "ammunition") warnings.push("attack/damage 보너스는 base가 무기일 때만 그 무기의 공격에 붙습니다 — 지금은 모든 공격에 붙습니다");
   return { item, warnings };
+}
+
+/**
+ * D360: why this character may not attune to the item, or nothing. A class is named by its catalog id or the last
+ * segment of it, as the content writes it.
+ */
+export function attunementProblem(magic: Pick<CustomItem, "attunementRequires"> | undefined, derived: { spellSlots: Record<number, number>; pactMagic?: unknown; classes: Array<{ classId: string; name?: string }> }): string | undefined {
+  const req = magic?.attunementRequires;
+  if (!req) return undefined;
+  // A spellcaster has the Spellcasting or Pact Magic of a class — slots of their own, not a feat's single spell.
+  if (req.spellcaster && !Object.values(derived.spellSlots).some((count) => count > 0) && !derived.pactMagic) return "주문 시전자만 조율할 수 있습니다";
+  if (req.classes?.length && !derived.classes.some((state) => req.classes!.some((cls) => state.classId === cls || state.classId.endsWith(`.${cls}`)))) return `이 직업만 조율할 수 있습니다: ${req.classes.join(", ")}`;
+  return undefined;
 }
 
 /** D354: the catalog items a `baseOptions` allows, in catalog order. */

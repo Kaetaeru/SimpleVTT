@@ -238,14 +238,24 @@ export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name
 }
 
 /** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */
-export function toggleAttune(runtime: CharacterRuntime, instanceId: string, limit = 3, /** D350: an official item's definition lives in the catalog, not on the runtime — the sheet passes what it derived. */ definition?: Pick<CustomItem, "attunement" | "name">): CharacterRuntime {
+export function toggleAttune(runtime: CharacterRuntime, instanceId: string, limit = 3, /** D350: an official item's definition lives in the catalog, not on the runtime — the sheet passes what it derived. */ definition?: Pick<CustomItem, "attunement" | "name" | "curse">): CharacterRuntime {
   const patch = patchOf(runtime);
   const target = patch.extra.find((item) => item.instanceId === instanceId);
   const item = target?.custom ?? definition;
   if (!target || !item?.attunement) return runtime;
+  // D360: a curse that holds its bearer — the attunement stays until the curse is lifted.
+  if (target.attuned && item.curse?.cannotUnattune && !target.curseLifted) return stamp(runtime, `조율을 풀 수 없음: ${item.name} (저주 — 풀려면 DM 판정)`);
   if (!target.attuned && patch.extra.filter((entry) => entry.attuned && !patch.removed.includes(entry.instanceId)).length >= limit) return stamp(runtime, `조율할 수 없음: ${item.name} (이미 ${limit}개 조율 중)`);
   const extra = patch.extra.map((entry) => (entry.instanceId === instanceId ? { ...entry, attuned: !entry.attuned } : entry));
   return stamp({ ...runtime, inventory: { ...patch, extra } }, `${target.attuned ? "조율 해제" : "조율"}: ${item.name}`);
+}
+
+/** D360: the curse on an item is lifted (remove curse, the DM's call) — its penalty ends and it may be let go. */
+export function liftCurse(runtime: CharacterRuntime, instanceId: string): CharacterRuntime {
+  const patch = patchOf(runtime);
+  const target = patch.extra.find((item) => item.instanceId === instanceId);
+  if (!target || target.curseLifted) return runtime;
+  return stamp({ ...runtime, inventory: { ...patch, extra: patch.extra.map((entry) => (entry.instanceId === instanceId ? { ...entry, curseLifted: true } : entry)) } }, `저주 해제: ${target.name}`);
 }
 
 export function removeItem(runtime: CharacterRuntime, derived: DerivedCharacter, instanceId: string): CharacterRuntime {

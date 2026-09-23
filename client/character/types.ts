@@ -232,13 +232,13 @@ export interface DerivedResource {
   itemInstanceId?: string;
 }
 
-export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean; /** D350: the catalog magic item this is, when it is an official one rather than a pasted one. */ officialId?: string }
+export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean; /** D350: the catalog magic item this is, when it is an official one rather than a pasted one. */ officialId?: string; /** D360: its curse was lifted. */ curseLifted?: boolean }
 
 /** Runtime-side changes to the bag: items removed, quantities changed, items added during play. */
 export interface InventoryPatch {
   removed: string[];
   quantities: Record<string, number>;
-  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number; /** R75 (D210) */ custom?: CustomItem; attuned?: boolean; /** D354: the weapon or armour an official item was given as. */ base?: string }>;
+  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number; /** R75 (D210) */ custom?: CustomItem; attuned?: boolean; /** D354: the weapon or armour an official item was given as. */ base?: string; /** D360: its curse was lifted. */ curseLifted?: boolean }>;
 }
 
 /** R33 (D168): feat numbers that only matter once a swing is being rolled. */

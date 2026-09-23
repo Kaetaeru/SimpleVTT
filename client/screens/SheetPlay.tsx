@@ -12,7 +12,7 @@ import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
   addItem, adjustGold, advanceRound, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
-  restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleAttune, toggleCondition, toggleEquip,
+  liftCurse, restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleAttune, toggleCondition, toggleEquip,
   usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
@@ -23,7 +23,7 @@ import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared,
 import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "../ui/components";
 import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
-import { baseChoices, CUSTOM_ITEM_EXAMPLE, officialMagicItem, parseCustomItem, RARITY_KO } from "../character/customItem";
+import { attunementProblem, baseChoices, CUSTOM_ITEM_EXAMPLE, officialMagicItem, parseCustomItem, RARITY_KO } from "../character/customItem";
 import { pickSlots, restFeatures, spentSlots, triggerPolicyKey, useRestFeature } from "../character/rest";
 
 export interface SheetPlayProps {
@@ -92,7 +92,14 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
     setQuantity: (instanceId, quantity) => commit(setItemQuantity(runtime, derived, instanceId, quantity)),
     removeItem: (instanceId) => commit(removeItem(runtime, derived, instanceId)),
     openAddItem: () => setAdding({ query: "", custom: "", quantity: "1", json: "" }),
-    toggleAttune: (instanceId) => commit(toggleAttune(runtime, instanceId, 3 + (derived.attunementBonus ?? 0), derived.inventory.find((item) => item.instanceId === instanceId)?.magic)),
+    toggleAttune: (instanceId) => {
+      const magic = derived.inventory.find((item) => item.instanceId === instanceId)?.magic;
+      // D360: who may attune is the item's to say (a spellcaster, a class).
+      const attuned = derived.inventory.find((item) => item.instanceId === instanceId)?.attuned;
+      if (!attuned && attunementProblem(magic, derived)) return;
+      commit(toggleAttune(runtime, instanceId, 3 + (derived.attunementBonus ?? 0), magic));
+    },
+    liftCurse: (instanceId) => commit(liftCurse(runtime, instanceId)),
     roll: (label, formula, note, kind) => { void rollAndLog({ label, formula, note, kind }); },
     useFeature: (feature) => { void activateFeature(feature); },
     endEffect: (key) => commit(endEffect(runtime, key)),

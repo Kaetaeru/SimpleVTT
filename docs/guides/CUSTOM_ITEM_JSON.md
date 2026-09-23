@@ -34,6 +34,9 @@
 | `conditionImmunities` | 상태 배열 | `poisoned`, `charmed`, `frightened` … 상태 면역 (D352) |
 | `speeds` | 객체 | `{ "fly": 60 }`, `{ "swim": "walk" }` — 피트 수 또는 보행 속도와 같음 (D352) |
 | `darkvision` | 숫자(ft) | 암시야 (D352) |
+| `attunementRequires` | 객체 | 누가 조율할 수 있나: `{ "spellcaster": true }`(직업의 주문 시전·계약 마법이 있는 캐릭터), `{ "classes": ["cleric", "paladin"] }`(직업 id나 그 끝 부분), `note`(앱이 확인 못 하는 조건). 안 되면 조율 버튼이 이유를 보여 준다 (D360) |
+| `curse` | 객체 | 저주: `cannotUnattune`(조율을 풀 수 없음), `grants`(아이템과 같은 필드 — 불이익·취약), `note`. 작동하는 동안 걸리고, 가방 줄의 "저주 풀기"(DM 판정)로 풀면 끝난다 (D360) |
+| `vulnerabilities` | 피해 타입 배열 | 피해 취약 — 표가 그 피해를 두 배로 받는다 (D360) |
 | `worksWhen` | `"held"` | 손에 쥐고 있을 때(주 손·보조 손 칸)만 작동 — 지팡이·막대처럼. 조율이 필요하면 조율도 해야 한다 (D359) |
 | `uses` | 배열 | `charges` 말고 따로 세는 풀: `[{ "id": "bolt", "label": "번개", "max": 2, "recharge": "short-rest" }]`. `recharge`는 `dawn`·`long-rest`·`short-rest`·`never` 또는 새벽에 굴리는 주사위("1d6+1"). 주문은 `"pool": "bolt"`로, 계약은 `resource:self.bolt`로 쓴다. 사본마다 따로 센다 (D358) |
 | `contract` | 객체 | 모듈 항목과 같은 `common-play` 계약(MODULE_GRAMMAR.md §2~§6): 상시 속성, 라벨 붙은 사용(버튼), 반응. `id`는 앱이 붙인다. `resource:self`는 이 사본의 `charges`, `resource:self.<id>`는 `uses` 풀 (D358) |
