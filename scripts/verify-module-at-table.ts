@@ -315,7 +315,9 @@ async function main() {
       const carried = derivedOf({ source: emptySource({ name: "-" }), runtime: next } as never, catalog).inventory.find((line) => line.officialId === item.id) ?? derived.inventory.find(() => false);
       const attuned = carried && definition?.attunement ? toggleAttune(next, carried.instanceId, 3, definition) : next;
       // Armour and shields work only while worn.
-      return carried && (carried.kind === "armor" || carried.kind === "shield") ? { ...attuned, equipped: { ...attuned.equipped, [carried.kind]: carried.instanceId } } : attuned;
+      if (carried && (carried.kind === "armor" || carried.kind === "shield")) return { ...attuned, equipped: { ...attuned.equipped, [carried.kind]: carried.instanceId } };
+      // D362: an item that works only in hand is held.
+      return carried && definition?.worksWhen === "held" ? { ...attuned, equipped: { ...attuned.equipped, mainHand: carried.instanceId } } : attuned;
     });
     // D358: an item's contract runs under its copy's key (`item.<copy>`); the hero carries only this one.
     await pressFeatures(t, item.name, (id) => id.startsWith("item."));

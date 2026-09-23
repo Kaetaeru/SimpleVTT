@@ -115,3 +115,15 @@ test("D357: +1 weapons are one entry per weapon — 장검 +1 is found by its na
   const row = sheet.attacks.find((attack) => attack.name === "장검 +1")!;
   assert.equal(row.attackBonus, plain.attackBonus + 1);
 });
+
+test("D362: SRD items moved from DM lines to the new grammar — versus damage, who may attune, held staffs", () => {
+  const { cat, derive, carry, start } = hero();
+  const sheet = derive(carry(start, "sun-blade"));
+  const blade = sheet.attacks.find((attack) => attack.name.includes("태양검"))!;
+  assert.ok(blade.extraDamage?.some((part) => part.versus?.includes("undead")), JSON.stringify(blade.extraDamage));
+  const pearl = officialMagicItem("x", cat.itemById(ID("pearl-of-power"))!.magic!, cat)!;
+  assert.equal(pearl.attunementRequires?.spellcaster, true);
+  const staff = officialMagicItem("x", cat.itemById(ID("staff-of-power"))!.magic!, cat)!;
+  assert.equal(staff.worksWhen, "held");
+  assert.equal(derive(carry(start, "staff-of-power")).ac.value, derive(start).ac.value, "carried, not held: no +2 AC");
+});

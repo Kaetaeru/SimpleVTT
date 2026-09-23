@@ -2366,12 +2366,16 @@
   },
   "dnd.srd521.magic-item.hat-of-many-spells": {
    "definition": {
-    "type": "wondrous"
+    "type": "wondrous",
+    "attunementRequires": {
+     "classes": [
+      "wizard"
+     ]
+    }
    },
    "dm": [
     "마법사 주문 시전 초점",
-    "모르는 마법사 주문 시전: 슬롯 소비 후 지능(비전) DC 10+레벨 — 성공 시 휴식까지 재사용 불가, 실패 시 d100 표",
-    "조율은 마법사만"
+    "모르는 마법사 주문 시전: 슬롯 소비 후 지능(비전) DC 10+레벨 — 성공 시 휴식까지 재사용 불가, 실패 시 d100 표"
    ]
   },
   "dnd.srd521.magic-item.headband-of-intellect": {
@@ -2455,13 +2459,28 @@
     },
     "bonus": {
      "attack": 3,
-     "damage": 3
+     "damage": 3,
+     "extraDamage": [
+      {
+       "dice": "2d10",
+       "type": "radiant",
+       "when": {
+        "targetTypes": [
+         "fiend",
+         "undead"
+        ]
+       }
+      }
+     ]
+    },
+    "attunementRequires": {
+     "classes": [
+      "paladin"
+     ]
     }
    },
    "dm": [
-    "악마·언데드 명중 시 2d10 광휘 추가 — 크리처 종류는 표에서",
-    "뽑아 든 동안 10피트(성기사 17레벨이면 30피트) 발산: 당신과 아군은 주문·마법 효과 내성에 유리 — 범위는 좌표가 없어 표에서",
-    "조율은 성기사만"
+    "뽑아 든 동안 10피트(성기사 17레벨이면 30피트) 발산: 당신과 아군은 주문·마법 효과 내성에 유리 — 범위는 좌표가 없어 표에서"
    ]
   },
   "dnd.srd521.magic-item.horn-of-blasting": {
@@ -2930,10 +2949,23 @@
   "dnd.srd521.magic-item.mace-of-disruption": {
    "definition": {
     "type": "weapon",
-    "base": "dnd.srd521.item.weapon.mace"
+    "base": "dnd.srd521.item.weapon.mace",
+    "bonus": {
+     "extraDamage": [
+      {
+       "dice": "2d6",
+       "type": "radiant",
+       "when": {
+        "targetTypes": [
+         "fiend",
+         "undead"
+        ]
+       }
+      }
+     ]
+    }
    },
    "dm": [
-    "악마·언데드에게 맞히면 광휘 2d6 추가 — 크리처 유형은 앱이 판정하지 않는다",
     "그 뒤 HP 25 이하면 DC 15 지혜 내성 실패 시 파괴, 성공 시 다음 턴 끝까지 공포",
     "들고 있으면 밝은 빛 20피트, 어둑한 빛 20피트 더"
    ]
@@ -3262,12 +3294,18 @@
       "spellId": "dnd.srd521.spell.wind-walk",
       "charges": 1
      }
-    ]
+    ],
+    "attunementRequires": {
+     "classes": [
+      "cleric",
+      "druid",
+      "paladin"
+     ]
+    }
    },
    "dm": [
     "구슬 수(1d4+2)와 종류는 DM이 정하거나 굴린다 — 가진 구슬의 주문만 쓴다",
-    "구슬마다 추가 행동으로 시전, 그 구슬은 다음 새벽까지 못 쓴다",
-    "성직자·드루이드·성기사만 조율"
+    "구슬마다 추가 행동으로 시전, 그 구슬은 다음 새벽까지 못 쓴다"
    ]
   },
   "dnd.srd521.magic-item.nine-lives-stealer": {
@@ -3377,11 +3415,13 @@
     "charges": {
      "max": 1,
      "note": "새벽마다 다시 쓸 수 있다"
+    },
+    "attunementRequires": {
+     "spellcaster": true
     }
    },
    "dm": [
-    "마법 행동으로 3레벨 이하 쓴 슬롯 하나를 되찾는다 — 충전을 쓰고 슬롯은 시트에서 직접 돌린다",
-    "주문 시전자만 조율"
+    "마법 행동으로 3레벨 이하 쓴 슬롯 하나를 되찾는다 — 충전을 쓰고 슬롯은 시트에서 직접 돌린다"
    ]
   },
   "dnd.srd521.magic-item.periapt-of-health": {
@@ -5414,11 +5454,14 @@
   "dnd.srd521.magic-item.shield-of-missile-attraction": {
    "definition": {
     "type": "shield",
-    "base": "dnd.srd521.item.shield"
+    "base": "dnd.srd521.item.shield",
+    "curse": {
+     "cannotUnattune": true,
+     "note": "10피트 안의 크리처를 노린 원거리 무기 공격이 대신 나를 노린다 — 저주 해제로만 풀린다"
+    }
    },
    "dm": [
-    "원거리 무기 공격 피해에 저항 — 공격 종류는 앱이 모름",
-    "저주: 10피트 내 크리처를 노린 원거리 무기 공격이 나를 대상으로 함, 저주 해제로만 풀림"
+    "원거리 무기 공격 피해에 저항 — 공격 종류는 앱이 모름"
    ]
   },
   "dnd.srd521.magic-item.shield-of-the-cavalier": {
@@ -5851,7 +5894,8 @@
       "spellId": "dnd.srd521.spell.wall-of-force",
       "charges": 5
      }
-    ]
+    ],
+    "worksWhen": "held"
    },
    "dm": [
     "보복 공격: 지팡이를 부숴 30피트 폭발 — 충전×16 역장(자신, 50% 차원 이동), 다른 크리처 DC 17 민첩 충전×4"
@@ -6195,13 +6239,23 @@
     "base": "dnd.srd521.item.weapon.longsword",
     "bonus": {
      "attack": 2,
-     "damage": 2
+     "damage": 2,
+     "extraDamage": [
+      {
+       "dice": "1d8",
+       "type": "radiant",
+       "when": {
+        "targetTypes": [
+         "undead"
+        ]
+       }
+      }
+     ]
     },
     "damageType": "radiant"
    },
    "dm": [
     "기교 속성 — 근력 대신 민첩을 쓸 수 있다",
-    "언데드 명중 시 1d8 광휘 추가",
     "칼날 생성·소멸은 추가 행동, 햇빛 15피트 반경 조절"
    ]
   },
@@ -6278,6 +6332,12 @@
      "max": 7,
      "recharge": "0",
      "note": "마지막 충전을 쓰면 부적 파괴"
+    },
+    "attunementRequires": {
+     "classes": [
+      "cleric",
+      "paladin"
+     ]
     }
    },
    "contract": {
@@ -6313,8 +6373,7 @@
    },
    "dm": [
     "닿은 핀드·언데드는 8d6 광휘 피해 — 닿는 순간과 들고 있는 턴 끝마다, 표에서 적용",
-    "신성한 문양으로 쓸 수 있음",
-    "성직자·성기사만 조율 가능 — 자격은 표에서"
+    "신성한 문양으로 쓸 수 있음"
    ]
   },
   "dnd.srd521.magic-item.talisman-of-the-sphere": {
