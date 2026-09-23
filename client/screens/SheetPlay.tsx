@@ -446,6 +446,8 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
                 <>
                   <Notice tone={parsed.warnings.length ? "warn" : "good"}>{parsed.item.name}{parsed.item.base ? ` · ${catalog.itemById(parsed.item.base)?.name}` : ""}{parsed.item.attunement ? " · 조율 필요" : ""}{parsed.warnings.map((warning) => <div key={warning} className="cl-small">⚠ {warning}</div>)}</Notice>
                   <button type="button" className="cl-btn small primary" onClick={() => { commit(addItem(runtime, { name: parsed.item.name, custom: parsed.item, quantity: Number(adding.quantity) || 1 })); setAdding(null); }}>이 캐릭터에게 지급</button>
+                  {/* D365: the same JSON as a boon — a feature of the character (축복, 계약), not a thing in the bag. */}
+                  <button type="button" className="cl-btn small" style={{ marginLeft: 4 }} onClick={() => { commit(addItem(runtime, { name: parsed.item.name, custom: parsed.item, boon: true })); setAdding(null); }}>은혜(특성)로 주기</button>
                 </>
               );
             })()}

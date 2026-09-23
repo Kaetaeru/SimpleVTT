@@ -69,7 +69,7 @@ export interface ChoiceRequest {
 }
 
 /** D345: `spell` is a button that belongs to a spell in play, not to the character (타샤의 가마솥: 물약 꺼내기). */
-export type FeatureSource = "class" | "subclass" | "species" | "background" | "feat" | "invocation" | "metamagic" | "spell" | "item";
+export type FeatureSource = "class" | "subclass" | "species" | "background" | "feat" | "invocation" | "metamagic" | "spell" | "item" | "boon";
 
 export interface DerivedFeature {
   id: string;
@@ -86,6 +86,8 @@ export interface DerivedFeature {
   execution?: "derived" | "pre-roll" | "selection" | "common-play" | "descriptive";
   /** H2 (D239): what an option was taken for — each pick of a repeatable one adds a target (고통스러운 폭발's cantrips). */
   targets?: string[];
+  /** D365: the bag copy a boon (or an item's contract) comes from, so the sheet can take it away. */
+  itemInstanceId?: string;
 }
 
 /** One addend of a derived number, so the sheet can show where it came from ("민첩 +2", "숙련 보너스 +3"). */
@@ -232,13 +234,13 @@ export interface DerivedResource {
   itemInstanceId?: string;
 }
 
-export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean; /** D350: the catalog magic item this is, when it is an official one rather than a pasted one. */ officialId?: string; /** D360: its curse was lifted. */ curseLifted?: boolean; /** D361: the spell it holds (a spell scroll). */ chosenSpell?: string; /** D364: not identified yet — shown as an unknown thing, doing nothing. */ unidentified?: boolean }
+export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean; /** R75 (D210): a pasted magic item's own definition, and whether it is attuned. */ magic?: CustomItem; attuned?: boolean; /** D350: the catalog magic item this is, when it is an official one rather than a pasted one. */ officialId?: string; /** D360: its curse was lifted. */ curseLifted?: boolean; /** D361: the spell it holds (a spell scroll). */ chosenSpell?: string; /** D364: not identified yet — shown as an unknown thing, doing nothing. */ unidentified?: boolean; /** D365: a boon (a feature given as item JSON): not in the bag, always working. */ boon?: boolean }
 
 /** Runtime-side changes to the bag: items removed, quantities changed, items added during play. */
 export interface InventoryPatch {
   removed: string[];
   quantities: Record<string, number>;
-  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number; /** R75 (D210) */ custom?: CustomItem; attuned?: boolean; /** D354: the weapon or armour an official item was given as. */ base?: string; /** D360: its curse was lifted. */ curseLifted?: boolean; /** D361: the spell it holds (a spell scroll). */ spell?: string; /** D364: given unidentified — its name and properties hidden until identified. */ unidentified?: boolean }>;
+  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number; /** R75 (D210) */ custom?: CustomItem; attuned?: boolean; /** D354: the weapon or armour an official item was given as. */ base?: string; /** D360: its curse was lifted. */ curseLifted?: boolean; /** D361: the spell it holds (a spell scroll). */ spell?: string; /** D364: given unidentified — its name and properties hidden until identified. */ unidentified?: boolean; /** D365: a boon — a feature, not a thing in the bag. */ boon?: boolean }>;
 }
 
 /** R33 (D168): feat numbers that only matter once a swing is being rolled. */

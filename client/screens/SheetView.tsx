@@ -20,7 +20,7 @@ import { Explain } from "../ui/Explain";
 const PROPERTY_KO: Record<string, string> = { light: "경량", heavy: "중량", finesse: "교묘", thrown: "투척", versatile: "다용도", "two-handed": "양손", reach: "간격", ammunition: "탄약", loading: "장전", special: "특수", nick: "닉", "숙련 없음": "숙련 없음" };
 const propertyKo = (property: string) => PROPERTY_KO[property] ?? property;
 
-const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "class", "subclass", "feat", "invocation", "metamagic", "item"];
+const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "class", "subclass", "feat", "invocation", "metamagic", "item", "boon"];
 /**
  * R33 (D168): what the engine actually does with a feat. R32 kept this as a hand-written table keyed on the feat's
  * name; it is the derivation's own answer now, written from the feat catalog's config, so the sheet cannot claim a
@@ -28,7 +28,7 @@ const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "clas
  */
 const featRule = (feature: DerivedFeature): string | null => (feature.rules?.length ? feature.rules.join(" · ") : null);
 
-const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직", spell: "주문", item: "마법 아이템" };
+const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직", spell: "주문", item: "마법 아이템", boon: "은혜·보상" };
 
 export interface SheetActions {
   useSlot: (level: number) => void;
@@ -195,9 +195,9 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
                 </span>
               ) : null}
             </h2>
-            {derived.inventory.length === 0 ? <p className="cl-quiet">장비 없음</p> : (
+            {derived.inventory.filter((item) => !item.boon).length === 0 ? <p className="cl-quiet">장비 없음</p> : (
               <div>
-                {derived.inventory.map((item) => {
+                {derived.inventory.filter((item) => !item.boon).map((item) => {
                   const equippable = item.kind === "armor" || item.kind === "shield" || item.kind === "weapon";
                   return (
                     <div className="cl-item-row" key={item.instanceId}>
@@ -294,6 +294,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions,
                       <div className={`cl-feature${active ? " active" : ""}`} key={key}>
                         <div className="cl-head" onClick={() => setOpenFeatures((state) => ({ ...state, [key]: !open }))} style={{ cursor: compact ? "default" : "pointer" }}>
                           <span className="cl-name">{feature.name}</span>
+                          {feature.source === "boon" && live && feature.itemInstanceId ? <button type="button" className="cl-btn small quiet" title="은혜 거두기" onClick={(event) => { event.stopPropagation(); actions!.removeItem(feature.itemInstanceId!); }}>✕</button> : null}
                           {feature.nameEn && feature.nameEn !== feature.name ? <span className="cl-quiet cl-small">{feature.nameEn}</span> : null}
                           {feature.level ? <Pill>{feature.level}레벨</Pill> : null}
                           {active ? <Pill tone="accent">진행 중</Pill> : null}

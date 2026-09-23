@@ -134,7 +134,7 @@ export function sheetHtml({ derived, runtime, catalog, notes }: SheetInput): str
 
   const castingRows = derived.spellcasting.map((casting) => `<div class="row">${field("주문 시전", `${casting.className} · ${ABILITIES.find((item) => item.key === casting.ability)?.ko ?? casting.ability}`, "wide")}${field("주문 내성 DC", casting.saveDc)}${field("주문 명중", signed(casting.attackBonus))}</div>`).join("");
   const resources = derived.resources.filter((resource) => resource.max > 0 && !resource.atWill);
-  const inventory = derived.inventory.filter((item) => item.quantity > 0);
+  const inventory = derived.inventory.filter((item) => item.quantity > 0 && !item.boon);
   // D354: what a magic item leaves to the table (충전 뒤의 파괴 굴림, DM 판정 줄) goes on paper with its name.
   const magicNotes = inventory.flatMap((item) => [...(item.magic?.charges?.note ? [`${item.name}: ${item.magic.charges.note}`] : []), ...(item.magic?.notes ?? []).map((line) => `${item.name}: ${line}`)]);
 

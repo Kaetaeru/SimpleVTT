@@ -380,6 +380,8 @@ export function customItemActive(item: DerivedItem): boolean {
   if (!item.magic) return false;
   // D364: an item nobody has identified yet does nothing that shows.
   if (item.unidentified) return false;
+  // D365: a boon is the character's own — no attunement, nothing to wear.
+  if (item.boon) return true;
   if (item.magic.attunement && !item.attuned) return false;
   if ((item.kind === "armor" || item.kind === "shield") && !item.equipped) return false;
   // D359: an item that works only in hand (지팡이, 막대) — held is equipped in a hand slot.

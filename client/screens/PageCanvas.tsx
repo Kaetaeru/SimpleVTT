@@ -595,7 +595,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     ? entry.statBlock.traits.filter((trait) => entry.runtime.traitUses?.[trait.name] !== undefined).map((trait) => { const most = entry.runtime.traitUses?.[trait.name]; const used = entry.runtime.uses?.[`trait:${trait.name}`] ?? 0; return { key: trait.name, label: trait.name, hint: `${most ? `${Math.max(0, most - used)}/${most} 남음 · ` : ""}${trait.text.slice(0, 60)}`, disabled: most !== undefined && used >= most, onSelect: () => c.useTrait(me, trait.name) }; })
     // R65 (D200): only what pressing does something for, and only what is not a bonus action or a reaction (those have rows).
     : usable.filter((item) => item.pressable && (item.economy === "action" || item.economy === "free")).map((item) => ({ key: item.feature.id, label: item.feature.name, uses: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}${item.activation.note ? ` · ${item.activation.note}` : ""}` : item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) }));
-  const items = entry.kind === "character" && derived ? derived.inventory.filter((item) => item.quantity > 0 && !["weapon", "armor", "shield"].includes(item.kind)) : [];
+  const items = entry.kind === "character" && derived ? derived.inventory.filter((item) => item.quantity > 0 && !item.boon && !["weapon", "armor", "shield"].includes(item.kind)) : [];
   const useItem = async (item: DerivedItem) => {
     if (entry.kind !== "character" || !derived) return;
     const use = itemUse(item, catalog);

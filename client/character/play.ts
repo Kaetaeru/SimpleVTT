@@ -230,11 +230,11 @@ export function setGold(runtime: CharacterRuntime, gold: number): CharacterRunti
 
 const patchOf = (runtime: CharacterRuntime) => runtime.inventory ?? emptyInventoryPatch();
 
-export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem; /** D354 */ base?: string; /** D361 */ spell?: string; /** D364 */ unidentified?: boolean }): CharacterRuntime {
+export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem; /** D354 */ base?: string; /** D361 */ spell?: string; /** D364 */ unidentified?: boolean; /** D365 */ boon?: boolean }): CharacterRuntime {
   const patch = patchOf(runtime);
   const instanceId = `extra:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const quantity = Math.max(1, Math.floor(item.quantity ?? 1));
-  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}), ...(item.base ? { base: item.base } : {}), ...(item.spell ? { spell: item.spell } : {}), ...(item.unidentified ? { unidentified: true } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
+  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}), ...(item.base ? { base: item.base } : {}), ...(item.spell ? { spell: item.spell } : {}), ...(item.unidentified ? { unidentified: true } : {}), ...(item.boon ? { boon: true } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
 }
 
 /** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */

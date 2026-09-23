@@ -115,7 +115,7 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
     const itemId = definition ? definition.base : extra.itemId;
     const view = itemId ? ledger.catalog.itemById(itemId) : undefined;
     const quantity = patch.quantities[extra.instanceId] ?? extra.quantity;
-    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true, ...(extra.curseLifted ? { curseLifted: true } : {}) } : {}), ...(extra.spell ? { chosenSpell: extra.spell } : {}), ...(extra.unidentified && definition ? { unidentified: true, name: unidentifiedName(definition), magic: { ...definition, name: unidentifiedName(definition), description: undefined, notes: undefined } } : {}), ...(official ? { officialId: extra.itemId } : {}) };
+    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true, ...(extra.curseLifted ? { curseLifted: true } : {}) } : {}), ...(extra.spell ? { chosenSpell: extra.spell } : {}), ...(extra.boon ? { boon: true } : {}), ...(extra.unidentified && definition ? { unidentified: true, name: unidentifiedName(definition), magic: { ...definition, name: unidentifiedName(definition), description: undefined, notes: undefined } } : {}), ...(official ? { officialId: extra.itemId } : {}) };
     ledger.inventory.push(item);
   }
 }
@@ -142,7 +142,10 @@ function addItemGrants(ledger: Ledger) {
       const poolRef = (name?: string) => (pools.find((resource) => resource.itemPool === (name ?? "charges")) ?? pools[0])?.id.replace(/^resource\./, "") ?? key;
       const config = JSON.parse(JSON.stringify(magic.contract).replace(/"resource:self(?:\.([a-z0-9-]+))?"/g, (_match, name?: string) => `"resource:${poolRef(name)}"`)) as Record<string, unknown>;
       ledger.catalog.registerContract(key, config);
-      ledger.addFeature({ id: key, name: item.name, source: "item", sourceLabel: item.name, ...(magic.description ? { description: magic.description } : {}) });
+      ledger.addFeature({ id: key, name: item.name, source: item.boon ? "boon" : "item", sourceLabel: item.name, itemInstanceId: item.instanceId, ...(magic.description || magic.notes?.length ? { description: [magic.description, ...(magic.notes ?? [])].filter(Boolean).join("\n") } : {}) });
+    } else if (item.boon) {
+      // D365: a boon without a contract is still a line in the features, with its text and what the table settles.
+      ledger.addFeature({ id: `boon.${item.instanceId.replace(/[^a-z0-9]/gi, "-")}`, name: item.name, source: "boon", sourceLabel: item.name, itemInstanceId: item.instanceId, ...(magic.description || magic.notes?.length ? { description: [magic.description, ...(magic.notes ?? [])].filter(Boolean).join("\n") } : {}) });
     }
   }
 }
