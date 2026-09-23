@@ -34,6 +34,9 @@
 | `conditionImmunities` | 상태 배열 | `poisoned`, `charmed`, `frightened` … 상태 면역 (D352) |
 | `speeds` | 객체 | `{ "fly": 60 }`, `{ "swim": "walk" }` — 피트 수 또는 보행 속도와 같음 (D352) |
 | `darkvision` | 숫자(ft) | 암시야 (D352) |
+| `uses` | 배열 | `charges` 말고 따로 세는 풀: `[{ "id": "bolt", "label": "번개", "max": 2, "recharge": "short-rest" }]`. `recharge`는 `dawn`·`long-rest`·`short-rest`·`never` 또는 새벽에 굴리는 주사위("1d6+1"). 주문은 `"pool": "bolt"`로, 계약은 `resource:self.bolt`로 쓴다. 사본마다 따로 센다 (D358) |
+| `contract` | 객체 | 모듈 항목과 같은 `common-play` 계약(MODULE_GRAMMAR.md §2~§6): 상시 속성, 라벨 붙은 사용(버튼), 반응. `id`는 앱이 붙인다. `resource:self`는 이 사본의 `charges`, `resource:self.<id>`는 `uses` 풀 (D358) |
+| `format` | `"simplevtt.magic-item/2"` | 생략해도 된다. 전체 형식은 `schemas/magic-item.schema.json` (D358) |
 | `abilityBonuses` | 객체 | 작동하는 동안 능력치를 올린다, 상한까지: `{ "con": { "amount": 2, "max": 20 } }`. 이미 상한을 넘은 점수는 그대로 (D356) |
 | `damageType` | 피해 타입 | 이 무기의 피해 타입을 기반 무기 대신 이것으로 (태양검: `radiant`) (D356) |
 | `baseOptions` | 객체 | 공식·모듈 아이템: 지급할 때 기반을 고른다. `{ "kind": "weapon"|"armor"|"shield"|"ammunition", "training": ["martial"] 또는 ["medium","heavy"], "mode": "melee"|"ranged", "ids": [...], "exclude": [...] }`. 고른 기반으로 "아이템 (기반)" 이름으로 지급된다 (D354) |
@@ -115,6 +118,6 @@
 - `damageDice`는 무기의 피해 타입으로 굴린다. 다른 타입의 추가 피해는 `bonus.extraDamage`로 적는다.
 - 마법 탄약(`type: "ammunition"`, `base`가 화살·볼트)은 탄약을 쓰는 무기마다 "무기 (탄약 이름)" 공격 줄이 생기고 보너스는 그 줄에만 붙는다. 화살과 볼트는 구분하지 않는다 — 맞는 무기 줄을 고른다. 쏜 뒤 줄이는 것은 가방에서 직접.
 - 주문 두루마리는 아이템 추가 창의 두루마리(R19)로 지급한다.
-- 발동하는 능력(버튼)·조건부 효과는 붙여넣기로는 못 만든다. 모듈의 공식 아이템 항목에 계약을 달면 된다(MODULE_GRAMMAR.md §9).
+- 발동하는 능력(버튼)은 `contract`로 붙여넣기에서도 만든다(D358).
 - 조건부 보너스(특정 크리처에게만 등)는 계산하지 않는다.
 - 지급한 아이템의 정의는 시트에서 고칠 수 없다. 버리고 JSON을 고쳐 다시 지급한다.

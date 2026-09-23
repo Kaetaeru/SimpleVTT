@@ -377,6 +377,18 @@ export class ContentCatalog {
   }
 
   entry(id: string) { return this.entries.get(id); }
+  /**
+   * D358: a contract that belongs to one thing a character carries (a magic item's copy), registered when the sheet
+   * is worked out. The key names the copy, so two copies never share a pool; the same key with the same config is a
+   * no-op, so every derivation on every seat may call it.
+   */
+  registerContract(ruleKey: string, config: Record<string, unknown>) {
+    const text = JSON.stringify(config);
+    if (this.registered.get(ruleKey) === text) return;
+    this.registered.set(ruleKey, text);
+    this.contracts.set(ruleKey, parseContract({ ...config, id: ruleKey }, ruleKey));
+  }
+  private readonly registered = new Map<string, string>();
   /** R34 (D171): the contract for a feature rule key (`featureRuleKey(feature.id)`), when the content ships one. */
   /**
    * A contract by rule key. V3d (D258): `<rule key>#<use>` is one labelled use of it — only that entry point, with its
@@ -670,7 +682,8 @@ export class ContentCatalog {
         ...(shield ? { shieldBonus: shield.acBonus ?? 2 } : {}),
         ...(tool ? { tool } : {}),
         // D354: the item's text is its entry's; a definition writes one only when it wants to say something else.
-        ...(magic ? { magic: entry.description && magic.description === undefined ? { ...magic, description: entry.description } : magic } : {}),
+        // D358: an item's contract travels with its definition, as a pasted item's does.
+        ...(magic ? { magic: { ...magic, ...(entry.description && magic.description === undefined ? { description: entry.description } : {}), ...(magic.contract === undefined && mechanic<Record<string, unknown>>(entry, "common-play") ? { contract: mechanic<Record<string, unknown>>(entry, "common-play") } : {}) } } : {}),
         config: anyConfig, scope: entry.scope,
       });
     }

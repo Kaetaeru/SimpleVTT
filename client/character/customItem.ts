@@ -11,6 +11,7 @@
 import type { ContentCatalog } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import type { EffectApplication } from "../rules/effects";
+import { parseContract } from "../rules/contract";
 import { damageTypeKo } from "./origin";
 import type { DerivedAttack, DerivedItem } from "./types";
 
@@ -44,7 +45,7 @@ export interface CustomItem {
    */
   charges?: { max: number; recharge?: string; note?: string };
   /** D351: spells it casts from those charges — how many each costs, and the DC or attack bonus it casts with when it has its own. */
-  spells?: Array<{ spellId: string; charges: number; dc?: number; attackBonus?: number; level?: number; /** D356: each extra charge spent raises the spell's level by one, up to `maxLevel`. */ perLevel?: number; maxLevel?: number }>;
+  spells?: Array<{ spellId: string; charges: number; /** D358: the `uses` pool it spends (default: `charges`). */ pool?: string; dc?: number; attackBonus?: number; level?: number; /** D356: each extra charge spent raises the spell's level by one, up to `maxLevel`. */ perLevel?: number; maxLevel?: number }>;
   /** D352: ability scores it sets while it works — the score becomes this unless it is already higher (거인력 장갑: 근력 19). */
   abilities?: Partial<Record<AbilityKey, number>>;
   /** D356: ability scores it raises while it works, each up to a maximum (건강의 아이운 스톤: 건강 +2, 최대 20). */
@@ -58,11 +59,21 @@ export interface CustomItem {
   speeds?: { fly?: number | "walk"; swim?: number | "walk"; climb?: number | "walk" };
   darkvision?: number;
   /**
+   * D358: pools of its own besides `charges` — a use a dawn, a use a short rest, dice back at dawn, or none back.
+   * Its spells (`pool`) and its contract (`resource:self.<id>`) spend them.
+   */
+  uses?: ItemPool[];
+  /** D358: a `common-play` contract, as a module entry carries — standing properties, buttons, reactions. */
+  contract?: Record<string, unknown>;
+  /**
    * D354: the item is made from a weapon or armour the giver picks (불꽃 혀: any melee weapon) — the kinds of base it
    * may be. Given with a base, it is carried as that base (`base`), named "<item> (<base>)".
    */
   baseOptions?: BaseOptions;
 }
+export interface ItemPool { id: string; label: string; max: number; /** `dawn`, `long-rest`, `short-rest`, `never`, or dice back at dawn ("1d6+1"). */ recharge?: string; note?: string }
+export const ITEM_RECHARGES = ["dawn", "long-rest", "short-rest", "never"];
+const RECHARGE_DICE = /^[0-9]*d[0-9]+([+-][0-9]+)?$|^[0-9]+$/;
 export interface BaseOptions { kind: "weapon" | "armor" | "shield" | "ammunition"; training?: string[]; mode?: "melee" | "ranged"; ids?: string[]; exclude?: string[] }
 
 const ABILITIES: AbilityKey[] = ["str", "dex", "con", "int", "wis", "cha"];
@@ -140,7 +151,7 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
       const spellId = text(value.spellId)!;
       if (!catalog.spellById(spellId)) warnings.push(`spells[${index}]: "${spellId}"는 목록에 없는 주문입니다`);
       const charges = typeof value.charges === "number" && value.charges >= 0 ? Math.floor(value.charges) : 1;
-      spells.push({ spellId, charges, ...(typeof value.dc === "number" ? { dc: value.dc } : {}), ...(typeof value.attackBonus === "number" ? { attackBonus: value.attackBonus } : {}), ...(typeof value.level === "number" ? { level: value.level } : {}), ...(typeof value.perLevel === "number" && value.perLevel > 0 ? { perLevel: Math.floor(value.perLevel) } : {}), ...(typeof value.maxLevel === "number" && value.maxLevel <= 9 ? { maxLevel: Math.floor(value.maxLevel) } : {}) });
+      spells.push({ spellId, charges, ...(text(value.pool) ? { pool: text(value.pool) } : {}), ...(typeof value.dc === "number" ? { dc: value.dc } : {}), ...(typeof value.attackBonus === "number" ? { attackBonus: value.attackBonus } : {}), ...(typeof value.level === "number" ? { level: value.level } : {}), ...(typeof value.perLevel === "number" && value.perLevel > 0 ? { perLevel: Math.floor(value.perLevel) } : {}), ...(typeof value.maxLevel === "number" && value.maxLevel <= 9 ? { maxLevel: Math.floor(value.maxLevel) } : {}) });
     }
     if (spells.length) item.spells = spells;
   }
@@ -187,6 +198,25 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
       if (!baseChoices(catalog, item.baseOptions).length) warnings.push("baseOptions: 고를 수 있는 기반 아이템이 없습니다");
     }
   }
+  if (Array.isArray(raw.uses)) {
+    const pools: ItemPool[] = [];
+    for (const [index, value] of raw.uses.entries()) {
+      const id = isObject(value) ? text(value.id) : undefined;
+      if (!isObject(value) || !id || !/^[a-z0-9-]+$/.test(id) || id === "charges") { warnings.push(`uses[${index}].id: 소문자·숫자·- 로 된 id가 필요합니다 ("charges"는 charges 필드의 이름)`); continue; }
+      if (typeof value.max !== "number" || !Number.isInteger(value.max) || value.max < 1) { warnings.push(`uses[${index}].max: 1 이상의 정수여야 합니다`); continue; }
+      const recharge = text(value.recharge)?.replace(/\s+/g, "");
+      if (recharge !== undefined && !ITEM_RECHARGES.includes(recharge) && !RECHARGE_DICE.test(recharge)) warnings.push(`uses[${index}].recharge: ${ITEM_RECHARGES.join("/")} 또는 "1d6+1" 형식이어야 합니다`);
+      pools.push({ id, label: text(value.label) ?? id, max: value.max, ...(recharge && (ITEM_RECHARGES.includes(recharge) || RECHARGE_DICE.test(recharge)) ? { recharge } : {}), ...(text(value.note) ? { note: text(value.note) } : {}) });
+    }
+    if (pools.length) item.uses = pools;
+  }
+  for (const spell of item.spells ?? []) if (spell.pool && spell.pool !== "charges" && !item.uses?.some((pool) => pool.id === spell.pool)) warnings.push(`spells: "${spell.spellId}"의 pool "${spell.pool}"이 uses에 없습니다`);
+  if (isObject(raw.contract)) {
+    const contract = parseContract(raw.contract, "item");
+    for (const gap of contract.unsupported) warnings.push(`contract: 실행할 수 없는 부분 — ${gap}`);
+    item.contract = raw.contract;
+  }
+  if (raw.format !== undefined && raw.format !== "simplevtt.magic-item/2") warnings.push(`format: "${String(raw.format)}"는 모르는 형식입니다 (simplevtt.magic-item/2)`);
   if (isObject(raw.use)) {
     const use: NonNullable<CustomItem["use"]> = {};
     const healing = text(raw.use.healing)?.replace(/\s+/g, "");

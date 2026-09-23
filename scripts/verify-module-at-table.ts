@@ -313,9 +313,12 @@ async function main() {
       const basePick = definition?.baseOptions && !definition.base ? baseChoices(catalog, definition.baseOptions)[0] : undefined;
       const next = addItem(runtime, { itemId: item.id, name: basePick ? `${item.name} (${basePick.name})` : item.name, ...(basePick ? { base: basePick.id } : {}) });
       const carried = derivedOf({ source: emptySource({ name: "-" }), runtime: next } as never, catalog).inventory.find((line) => line.officialId === item.id) ?? derived.inventory.find(() => false);
-      return carried && definition?.attunement ? toggleAttune(next, carried.instanceId, 3, definition) : next;
+      const attuned = carried && definition?.attunement ? toggleAttune(next, carried.instanceId, 3, definition) : next;
+      // Armour and shields work only while worn.
+      return carried && (carried.kind === "armor" || carried.kind === "shield") ? { ...attuned, equipped: { ...attuned.equipped, [carried.kind]: carried.instanceId } } : attuned;
     });
-    await pressFeatures(t, item.name, (id) => id.startsWith(item.id));
+    // D358: an item's contract runs under its copy's key (`item.<copy>`); the hero carries only this one.
+    await pressFeatures(t, item.name, (id) => id.startsWith("item."));
   }
   await castSpells();
 

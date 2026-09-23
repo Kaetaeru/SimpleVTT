@@ -111,5 +111,5 @@ test("D352: pressing the item's use spends a charge and starts its effect", asyn
   });
   assert.equal(outcome, "done");
   assert.equal(saved.resourcesUsed[`resource.${BOOTS}`], 1, "one charge");
-  assert.ok((saved.effects ?? []).some((effect) => effect.key === `feature:${BOOTS}#dash` && effect.rounds === 100), JSON.stringify(saved.effects));
+  assert.ok((saved.effects ?? []).some((effect) => /^feature:item\.[^#]+#dash$/.test(effect.key) && effect.rounds === 100), JSON.stringify(saved.effects));
 });

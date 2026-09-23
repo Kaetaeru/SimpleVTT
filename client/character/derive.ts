@@ -24,7 +24,7 @@ import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
 import { deriveSpellSlots } from "./spells";
 import { applyTracks } from "./tracks";
-import { customAttackId, customItemActive, customItemApplication, officialMagicItem } from "./customItem";
+import { customAttackId, customItemActive, customItemApplication, ITEM_RECHARGES, officialMagicItem } from "./customItem";
 import type { ActiveEffect, CharacterSource, DerivedAttack, DerivedCharacter, DerivedItem, DerivedSkill, DerivedSpellcasting, InventoryPatch, Term } from "./types";
 
 const ARMOR_KO: Record<string, string> = { light: "경장 방어구", medium: "평장 방어구", heavy: "중장 방어구", shield: "방패" };
@@ -131,8 +131,15 @@ function addItemGrants(ledger: Ledger) {
     if (!customItemActive(item)) continue;
     const magic = item.magic!;
     addGrants(ledger, item.name, magic);
-    const key = item.officialId;
-    if (key && (ledger.catalog.contractFor(key) || ledger.catalog.contractUses(key).length)) {
+    // D358: an item's contract (official or pasted, the same JSON) belongs to this copy: it is registered under the
+    // copy's key, and `resource:self` / `resource:self.<pool>` name this copy's pools. While the item works the
+    // contract is its bearer's feature, so its standing properties, buttons and reactions run as features' do.
+    if (magic.contract) {
+      const key = `item.${item.instanceId.replace(/[^a-z0-9]/gi, "-")}`;
+      const pools = ledger.resources.filter((resource) => resource.itemInstanceId === item.instanceId && resource.itemPool);
+      const poolRef = (name?: string) => (pools.find((resource) => resource.itemPool === (name ?? "charges")) ?? pools[0])?.id.replace(/^resource\./, "") ?? key;
+      const config = JSON.parse(JSON.stringify(magic.contract).replace(/"resource:self(?:\.([a-z0-9-]+))?"/g, (_match, name?: string) => `"resource:${poolRef(name)}"`)) as Record<string, unknown>;
+      ledger.catalog.registerContract(key, config);
       ledger.addFeature({ id: key, name: item.name, source: "item", sourceLabel: item.name, ...(magic.description ? { description: magic.description } : {}) });
     }
   }
@@ -164,28 +171,34 @@ function addGrants(ledger: Ledger, name: string, magic: NonNullable<DerivedItem[
  */
 function addItemCharges(ledger: Ledger) {
   for (const item of ledger.inventory) {
+    const magic = item.magic;
+    if (!magic) continue;
     const working = customItemActive(item);
-    const spells = item.magic?.spells ?? [];
-    // D354: an item that casts its spells at will has no charges — its spells are an at-will pool while it works.
-    if (!item.magic?.charges) {
-      if (working && spells.length) ledger.addResource({ id: `resource.item.${item.instanceId}`, label: `${item.name} 주문`, max: 1, recovery: "무제한", source: item.name, itemInstanceId: item.instanceId, atWill: true, freeCastSpellIds: spells.map((spell) => spell.spellId), castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined || spell.perLevel !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}), ...(spell.perLevel !== undefined ? { perLevel: spell.perLevel, maxLevel: spell.maxLevel ?? 9 } : {}) }])) });
-      continue;
+    const spells = magic.spells ?? [];
+    const statsOf = (list: typeof spells) => Object.fromEntries(list.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined || spell.perLevel !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}), ...(spell.perLevel !== undefined ? { perLevel: spell.perLevel, maxLevel: spell.maxLevel ?? 9 } : {}) }]));
+    const poolOf = (spell: (typeof spells)[number]) => spell.pool ?? (magic.charges ? "charges" : undefined);
+    // D354: spells an item casts from no pool are an at-will pool while it works.
+    const free = spells.filter((spell) => !poolOf(spell));
+    if (working && free.length) ledger.addResource({ id: `resource.item.${item.instanceId}`, label: `${item.name} 주문`, max: 1, recovery: "무제한", source: item.name, itemInstanceId: item.instanceId, atWill: true, freeCastSpellIds: free.map((spell) => spell.spellId), castStats: statsOf(free) });
+    // D351/D358: `charges` and every `uses` pool. The charges pool keeps the id it always had (an official item's
+    // first copy is named after the item, D352); a `uses` pool is named after its copy, so copies never share one.
+    const pools = [
+      ...(magic.charges ? [{ id: "charges", label: "충전", max: magic.charges.max, recharge: magic.charges.recharge === "0" ? "never" : magic.charges.recharge ?? "dawn" }] : []),
+      ...(magic.uses ?? []).map((pool) => ({ ...pool, recharge: pool.recharge === "0" ? "never" : pool.recharge ?? "dawn" })),
+    ];
+    for (const pool of pools) {
+      const named = pool.id === "charges" && item.officialId && !ledger.resources.some((resource) => resource.id === `resource.${item.officialId}`);
+      const id = pool.id === "charges" ? (named ? `resource.${item.officialId}` : `resource.item.${item.instanceId}`) : `resource.item.${item.instanceId}.${pool.id}`;
+      const cast = spells.filter((spell) => poolOf(spell) === pool.id);
+      const dice = !ITEM_RECHARGES.includes(pool.recharge);
+      ledger.addResource({
+        id, label: `${item.name} ${pool.label}`, max: pool.max, source: item.name, itemInstanceId: item.instanceId, itemPool: pool.id,
+        recovery: pool.recharge === "never" ? "회복 안 됨" : pool.recharge === "short-rest" ? "짧은 휴식" : dice ? `새벽 (긴 휴식에 ${pool.recharge} 회복)` : "새벽 (긴 휴식)",
+        restore: { short: pool.recharge === "short-rest" ? "all" : 0 },
+        ...(pool.recharge === "never" ? { recharge: "0" } : dice ? { recharge: pool.recharge } : {}),
+        ...(working && cast.length ? { freeCastSpellIds: cast.map((spell) => spell.spellId), spellCosts: Object.fromEntries(cast.map((spell) => [spell.spellId, spell.charges])), castStats: statsOf(cast) } : {}),
+      });
     }
-    const charges = item.magic.charges;
-    // D352: an official item's pool is named after the item, so its contract can spend it (`resource:<item id>`).
-    // ponytail: a second copy of the same item gets a pool of its own, but its contract's uses spend the first copy's.
-    const named = item.officialId && !ledger.resources.some((resource) => resource.id === `resource.${item.officialId}`);
-    ledger.addResource({
-      id: named ? `resource.${item.officialId}` : `resource.item.${item.instanceId}`, label: `${item.name} 충전`, max: charges.max, source: item.name, itemInstanceId: item.instanceId,
-      recovery: charges.recharge === "0" ? "회복 안 됨" : charges.recharge ? `새벽 (긴 휴식에 ${charges.recharge} 회복)` : "새벽 (긴 휴식)",
-      restore: { short: 0 },
-      ...(charges.recharge ? { recharge: charges.recharge } : {}),
-      ...(working && spells.length ? {
-        freeCastSpellIds: spells.map((spell) => spell.spellId),
-        spellCosts: Object.fromEntries(spells.map((spell) => [spell.spellId, spell.charges])),
-        castStats: Object.fromEntries(spells.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined || spell.perLevel !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}), ...(spell.perLevel !== undefined ? { perLevel: spell.perLevel, maxLevel: spell.maxLevel ?? 9 } : {}) }])),
-      } : {}),
-    });
   }
 }
 

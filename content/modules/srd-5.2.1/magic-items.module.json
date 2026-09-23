@@ -868,7 +868,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.armor-of-invulnerability",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -4484,7 +4484,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.cloak-of-invisibility",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -4989,7 +4989,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.dagger-of-venom",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -7156,7 +7156,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.gem-of-brightness",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -7200,7 +7200,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.gem-of-brightness",
+          "resource": "resource:self",
           "amount": -5,
           "target": "self"
          },
@@ -7289,7 +7289,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.gem-of-seeing",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -8886,7 +8886,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.iron-bands",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -9065,7 +9065,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.javelin-of-lightning",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -9326,7 +9326,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.mace-of-terror",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -10365,7 +10365,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.periapt-of-health",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -10549,7 +10549,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.pipes-of-haunting",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -12331,7 +12331,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.ring-of-djinni-summoning",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -12669,7 +12669,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.ring-of-evasion",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -13318,7 +13318,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.ring-of-shooting-stars",
+          "resource": "resource:self",
           "amount": -2,
           "target": "self"
          },
@@ -13345,7 +13345,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.ring-of-shooting-stars",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -13556,7 +13556,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.ring-of-the-ram",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -13739,7 +13739,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.ring-of-x-ray-vision",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -13872,7 +13872,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.robe-of-scintillating-colors",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -14163,7 +14163,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.rod-of-alertness",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -14231,7 +14231,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.rod-of-lordly-might",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -14248,7 +14248,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.rod-of-lordly-might",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -14275,7 +14275,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.rod-of-lordly-might",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -14390,7 +14390,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.rod-of-rulership",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -14560,7 +14560,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.rust-bag-of-tricks",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -14637,7 +14637,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.scarab-of-protection",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -15941,7 +15941,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.staff-of-swarming-insects",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -16212,7 +16212,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.staff-of-the-woodlands",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -16362,7 +16362,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.stone-of-controlling-earth-elementals",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -16659,7 +16659,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.talisman-of-pure-good",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -16772,7 +16772,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.talisman-of-ultimate-evil",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -16935,7 +16935,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.thunderous-greatclub",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -17380,7 +17380,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.wand-of-enemy-detection",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -17685,7 +17685,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.wand-of-paralysis",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },
@@ -22239,7 +22239,7 @@
         "operations": [
          {
           "kind": "resource.change",
-          "resource": "resource:dnd.srd521.magic-item.winged-boots",
+          "resource": "resource:self",
           "amount": -1,
           "target": "self"
          },

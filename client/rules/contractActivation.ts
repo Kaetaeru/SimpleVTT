@@ -285,7 +285,8 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
     if (operation.kind === "temp-hp.grant") { use.tempHp = formula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides); found = true; continue; }
     if (operation.kind === "damage.apply") {
       // V4a (D263): damage aimed at other creatures is rolled by the table against them, not logged here.
-      if (atOthers(operation.target)) continue;
+      // D358: it is still what the button does — a use that only hurts others (역장의 구슬) had no button at all.
+      if (atOthers(operation.target)) { found = true; continue; }
       const rolled = formula(operation.dice, operation.amount, scope, operation.diceCount, operation.diceSides);
       if (rolled) { use.roll = { label: `${label} 피해`, formula: rolled }; found = true; }
       continue;
