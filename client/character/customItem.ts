@@ -321,6 +321,65 @@ export function attunementProblem(magic: Pick<CustomItem, "attunementRequires"> 
   return undefined;
 }
 
+/**
+ * D366: what an item will do at the table, in three lists, for the paste window: what the app computes on its own,
+ * what becomes a button, and what the table still settles (DM 판정). It reads the parsed item only — nothing here
+ * decides a rule, it names the fields the engine runs.
+ */
+export function itemPreview(item: CustomItem, catalog: Pick<ContentCatalog, "spellById" | "itemById">): { automatic: string[]; buttons: string[]; table: string[] } {
+  const automatic: string[] = [];
+  const buttons: string[] = [];
+  const table: string[] = [];
+  const sign = (value: number) => `${value >= 0 ? "+" : ""}${value}`;
+  const bonus = item.bonus ?? {};
+  const base = item.base ? catalog.itemById(item.base)?.name : undefined;
+  if (base) automatic.push(`기반: ${base}`);
+  if (item.baseOptions) automatic.push(`지급할 때 기반 선택 (${item.baseOptions.kind})`);
+  if (bonus.attack) automatic.push(`명중 ${sign(bonus.attack)}`);
+  if (bonus.damage) automatic.push(`피해 ${sign(bonus.damage)}`);
+  if (bonus.damageDice) automatic.push(`피해 +${bonus.damageDice}`);
+  for (const part of bonus.extraDamage ?? []) automatic.push(`추가 피해 ${part.dice} ${damageTypeKo(part.type)}${part.when?.targetTypes ? ` (${part.when.targetTypes.join("·")}에게만)` : ""}${part.when?.effect ? ` (${part.when.effect} 동안)` : ""}`);
+  if (bonus.ac) automatic.push(`AC ${sign(bonus.ac)}`);
+  if (bonus.saves) automatic.push(`내성 ${sign(bonus.saves)}${item.saveAbilities ? ` (${item.saveAbilities.join("·")})` : ""}`);
+  if (bonus.checks) automatic.push(`능력 판정 ${sign(bonus.checks)}`);
+  if (bonus.speed) automatic.push(`이동 속도 ${sign(bonus.speed)}ft`);
+  if (bonus.hpMax) automatic.push(`최대 HP ${sign(bonus.hpMax)}`);
+  if (bonus.spellDc) automatic.push(`주문 DC ${sign(bonus.spellDc)}`);
+  if (bonus.spellAttack) automatic.push(`주문 명중 ${sign(bonus.spellAttack)}`);
+  if (item.damageType) automatic.push(`피해 유형: ${damageTypeKo(item.damageType)}`);
+  for (const [key, value] of Object.entries(item.abilities ?? {})) automatic.push(`${key} ${value} (이미 높으면 그대로)`);
+  for (const [key, value] of Object.entries(item.abilityBonuses ?? {})) automatic.push(`${key} +${value!.amount} (최대 ${value!.max})`);
+  if (item.resistances?.length) automatic.push(`저항: ${item.resistances.join("·")}`);
+  if (item.immunities?.length) automatic.push(`면역: ${item.immunities.map(damageTypeKo).join("·")}`);
+  if (item.vulnerabilities?.length) automatic.push(`취약: ${item.vulnerabilities.map(damageTypeKo).join("·")}`);
+  if (item.conditionImmunities?.length) automatic.push(`상태 면역: ${item.conditionImmunities.join("·")}`);
+  for (const [mode, value] of Object.entries(item.speeds ?? {})) automatic.push(`${mode} ${value === "walk" ? "보행과 같음" : `${value}ft`}`);
+  if (item.darkvision) automatic.push(`암시야 ${item.darkvision}ft`);
+  if (item.attunement) automatic.push(`조율 필요${item.attunementRequires?.spellcaster ? " — 주문 시전자만" : ""}${item.attunementRequires?.classes ? ` — ${item.attunementRequires.classes.join("·")}만` : ""}`);
+  if (item.worksWhen === "held") automatic.push("손에 들었을 때만 작동");
+  if (item.charges) automatic.push(`충전 ${item.charges.max}회 (${item.charges.recharge === "0" ? "회복 안 됨" : item.charges.recharge ? `새벽 ${item.charges.recharge}` : "새벽 전부"})`);
+  for (const pool of item.uses ?? []) automatic.push(`${pool.label} ${pool.max}회 (${pool.recharge ?? "dawn"})`);
+  if (item.curse) automatic.push(`저주${item.curse.cannotUnattune ? " — 조율을 풀 수 없음" : ""}${item.curse.grants ? " · 불이익" : ""}`);
+  for (const spell of item.spells ?? []) buttons.push(`주문: ${catalog.spellById(spell.spellId)?.name ?? spell.spellId}${spell.charges ? ` (충전 ${spell.charges})` : " (무료)"}${spell.perLevel ? ` · 충전 ${spell.perLevel}개당 +1레벨` : ""}`);
+  if (item.spellChoice) buttons.push("담긴 주문 시전 (지급할 때 주문 선택)");
+  if (item.use?.healing || item.use?.tempHp || item.use?.effect || item.use?.spell) buttons.push(`사용: ${[item.use.healing ? `회복 ${item.use.healing}` : "", item.use.tempHp ? `임시 HP ${item.use.tempHp}` : "", item.use.effect ? `${item.use.effect.name ?? item.name} ${item.use.effect.duration}` : "", item.use.spell ? catalog.spellById(item.use.spell.spellId)?.name ?? item.use.spell.spellId : ""].filter(Boolean).join(" · ")}`);
+  if (item.contract) {
+    const contract = parseContract(item.contract, "preview");
+    for (const entry of contract.entryPoints) {
+      if (entry.label) buttons.push(`버튼: ${entry.label}`);
+      else if (entry.operations.some((operation) => operation.kind === "property.modify")) automatic.push("계약의 상시 속성");
+      for (const operation of entry.operations) if (operation.kind === "adjudication.request") table.push(operation.question);
+    }
+    if (contract.interceptors.length) buttons.push(`반응·굴림 창 ${contract.interceptors.length}개`);
+    for (const gap of contract.unsupported) table.push(`계약에서 실행 못 하는 부분: ${gap}`);
+  }
+  if (item.charges?.note) table.push(item.charges.note);
+  if (item.curse?.note) table.push(item.curse.note);
+  if (item.attunementRequires?.note) table.push(item.attunementRequires.note);
+  table.push(...(item.notes ?? []));
+  return { automatic, buttons, table };
+}
+
 /** D364: what an unidentified item is shown as — its kind, not its name. */
 const TYPE_KO: Record<string, string> = { weapon: "무기", armor: "갑옷", shield: "방패", ring: "반지", wand: "마법봉", staff: "지팡이", rod: "막대", potion: "물약", scroll: "두루마리", ammunition: "탄약", wondrous: "물건" };
 export const unidentifiedName = (magic: Pick<CustomItem, "type">) => `미식별 ${TYPE_KO[magic.type] ?? "물건"}`;

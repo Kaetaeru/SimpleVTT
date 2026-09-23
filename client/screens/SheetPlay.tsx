@@ -23,7 +23,8 @@ import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared,
 import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "../ui/components";
 import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
-import { attunementProblem, baseChoices, CUSTOM_ITEM_EXAMPLE, officialMagicItem, parseCustomItem, RARITY_KO, spellChoices } from "../character/customItem";
+import { attunementProblem, baseChoices, CUSTOM_ITEM_EXAMPLE, itemPreview, officialMagicItem, parseCustomItem, RARITY_KO, spellChoices } from "../character/customItem";
+import type { CustomItem } from "../character/customItem";
 import { pickSlots, restFeatures, spentSlots, triggerPolicyKey, useRestFeature } from "../character/rest";
 
 export interface SheetPlayProps {
@@ -445,6 +446,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
               return (
                 <>
                   <Notice tone={parsed.warnings.length ? "warn" : "good"}>{parsed.item.name}{parsed.item.base ? ` · ${catalog.itemById(parsed.item.base)?.name}` : ""}{parsed.item.attunement ? " · 조율 필요" : ""}{parsed.warnings.map((warning) => <div key={warning} className="cl-small">⚠ {warning}</div>)}</Notice>
+                  <ItemPreviewBox item={parsed.item} catalog={catalog} />
                   <button type="button" className="cl-btn small primary" onClick={() => { commit(addItem(runtime, { name: parsed.item.name, custom: parsed.item, quantity: Number(adding.quantity) || 1 })); setAdding(null); }}>이 캐릭터에게 지급</button>
                   {/* D365: the same JSON as a boon — a feature of the character (축복, 계약), not a thing in the bag. */}
                   <button type="button" className="cl-btn small" style={{ marginLeft: 4 }} onClick={() => { commit(addItem(runtime, { name: parsed.item.name, custom: parsed.item, boon: true })); setAdding(null); }}>은혜(특성)로 주기</button>
@@ -454,6 +456,27 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
           </details>
         </Modal>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * D366: what a pasted item will do, before it is given — computed on its own, a button, or the table's to settle.
+ * The DM sees at a glance whether the sheet will look finished when it is not.
+ */
+export function ItemPreviewBox({ item, catalog }: { item: CustomItem; catalog: ContentCatalog }) {
+  const preview = itemPreview(item, catalog);
+  const column = (title: string, lines: string[], tone?: string) => (
+    <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+      <div className="cl-small" style={{ fontWeight: 600, color: tone }}>{title} <Pill>{lines.length}</Pill></div>
+      {lines.length ? <ul className="cl-small" style={{ margin: "2px 0 0", paddingLeft: 16 }}>{lines.map((line) => <li key={line}>{line}</li>)}</ul> : <p className="cl-quiet cl-small" style={{ margin: 0 }}>—</p>}
+    </div>
+  );
+  return (
+    <div className="cl-row" style={{ gap: 8, flexWrap: "wrap", alignItems: "flex-start" }} aria-label="아이템 미리보기">
+      {column("자동 계산", preview.automatic)}
+      {column("버튼", preview.buttons)}
+      {column("DM 판정", preview.table, preview.table.length ? "var(--warn)" : undefined)}
     </div>
   );
 }

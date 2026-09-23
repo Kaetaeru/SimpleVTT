@@ -106,6 +106,67 @@
   "description": "도약 거리가 세 배가 된다.", "notes": ["도약 거리 ×3 (수동 적용)"] }
 ```
 
+### 문법 2판 예시 (D358~D366)
+
+붙여넣으면 창 아래에 **자동 계산 / 버튼 / DM 판정** 세 칸으로 무엇이 계산되고 무엇이 손으로 남는지 먼저 보여 준다.
+
+충전을 쓰는 버튼이 있는 반지 — `uses`와 `contract`, 사본마다 따로 세는 풀:
+
+```json
+{
+  "format": "simplevtt.magic-item/2",
+  "name": "번개 반지", "type": "ring", "rarity": "rare", "attunement": true,
+  "uses": [{ "id": "bolt", "label": "번개", "max": 2, "recharge": "short-rest" }],
+  "contract": { "entryPoints": [
+    { "id": "ward", "invocation": "manual", "operations": [{ "kind": "property.modify", "property": "resistance", "operation": "add", "value": "번개" }] },
+    { "id": "zap", "label": "번개 쏘기", "invocation": "manual",
+      "payments": [{ "kind": "economy", "bucket": "bonus-action", "amount": { "value": 1 }, "consumeAt": "commit" }],
+      "targeting": { "from": "targets", "min": 1, "max": 1 },
+      "operations": [
+        { "kind": "resource.change", "resource": "resource:self.bolt", "amount": -1, "target": "self" },
+        { "kind": "damage.apply", "dice": "2d6", "damageType": "번개", "target": "targets" }
+      ] }
+  ] }
+}
+```
+
+언데드에게만 더 아픈 검, 켜야 붙는 불꽃 — `extraDamage`의 `when`:
+
+```json
+{
+  "name": "새벽 칼날", "type": "weapon", "rarity": "rare", "base": "longsword",
+  "bonus": { "attack": 1, "damage": 1, "extraDamage": [
+    { "dice": "2d6", "type": "radiant", "when": { "targetTypes": ["undead", "fiend"] } },
+    { "dice": "1d6", "type": "fire", "when": { "effect": "불꽃" } }
+  ] }
+}
+```
+
+주문 시전자만 조율하는 저주받은 구슬 — `attunementRequires`, `curse`:
+
+```json
+{
+  "name": "탐욕의 구슬", "type": "wondrous", "rarity": "rare", "attunement": true,
+  "attunementRequires": { "spellcaster": true },
+  "bonus": { "spellDc": 1 },
+  "curse": { "cannotUnattune": true, "grants": { "bonus": { "saves": -2 }, "vulnerabilities": ["fire"] }, "note": "끼면 놓지 못한다" }
+}
+```
+
+충전을 더 쓰면 높은 레벨로 — `perLevel`/`maxLevel`:
+
+```json
+{ "name": "번개 막대", "type": "rod", "rarity": "rare", "charges": { "max": 7, "recharge": "1d6+1" },
+  "spells": [{ "spellId": "dnd.srd521.spell.lightning-bolt", "charges": 1, "dc": 15, "perLevel": 1, "maxLevel": 6 }] }
+```
+
+캠페인 보상으로 주는 은혜 — 같은 JSON을 "은혜(특성)로 주기":
+
+```json
+{ "name": "숲의 축복", "type": "wondrous", "description": "숲의 정령이 지켜 준다", "resistances": ["poison"],
+  "notes": ["숲에서 길을 잃지 않는다"] }
+```
+
 ## 6. 코딩 에이전트에게 맡길 때
 
 이 문서를 함께 주고 아래처럼 요청한다.

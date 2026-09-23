@@ -18,6 +18,7 @@ import { spellExec } from "../compendium/spells";
 import { scrollItemId, scrollName, scrollRarity } from "../rules/scrolls";
 import { parseCustomItem } from "../character/customItem";
 import type { CampaignItem } from "../campaign/model";
+import { ItemPreviewBox } from "./SheetPlay";
 
 export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => void }) {
   const c = useCampaigns();
@@ -161,6 +162,7 @@ function CampaignItems({ items, characters, onSave, onGive }: { items: CampaignI
       ))}
       <textarea className="cl-input" aria-label="캠페인 아이템 JSON" rows={6} style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }} placeholder='{ "name": "…", "type": "ring", "bonus": { "ac": 1 } }' value={text} onChange={(event) => setText(event.target.value)} />
       {read ? ("error" in read ? <p className="cl-small" style={{ color: "var(--bad)" }}>{read.error}</p> : read.warnings.length ? <ul className="cl-small">{read.warnings.map((line) => <li key={line}>{line}</li>)}</ul> : <p className="cl-small cl-quiet">형식 확인됨.</p>) : null}
+      {read && !("error" in read) ? <ItemPreviewBox item={read.item} catalog={catalog} /> : null}
       <div className="cl-row" style={{ gap: 4 }}>
         <button type="button" className="cl-btn small primary" disabled={!read || "error" in read} onClick={save}>{editing ? "고친 것 저장 (가진 캐릭터 모두에게 반영)" : "캠페인에 저장"}</button>
         {editing ? <button type="button" className="cl-btn small quiet" onClick={() => { setEditing(null); setText(""); }}>취소</button> : null}
