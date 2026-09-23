@@ -230,11 +230,11 @@ export function setGold(runtime: CharacterRuntime, gold: number): CharacterRunti
 
 const patchOf = (runtime: CharacterRuntime) => runtime.inventory ?? emptyInventoryPatch();
 
-export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem; /** D354 */ base?: string; /** D361 */ spell?: string }): CharacterRuntime {
+export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem; /** D354 */ base?: string; /** D361 */ spell?: string; /** D364 */ unidentified?: boolean }): CharacterRuntime {
   const patch = patchOf(runtime);
   const instanceId = `extra:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const quantity = Math.max(1, Math.floor(item.quantity ?? 1));
-  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}), ...(item.base ? { base: item.base } : {}), ...(item.spell ? { spell: item.spell } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
+  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}), ...(item.base ? { base: item.base } : {}), ...(item.spell ? { spell: item.spell } : {}), ...(item.unidentified ? { unidentified: true } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
 }
 
 /** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */
@@ -246,8 +246,17 @@ export function toggleAttune(runtime: CharacterRuntime, instanceId: string, limi
   // D360: a curse that holds its bearer — the attunement stays until the curse is lifted.
   if (target.attuned && item.curse?.cannotUnattune && !target.curseLifted) return stamp(runtime, `조율을 풀 수 없음: ${item.name} (저주 — 풀려면 DM 판정)`);
   if (!target.attuned && patch.extra.filter((entry) => entry.attuned && !patch.removed.includes(entry.instanceId)).length >= limit) return stamp(runtime, `조율할 수 없음: ${item.name} (이미 ${limit}개 조율 중)`);
-  const extra = patch.extra.map((entry) => (entry.instanceId === instanceId ? { ...entry, attuned: !entry.attuned } : entry));
-  return stamp({ ...runtime, inventory: { ...patch, extra } }, `${target.attuned ? "조율 해제" : "조율"}: ${item.name}`);
+  // D364: attuning to an item teaches its properties — it is identified.
+  const extra = patch.extra.map((entry) => (entry.instanceId === instanceId ? { ...entry, attuned: !entry.attuned, ...(entry.attuned ? {} : { unidentified: undefined }) } : entry));
+  return stamp({ ...runtime, inventory: { ...patch, extra } }, `${target.attuned ? "조율 해제" : "조율"}: ${target.unidentified ? target.name : item.name}`);
+}
+
+/** D364: the item is identified (identify, a short rest with it, the DM's say) — its name and properties show. */
+export function identifyItem(runtime: CharacterRuntime, instanceId: string): CharacterRuntime {
+  const patch = patchOf(runtime);
+  const target = patch.extra.find((item) => item.instanceId === instanceId);
+  if (!target?.unidentified) return runtime;
+  return stamp({ ...runtime, inventory: { ...patch, extra: patch.extra.map((entry) => (entry.instanceId === instanceId ? { ...entry, unidentified: undefined } : entry)) } }, `식별: ${target.name}`);
 }
 
 /** D360: the curse on an item is lifted (remove curse, the DM's call) — its penalty ends and it may be let go. */

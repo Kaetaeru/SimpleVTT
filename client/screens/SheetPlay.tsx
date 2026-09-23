@@ -12,7 +12,7 @@ import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
   addItem, adjustGold, advanceRound, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
-  liftCurse, restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleAttune, toggleCondition, toggleEquip,
+  identifyItem, liftCurse, restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleAttune, toggleCondition, toggleEquip,
   usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
@@ -100,6 +100,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
       commit(toggleAttune(runtime, instanceId, 3 + (derived.attunementBonus ?? 0), magic));
     },
     liftCurse: (instanceId) => commit(liftCurse(runtime, instanceId)),
+    identify: (instanceId) => commit(identifyItem(runtime, instanceId)),
     roll: (label, formula, note, kind) => { void rollAndLog({ label, formula, note, kind }); },
     useFeature: (feature) => { void activateFeature(feature); },
     endEffect: (key) => commit(endEffect(runtime, key)),

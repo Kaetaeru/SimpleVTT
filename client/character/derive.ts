@@ -24,7 +24,7 @@ import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
 import { deriveSpellSlots } from "./spells";
 import { applyTracks } from "./tracks";
-import { customAttackId, customItemActive, customItemApplication, ITEM_RECHARGES, officialMagicItem } from "./customItem";
+import { customAttackId, customItemActive, customItemApplication, ITEM_RECHARGES, officialMagicItem, unidentifiedName } from "./customItem";
 import type { ActiveEffect, CharacterSource, DerivedAttack, DerivedCharacter, DerivedItem, DerivedSkill, DerivedSpellcasting, InventoryPatch, Term } from "./types";
 
 const ARMOR_KO: Record<string, string> = { light: "경장 방어구", medium: "평장 방어구", heavy: "중장 방어구", shield: "방패" };
@@ -115,7 +115,7 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
     const itemId = definition ? definition.base : extra.itemId;
     const view = itemId ? ledger.catalog.itemById(itemId) : undefined;
     const quantity = patch.quantities[extra.instanceId] ?? extra.quantity;
-    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true, ...(extra.curseLifted ? { curseLifted: true } : {}) } : {}), ...(extra.spell ? { chosenSpell: extra.spell } : {}), ...(official ? { officialId: extra.itemId } : {}) };
+    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true, ...(extra.curseLifted ? { curseLifted: true } : {}) } : {}), ...(extra.spell ? { chosenSpell: extra.spell } : {}), ...(extra.unidentified && definition ? { unidentified: true, name: unidentifiedName(definition), magic: { ...definition, name: unidentifiedName(definition), description: undefined, notes: undefined } } : {}), ...(official ? { officialId: extra.itemId } : {}) };
     ledger.inventory.push(item);
   }
 }
@@ -175,7 +175,8 @@ function addGrants(ledger: Ledger, name: string, magic: NonNullable<DerivedItem[
 function addItemCharges(ledger: Ledger) {
   for (const item of ledger.inventory) {
     const magic = item.magic;
-    if (!magic) continue;
+    // D364: an unidentified item shows no pools either — they would tell what it is.
+    if (!magic || item.unidentified) continue;
     const working = customItemActive(item);
     const spells = magic.spells ?? [];
     const statsOf = (list: typeof spells) => Object.fromEntries(list.filter((spell) => spell.dc !== undefined || spell.attackBonus !== undefined || spell.level !== undefined || spell.perLevel !== undefined).map((spell) => [spell.spellId, { ...(spell.dc !== undefined ? { dc: spell.dc } : {}), ...(spell.attackBonus !== undefined ? { attackBonus: spell.attackBonus } : {}), ...(spell.level !== undefined ? { level: spell.level } : {}), ...(spell.perLevel !== undefined ? { perLevel: spell.perLevel, maxLevel: spell.maxLevel ?? 9 } : {}) }]));

@@ -321,6 +321,10 @@ export function attunementProblem(magic: Pick<CustomItem, "attunementRequires"> 
   return undefined;
 }
 
+/** D364: what an unidentified item is shown as — its kind, not its name. */
+const TYPE_KO: Record<string, string> = { weapon: "무기", armor: "갑옷", shield: "방패", ring: "반지", wand: "마법봉", staff: "지팡이", rod: "막대", potion: "물약", scroll: "두루마리", ammunition: "탄약", wondrous: "물건" };
+export const unidentifiedName = (magic: Pick<CustomItem, "type">) => `미식별 ${TYPE_KO[magic.type] ?? "물건"}`;
+
 /** D361: the spells a `spellChoice` allows, lowest level first. */
 export function spellChoices(catalog: Pick<ContentCatalog, "spells">, choice: NonNullable<CustomItem["spellChoice"]>) {
   return catalog.spells.filter((spell) => {
@@ -374,6 +378,8 @@ export const customAttackId = (item: Pick<DerivedItem, "itemId" | "instanceId">)
 /** Whether the item's numbers are on the sheet right now. */
 export function customItemActive(item: DerivedItem): boolean {
   if (!item.magic) return false;
+  // D364: an item nobody has identified yet does nothing that shows.
+  if (item.unidentified) return false;
   if (item.magic.attunement && !item.attuned) return false;
   if ((item.kind === "armor" || item.kind === "shield") && !item.equipped) return false;
   // D359: an item that works only in hand (지팡이, 막대) — held is equipped in a hand slot.

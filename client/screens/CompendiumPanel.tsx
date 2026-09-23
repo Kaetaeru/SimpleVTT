@@ -97,11 +97,11 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
             {open === spell.id ? <div className="cl-compendium-detail cl-small"><p className="cl-quiet">{spell.school} · {spell.castingTime} · {spell.range} · {spell.components} · {spell.duration}{spell.ritual ? " · 의식" : ""}</p><p style={{ whiteSpace: "pre-wrap" }}>{spell.description ?? spell.summary ?? ""}</p><p className="cl-quiet">{spell.classes.map((id) => catalog.name(id)).join(", ")}</p></div> : null}
           </div>
         )) : null}
-        {section === "items" && isGm ? <CampaignItems items={snapshot.items ?? []} characters={characters} onSave={c.saveItems} onGive={(itemId, name, entryId) => {
+        {section === "items" && isGm ? <CampaignItems items={snapshot.items ?? []} characters={characters} onSave={c.saveItems} onGive={(itemId, name, entryId, unidentified) => {
           const entry = characters.find((item) => item.id === entryId);
           if (!entry) return;
-          c.putJournal({ ...entry, runtime: addItem(entry.runtime, { itemId, name }), updatedAt: new Date().toISOString() });
-          c.say(`/em ${entry.name}이(가) ${name}을(를) 받았습니다`);
+          c.putJournal({ ...entry, runtime: addItem(entry.runtime, { itemId, name, ...(unidentified ? { unidentified: true } : {}) }), updatedAt: new Date().toISOString() });
+          c.say(`/em ${entry.name}이(가) ${unidentified ? "알 수 없는 물건" : name}을(를) 받았습니다`);
         }} /> : null}
         {section === "items" ? items.map((item) => (
           <div key={item.id} className={`cl-compendium-row${open === item.id ? " open" : ""}`}>
@@ -124,11 +124,13 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
  * checked by the same parser a sheet uses, and saved to the campaign; a character given it holds only its id, so an
  * edit here reaches every bag that holds it.
  */
-function CampaignItems({ items, characters, onSave, onGive }: { items: CampaignItem[]; characters: Array<{ id: string; name: string }>; onSave: (items: CampaignItem[]) => void; onGive: (itemId: string, name: string, entryId: string) => void }) {
+function CampaignItems({ items, characters, onSave, onGive }: { items: CampaignItem[]; characters: Array<{ id: string; name: string }>; onSave: (items: CampaignItem[]) => void; onGive: (itemId: string, name: string, entryId: string, unidentified: boolean) => void }) {
   const { catalog } = useClient();
   const [text, setText] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [giveTo, setGiveTo] = useState<Record<string, string>>({});
+  // D364: give it unidentified — the character sees an unknown thing until it is identified.
+  const [hidden, setHidden] = useState(false);
   const read = text.trim() ? parseCustomItem(text, catalog) : undefined;
   const save = () => {
     if (!read || "error" in read) return;
@@ -141,6 +143,7 @@ function CampaignItems({ items, characters, onSave, onGive }: { items: CampaignI
   return (
     <div className="cl-compendium-row" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <strong className="cl-small">캠페인 아이템 (DM) <Pill>{items.length}</Pill></strong>
+      <label className="cl-small"><input type="checkbox" checked={hidden} onChange={(event) => setHidden(event.target.checked)} /> 미식별로 주기</label>
       {items.map((item) => (
         <div key={item.id} className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
           <span className="cl-small" style={{ flex: 1 }}>{String(item.definition.name)}</span>
@@ -148,7 +151,7 @@ function CampaignItems({ items, characters, onSave, onGive }: { items: CampaignI
             <option value="">캐릭터…</option>
             {characters.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
           </select>
-          <button type="button" className="cl-btn small" disabled={!giveTo[item.id]} onClick={() => onGive(item.id, String(item.definition.name), giveTo[item.id])}>주기</button>
+          <button type="button" className="cl-btn small" disabled={!giveTo[item.id]} onClick={() => onGive(item.id, String(item.definition.name), giveTo[item.id], hidden)}>주기</button>
           <button type="button" className="cl-btn small quiet" onClick={() => { setEditing(item.id); setText(JSON.stringify(item.definition, null, 2)); }}>고치기</button>
           <button type="button" className="cl-btn small quiet" title="가진 캐릭터에게는 이름만 남는다" onClick={() => onSave(items.filter((other) => other.id !== item.id))}>삭제</button>
         </div>
