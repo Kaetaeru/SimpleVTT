@@ -94,7 +94,7 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   const passive = applyPassiveContracts(derived, catalog, (options.effects ?? []).map((effect) => effect.name));
   // R75 (D210): pasted magic items, as always-on effects while attuned (and worn, for armour).
   const magic = passive.inventory.filter(customItemActive);
-  const equipped = magic.length ? applyActiveEffects(passive, magic.map((item) => ({ key: `item:${item.instanceId}`, name: item.name, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" })), catalog, { list: false, inline: Object.fromEntries(magic.map((item) => [`item:${item.instanceId}`, customItemApplication(item)])) }) : passive;
+  const equipped = magic.length ? applyActiveEffects(passive, magic.map((item) => ({ key: `item:${item.instanceId}`, name: item.name, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" })), catalog, { list: false, inline: Object.fromEntries(magic.map((item) => [`item:${item.instanceId}`, customItemApplication(item, (options.effects ?? []).map((effect) => effect.name))])) }) : passive;
   const granted = (options.effects ?? []).filter((effect) => effect.grants);
   return options.effects?.length ? applyActiveEffects(equipped, options.effects, catalog, granted.length ? { inline: Object.fromEntries(granted.map((effect) => [effect.key, customItemApplication({ instanceId: effect.key, itemId: effect.key, name: effect.name, kind: "custom", quantity: 1, source: effect.name, magic: effect.grants })])) } : {}) : equipped;
 }

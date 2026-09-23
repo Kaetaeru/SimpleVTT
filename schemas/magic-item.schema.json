@@ -4,77 +4,510 @@
   "title": "SimpleVTT magic item",
   "description": "One magic item: pasted into a sheet's add-item window, or the config of a module entry's `magic-item-definition` (category `magic-item`). Guide: docs/guides/CUSTOM_ITEM_JSON.md. The app reads it with client/character/customItem.ts#parseCustomItem, which warns about anything it cannot use.",
   "type": "object",
-  "required": ["name"],
+  "required": [
+    "name"
+  ],
   "properties": {
-    "format": { "const": "simplevtt.magic-item/2", "description": "Optional. Older items without it are read the same way." },
-    "name": { "type": "string", "minLength": 1, "description": "Pasted items only; a module entry's name is its presentation." },
-    "type": { "enum": ["weapon", "armor", "shield", "ring", "wand", "staff", "rod", "potion", "scroll", "ammunition", "wondrous"] },
-    "rarity": { "enum": ["common", "uncommon", "rare", "very-rare", "legendary", "artifact"] },
-    "attunement": { "type": "boolean" },
-    "description": { "type": "string" },
-    "base": { "type": "string", "description": "Catalog weapon/armour/shield/ammunition the item is made from (id, English or Korean name)." },
+    "format": {
+      "const": "simplevtt.magic-item/2",
+      "description": "Optional. Older items without it are read the same way."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pasted items only; a module entry's name is its presentation."
+    },
+    "type": {
+      "enum": [
+        "weapon",
+        "armor",
+        "shield",
+        "ring",
+        "wand",
+        "staff",
+        "rod",
+        "potion",
+        "scroll",
+        "ammunition",
+        "wondrous"
+      ]
+    },
+    "rarity": {
+      "enum": [
+        "common",
+        "uncommon",
+        "rare",
+        "very-rare",
+        "legendary",
+        "artifact"
+      ]
+    },
+    "attunement": {
+      "type": "boolean"
+    },
+    "description": {
+      "type": "string"
+    },
+    "base": {
+      "type": "string",
+      "description": "Catalog weapon/armour/shield/ammunition the item is made from (id, English or Korean name)."
+    },
     "baseOptions": {
-      "type": "object", "required": ["kind"],
+      "type": "object",
+      "required": [
+        "kind"
+      ],
       "properties": {
-        "kind": { "enum": ["weapon", "armor", "shield", "ammunition"] },
-        "training": { "type": "array", "items": { "type": "string" } },
-        "mode": { "enum": ["melee", "ranged"] },
-        "ids": { "type": "array", "items": { "type": "string" } },
-        "exclude": { "type": "array", "items": { "type": "string" } }
+        "kind": {
+          "enum": [
+            "weapon",
+            "armor",
+            "shield",
+            "ammunition"
+          ]
+        },
+        "training": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mode": {
+          "enum": [
+            "melee",
+            "ranged"
+          ]
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "bonus": {
       "type": "object",
       "properties": {
-        "ac": { "type": "number" }, "attack": { "type": "number" }, "damage": { "type": "number" },
-        "damageDice": { "type": "string", "pattern": "^[0-9]*d[0-9]+$" },
-        "extraDamage": { "type": "object", "required": ["dice", "type"], "properties": { "dice": { "type": "string" }, "type": { "$ref": "#/$defs/damageType" } } },
-        "saves": { "type": "number" }, "checks": { "type": "number" }, "speed": { "type": "number" }, "hpMax": { "type": "number" },
-        "spellDc": { "type": "number" }, "spellAttack": { "type": "number" }
+        "ac": {
+          "type": "number"
+        },
+        "attack": {
+          "type": "number"
+        },
+        "damage": {
+          "type": "number"
+        },
+        "damageDice": {
+          "type": "string",
+          "pattern": "^[0-9]*d[0-9]+$"
+        },
+        "extraDamage": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "dice",
+                "type"
+              ],
+              "properties": {
+                "dice": {
+                  "type": "string"
+                },
+                "type": {
+                  "$ref": "#/$defs/damageType"
+                },
+                "when": {
+                  "type": "object",
+                  "properties": {
+                    "targetTypes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Creature types (English): only against these."
+                    },
+                    "effect": {
+                      "type": "string",
+                      "description": "Only while an effect of this name runs on the bearer."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "dice",
+                  "type"
+                ],
+                "properties": {
+                  "dice": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "$ref": "#/$defs/damageType"
+                  },
+                  "when": {
+                    "type": "object",
+                    "properties": {
+                      "targetTypes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Creature types (English): only against these."
+                      },
+                      "effect": {
+                        "type": "string",
+                        "description": "Only while an effect of this name runs on the bearer."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "saves": {
+          "type": "number"
+        },
+        "checks": {
+          "type": "number"
+        },
+        "speed": {
+          "type": "number"
+        },
+        "hpMax": {
+          "type": "number"
+        },
+        "spellDc": {
+          "type": "number"
+        },
+        "spellAttack": {
+          "type": "number"
+        }
       },
       "additionalProperties": false
     },
-    "saveAbilities": { "type": "array", "items": { "$ref": "#/$defs/ability" } },
-    "resistances": { "type": "array", "items": { "$ref": "#/$defs/damageType" } },
-    "immunities": { "type": "array", "items": { "$ref": "#/$defs/damageType" } },
-    "conditionImmunities": { "type": "array", "items": { "enum": ["blinded", "charmed", "deafened", "exhaustion", "frightened", "grappled", "incapacitated", "invisible", "paralyzed", "petrified", "poisoned", "prone", "restrained", "stunned", "unconscious"] } },
-    "abilities": { "type": "object", "propertyNames": { "$ref": "#/$defs/ability" }, "additionalProperties": { "type": "integer" }, "description": "Scores it sets (unless already higher)." },
-    "abilityBonuses": { "type": "object", "propertyNames": { "$ref": "#/$defs/ability" }, "additionalProperties": { "type": "object", "required": ["amount", "max"], "properties": { "amount": { "type": "integer" }, "max": { "type": "integer" } } } },
-    "damageType": { "$ref": "#/$defs/damageType", "description": "The damage type its weapon deals instead of the base's." },
-    "speeds": { "type": "object", "properties": { "fly": { "$ref": "#/$defs/speed" }, "swim": { "$ref": "#/$defs/speed" }, "climb": { "$ref": "#/$defs/speed" } }, "additionalProperties": false },
-    "darkvision": { "type": "number" },
-    "charges": { "type": "object", "required": ["max"], "properties": { "max": { "type": "integer", "minimum": 1 }, "recharge": { "$ref": "#/$defs/recharge" }, "note": { "type": "string" } } },
+    "saveAbilities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ability"
+      }
+    },
+    "resistances": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/damageType"
+      }
+    },
+    "immunities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/damageType"
+      }
+    },
+    "conditionImmunities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "blinded",
+          "charmed",
+          "deafened",
+          "exhaustion",
+          "frightened",
+          "grappled",
+          "incapacitated",
+          "invisible",
+          "paralyzed",
+          "petrified",
+          "poisoned",
+          "prone",
+          "restrained",
+          "stunned",
+          "unconscious"
+        ]
+      }
+    },
+    "abilities": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/ability"
+      },
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "description": "Scores it sets (unless already higher)."
+    },
+    "abilityBonuses": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/ability"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "amount",
+          "max"
+        ],
+        "properties": {
+          "amount": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "damageType": {
+      "$ref": "#/$defs/damageType",
+      "description": "The damage type its weapon deals instead of the base's."
+    },
+    "speeds": {
+      "type": "object",
+      "properties": {
+        "fly": {
+          "$ref": "#/$defs/speed"
+        },
+        "swim": {
+          "$ref": "#/$defs/speed"
+        },
+        "climb": {
+          "$ref": "#/$defs/speed"
+        }
+      },
+      "additionalProperties": false
+    },
+    "darkvision": {
+      "type": "number"
+    },
+    "charges": {
+      "type": "object",
+      "required": [
+        "max"
+      ],
+      "properties": {
+        "max": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recharge": {
+          "$ref": "#/$defs/recharge"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
     "uses": {
       "type": "array",
       "description": "Pools besides `charges`. A spell spends one with `pool`; a contract with `resource:self.<id>`.",
-      "items": { "type": "object", "required": ["id", "max"], "properties": { "id": { "type": "string", "pattern": "^[a-z0-9-]+$", "not": { "const": "charges" } }, "label": { "type": "string" }, "max": { "type": "integer", "minimum": 1 }, "recharge": { "$ref": "#/$defs/recharge" }, "note": { "type": "string" } } }
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "max"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "not": {
+              "const": "charges"
+            }
+          },
+          "label": {
+            "type": "string"
+          },
+          "max": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "recharge": {
+            "$ref": "#/$defs/recharge"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
     },
     "spells": {
       "type": "array",
       "items": {
-        "type": "object", "required": ["spellId"],
+        "type": "object",
+        "required": [
+          "spellId"
+        ],
         "properties": {
-          "spellId": { "type": "string" }, "charges": { "type": "integer", "minimum": 0 }, "pool": { "type": "string" },
-          "dc": { "type": "integer" }, "attackBonus": { "type": "integer" }, "level": { "type": "integer" },
-          "perLevel": { "type": "integer", "minimum": 1 }, "maxLevel": { "type": "integer", "maximum": 9 }
+          "spellId": {
+            "type": "string"
+          },
+          "charges": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pool": {
+            "type": "string"
+          },
+          "dc": {
+            "type": "integer"
+          },
+          "attackBonus": {
+            "type": "integer"
+          },
+          "level": {
+            "type": "integer"
+          },
+          "perLevel": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxLevel": {
+            "type": "integer",
+            "maximum": 9
+          }
         }
       }
     },
     "use": {
       "type": "object",
       "properties": {
-        "healing": { "type": "string" }, "consumes": { "type": "boolean" }, "tempHp": { "type": "string" },
-        "effect": { "type": "object", "required": ["duration", "grants"], "properties": { "name": { "type": "string" }, "duration": { "type": "string" }, "rounds": { "type": "integer" }, "permanent": { "type": "boolean" }, "grants": { "type": "object", "description": "The same fields as this schema (bonus, abilities, resistances …)." } } },
-        "spell": { "type": "object", "required": ["spellId"], "properties": { "spellId": { "type": "string" }, "duration": { "type": "string" }, "rounds": { "type": "integer" } } }
+        "healing": {
+          "type": "string"
+        },
+        "consumes": {
+          "type": "boolean"
+        },
+        "tempHp": {
+          "type": "string"
+        },
+        "effect": {
+          "type": "object",
+          "required": [
+            "duration",
+            "grants"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "duration": {
+              "type": "string"
+            },
+            "rounds": {
+              "type": "integer"
+            },
+            "permanent": {
+              "type": "boolean"
+            },
+            "grants": {
+              "type": "object",
+              "description": "The same fields as this schema (bonus, abilities, resistances …)."
+            }
+          }
+        },
+        "spell": {
+          "type": "object",
+          "required": [
+            "spellId"
+          ],
+          "properties": {
+            "spellId": {
+              "type": "string"
+            },
+            "duration": {
+              "type": "string"
+            },
+            "rounds": {
+              "type": "integer"
+            }
+          }
+        }
       }
     },
-    "contract": { "$ref": "common-play-contract.schema.json", "description": "Buttons, standing properties and reactions (docs/design/v3/MODULE_GRAMMAR.md §2–§6). `id` is set by the app. `resource:self` is this copy's charges, `resource:self.<pool>` one of its `uses`." },
-    "notes": { "type": "array", "items": { "type": "string" }, "description": "What the app cannot compute — shown as the table's to settle." }
+    "contract": {
+      "$ref": "common-play-contract.schema.json",
+      "description": "Buttons, standing properties and reactions (docs/design/v3/MODULE_GRAMMAR.md §2–§6). `id` is set by the app. `resource:self` is this copy's charges, `resource:self.<pool>` one of its `uses`."
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "What the app cannot compute — shown as the table's to settle."
+    },
+    "worksWhen": {
+      "const": "held",
+      "description": "Works only in a hand slot."
+    }
   },
   "$defs": {
-    "ability": { "enum": ["str", "dex", "con", "int", "wis", "cha"] },
-    "damageType": { "enum": ["acid", "bludgeoning", "cold", "fire", "force", "lightning", "necrotic", "piercing", "poison", "psychic", "radiant", "slashing", "thunder"] },
-    "speed": { "anyOf": [{ "type": "number", "exclusiveMinimum": 0 }, { "const": "walk" }] },
-    "recharge": { "anyOf": [{ "enum": ["dawn", "long-rest", "short-rest", "never"] }, { "type": "string", "pattern": "^[0-9]*d[0-9]+([+-][0-9]+)?$|^[0-9]+$" }] }
+    "ability": {
+      "enum": [
+        "str",
+        "dex",
+        "con",
+        "int",
+        "wis",
+        "cha"
+      ]
+    },
+    "damageType": {
+      "enum": [
+        "acid",
+        "bludgeoning",
+        "cold",
+        "fire",
+        "force",
+        "lightning",
+        "necrotic",
+        "piercing",
+        "poison",
+        "psychic",
+        "radiant",
+        "slashing",
+        "thunder"
+      ]
+    },
+    "speed": {
+      "anyOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "const": "walk"
+        }
+      ]
+    },
+    "recharge": {
+      "anyOf": [
+        {
+          "enum": [
+            "dawn",
+            "long-rest",
+            "short-rest",
+            "never"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]*d[0-9]+([+-][0-9]+)?$|^[0-9]+$"
+        }
+      ]
+    }
   }
 }

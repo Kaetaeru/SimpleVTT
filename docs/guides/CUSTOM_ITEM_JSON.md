@@ -34,6 +34,7 @@
 | `conditionImmunities` | 상태 배열 | `poisoned`, `charmed`, `frightened` … 상태 면역 (D352) |
 | `speeds` | 객체 | `{ "fly": 60 }`, `{ "swim": "walk" }` — 피트 수 또는 보행 속도와 같음 (D352) |
 | `darkvision` | 숫자(ft) | 암시야 (D352) |
+| `worksWhen` | `"held"` | 손에 쥐고 있을 때(주 손·보조 손 칸)만 작동 — 지팡이·막대처럼. 조율이 필요하면 조율도 해야 한다 (D359) |
 | `uses` | 배열 | `charges` 말고 따로 세는 풀: `[{ "id": "bolt", "label": "번개", "max": 2, "recharge": "short-rest" }]`. `recharge`는 `dawn`·`long-rest`·`short-rest`·`never` 또는 새벽에 굴리는 주사위("1d6+1"). 주문은 `"pool": "bolt"`로, 계약은 `resource:self.bolt`로 쓴다. 사본마다 따로 센다 (D358) |
 | `contract` | 객체 | 모듈 항목과 같은 `common-play` 계약(MODULE_GRAMMAR.md §2~§6): 상시 속성, 라벨 붙은 사용(버튼), 반응. `id`는 앱이 붙인다. `resource:self`는 이 사본의 `charges`, `resource:self.<id>`는 `uses` 풀 (D358) |
 | `format` | `"simplevtt.magic-item/2"` | 생략해도 된다. 전체 형식은 `schemas/magic-item.schema.json` (D358) |
@@ -55,7 +56,7 @@
 | `hpMax` | 숫자 | 최대 HP |
 | `spellDc` | 숫자 | 주문 내성 DC |
 | `spellAttack` | 숫자 | 주문 명중 |
-| `extraDamage` | `{ "dice": "2d6", "type": "fire" }` | 이 무기가 맞히면 따로 굴리는 다른 타입의 피해 (D352) |
+| `extraDamage` | `{ "dice": "2d6", "type": "fire" }` 또는 그 배열 | 이 무기가 맞히면 따로 굴리는 다른 타입의 피해 (D352). 각각 `"when": { "targetTypes": ["undead", "fiend"] }`(그 크리처 유형에게만 — 맞을 때 표가 대상을 본다) 또는 `"when": { "effect": "불꽃" }`(그 이름의 효과가 도는 동안만 — 계약의 켜기 버튼과 짝)을 붙일 수 있다 (D359) |
 
 모르는 키나 숫자가 아닌 값은 경고와 함께 무시한다.
 

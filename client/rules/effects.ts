@@ -19,6 +19,8 @@ import { damageTypeKo } from "./resolve";
 import { onHitOf, spellExec, type SpellDice } from "../compendium/spells";
 
 
+/** D339/D359: damage of its own type beside the weapon's; `versus` limits it to targets of those creature types. */
+export interface TypedDamage { value?: number; dice?: string; type: string; filter?: (attack: DerivedAttack) => boolean; versus?: string[] }
 export interface EffectApplication {
   /** AC: a flat bonus, a replacement unarmored base (Mage Armor: 13 + Dex), or a floor (Barkskin 17). */
   ac?: { add?: number; unarmoredBase?: number; min?: number };
@@ -26,7 +28,7 @@ export interface EffectApplication {
   attack?: { value?: number; dice?: string; filter?: (attack: DerivedAttack) => boolean };
   damage?: { value?: number; dice?: string; filter?: (attack: DerivedAttack) => boolean };
   /** D339: extra damage of its own type, which rides beside the weapon's damage rather than adding to it. */
-  damageTyped?: { value?: number; dice?: string; type: string; filter?: (attack: DerivedAttack) => boolean };
+  damageTyped?: TypedDamage | TypedDamage[];
   saves?: { value?: number; dice?: string; keys?: AbilityKey[] };
   /** Every ability check and skill. */
   checks?: { value?: number; dice?: string; keys?: AbilityKey[] };
@@ -323,16 +325,16 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
         if (hit) changed = { ...changed, attackTerms: [...changed.attackTerms, hit], attackBonus: sum([...changed.attackTerms, hit]) };
         const dmg = application.damage && (!application.damage.filter || application.damage.filter(attack)) ? term(label, application.damage.value, application.damage.dice) : null;
         if (dmg) changed = { ...changed, damageTerms: [...changed.damageTerms, dmg], damageBonus: sum([...changed.damageTerms, dmg]) };
-        const typed = application.damageTyped;
-        if (typed && (!typed.filter || typed.filter(attack))) {
+        for (const typed of [application.damageTyped ?? []].flat()) {
+          if (typed.filter && !typed.filter(attack)) continue;
           const formula = typed.dice ?? (typed.value ? String(typed.value) : "");
-          if (formula) changed = { ...changed, extraDamage: [...(changed.extraDamage ?? []), { label, formula, type: typed.type }] };
+          if (formula) changed = { ...changed, extraDamage: [...(changed.extraDamage ?? []), { label, formula, type: typed.type, ...(typed.versus?.length ? { versus: typed.versus } : {}) }] };
         }
         return changed;
       }) };
       if (application.attack) notes.push(`명중 ${describe(application.attack.filter === strengthMelee ? "근력 근접 공격" : application.attack.filter ? "무기 공격" : "모든 공격", application.attack.value, application.attack.dice)}`);
       if (application.damage) notes.push(`피해 ${describe(application.damage.filter === strengthMelee ? "근력 근접 공격" : application.damage.filter ? "무기 공격" : "모든 공격", application.damage.value, application.damage.dice)}`);
-      if (application.damageTyped) notes.push(`피해 ${describe(application.damageTyped.filter ? "무기 공격" : "모든 공격", application.damageTyped.value, application.damageTyped.dice)} (${application.damageTyped.type})`);
+      for (const typed of [application.damageTyped ?? []].flat()) notes.push(`피해 ${describe(typed.filter ? "무기 공격" : "모든 공격", typed.value, typed.dice)} (${typed.type}${typed.versus?.length ? `, ${typed.versus.join("·")}에게만` : ""})`);
     }
     if (application.saves) {
       const keys = application.saves.keys ?? [...ABILITY_KEYS];

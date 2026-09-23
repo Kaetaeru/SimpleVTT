@@ -15,7 +15,9 @@ import { parseContract } from "../rules/contract";
 import { damageTypeKo } from "./origin";
 import type { DerivedAttack, DerivedItem } from "./types";
 
-export interface CustomItemBonus { /** D352: extra damage of its own type on this weapon's hits (화염의 혀: 2d6 화염). */ extraDamage?: { dice: string; type: string }; ac?: number; attack?: number; damage?: number; damageDice?: string; saves?: number; checks?: number; speed?: number; hpMax?: number; spellDc?: number; spellAttack?: number }
+/** D352/D359: damage of another type on the weapon's hits — only against some creature types, or only while an effect runs. */
+export interface ExtraDamage { dice: string; type: string; when?: { targetTypes?: string[]; effect?: string } }
+export interface CustomItemBonus { /** D352: extra damage of its own type on this weapon's hits (화염의 혀: 2d6 화염). */ extraDamage?: ExtraDamage[]; ac?: number; attack?: number; damage?: number; damageDice?: string; saves?: number; checks?: number; speed?: number; hpMax?: number; spellDc?: number; spellAttack?: number }
 export interface CustomItem {
   name: string;
   type: string;
@@ -58,6 +60,8 @@ export interface CustomItem {
   /** D352: speeds it gives, in feet; `"walk"` means equal to the walking speed. */
   speeds?: { fly?: number | "walk"; swim?: number | "walk"; climb?: number | "walk" };
   darkvision?: number;
+  /** D359: it works only while held (in a hand slot), not merely carried. */
+  worksWhen?: "held";
   /**
    * D358: pools of its own besides `charges` — a use a dawn, a use a short rest, dice back at dawn, or none back.
    * Its spells (`pool`) and its contract (`resource:self.<id>`) spend them.
@@ -115,7 +119,19 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
   if (isObject(raw.bonus)) {
     const bonus: CustomItemBonus = {};
     for (const [key, value] of Object.entries(raw.bonus)) {
-      if (key === "extraDamage") { if (isObject(value) && typeof value.dice === "string" && /^[0-9]*d[0-9]+([+-][0-9]+)?$/.test(value.dice.replace(/\s+/g, "")) && DAMAGE_TYPES.includes(String(value.type))) bonus.extraDamage = { dice: value.dice.replace(/\s+/g, ""), type: String(value.type) }; else warnings.push('bonus.extraDamage: { "dice": "2d6", "type": "fire" } 형식이어야 합니다'); continue; }
+      if (key === "extraDamage") {
+        const parts: ExtraDamage[] = [];
+        for (const part of Array.isArray(value) ? value : [value]) {
+          const dice = isObject(part) && typeof part.dice === "string" ? part.dice.replace(/\s+/g, "") : "";
+          if (!isObject(part) || !/^[0-9]*d[0-9]+([+-][0-9]+)?$/.test(dice) || !DAMAGE_TYPES.includes(String(part.type))) { warnings.push('bonus.extraDamage: { "dice": "2d6", "type": "fire" } 형식이어야 합니다 (배열도 된다)'); continue; }
+          const when = isObject(part.when) ? part.when : undefined;
+          const targetTypes = Array.isArray(when?.targetTypes) ? (when!.targetTypes as unknown[]).map((type) => String(type).toLowerCase()) : undefined;
+          const effect = when ? text(when.effect) : undefined;
+          parts.push({ dice, type: String(part.type), ...(targetTypes?.length || effect ? { when: { ...(targetTypes?.length ? { targetTypes } : {}), ...(effect ? { effect } : {}) } } : {}) });
+        }
+        if (parts.length) bonus.extraDamage = parts;
+        continue;
+      }
       if (key === "damageDice") { if (typeof value === "string" && /^\d*d\d+$/.test(value.replace(/\s+/g, ""))) bonus.damageDice = value.replace(/\s+/g, ""); else warnings.push(`bonus.damageDice: "${String(value)}"는 "1d6" 형식이어야 합니다`); continue; }
       if (!BONUS_KEYS.includes(key as keyof CustomItemBonus)) { warnings.push(`bonus.${key}: 모르는 보너스입니다 (${[...BONUS_KEYS, "damageDice"].join("/")})`); continue; }
       if (typeof value !== "number" || !Number.isFinite(value)) { warnings.push(`bonus.${key}: 숫자여야 합니다`); continue; }
@@ -189,6 +205,7 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     if (Object.keys(speeds).length) item.speeds = speeds;
   }
   if (typeof raw.darkvision === "number" && raw.darkvision > 0) item.darkvision = raw.darkvision;
+  if (raw.worksWhen !== undefined) { if (raw.worksWhen === "held") item.worksWhen = "held"; else warnings.push('worksWhen: "held"만 있습니다'); }
   if (isObject(raw.baseOptions)) {
     const options = raw.baseOptions;
     if (!["weapon", "armor", "shield", "ammunition"].includes(String(options.kind))) warnings.push("baseOptions.kind: weapon/armor/shield/ammunition 중 하나여야 합니다");
@@ -274,11 +291,13 @@ export function customItemActive(item: DerivedItem): boolean {
   if (!item.magic) return false;
   if (item.magic.attunement && !item.attuned) return false;
   if ((item.kind === "armor" || item.kind === "shield") && !item.equipped) return false;
+  // D359: an item that works only in hand (지팡이, 막대) — held is equipped in a hand slot.
+  if (item.magic.worksWhen === "held" && !item.equipped) return false;
   return true;
 }
 
 /** The item's numbers as an effect application. Attack and damage go to its own attack row when it is a weapon. */
-export function customItemApplication(item: DerivedItem): EffectApplication {
+export function customItemApplication(item: DerivedItem, /** D359: the effects running on the bearer, by name. */ running: string[] = []): EffectApplication {
   const magic = item.magic!;
   const bonus = magic.bonus ?? {};
   // D353: magic ammunition has a row per weapon that shoots it (`<id>:<weapon>`), and its bonus is on those rows.
@@ -287,7 +306,8 @@ export function customItemApplication(item: DerivedItem): EffectApplication {
     ...(bonus.ac ? { ac: { add: bonus.ac } } : {}),
     ...(bonus.attack ? { attack: { value: bonus.attack, ...(own ? { filter: own } : {}) } } : {}),
     ...(bonus.damage || bonus.damageDice ? { damage: { ...(bonus.damageDice ? { dice: bonus.damageDice } : {}), ...(bonus.damage ? { value: bonus.damage } : {}), ...(own ? { filter: own } : {}) } } : {}),
-    ...(bonus.extraDamage ? { damageTyped: { dice: bonus.extraDamage.dice, type: damageTypeKo(bonus.extraDamage.type), ...(own ? { filter: own } : {}) } } : {}),
+    // D359: a part that waits for an effect (불꽃 혀를 켰을 때) is on the row only while it runs.
+    ...(bonus.extraDamage?.length ? { damageTyped: bonus.extraDamage.filter((part) => !part.when?.effect || running.includes(part.when.effect)).map((part) => ({ dice: part.dice, type: damageTypeKo(part.type), ...(own ? { filter: own } : {}), ...(part.when?.targetTypes ? { versus: part.when.targetTypes } : {}) })) } : {}),
     ...(bonus.saves ? { saves: { value: bonus.saves, ...(magic.saveAbilities ? { keys: magic.saveAbilities } : {}) } } : {}),
     ...(bonus.checks ? { checks: { value: bonus.checks } } : {}),
     ...(bonus.speed ? { speed: { add: bonus.speed } } : {}),

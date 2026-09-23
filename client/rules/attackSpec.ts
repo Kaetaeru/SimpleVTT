@@ -225,7 +225,13 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : offHand ? `${attack.name} (보조 손)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}), ...(ignores(attack.damageType) ? { ignoresResistance: true } : {}) }];
   const extra: DamagePart[] = [];
   // D339: damage of its own type an effect put on this weapon — a part beside it, so resistance reads that type.
-  for (const part of attack.extraDamage ?? []) extra.push({ formula: part.formula, type: damageTypeKo(part.type), label: part.label, critDoubles: false });
+  // D359: a part that names creature types lands only on those — the table checks the target, as a smite's does.
+  const versusRiders: NonNullable<AttackSpec["versusRiders"]> = [];
+  for (const part of attack.extraDamage ?? []) {
+    const dealt = { formula: part.formula, type: damageTypeKo(part.type), label: part.label, critDoubles: false };
+    if (part.versus?.length) versusRiders.push({ creatureTypes: part.versus, part: { ...dealt, label: `${part.label} (${part.versus.join("·")})` } });
+    else extra.push(dealt);
+  }
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   const strikeDice = strike?.rule.extraDice?.filter((step) => derived.level >= step.level).at(-1);
   if (strike && strikeDice) extra.push({ formula: strikeDice.dice, type: damageTypeKo(strike.rule.damageType ?? attack.damageType), label: strikeName });
@@ -233,7 +239,6 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   // (so a lasting one starts its effect), and what it inflicts outright lands with the hit.
   const inflicts: string[] = [];
   const hitMarksFromSmite: Array<{ label: string; mark: { name: string; nextAttack?: { advantage?: boolean; bonus?: number; by: "any" | "others" } } }> = [];
-  const versusRiders: NonNullable<AttackSpec["versusRiders"]> = [];
   const smite = riders.spellSmite ? smiteSpells(derived, entry.runtime, attack).find((item) => item.spellId === riders.spellSmite!.spellId && item.slots.some((slot) => slot.level === riders.spellSmite!.slot)) : undefined;
   if (smite) {
     const slot = riders.spellSmite!.slot;
