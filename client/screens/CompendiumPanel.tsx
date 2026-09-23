@@ -39,14 +39,21 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
     if (!placeToken(tokenForNpc(npc))) alert("열린 페이지가 없습니다. 저널에는 NPC가 만들어졌습니다.");
   };
   /**
-   * R19 (D113): SRD 5.2.1 lists no magic items, so a 주문 두루마리 is made here — the DM picks a spell and a
-   * character, and the scroll lands in that character's bag as an item that casts the spell once.
+   * R19 (D113): the DM picks a spell and a character, and a scroll holding it lands in that character's bag. Since
+   * D361 it is the catalog's own spell-holding item of that level (the SRD's 주문 두루마리), with its numbers.
    */
   const characters = snapshot.journal.filter((entry): entry is Extract<typeof entry, { kind: "character" }> => entry.kind === "character" && !entry.archived);
   const giveScroll = (spell: { id: string; name: string; level: number }, entryId: string) => {
     const entry = characters.find((item) => item.id === entryId);
     if (!entry) return;
-    const runtime = addItem(entry.runtime, { itemId: scrollItemId(spell.id), name: scrollName(spell.name, spell.level) });
+    // D361: the catalog's item that holds a spell of this level (the SRD's 주문 두루마리) when there is one — its
+    // numbers and rules are the content's; otherwise the R19 scroll.
+    const holder = catalog.items.find((item) => {
+      const choice = item.magic?.spellChoice as { level?: number; minLevel?: number; maxLevel?: number } | undefined;
+      const reads = (item.magic?.use as { castChosen?: unknown } | undefined)?.castChosen;
+      return reads && choice && (choice.level === undefined || choice.level === spell.level) && (choice.minLevel ?? 0) <= spell.level && spell.level <= (choice.maxLevel ?? 9);
+    });
+    const runtime = holder ? addItem(entry.runtime, { itemId: holder.id, name: `${holder.name} (${spell.name})`, spell: spell.id }) : addItem(entry.runtime, { itemId: scrollItemId(spell.id), name: scrollName(spell.name, spell.level) });
     c.putJournal({ ...entry, runtime, updatedAt: new Date().toISOString() });
     c.say(`/em ${entry.name}이(가) ${scrollName(spell.name, spell.level)}을(를) 받았습니다 (${scrollRarity(spell.level)})`);
   };

@@ -26,7 +26,7 @@
 | `saveAbilities` | `["wis", "cha"]` | `bonus.saves`를 이 능력의 내성에만 붙인다. 생략하면 모든 내성 |
 | `resistances` | 피해 타입 배열 | 영문 id (§4). 시트의 저항 목록에 더해진다 |
 | `notes` | 문자열 배열 | 계산할 수 없는 효과. 가방 줄에 마우스를 올리면 설명 아래에 보인다 |
-| `use` | 객체 | 턴 패널에서 썼을 때: `healing`("2d4+2" 형식, 마실 대상을 골라 굴려 회복)과 `consumes`(true면 하나 줄어듦). 회복이 있으면 소모된다. 이름에 "물약"이 들어가도 `use`가 없으면 회복하지 않는다(D247). D353: `tempHp`("10", "2d4" — 마신 쪽 임시 HP), `effect`(`{ "name", "duration": "1시간", "rounds", "grants": { 아이템과 같은 필드 } }` — 마신 쪽에 그 시간 동안 붙는다. `rounds`를 생략하면 지속시간 글에서 센다), `spell`(`{ "spellId", "duration" }` — 마신 쪽이 집중 없이 그 주문의 효과를 받는다). `effect.permanent: true`면 끝나지 않는 효과(교본: `grants.abilityBonuses`로 영구 +2), 두 번 쓰면 두 번 더해진다 (D356). 셋 중 하나라도 있으면 소모되고, 턴 패널에서 마실 대상을 고른다 |
+| `use` | 객체 | 턴 패널에서 썼을 때: `healing`("2d4+2" 형식, 마실 대상을 골라 굴려 회복)과 `consumes`(true면 하나 줄어듦). 회복이 있으면 소모된다. 이름에 "물약"이 들어가도 `use`가 없으면 회복하지 않는다(D247). D353: `tempHp`("10", "2d4" — 마신 쪽 임시 HP), `effect`(`{ "name", "duration": "1시간", "rounds", "grants": { 아이템과 같은 필드 } }` — 마신 쪽에 그 시간 동안 붙는다. `rounds`를 생략하면 지속시간 글에서 센다), `spell`(`{ "spellId", "duration" }` — 마신 쪽이 집중 없이 그 주문의 효과를 받는다). `effect.permanent: true`면 끝나지 않는 효과(교본: `grants.abilityBonuses`로 영구 +2), 두 번 쓰면 두 번 더해진다 (D356). 셋 중 하나라도 있으면 소모되고, 턴 패널에서 마실 대상을 고른다. D361: `castChosen`(`{ "dc": 15, "attackBonus": 7, "consumes": true, "requiresOwnList": true, "overLevelCheckDc": 10 }`) — `spellChoice`로 담은 주문을 슬롯 없이 그 수치로 시전한다. `requiresOwnList`면 직업 주문 목록에 그 주문이 있어야 읽고, 자기가 시전할 수 있는 것보다 높은 레벨이면 능력 판정 DC(`overLevelCheckDc` + 주문 레벨)를 보여 준다 |
 | `charges` | 객체 | 충전: `max`(최대치), `recharge`("1d6+4" 형식, 긴 휴식(새벽)에 이만큼 돌아온다. 생략하면 긴 휴식에 전부), `note`(다 쓰면 부서지는지 같은 서사 — "DM 판정"). 시트의 자원에 "이름 충전"으로 보인다 (D351) |
 | `spells` | 배열 | 충전으로 시전하는 주문: `{ "spellId", "charges", "dc", "attackBonus", "level" }`. 아이템이 작동할 때(조율이 필요하면 조율 중) 주문 목록에 들어가고, 그 충전 풀로 시전하면 주문마다 적힌 충전이 빠진다. `dc`·`attackBonus`를 생략하면 시전자의 값, `level`을 생략하면 주문 레벨 (D351). `perLevel`·`maxLevel`: 충전을 `perLevel`개 더 쓸 때마다 한 레벨 높게, `maxLevel`까지 — 시전 창이 레벨별로 보여 준다 (D356) |
 | `abilities` | 객체 | 작동하는 동안 능력치를 이 값으로: `{ "str": 19 }`. 이미 더 높으면 그대로 (D352) |
@@ -37,6 +37,7 @@
 | `attunementRequires` | 객체 | 누가 조율할 수 있나: `{ "spellcaster": true }`(직업의 주문 시전·계약 마법이 있는 캐릭터), `{ "classes": ["cleric", "paladin"] }`(직업 id나 그 끝 부분), `note`(앱이 확인 못 하는 조건). 안 되면 조율 버튼이 이유를 보여 준다 (D360) |
 | `curse` | 객체 | 저주: `cannotUnattune`(조율을 풀 수 없음), `grants`(아이템과 같은 필드 — 불이익·취약), `note`. 작동하는 동안 걸리고, 가방 줄의 "저주 풀기"(DM 판정)로 풀면 끝난다 (D360) |
 | `vulnerabilities` | 피해 타입 배열 | 피해 취약 — 표가 그 피해를 두 배로 받는다 (D360) |
+| `spellChoice` | 객체 | 지급할 때 담을 주문을 고른다: `{ "level": 3 }` 또는 `{ "minLevel": 1, "maxLevel": 3, "classes": ["wizard"] }`. "아이템 (주문)" 이름으로 지급된다 (D361) |
 | `worksWhen` | `"held"` | 손에 쥐고 있을 때(주 손·보조 손 칸)만 작동 — 지팡이·막대처럼. 조율이 필요하면 조율도 해야 한다 (D359) |
 | `uses` | 배열 | `charges` 말고 따로 세는 풀: `[{ "id": "bolt", "label": "번개", "max": 2, "recharge": "short-rest" }]`. `recharge`는 `dawn`·`long-rest`·`short-rest`·`never` 또는 새벽에 굴리는 주사위("1d6+1"). 주문은 `"pool": "bolt"`로, 계약은 `resource:self.bolt`로 쓴다. 사본마다 따로 센다 (D358) |
 | `contract` | 객체 | 모듈 항목과 같은 `common-play` 계약(MODULE_GRAMMAR.md §2~§6): 상시 속성, 라벨 붙은 사용(버튼), 반응. `id`는 앱이 붙인다. `resource:self`는 이 사본의 `charges`, `resource:self.<id>`는 `uses` 풀 (D358) |
@@ -121,7 +122,7 @@
 - 충전을 다 썼을 때의 파괴 굴림은 굴리지 않는다. `charges.note`에 적어 DM이 판정한다.
 - `damageDice`는 무기의 피해 타입으로 굴린다. 다른 타입의 추가 피해는 `bonus.extraDamage`로 적는다.
 - 마법 탄약(`type: "ammunition"`, `base`가 화살·볼트)은 탄약을 쓰는 무기마다 "무기 (탄약 이름)" 공격 줄이 생기고 보너스는 그 줄에만 붙는다. 화살과 볼트는 구분하지 않는다 — 맞는 무기 줄을 고른다. 쏜 뒤 줄이는 것은 가방에서 직접.
-- 주문 두루마리는 아이템 추가 창의 두루마리(R19)로 지급한다.
+- 주문 두루마리는 SRD의 "주문 두루마리, N레벨" 항목(D361)이다. 도감의 주문 페이지에서 주는 두루마리도 이 항목으로 들어간다.
 - 발동하는 능력(버튼)은 `contract`로 붙여넣기에서도 만든다(D358).
 - 조건부 보너스(특정 크리처에게만 등)는 계산하지 않는다.
 - 지급한 아이템의 정의는 시트에서 고칠 수 없다. 버리고 JSON을 고쳐 다시 지급한다.

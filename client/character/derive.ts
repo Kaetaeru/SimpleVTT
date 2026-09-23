@@ -110,12 +110,12 @@ function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
     const listed = !extra.custom && extra.itemId ? ledger.catalog.itemById(extra.itemId) : undefined;
     const found = listed?.magic ? officialMagicItem(listed.name, listed.magic, ledger.catalog) : undefined;
     // D354: an item given as a chosen weapon or armour is that base, under the name it was given with.
-    const official = found && extra.base ? { ...found, base: extra.base, name: extra.name } : found;
+    const official = found && (extra.base || extra.spell) ? { ...found, ...(extra.base ? { base: extra.base } : {}), name: extra.name } : found;
     const definition = extra.custom ?? official;
     const itemId = definition ? definition.base : extra.itemId;
     const view = itemId ? ledger.catalog.itemById(itemId) : undefined;
     const quantity = patch.quantities[extra.instanceId] ?? extra.quantity;
-    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true, ...(extra.curseLifted ? { curseLifted: true } : {}) } : {}), ...(official ? { officialId: extra.itemId } : {}) };
+    const item: DerivedItem = { instanceId: extra.instanceId, itemId: itemId ?? `custom:${extra.instanceId}`, name: definition?.name ?? view?.name ?? extra.name, kind: view?.kind ?? "custom", quantity, source: "세션 중 획득", custom: !view && !definition, ...(definition ? { magic: definition, attuned: extra.attuned === true, ...(extra.curseLifted ? { curseLifted: true } : {}) } : {}), ...(extra.spell ? { chosenSpell: extra.spell } : {}), ...(official ? { officialId: extra.itemId } : {}) };
     ledger.inventory.push(item);
   }
 }

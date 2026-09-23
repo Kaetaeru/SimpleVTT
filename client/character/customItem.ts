@@ -40,6 +40,12 @@ export interface CustomItem {
     effect?: { name?: string; duration: string; rounds?: number; grants: CustomItem; /** D356: it never ends (교본: 능력치가 영구히 오른다). */ permanent?: boolean };
     /** D353: the drinker is under this spell for a while, without concentration (속도의 물약: 가속). */
     spell?: { spellId: string; duration?: string; rounds?: number };
+    /**
+     * D361: using it casts the spell it holds, with no slot — at its own save DC and attack bonus, only by someone
+     * whose class list has the spell (`requiresOwnList`), gone when cast (`consumes`); a spell above what the reader
+     * can cast asks for an ability check of `overLevelCheckDc` + the spell's level (the table rolls it).
+     */
+    castChosen?: { dc?: number; attackBonus?: number; consumes?: boolean; requiresOwnList?: boolean; overLevelCheckDc?: number };
   };
   /**
    * D351: charges — how many it holds, the dice that come back at dawn (a long rest here), and what happens when the
@@ -71,6 +77,11 @@ export interface CustomItem {
   curse?: { cannotUnattune?: boolean; grants?: CustomItem; note?: string };
   /** D360: damage types (English ids) it makes the bearer vulnerable to. */
   vulnerabilities?: string[];
+  /**
+   * D361: the item holds a spell the giver picks (a spell scroll) — of this level or between these levels, from these
+   * class lists. Given with a spell, it is carried with it and named "<item> (<spell>)".
+   */
+  spellChoice?: { level?: number; minLevel?: number; maxLevel?: number; classes?: string[] };
   /**
    * D358: pools of its own besides `charges` — a use a dawn, a use a short rest, dice back at dawn, or none back.
    * Its spells (`pool`) and its contract (`resource:self.<id>`) spend them.
@@ -228,6 +239,13 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
     else if (grants) warnings.push(...grants.warnings.map((line) => `curse.grants: ${line}`));
     item.curse = { ...(curse.cannotUnattune === true ? { cannotUnattune: true } : {}), ...(grants && !("error" in grants) ? { grants: grants.item } : {}), ...(text(curse.note) ? { note: text(curse.note) } : {}) };
   }
+  if (isObject(raw.spellChoice)) {
+    const choice = raw.spellChoice;
+    const num = (value: unknown) => (typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 9 ? value : undefined);
+    const classes = Array.isArray(choice.classes) ? choice.classes.map(String) : undefined;
+    item.spellChoice = { ...(num(choice.level) !== undefined ? { level: num(choice.level) } : {}), ...(num(choice.minLevel) !== undefined ? { minLevel: num(choice.minLevel) } : {}), ...(num(choice.maxLevel) !== undefined ? { maxLevel: num(choice.maxLevel) } : {}), ...(classes?.length ? { classes } : {}) };
+    if (!spellChoices(catalog, item.spellChoice).length) warnings.push("spellChoice: 고를 수 있는 주문이 없습니다");
+  }
   if (raw.worksWhen !== undefined) { if (raw.worksWhen === "held") item.worksWhen = "held"; else warnings.push('worksWhen: "held"만 있습니다'); }
   if (isObject(raw.baseOptions)) {
     const options = raw.baseOptions;
@@ -277,6 +295,12 @@ export function parseCustomItem(input: string, catalog: ContentCatalog): { item:
       if (!spellId || !catalog.spellById(spellId)) warnings.push(`use.spell.spellId: "${String(spell.spellId)}"는 목록에 없는 주문입니다`);
       else use.spell = { spellId, ...(text(spell.duration) ? { duration: text(spell.duration) } : {}), ...(typeof spell.rounds === "number" ? { rounds: spell.rounds } : {}) };
     }
+    if (isObject(raw.use.castChosen)) {
+      const cast = raw.use.castChosen;
+      const int = (value: unknown) => (typeof value === "number" && Number.isInteger(value) ? value : undefined);
+      use.castChosen = { ...(int(cast.dc) !== undefined ? { dc: int(cast.dc) } : {}), ...(int(cast.attackBonus) !== undefined ? { attackBonus: int(cast.attackBonus) } : {}), ...(cast.consumes === true ? { consumes: true } : {}), ...(cast.requiresOwnList === true ? { requiresOwnList: true } : {}), ...(int(cast.overLevelCheckDc) !== undefined ? { overLevelCheckDc: int(cast.overLevelCheckDc) } : {}) };
+      if (!raw.spellChoice) warnings.push("use.castChosen: spellChoice가 없으면 담을 주문이 없습니다");
+    }
     if (Object.keys(use).length) item.use = use;
   }
   const base = item.base ? catalog.itemById(item.base) : undefined;
@@ -295,6 +319,17 @@ export function attunementProblem(magic: Pick<CustomItem, "attunementRequires"> 
   if (req.spellcaster && !Object.values(derived.spellSlots).some((count) => count > 0) && !derived.pactMagic) return "주문 시전자만 조율할 수 있습니다";
   if (req.classes?.length && !derived.classes.some((state) => req.classes!.some((cls) => state.classId === cls || state.classId.endsWith(`.${cls}`)))) return `이 직업만 조율할 수 있습니다: ${req.classes.join(", ")}`;
   return undefined;
+}
+
+/** D361: the spells a `spellChoice` allows, lowest level first. */
+export function spellChoices(catalog: Pick<ContentCatalog, "spells">, choice: NonNullable<CustomItem["spellChoice"]>) {
+  return catalog.spells.filter((spell) => {
+    if (choice.level !== undefined && spell.level !== choice.level) return false;
+    if (choice.minLevel !== undefined && spell.level < choice.minLevel) return false;
+    if (choice.maxLevel !== undefined && spell.level > choice.maxLevel) return false;
+    if (choice.classes?.length && !spell.classes.some((cls) => choice.classes!.some((wanted) => cls === wanted || cls.endsWith(`.${wanted}`)))) return false;
+    return true;
+  }).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 }
 
 /** D354: the catalog items a `baseOptions` allows, in catalog order. */

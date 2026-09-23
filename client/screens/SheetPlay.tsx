@@ -23,7 +23,7 @@ import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared,
 import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "../ui/components";
 import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
-import { attunementProblem, baseChoices, CUSTOM_ITEM_EXAMPLE, officialMagicItem, parseCustomItem, RARITY_KO } from "../character/customItem";
+import { attunementProblem, baseChoices, CUSTOM_ITEM_EXAMPLE, officialMagicItem, parseCustomItem, RARITY_KO, spellChoices } from "../character/customItem";
 import { pickSlots, restFeatures, spentSlots, triggerPolicyKey, useRestFeature } from "../character/rest";
 
 export interface SheetPlayProps {
@@ -54,7 +54,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const [copied, setCopied] = useState<string | null>(null);
 
   const [resting, setResting] = useState<{ spends: Record<string, number>; /** R78 (D213): rest features chosen, with the slot levels each gives back. */ uses?: Record<string, number[]> } | null>(null);
-  const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string; json: string; /** D354: the magic item waiting for its base to be picked. */ basing?: string } | null>(null);
+  const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string; json: string; /** D354: the magic item waiting for its base to be picked. */ basing?: string; /** D361: the item waiting for its spell. */ spelling?: string; spellQuery?: string } | null>(null);
   // V4k (D273): which form a use turns this character into (야생 변신) — a window, never a typed name.
   const [formAsk, setFormAsk] = useState<{ name: string; options: Array<{ id: string; name: string; crText: string }>; resolve: (id: string | null) => void } | null>(null);
   const [showLog, setShowLog] = useState(true);
@@ -389,6 +389,24 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
                 // D354: an item made from a weapon or armour the giver picks asks which one first.
                 const pending = adding.basing ? catalog.itemById(adding.basing) : undefined;
                 const definition = pending?.magic ? officialMagicItem(pending.name, pending.magic, catalog) : undefined;
+                // D361: an item that holds a spell (a spell scroll) asks which one.
+                const holder = adding.spelling ? catalog.itemById(adding.spelling) : undefined;
+                const held = holder?.magic ? officialMagicItem(holder.name, holder.magic, catalog) : undefined;
+                if (holder && held?.spellChoice) {
+                  const needle = (adding.spellQuery ?? "").trim().toLowerCase();
+                  const options = spellChoices(catalog, held.spellChoice).filter((spell) => !needle || spell.name.toLowerCase().includes(needle) || spell.nameEn.toLowerCase().includes(needle)).slice(0, 60);
+                  return (
+                    <div className="cl-field">
+                      <p className="cl-small">{holder.name} — 어떤 주문인가요?</p>
+                      <input className="cl-input" aria-label="주문 검색" placeholder="주문 이름" value={adding.spellQuery ?? ""} onChange={(event) => setAdding({ ...adding, spellQuery: event.target.value })} />
+                      <div className="cl-row" style={{ flexWrap: "wrap", gap: 4, maxHeight: 160, overflow: "auto" }}>
+                        {options.map((spell) => (
+                          <button type="button" key={spell.id} className="cl-btn small" onClick={() => { commit(addItem(runtime, { itemId: holder.id, name: `${holder.name} (${spell.name})`, spell: spell.id, quantity: Number(adding.quantity) || 1 })); setAdding(null); }}>{spell.name}</button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
                 if (!pending || !definition?.baseOptions) return null;
                 return (
                   <div className="cl-field">
@@ -405,6 +423,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
                 <button type="button" key={item.id} className="cl-option" onClick={() => {
                   const definition = item.magic ? officialMagicItem(item.name, item.magic, catalog) : undefined;
                   if (definition?.baseOptions && !definition.base) { setAdding({ ...adding, basing: item.id }); return; }
+                  if (definition?.spellChoice) { setAdding({ ...adding, spelling: item.id, spellQuery: "" }); return; }
                   commit(addItem(runtime, { itemId: item.id, name: item.name, quantity: Number(adding.quantity) || 1 })); setAdding(null);
                 }}>
                   <span className="cl-name">{item.name}</span><span className="cl-en">{item.nameEn}</span>

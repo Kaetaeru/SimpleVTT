@@ -15162,8 +15162,20 @@
      "config": {
       "type": "scroll",
       "rarity": "common",
+      "spellChoice": {
+       "level": 1
+      },
+      "use": {
+       "castChosen": {
+        "dc": 13,
+        "attackBonus": 5,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15195,8 +15207,20 @@
      "config": {
       "type": "scroll",
       "rarity": "uncommon",
+      "spellChoice": {
+       "level": 2
+      },
+      "use": {
+       "castChosen": {
+        "dc": 13,
+        "attackBonus": 5,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15228,8 +15252,20 @@
      "config": {
       "type": "scroll",
       "rarity": "uncommon",
+      "spellChoice": {
+       "level": 3
+      },
+      "use": {
+       "castChosen": {
+        "dc": 15,
+        "attackBonus": 7,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15261,8 +15297,20 @@
      "config": {
       "type": "scroll",
       "rarity": "rare",
+      "spellChoice": {
+       "level": 4
+      },
+      "use": {
+       "castChosen": {
+        "dc": 15,
+        "attackBonus": 7,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15294,8 +15342,20 @@
      "config": {
       "type": "scroll",
       "rarity": "rare",
+      "spellChoice": {
+       "level": 5
+      },
+      "use": {
+       "castChosen": {
+        "dc": 17,
+        "attackBonus": 9,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15327,8 +15387,20 @@
      "config": {
       "type": "scroll",
       "rarity": "very-rare",
+      "spellChoice": {
+       "level": 6
+      },
+      "use": {
+       "castChosen": {
+        "dc": 17,
+        "attackBonus": 9,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15360,8 +15432,20 @@
      "config": {
       "type": "scroll",
       "rarity": "very-rare",
+      "spellChoice": {
+       "level": 7
+      },
+      "use": {
+       "castChosen": {
+        "dc": 18,
+        "attackBonus": 10,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15393,8 +15477,20 @@
      "config": {
       "type": "scroll",
       "rarity": "very-rare",
+      "spellChoice": {
+       "level": 8
+      },
+      "use": {
+       "castChosen": {
+        "dc": 18,
+        "attackBonus": 10,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15426,8 +15522,20 @@
      "config": {
       "type": "scroll",
       "rarity": "legendary",
+      "spellChoice": {
+       "level": 9
+      },
+      "use": {
+       "castChosen": {
+        "dc": 19,
+        "attackBonus": 11,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }
@@ -15459,8 +15567,20 @@
      "config": {
       "type": "scroll",
       "rarity": "common",
+      "spellChoice": {
+       "level": 0
+      },
+      "use": {
+       "castChosen": {
+        "dc": 13,
+        "attackBonus": 5,
+        "consumes": true,
+        "requiresOwnList": true,
+        "overLevelCheckDc": 10
+       }
+      },
       "notes": [
-       "DM 판정: 아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+       "DM 판정: 마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
       ]
      }
     }

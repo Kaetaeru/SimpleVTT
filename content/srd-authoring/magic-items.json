@@ -5471,82 +5471,202 @@
   },
   "dnd.srd521.magic-item.spell-scroll-1st-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 1
+    },
+    "use": {
+     "castChosen": {
+      "dc": 13,
+      "attackBonus": 5,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-2nd-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 2
+    },
+    "use": {
+     "castChosen": {
+      "dc": 13,
+      "attackBonus": 5,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-3rd-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 3
+    },
+    "use": {
+     "castChosen": {
+      "dc": 15,
+      "attackBonus": 7,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-4th-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 4
+    },
+    "use": {
+     "castChosen": {
+      "dc": 15,
+      "attackBonus": 7,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-5th-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 5
+    },
+    "use": {
+     "castChosen": {
+      "dc": 17,
+      "attackBonus": 9,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-6th-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 6
+    },
+    "use": {
+     "castChosen": {
+      "dc": 17,
+      "attackBonus": 9,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-7th-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 7
+    },
+    "use": {
+     "castChosen": {
+      "dc": 18,
+      "attackBonus": 10,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-8th-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 8
+    },
+    "use": {
+     "castChosen": {
+      "dc": 18,
+      "attackBonus": 10,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-9th-level": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 9
+    },
+    "use": {
+     "castChosen": {
+      "dc": 19,
+      "attackBonus": 11,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spell-scroll-cantrip": {
    "definition": {
-    "type": "scroll"
+    "type": "scroll",
+    "spellChoice": {
+     "level": 0
+    },
+    "use": {
+     "castChosen": {
+      "dc": 13,
+      "attackBonus": 5,
+      "consumes": true,
+      "requiresOwnList": true,
+      "overLevelCheckDc": 10
+     }
+    }
    },
    "dm": [
-    "아이템 추가 창의 주문 두루마리로 지급 — 주문마다 따로"
+    "마법사 주문서로 옮겨 적기: 지능(비전) DC 10 + 주문 레벨, 시도하면 두루마리는 사라진다"
    ]
   },
   "dnd.srd521.magic-item.spellguard-shield": {

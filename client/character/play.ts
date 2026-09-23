@@ -230,11 +230,11 @@ export function setGold(runtime: CharacterRuntime, gold: number): CharacterRunti
 
 const patchOf = (runtime: CharacterRuntime) => runtime.inventory ?? emptyInventoryPatch();
 
-export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem; /** D354 */ base?: string }): CharacterRuntime {
+export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name: string; quantity?: number; custom?: CustomItem; /** D354 */ base?: string; /** D361 */ spell?: string }): CharacterRuntime {
   const patch = patchOf(runtime);
   const instanceId = `extra:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const quantity = Math.max(1, Math.floor(item.quantity ?? 1));
-  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}), ...(item.base ? { base: item.base } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
+  return stamp({ ...runtime, inventory: { ...patch, extra: [...patch.extra, { instanceId, itemId: item.itemId, name: item.name, quantity, ...(item.custom ? { custom: item.custom } : {}), ...(item.base ? { base: item.base } : {}), ...(item.spell ? { spell: item.spell } : {}) }] } }, `획득: ${item.name}${quantity > 1 ? ` ×${quantity}` : ""}`);
 }
 
 /** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */
@@ -509,9 +509,12 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
     case "scroll": {
       // R19: the scroll is the cost — no slot, and the scroll itself is destroyed.
       const item = derived.inventory.find((entry) => entry.instanceId === method.instanceId);
-      if (!item || item.quantity <= 0 || scrollSpellId(item.itemId) !== spell.id) return null;
-      next = setItemQuantity(next, derived, method.instanceId, item.quantity - 1);
-      how = `두루마리 (${item.name}) — 슬롯 없이, 두루마리는 사라집니다`;
+      // D361: an item holding the spell it was given with (`spellChoice`); R19's scroll ids are still read.
+      const held = item?.chosenSpell ?? scrollSpellId(item?.itemId);
+      if (!item || item.quantity <= 0 || held !== spell.id) return null;
+      const consumes = item.magic?.use?.castChosen ? item.magic.use.castChosen.consumes === true : true;
+      if (consumes) next = setItemQuantity(next, derived, method.instanceId, item.quantity - 1);
+      how = `${item.name} — 슬롯 없이${consumes ? ", 사라집니다" : ""}`;
       break;
     }
   }

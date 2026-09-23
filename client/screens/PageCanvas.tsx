@@ -612,12 +612,15 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   };
   // R19 (D113): a 주문 두루마리 in the bag casts its spell — no slot, and the scroll is gone.
   const itemItems = items.map((item) => {
-    const spellId = scrollSpellId(item.itemId);
+    // D361: an item holding a spell it was given with (`spellChoice`), or an R19 scroll.
+    const spellId = item.chosenSpell ?? scrollSpellId(item.itemId);
     const view = spellId ? catalog.spellById(spellId) : undefined;
+    const reading = item.magic?.use?.castChosen;
+    const unreadable = Boolean(reading?.requiresOwnList && view && derived && !derived.classes.some((state) => view.classes.includes(state.classId)));
     const highest = derived ? Math.max(0, ...Object.entries(derived.spellSlots).filter(([, max]) => max > 0).map(([level]) => Number(level))) : 0;
     if (spellId && view && spellExec(spellId)) {
       const overLevel = view.level > highest;
-      return { key: item.instanceId, label: `📜 ${item.name}`, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}두루마리로 시전 (슬롯 없음)${overLevel ? ` · 지능(신비학) DC ${scrollCheckDc(view.level)} — DM 판단` : ""}`, onSelect: () => void castIt(spellId, view.name, { kind: "scroll", instanceId: item.instanceId }) };
+      return { key: item.instanceId, label: `📜 ${item.name}`, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}두루마리로 시전 (슬롯 없음)${unreadable ? " · 주문 목록에 없어 읽을 수 없음" : overLevel ? ` · 능력 판정 DC ${(reading?.overLevelCheckDc ?? scrollCheckDc(0)) + view.level} — 실패하면 사라짐 (DM 판정)` : ""}`, disabled: unreadable, onSelect: () => void castIt(spellId, view.name, { kind: "scroll", instanceId: item.instanceId }) };
     }
     return { key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item, catalog).heal ? `회복 ${itemUse(item, catalog).heal}` : itemUse(item, catalog).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) };
   });
